@@ -1,74 +1,80 @@
 # AGENTS.md
 
-## Про проєкт
+## Project overview
 
-Inventory Atlas Lite — невеликий self-hosted застосунок для обліку особистих фізичних речей. Користувач створює категорії та власні поля, додає предмети й фотографії, шукає та фільтрує записи, а також завантажує резервну копію всієї SQLite-бази.
+Inventory Atlas Lite is a small self-hosted application for tracking personal physical items. Users can create categories and custom fields, add items and photos, search and filter records, and download a backup of the entire SQLite database.
 
-Це MVP без автентифікації, розрахований на роботу в довіреній локальній мережі або через VPN/Tailscale. Під час розробки насамперед обирай найшвидшу просту реалізацію, яка повністю закриває поточну потребу й залишається зрозумілою. Дотримуйся KISS, DRY та YAGNI: не додавай абстракції, залежності, конфігурацію чи функції про запас.
+This is an MVP without authentication, intended for use on a trusted local network or through VPN/Tailscale. During development, prioritize the fastest simple implementation that fully solves the current need and remains easy to understand. Follow KISS, DRY, and YAGNI: do not add abstractions, dependencies, configuration, or features for hypothetical future use.
 
-## Стек і архітектура
+## Language
 
-- Node.js 20+, один кореневий npm-проєкт з ES modules.
-- Клієнт: Vue 3 Composition API (`<script setup>`), Vue Router, Vite та Bootstrap 5.
-- Сервер: Express 5 і `multer`; REST API доступний під `/api`.
-- Дані: одна SQLite-база через `better-sqlite3`. У ній зберігаються і записи, і оригінальні байти фотографій.
-- У development Vite працює на `:5173` і проксіює `/api` на Express на `:3000`.
-- У production Express роздає зібраний клієнт із `dist/` і слухає `PORT` (типово `3000`).
+- Use English throughout the project.
+- Write all documentation, code comments, commit messages, identifiers, user-facing copy, test descriptions, and configuration notes in English.
+- When editing existing text, keep terminology consistent with the surrounding English content.
 
-Потік даних простий: Vue-сторінка викликає helper з `client/src/api.js`, Express route перевіряє запит і напряму працює з SQLite, після чого повертає JSON. Не вводь додаткові шари без конкретної потреби.
+## Stack and architecture
 
-## Структура репозиторію
+- Node.js 20+ with a single root npm project using ES modules.
+- Client: Vue 3 Composition API (`<script setup>`), Vue Router, Vite, and Bootstrap 5.
+- Server: Express 5 and `multer`; the REST API is available under `/api`.
+- Data: a single SQLite database accessed through `better-sqlite3`. It stores both records and the original photo bytes.
+- In development, Vite runs on `:5173` and proxies `/api` to Express on `:3000`.
+- In production, Express serves the built client from `dist/` and listens on `PORT` (default `3000`).
 
-- `client/src/main.js` — запуск Vue, конфігурація роутера та список сторінок.
-- `client/src/App.vue` — спільний каркас застосунку й основна навігація.
-- `client/src/api.js` — спільний wrapper над `fetch` і helper для JSON-запитів.
-- `client/src/pages/ItemsList.vue` — список предметів, пошук, фільтрація, сортування та пагінація.
-- `client/src/pages/ItemDetails.vue` — деталі предмета, фотографії та видалення.
-- `client/src/pages/ItemForm.vue` — створення/редагування предмета, значення власних полів і завантаження фото.
-- `client/src/pages/Categories.vue` — керування категоріями та їхніми власними полями.
-- `client/src/pages/DataBackup.vue` — завантаження резервної копії SQLite.
-- `client/src/style.css` — невеликий набір глобальних стилів поверх Bootstrap.
-- `server/src/index.js` — Express app, усі API routes, валідація, робота з фото, backup і production static serving.
-- `server/src/db.js` — шлях до бази, підключення SQLite, PRAGMA та актуальна схема таблиць/індексів.
-- `test/e2e.test.js` — наскрізний acceptance-тест API, persistence, фото та backup.
-- `data/` — локальні runtime-дані; SQLite-файли і backup-и ігноруються Git.
-- `dist/` — результат `npm run build`; генерується автоматично й ігнорується Git.
-- `vite.config.js` — Vue plugin і development proxy.
-- `README.md` — інструкції запуску, production та резервного копіювання.
+The data flow is intentionally simple: a Vue page calls the helper in `client/src/api.js`, an Express route validates the request and works directly with SQLite, and then returns JSON. Do not introduce additional layers without a concrete need.
 
-## Модель даних і важливі обмеження
+## Repository structure
 
-- `categories` групують предмети; категорію, яку використовують предмети, видаляти не можна.
-- `custom_fields` належать категорії та мають тип `text`, `number`, `date` або `boolean`.
-- `items` мають UUID, категорію, базові текстові атрибути й timestamps.
-- `item_field_values` зберігають значення власних полів як текст; boolean нормалізується до `"1"` або `"0"`.
-- `item_photos` зберігає metadata та BLOB у тій самій базі. API приймає до 10 JPEG/PNG/WebP/GIF файлів по 15 MB.
-- Foreign keys увімкнені. Залежні поля, значення й фото видаляються відповідно до `ON DELETE`; не ламай ці правила ручними обхідними операціями.
-- `DATA_DIR` змінює каталог постійних даних. Тести мають використовувати тимчасовий каталог, а не робочу базу в `data/`.
+- `client/src/main.js` — starts Vue, configures the router, and lists application routes.
+- `client/src/App.vue` — shared application shell and primary navigation.
+- `client/src/api.js` — shared `fetch` wrapper and helper for JSON requests.
+- `client/src/pages/ItemsList.vue` — item list, search, filtering, sorting, and pagination.
+- `client/src/pages/ItemDetails.vue` — item details, photos, and deletion.
+- `client/src/pages/ItemForm.vue` — item creation/editing, custom field values, and photo uploads.
+- `client/src/pages/Categories.vue` — category and custom field management.
+- `client/src/pages/DataBackup.vue` — SQLite backup download.
+- `client/src/style.css` — small set of global styles layered on Bootstrap.
+- `server/src/index.js` — Express app, all API routes, validation, photo handling, backup, and production static serving.
+- `server/src/db.js` — database path, SQLite connection, PRAGMAs, and current table/index schema.
+- `test/e2e.test.js` — end-to-end acceptance test for the API, persistence, photos, and backups.
+- `data/` — local runtime data; SQLite files and backups are ignored by Git.
+- `dist/` — output from `npm run build`; generated automatically and ignored by Git.
+- `vite.config.js` — Vue plugin and development proxy configuration.
+- `README.md` — setup, production, and backup instructions.
 
-## Робота над змінами
+## Data model and important constraints
 
-- Перед редагуванням прочитай пов'язані Vue-компоненти, API routes, схему та тест, щоб зберегти наскрізний контракт.
-- Підтримуй наявний компактний стиль і використовуй уже встановлені залежності. Нову залежність додавай лише тоді, коли вона помітно спрощує потрібну зараз реалізацію.
-- Валідуй дані на сервері. Повертай помилки API у форматі `{ "error": "..." }`, який очікує `client/src/api.js`.
-- Зміни схеми мають бути безпечними для вже створеної `data/inventory.sqlite`; не покладайся лише на створення нової чистої бази.
-- Зберігай застосунок придатним для self-hosted використання без зовнішніх runtime-сервісів.
-- Не редагуй вручну `dist/`, `node_modules/` або файли SQLite.
-- Не розширюй scope задачі супутніми рефакторингами. Якщо просте дублювання уже стало повторюваним і заважає зміні, винеси лише найменшу спільну частину.
+- `categories` group items; a category used by any item cannot be deleted.
+- `custom_fields` belong to a category and have the type `text`, `number`, `date`, or `boolean`.
+- `items` have a UUID, category, basic text attributes, and timestamps.
+- `item_field_values` store custom field values as text; booleans are normalized to `"1"` or `"0"`.
+- `item_photos` stores metadata and BLOB data in the same database. The API accepts up to 10 JPEG/PNG/WebP/GIF files of 15 MB each.
+- Foreign keys are enabled. Related fields, values, and photos are deleted according to their `ON DELETE` rules; do not bypass those rules with manual operations.
+- `DATA_DIR` changes the persistent data directory. Tests must use a temporary directory instead of the working database in `data/`.
 
-## Перевірка
+## Working on changes
 
-Після зміни запускай перевірки, доречні до її масштабу:
+- Before editing, read the related Vue components, API routes, schema, and tests so the end-to-end contract remains intact.
+- Preserve the existing compact style and use installed dependencies. Add a dependency only when it clearly simplifies the implementation needed now.
+- Validate data on the server. Return API errors as `{ "error": "..." }`, as expected by `client/src/api.js`.
+- Schema changes must be safe for existing `data/inventory.sqlite` databases; do not rely only on creating a fresh database.
+- Keep the application suitable for self-hosted use without external runtime services.
+- Do not manually edit `dist/`, `node_modules/`, or SQLite files.
+- Do not expand task scope with unrelated refactors. If repeated code is already obstructing the requested change, extract only the smallest useful shared part.
+
+## Verification
+
+After a change, run checks appropriate to its scope:
 
 ```bash
 npm test
 npm run build
 ```
 
-`npm test` перевіряє основний API-сценарій на окремій тимчасовій базі. `npm run build` перевіряє компіляцію Vue-клієнта. Для змін UI додатково вручну перевір відповідний сценарій через `npm run dev`, якщо середовище це дозволяє.
+`npm test` checks the main API flow against an isolated temporary database. `npm run build` verifies that the Vue client compiles. For UI changes, also verify the relevant flow manually with `npm run dev` when the environment permits it.
 
 ## Git
 
-- Після завершення кожної задачі створи локальний git-коміт із коротким змістовним повідомленням.
-- Коміть лише файли, що належать до поточної задачі; не включай сторонні або вже наявні зміни користувача.
-- Ніколи не виконуй `git push`. Push завжди робить користувач самостійно.
+- After completing each task, create a local Git commit with a short, meaningful message written in English.
+- Commit only files that belong to the current task; do not include unrelated or pre-existing user changes.
+- Never run `git push`. The user always pushes commits themselves.
