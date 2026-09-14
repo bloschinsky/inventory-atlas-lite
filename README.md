@@ -1,4 +1,15 @@
-# Simple Personal Inventory
+```text
+┌──────────────────────────────────────────────────────────────┐
+│  ██╗ █████╗                                                  │
+│  ██║██╔══██╗   INVENTORY ATLAS LITE                          │
+│  ██║███████║   TRACK WHAT YOU OWN. FIND IT FAST.             │
+│  ██║██╔══██║                                                 │
+│  ██║██║  ██║                                                 │
+│  ╚═╝╚═╝  ╚═╝                                                 │
+└──────────────────────────────────────────────────────────────┘
+```
+
+# Inventory Atlas Lite
 
 A deliberately small, self-hosted inventory app for physical items. It uses Vue 3, Express, and one SQLite database containing all data and photos. No authentication or Internet connection is required at runtime; access should be limited to a trusted LAN or VPN/Tailscale network.
 
