@@ -21,4 +21,5 @@ Added optional item nesting so that an item can be stored inside another item, w
 ## Verification
 
 - `npm run lint` passes.
-- `npm test` and `npm run build` were not run: the available Node.js on this machine is 18.14.0, while the project requires 20.19+ and the installed `better-sqlite3` binary targets Node.js 24.
+- `npm test` passes, including the new hierarchy scenario.
+- `npm run build` compiles the client successfully.
