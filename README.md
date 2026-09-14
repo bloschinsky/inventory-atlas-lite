@@ -25,7 +25,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:5173`. The development server listens on the local network as well.
+Open `http://localhost:5173`. The development server listens on the local network as well. Set `PORT` to move the API off port `3000`; the development proxy follows it.
 
 ## Checks
 

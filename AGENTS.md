@@ -18,7 +18,7 @@ This is an MVP without authentication, intended for use on a trusted local netwo
 - Client: Vue 3 Composition API (`<script setup>`), Vue Router, Vite, and Bootstrap 5.
 - Server: Express 5 and `multer`; the REST API is available under `/api`.
 - Data: a single SQLite database accessed through `better-sqlite3`. It stores both records and the original photo bytes.
-- In development, Vite runs on `:5173` and proxies `/api` to Express on `:3000`.
+- In development, Vite runs on `:5173` and proxies `/api` to Express on `PORT` (default `3000`).
 - In production, Express serves the built client from `dist/` and listens on `PORT` (default `3000`).
 
 The data flow is intentionally simple: a Vue page calls the helper in `client/src/api.js`, an Express route validates the request and works directly with SQLite, and then returns JSON. Do not introduce additional layers without a concrete need.
