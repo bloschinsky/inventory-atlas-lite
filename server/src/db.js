@@ -27,6 +27,7 @@ db.exec(`
     description TEXT,
     condition TEXT,
     location TEXT,
+    parent_item_id INTEGER REFERENCES items(id) ON DELETE RESTRICT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
@@ -58,3 +59,9 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_items_name ON items(name COLLATE NOCASE);
   CREATE INDEX IF NOT EXISTS idx_photos_item ON item_photos(item_id);
 `);
+
+// Existing databases created before item nesting need the self-referencing column added in place.
+if (!db.prepare('PRAGMA table_info(items)').all().some(column => column.name === 'parent_item_id')) {
+  db.exec('ALTER TABLE items ADD COLUMN parent_item_id INTEGER REFERENCES items(id) ON DELETE RESTRICT');
+}
+db.exec('CREATE INDEX IF NOT EXISTS idx_items_parent ON items(parent_item_id)');

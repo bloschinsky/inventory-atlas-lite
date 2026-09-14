@@ -7,7 +7,10 @@ const item = ref(null); const error = ref('');
 const formatDate = value => value ? new Date(value.replace(' ', 'T') + 'Z').toLocaleString() : '—';
 const displayValue = field => field.type === 'boolean' ? (field.value === '1' ? 'Yes' : 'No') : (field.value || '—');
 async function load() { try { item.value = await api(`/api/items/${route.params.id}`); } catch (e) { error.value = e.message; } }
-async function remove() { if (confirm(`Delete “${item.value.name}” and its photos?`)) { await api(`/api/items/${item.value.id}`, { method: 'DELETE' }); router.push('/'); } }
+async function remove() {
+  if (!confirm(`Delete “${item.value.name}” and its photos?`)) return;
+  try { await api(`/api/items/${item.value.id}`, { method: 'DELETE' }); router.push('/'); } catch (e) { error.value = e.message; }
+}
 async function removePhoto(id) { if (confirm('Delete this photo?')) { await api(`/api/photos/${id}`, { method: 'DELETE' }); await load(); } }
 onMounted(load);
 </script>
@@ -63,6 +66,18 @@ onMounted(load);
                 {{ item.location || '—' }}
               </dd>
               <dt class="col-sm-4">
+                Stored inside
+              </dt><dd class="col-sm-8">
+                <RouterLink
+                  v-if="item.parent"
+                  :to="`/items/${item.parent.id}`"
+                >
+                  {{ item.parent.name }}
+                </RouterLink><template v-else>
+                  —
+                </template>
+              </dd>
+              <dt class="col-sm-4">
                 Description
               </dt><dd class="col-sm-8 text-break">
                 {{ item.description || '—' }}
@@ -80,7 +95,44 @@ onMounted(load);
             </dl>
           </div>
         </div>
-        <div class="small text-secondary">
+        <h2 class="h5">
+          Contents
+        </h2>
+        <div
+          v-if="!item.children.length"
+          class="text-secondary mb-4"
+        >
+          No items stored inside.
+        </div>
+        <div
+          v-for="child in item.children"
+          :key="child.id"
+          class="card mb-2"
+        >
+          <div class="card-body py-2 d-flex align-items-center gap-3">
+            <img
+              v-if="child.thumbnail_id"
+              class="thumbnail"
+              :src="`/api/photos/${child.thumbnail_id}`"
+              :alt="child.name"
+            ><div
+              v-else
+              class="thumbnail empty-thumb"
+            >
+              No photo
+            </div>
+            <div>
+              <RouterLink :to="`/items/${child.id}`">
+                {{ child.name }}
+              </RouterLink><div class="small text-secondary">
+                {{ child.category_name }}<template v-if="child.condition">
+                  · {{ child.condition }}
+                </template>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="small text-secondary mt-4">
           UUID: {{ item.uuid }}<br>Created: {{ formatDate(item.created_at) }}<br>Updated: {{ formatDate(item.updated_at) }}
         </div>
       </div>

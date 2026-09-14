@@ -34,6 +34,28 @@ const getItemBase = id => db.prepare(`
   SELECT i.*, c.name AS category_name FROM items i
   JOIN categories c ON c.id = i.category_id WHERE i.id = ? OR i.uuid = ?
 `).get(id, id);
+const getItemRef = id => db.prepare('SELECT id, uuid, name FROM items WHERE id = ?').get(id);
+const getDescendantIds = id => db.prepare(`
+  WITH RECURSIVE tree(id) AS (
+    SELECT id FROM items WHERE parent_item_id = @id
+    UNION ALL SELECT i.id FROM items i JOIN tree t ON i.parent_item_id = t.id
+  ) SELECT id FROM tree
+`).all({ id }).map(row => row.id);
+const getChildren = id => db.prepare(`
+  SELECT i.id, i.uuid, i.name, i.condition, c.name AS category_name,
+    (SELECT id FROM item_photos p WHERE p.item_id = i.id ORDER BY p.id LIMIT 1) AS thumbnail_id
+  FROM items i JOIN categories c ON c.id = i.category_id
+  WHERE i.parent_item_id = ? ORDER BY i.name COLLATE NOCASE
+`).all(id);
+const resolveParentId = (raw, itemId = null) => {
+  if (raw === null || raw === undefined || raw === '') return null;
+  const parentId = Number.parseInt(raw);
+  if (!Number.isInteger(parentId) || !getItemRef(parentId)) throw Object.assign(new Error('Parent item not found.'), { status: 400 });
+  if (itemId && parentId === itemId) throw Object.assign(new Error('An item cannot be stored inside itself.'), { status: 400 });
+  if (itemId && getDescendantIds(itemId).includes(parentId)) throw Object.assign(new Error('An item cannot be stored inside one of its own contents.'), { status: 400 });
+  return parentId;
+};
+const searchLike = value => `%${value.replace(/[\\%_]/g, '\\$&')}%`;
 
 app.get('/api/categories', (_req, res) => {
   res.json(db.prepare(`
@@ -89,7 +111,7 @@ app.get('/api/items', (req, res) => {
   const categoryId = Number.parseInt(req.query.categoryId) || null;
   const where = [];
   const params = {};
-  if (search) { where.push('(i.name LIKE @search ESCAPE \'\\\' OR i.description LIKE @search ESCAPE \'\\\')'); params.search = `%${search.replace(/[\\%_]/g, '\\$&')}%`; }
+  if (search) { where.push('(i.name LIKE @search ESCAPE \'\\\' OR i.description LIKE @search ESCAPE \'\\\')'); params.search = searchLike(search); }
   if (categoryId) { where.push('i.category_id = @categoryId'); params.categoryId = categoryId; }
   const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
   const total = db.prepare(`SELECT COUNT(*) AS count FROM items i ${clause}`).get(params).count;
@@ -102,11 +124,28 @@ app.get('/api/items', (req, res) => {
   `).all({ ...params, limit: pageSize, offset: (page - 1) * pageSize });
   res.json({ items, pagination: { page, pageSize, total, pages: Math.max(1, Math.ceil(total / pageSize)) } });
 });
+app.get('/api/items/parent-candidates', (req, res) => {
+  const search = String(req.query.search || '').trim();
+  const excludeId = Number.parseInt(req.query.excludeId) || null;
+  const excluded = excludeId ? [excludeId, ...getDescendantIds(excludeId)] : [];
+  const where = [];
+  const params = {};
+  if (search) { where.push("i.name LIKE @search ESCAPE '\\'"); params.search = searchLike(search); }
+  if (excluded.length) where.push(`i.id NOT IN (${excluded.join(',')})`);
+  const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
+  res.json(db.prepare(`
+    SELECT i.id, i.uuid, i.name, c.name AS category_name FROM items i
+    JOIN categories c ON c.id = i.category_id ${clause}
+    ORDER BY i.name COLLATE NOCASE LIMIT 20
+  `).all(params));
+});
 app.get('/api/items/:id', (req, res) => {
   const item = getItemBase(req.params.id);
   if (!item) return res.status(404).json({ error: 'Item not found.' });
   item.fields = db.prepare(`SELECT f.id, f.name, f.type, v.value FROM custom_fields f LEFT JOIN item_field_values v ON v.field_id = f.id AND v.item_id = ? WHERE f.category_id = ? ORDER BY f.id`).all(item.id, item.category_id);
   item.photos = db.prepare('SELECT id, filename, mime_type, created_at FROM item_photos WHERE item_id = ? ORDER BY id').all(item.id);
+  item.parent = item.parent_item_id ? getItemRef(item.parent_item_id) : null;
+  item.children = getChildren(item.id);
   res.json(item);
 });
 
@@ -129,7 +168,8 @@ const createItem = db.transaction(body => {
   const categoryId = Number.parseInt(body.category_id);
   if (!getCategory(categoryId)) throw Object.assign(new Error('Valid category is required.'), { status: 400 });
   const values = validateValues(categoryId, body.field_values);
-  const info = db.prepare('INSERT INTO items (uuid, name, category_id, description, condition, location) VALUES (?, ?, ?, ?, ?, ?)').run(randomUUID(), name, categoryId, nullableText(body.description), nullableText(body.condition), nullableText(body.location));
+  const parentId = resolveParentId(body.parent_item_id);
+  const info = db.prepare('INSERT INTO items (uuid, name, category_id, description, condition, location, parent_item_id) VALUES (?, ?, ?, ?, ?, ?, ?)').run(randomUUID(), name, categoryId, nullableText(body.description), nullableText(body.condition), nullableText(body.location), parentId);
   for (const [fieldId, value] of values) saveValue.run(info.lastInsertRowid, fieldId, value);
   return info.lastInsertRowid;
 });
@@ -140,7 +180,8 @@ const updateItem = db.transaction((id, body) => {
   const categoryId = Number.parseInt(body.category_id);
   if (!getCategory(categoryId)) throw Object.assign(new Error('Valid category is required.'), { status: 400 });
   const values = validateValues(categoryId, body.field_values);
-  db.prepare('UPDATE items SET name = ?, category_id = ?, description = ?, condition = ?, location = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(name, categoryId, nullableText(body.description), nullableText(body.condition), nullableText(body.location), current.id);
+  const parentId = resolveParentId(body.parent_item_id, current.id);
+  db.prepare('UPDATE items SET name = ?, category_id = ?, description = ?, condition = ?, location = ?, parent_item_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(name, categoryId, nullableText(body.description), nullableText(body.condition), nullableText(body.location), parentId, current.id);
   for (const [fieldId, value] of values) saveValue.run(current.id, fieldId, value);
   return current.id;
 });
@@ -149,6 +190,8 @@ app.put('/api/items/:id', (req, res) => { const id = updateItem(req.params.id, r
 app.delete('/api/items/:id', (req, res) => {
   const item = getItemBase(req.params.id);
   if (!item) return res.status(404).json({ error: 'Item not found.' });
+  const contained = db.prepare('SELECT COUNT(*) AS count FROM items WHERE parent_item_id = ?').get(item.id).count;
+  if (contained) return res.status(409).json({ error: `This item contains ${contained} item(s). Move or delete them first.` });
   db.prepare('DELETE FROM items WHERE id = ?').run(item.id);
   res.status(204).end();
 });

@@ -7,7 +7,18 @@ const route = useRoute(); const router = useRouter();
 const editing = computed(() => Boolean(route.params.id));
 const categories = ref([]); const fields = ref([]); const existingPhotos = ref([]); const photos = ref([]);
 const error = ref(''); const saving = ref(false); const initialized = ref(false);
-const form = reactive({ name: '', category_id: '', description: '', condition: '', location: '', field_values: {} });
+const form = reactive({ name: '', category_id: '', description: '', condition: '', location: '', parent_item_id: null, field_values: {} });
+const itemId = ref(null); const parent = ref(null); const parentSearch = ref(''); const parentResults = ref([]);
+
+async function searchParents() {
+  const query = new URLSearchParams({ search: parentSearch.value });
+  if (itemId.value) query.set('excludeId', itemId.value);
+  parentResults.value = await api(`/api/items/parent-candidates?${query}`);
+}
+function selectParent(candidate) {
+  parent.value = candidate; form.parent_item_id = candidate ? candidate.id : null;
+  parentSearch.value = ''; parentResults.value = [];
+}
 
 async function loadFields(categoryId) {
   if (!categoryId) { fields.value = []; return; }
@@ -37,7 +48,8 @@ onMounted(async () => {
     categories.value = await api('/api/categories');
     if (editing.value) {
       const item = await api(`/api/items/${route.params.id}`);
-      Object.assign(form, { name: item.name, category_id: item.category_id, description: item.description || '', condition: item.condition || '', location: item.location || '' });
+      Object.assign(form, { name: item.name, category_id: item.category_id, description: item.description || '', condition: item.condition || '', location: item.location || '', parent_item_id: item.parent_item_id });
+      itemId.value = item.id; parent.value = item.parent;
       for (const field of item.fields) form.field_values[field.id] = field.value ?? (field.type === 'boolean' ? '0' : '');
       existingPhotos.value = item.photos;
       await loadFields(item.category_id);
@@ -111,6 +123,52 @@ onMounted(async () => {
               class="form-control"
               placeholder="Garage, box A…"
             >
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Stored inside</label>
+          <div
+            v-if="parent"
+            class="d-flex align-items-center gap-2 mb-2"
+          >
+            <span class="badge text-bg-secondary">{{ parent.name }}</span><button
+              type="button"
+              class="btn btn-link btn-sm p-0"
+              @click="selectParent(null)"
+            >
+              Clear
+            </button>
+          </div>
+          <div class="input-group">
+            <input
+              v-model="parentSearch"
+              class="form-control"
+              placeholder="Search an item to store this one in…"
+              @keydown.enter.prevent="searchParents"
+            ><button
+              type="button"
+              class="btn btn-outline-secondary"
+              @click="searchParents"
+            >
+              Search
+            </button>
+          </div>
+          <ul
+            v-if="parentResults.length"
+            class="list-group mt-2"
+          >
+            <li
+              v-for="candidate in parentResults"
+              :key="candidate.id"
+              class="list-group-item list-group-item-action d-flex justify-content-between"
+              role="button"
+              @click="selectParent(candidate)"
+            >
+              <span>{{ candidate.name }}</span><small class="text-secondary">{{ candidate.category_name }}</small>
+            </li>
+          </ul>
+          <div class="form-text">
+            Leave empty to keep this item top-level.
           </div>
         </div>
         <div class="mb-3">
