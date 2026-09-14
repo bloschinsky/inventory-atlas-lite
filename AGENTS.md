@@ -14,7 +14,7 @@ This is an MVP without authentication, intended for use on a trusted local netwo
 
 ## Stack and architecture
 
-- Node.js 20+ with a single root npm project using ES modules.
+- Node.js 20.19+ with a single root npm project using ES modules.
 - Client: Vue 3 Composition API (`<script setup>`), Vue Router, Vite, and Bootstrap 5.
 - Server: Express 5 and `multer`; the REST API is available under `/api`.
 - Data: a single SQLite database accessed through `better-sqlite3`. It stores both records and the original photo bytes.
@@ -39,6 +39,7 @@ The data flow is intentionally simple: a Vue page calls the helper in `client/sr
 - `test/e2e.test.js` — end-to-end acceptance test for the API, persistence, photos, and backups.
 - `data/` — local runtime data; SQLite files and backups are ignored by Git.
 - `dist/` — output from `npm run build`; generated automatically and ignored by Git.
+- `eslint.config.js` — recommended ESLint rules for JavaScript and Vue files, plus browser and Node.js globals.
 - `vite.config.js` — Vue plugin and development proxy configuration.
 - `README.md` — setup, production, and backup instructions.
 
@@ -67,11 +68,12 @@ The data flow is intentionally simple: a Vue page calls the helper in `client/sr
 After a change, run checks appropriate to its scope:
 
 ```bash
+npm run lint
 npm test
 npm run build
 ```
 
-`npm test` checks the main API flow against an isolated temporary database. `npm run build` verifies that the Vue client compiles. For UI changes, also verify the relevant flow manually with `npm run dev` when the environment permits it.
+`npm run lint` checks JavaScript and Vue files with the recommended ESLint and `eslint-plugin-vue` rules. `npm test` checks the main API flow against an isolated temporary database. `npm run build` verifies that the Vue client compiles. For UI changes, also verify the relevant flow manually with `npm run dev` when the environment permits it.
 
 ## Git
 

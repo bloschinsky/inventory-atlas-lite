@@ -4,7 +4,7 @@ A deliberately small, self-hosted inventory app for physical items. It uses Vue 
 
 ## Requirements
 
-- Node.js 20 or newer
+- Node.js 20.19 or newer
 - npm
 
 ## Install and develop
@@ -15,6 +15,14 @@ npm run dev
 ```
 
 Open `http://localhost:5173`. The development server listens on the local network as well.
+
+## Checks
+
+```bash
+npm run lint
+npm test
+npm run build
+```
 
 ## Production
 

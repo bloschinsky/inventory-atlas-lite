@@ -15,7 +15,9 @@ async function startServer(dataDir) {
   });
   for (let attempt = 0; attempt < 50; attempt++) {
     if (child.exitCode !== null) throw new Error('Server exited before becoming ready.');
-    try { if ((await fetch(`${base}/api/categories`)).ok) return child; } catch {}
+    try { if ((await fetch(`${base}/api/categories`)).ok) return child; } catch {
+      // The server may still be starting; retry until the readiness deadline.
+    }
     await new Promise(resolve => setTimeout(resolve, 50));
   }
   child.kill();
