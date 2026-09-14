@@ -33,7 +33,16 @@ Open `http://localhost:5173`. The development server listens on the local networ
 npm run lint
 npm test
 npm run build
+npm run test:e2e
 ```
+
+`npm run test:e2e` runs the Playwright browser tests. Install the configured browser once before the first run:
+
+```bash
+npx playwright install chromium
+```
+
+The browser tests start their own API and Vite processes on separate ports and use a temporary SQLite database that is deleted afterwards. They never read or write `data/inventory.sqlite`.
 
 ## Project documentation
 

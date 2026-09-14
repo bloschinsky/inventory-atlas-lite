@@ -49,6 +49,7 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
         <select
           v-model="filters.categoryId"
           class="form-select"
+          aria-label="Filter by category"
           @change="changed"
         >
           <option value="">
@@ -66,6 +67,7 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
         <select
           v-model="filters.sort"
           class="form-select"
+          aria-label="Sort by"
           @change="changed"
         >
           <option value="name">
@@ -83,6 +85,7 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
         <select
           v-model="filters.direction"
           class="form-select"
+          aria-label="Sort direction"
           @change="changed"
         >
           <option value="asc">

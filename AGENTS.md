@@ -37,6 +37,8 @@ The data flow is intentionally simple: a Vue page calls the helper in `client/sr
 - `server/src/index.js` — Express app, all API routes, validation, photo handling, backup, and production static serving.
 - `server/src/db.js` — database path, SQLite connection, PRAGMAs, and current table/index schema.
 - `test/e2e.test.js` — end-to-end acceptance test for the API, persistence, photos, and backups.
+- `test/e2e/` — Playwright browser tests, their fixtures, shared helpers, and the run launcher.
+- `playwright.config.js` — Playwright projects, isolated test ports, and the API and Vite processes started for the suite.
 - `docs/README.md` — documentation layout and conventions.
 - `docs/issues/` — planned tasks, feature specifications, and future work.
 - `docs/changes/` — dated records of completed repository changes.
@@ -70,7 +72,7 @@ The data flow is intentionally simple: a Vue page calls the helper in `client/sr
 
 - After completing any task that changes repository files, create a Markdown record in `docs/changes/` describing what was implemented and when.
 - Name records `YYYY-MM-DD-short-description.md` and write them in English.
-- Include the completion date, resulting project version, a concise summary of the implementation, and the verification performed.
+- Include the completion date, resulting project version, a concise summary of the implementation, and the verification performed, including the Playwright result.
 - Keep planned work and future specifications in `docs/issues/`; keep completed implementation records in `docs/changes/`.
 
 ## Versioning
@@ -83,17 +85,30 @@ The data flow is intentionally simple: a Vue page calls the helper in `client/sr
 - Reserve `1.0.0` for an explicit decision that the product is ready to leave the initial MVP version line.
 - Decide and apply the version change as part of the task, before writing its completion record and creating the commit.
 
+## Browser test coverage
+
+Playwright is the browser-level safety net for user-facing behavior. It complements the API tests in `test/e2e.test.js`; do not duplicate detailed API validation there in the browser suite.
+
+- Every new user-facing feature must add a Playwright test or update an existing one covering its primary browser workflow.
+- A feature is not complete while its browser behavior has changed and the relevant Playwright coverage has not been updated.
+- Run `npm run test:e2e` during development once the implementation is integrated, and again as one of the final checks.
+- Locate elements by accessible role, label, and visible name. Add a stable test ID only when the interface offers no user-facing locator.
+- Never use fixed sleeps; wait for observable UI state. Keep tests independent and give created records unique names.
+- The suite uses a temporary SQLite database and its own ports. It must never touch `data/inventory.sqlite`.
+- Run `npx playwright install chromium` once before the first run in a new environment.
+
 ## Verification
 
-After a change, run checks appropriate to its scope:
+After a change, run checks appropriate to its scope. The final verification sequence for a feature is:
 
 ```bash
 npm run lint
 npm test
 npm run build
+npm run test:e2e
 ```
 
-`npm run lint` checks JavaScript and Vue files with the recommended ESLint and `eslint-plugin-vue` rules. `npm test` checks the main API flow against an isolated temporary database. `npm run build` verifies that the Vue client compiles. For UI changes, also verify the relevant flow manually with `npm run dev` when the environment permits it.
+`npm run lint` checks JavaScript and Vue files with the recommended ESLint and `eslint-plugin-vue` rules. `npm test` checks the main API flow against an isolated temporary database. `npm run build` verifies that the Vue client compiles. `npm run test:e2e` runs the Playwright workflows in Chromium against an isolated application. For UI changes, also verify the relevant flow manually with `npm run dev` when the environment permits it.
 
 ## Git
 

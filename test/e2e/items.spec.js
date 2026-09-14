@@ -1,0 +1,75 @@
+import { expect, test } from '@playwright/test';
+import { createCategory, detail, unique } from './helpers.js';
+
+const fields = [{ name: 'Brand', type: 'text' }, { name: 'Year', type: 'number' }, { name: 'Insured', type: 'boolean' }];
+
+test('creates an item, finds it in the list, and edits its values', async ({ page, request }) => {
+  const categoryName = unique('Cameras');
+  await createCategory(request, categoryName, fields);
+  const itemName = unique('Rangefinder');
+
+  await page.goto('/items/new');
+  await page.getByLabel('Name *').fill(itemName);
+  await page.getByLabel('Category *').selectOption({ label: categoryName });
+  await page.getByLabel('Condition').fill('Good');
+  await page.getByLabel('Location').fill('Shelf A');
+  await page.getByLabel('Description').fill('Bought second hand.');
+  await page.getByLabel('Brand').fill('Nikon');
+  await page.getByLabel('Year').fill('1985');
+  await page.getByLabel('Insured').selectOption('1');
+  await page.getByRole('button', { name: 'Save item' }).click();
+
+  await expect(page).toHaveURL(/\/items\/\d+$/);
+  await expect(page.getByRole('heading', { name: itemName })).toBeVisible();
+
+  // Find the saved item again through the list search and the category filter.
+  await page.getByRole('link', { name: 'Items', exact: true }).click();
+  await page.getByPlaceholder('Search name or description…').fill(itemName);
+  await expect(page.getByRole('link', { name: itemName })).toBeVisible();
+  await expect(page.getByRole('row')).toHaveCount(2);
+
+  await page.getByPlaceholder('Search name or description…').fill('');
+  await page.getByLabel('Filter by category').selectOption({ label: categoryName });
+  await expect(page.getByRole('link', { name: itemName })).toBeVisible();
+
+  await page.getByRole('link', { name: itemName }).click();
+  await expect(detail(page, 'Condition')).toHaveText('Good');
+  await expect(detail(page, 'Location')).toHaveText('Shelf A');
+  await expect(detail(page, 'Description')).toHaveText('Bought second hand.');
+  await expect(detail(page, 'Brand')).toHaveText('Nikon');
+  await expect(detail(page, 'Year')).toHaveText('1985');
+  await expect(detail(page, 'Insured')).toHaveText('Yes');
+
+  const renamed = `${itemName} restored`;
+  await page.getByRole('link', { name: 'Edit' }).click();
+  await expect(page.getByLabel('Name *')).toHaveValue(itemName);
+  await page.getByLabel('Name *').fill(renamed);
+  await page.getByLabel('Condition').fill('Excellent');
+  await page.getByLabel('Year').fill('1987');
+  await page.getByLabel('Insured').selectOption('0');
+  await page.getByRole('button', { name: 'Save item' }).click();
+
+  await expect(page.getByRole('heading', { name: renamed })).toBeVisible();
+  await expect(detail(page, 'Condition')).toHaveText('Excellent');
+  await expect(detail(page, 'Year')).toHaveText('1987');
+  await expect(detail(page, 'Insured')).toHaveText('No');
+});
+
+test('deletes an item and removes it from the list', async ({ page, request }) => {
+  const categoryName = unique('Tools');
+  const category = await createCategory(request, categoryName);
+  const itemName = unique('Drill');
+  await request.post('/api/items', { data: { name: itemName, category_id: category.id } });
+
+  await page.goto('/');
+  await page.getByPlaceholder('Search name or description…').fill(itemName);
+  await page.getByRole('link', { name: itemName }).click();
+  await expect(page.getByRole('heading', { name: itemName })).toBeVisible();
+
+  page.once('dialog', dialog => dialog.accept());
+  await page.getByRole('button', { name: 'Delete' }).click();
+
+  await expect(page).toHaveURL('/');
+  await page.getByPlaceholder('Search name or description…').fill(itemName);
+  await expect(page.getByText('No items found. Add your first item to get started.')).toBeVisible();
+});

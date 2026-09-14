@@ -5,3 +5,6 @@ data/*.sqlite-*
 data/backups/
 .env
 *.log
+test-results/
+playwright-report/
+blob-report/

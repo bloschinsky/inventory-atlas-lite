@@ -107,6 +107,7 @@ onMounted(() => load().catch(e => error.value = e.message));
                 <select
                   v-model="newField.type"
                   class="form-select"
+                  aria-label="Field type"
                 >
                   <option value="text">
                     Text

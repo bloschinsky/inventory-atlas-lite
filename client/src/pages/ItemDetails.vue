@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { api } from '../api.js';
 const route = useRoute(); const router = useRouter();
@@ -12,6 +12,8 @@ async function remove() {
   try { await api(`/api/items/${item.value.id}`, { method: 'DELETE' }); router.push('/'); } catch (e) { error.value = e.message; }
 }
 async function removePhoto(id) { if (confirm('Delete this photo?')) { await api(`/api/photos/${id}`, { method: 'DELETE' }); await load(); } }
+// The same component serves every /items/:id, so parent and contents links must reload it.
+watch(() => route.params.id, load);
 onMounted(load);
 </script>
 <template>

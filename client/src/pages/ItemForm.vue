@@ -84,14 +84,22 @@ onMounted(async () => {
     >
       <div class="card-body">
         <div class="mb-3">
-          <label class="form-label">Name *</label><input
+          <label
+            class="form-label"
+            for="item-name"
+          >Name *</label><input
+            id="item-name"
             v-model="form.name"
             class="form-control"
             required
           >
         </div>
         <div class="mb-3">
-          <label class="form-label">Category *</label><select
+          <label
+            class="form-label"
+            for="item-category"
+          >Category *</label><select
+            id="item-category"
             v-model="form.category_id"
             class="form-select"
             required
@@ -112,13 +120,21 @@ onMounted(async () => {
         </div>
         <div class="row">
           <div class="col-md-6 mb-3">
-            <label class="form-label">Condition</label><input
+            <label
+              class="form-label"
+              for="item-condition"
+            >Condition</label><input
+              id="item-condition"
               v-model="form.condition"
               class="form-control"
               placeholder="Good, needs repair…"
             >
           </div><div class="col-md-6 mb-3">
-            <label class="form-label">Location</label><input
+            <label
+              class="form-label"
+              for="item-location"
+            >Location</label><input
+              id="item-location"
               v-model="form.location"
               class="form-control"
               placeholder="Garage, box A…"
@@ -172,7 +188,11 @@ onMounted(async () => {
           </div>
         </div>
         <div class="mb-3">
-          <label class="form-label">Description</label><textarea
+          <label
+            class="form-label"
+            for="item-description"
+          >Description</label><textarea
+            id="item-description"
             v-model="form.description"
             class="form-control"
             rows="3"
@@ -187,9 +207,13 @@ onMounted(async () => {
             :key="field.id"
             class="mb-3"
           >
-            <label class="form-label">{{ field.name }}</label>
+            <label
+              class="form-label"
+              :for="`field-${field.id}`"
+            >{{ field.name }}</label>
             <select
               v-if="field.type === 'boolean'"
+              :id="`field-${field.id}`"
               v-model="form.field_values[field.id]"
               class="form-select"
             >
@@ -201,6 +225,7 @@ onMounted(async () => {
             </select>
             <input
               v-else
+              :id="`field-${field.id}`"
               v-model="form.field_values[field.id]"
               class="form-control"
               :type="field.type === 'text' ? 'text' : field.type"
@@ -236,6 +261,7 @@ onMounted(async () => {
         <input
           class="form-control"
           type="file"
+          aria-label="Add photos"
           accept="image/*"
           multiple
           @change="photos = Array.from($event.target.files)"
