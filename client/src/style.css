@@ -1,0 +1,6 @@
+body { background: #f6f7f9; }
+.thumbnail { width: 64px; height: 64px; object-fit: cover; border-radius: .35rem; background: #e9ecef; }
+.photo-large { max-width: 100%; max-height: 420px; object-fit: contain; background: #e9ecef; }
+.form-card { max-width: 820px; }
+.table td, .table th { vertical-align: middle; }
+.empty-thumb { display: grid; place-items: center; color: #6c757d; font-size: .75rem; }
