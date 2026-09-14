@@ -37,6 +37,9 @@ The data flow is intentionally simple: a Vue page calls the helper in `client/sr
 - `server/src/index.js` — Express app, all API routes, validation, photo handling, backup, and production static serving.
 - `server/src/db.js` — database path, SQLite connection, PRAGMAs, and current table/index schema.
 - `test/e2e.test.js` — end-to-end acceptance test for the API, persistence, photos, and backups.
+- `docs/README.md` — documentation layout and conventions.
+- `docs/issues/` — planned tasks, feature specifications, and future work.
+- `docs/changes/` — dated records of completed repository changes.
 - `data/` — local runtime data; SQLite files and backups are ignored by Git.
 - `dist/` — output from `npm run build`; generated automatically and ignored by Git.
 - `eslint.config.js` — recommended ESLint rules for JavaScript and Vue files, plus browser and Node.js globals.
@@ -63,6 +66,23 @@ The data flow is intentionally simple: a Vue page calls the helper in `client/sr
 - Do not manually edit `dist/`, `node_modules/`, or SQLite files.
 - Do not expand task scope with unrelated refactors. If repeated code is already obstructing the requested change, extract only the smallest useful shared part.
 
+## Task documentation
+
+- After completing any task that changes repository files, create a Markdown record in `docs/changes/` describing what was implemented and when.
+- Name records `YYYY-MM-DD-short-description.md` and write them in English.
+- Include the completion date, resulting project version, a concise summary of the implementation, and the verification performed.
+- Keep planned work and future specifications in `docs/issues/`; keep completed implementation records in `docs/changes/`.
+
+## Versioning
+
+- Follow Semantic Versioning, with `package.json` as the source of truth. Keep the version in `package-lock.json` synchronized.
+- The MVP version line starts at `0.1.0`.
+- Increment the patch component (`0.1.x`) for fixes, maintenance changes, and small features.
+- Increment the minor component (`0.x.0`) for substantial improvements or meaningful new features.
+- Documentation-only changes normally do not change the version. They may increment the patch or minor component when they materially change the project structure, development workflow, or product contract.
+- Reserve `1.0.0` for an explicit decision that the product is ready to leave the initial MVP version line.
+- Decide and apply the version change as part of the task, before writing its completion record and creating the commit.
+
 ## Verification
 
 After a change, run checks appropriate to its scope:
@@ -77,6 +97,6 @@ npm run build
 
 ## Git
 
-- After completing each task, create a local Git commit with a short, meaningful message written in English.
+- After updating the version when applicable and writing the completion record, create a local Git commit with a short, meaningful message written in English.
 - Commit only files that belong to the current task; do not include unrelated or pre-existing user changes.
 - Never run `git push`. The user always pushes commits themselves.

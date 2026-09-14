@@ -35,6 +35,10 @@ npm test
 npm run build
 ```
 
+## Project documentation
+
+See [`docs/README.md`](docs/README.md) for planned tasks, future work, and records of completed changes.
+
 ## Production
 
 ```bash
