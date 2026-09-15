@@ -154,3 +154,58 @@ test('item nesting keeps a valid hierarchy and survives restart and backup', asy
     await rm(dataDir, { recursive: true, force: true });
   }
 });
+
+test('text field suggestions reuse existing values of the same field only', async () => {
+  const dataDir = await mkdtemp(path.join(os.tmpdir(), 'inventory-suggestions-test-'));
+  let server;
+  try {
+    server = await startServer(dataDir);
+    const cameras = await request('/api/categories', json('POST', { name: 'Cameras' }));
+    const brand = await request(`/api/categories/${cameras.id}/fields`, json('POST', { name: 'Brand', type: 'text' }));
+    const year = await request(`/api/categories/${cameras.id}/fields`, json('POST', { name: 'Year', type: 'number' }));
+    const lenses = await request('/api/categories', json('POST', { name: 'Lenses' }));
+    const lensBrand = await request(`/api/categories/${lenses.id}/fields`, json('POST', { name: 'Brand', type: 'text' }));
+
+    const addCamera = value => request('/api/items', json('POST', { name: `Camera ${value}`, category_id: cameras.id, field_values: { [brand.id]: value } }));
+    for (const value of ['Pentax', 'Pentax', 'Pentax', '  pentax ', 'Olympus', 'Olympus', 'Canon', '   ', '']) await addCamera(value);
+    await request('/api/items', json('POST', { name: 'Summicron', category_id: lenses.id, field_values: { [lensBrand.id]: 'Leica' } }));
+
+    // Values are grouped case-insensitively, ordered by usage and then alphabetically.
+    const all = await request(`/api/fields/${brand.id}/suggestions`);
+    assert.deepEqual(all, [
+      { value: 'Pentax', usage_count: 4 },
+      { value: 'Olympus', usage_count: 2 },
+      { value: 'Canon', usage_count: 1 }
+    ]);
+
+    // A field with the same name in another category keeps a separate set of suggestions.
+    assert.deepEqual(await request(`/api/fields/${lensBrand.id}/suggestions`), [{ value: 'Leica', usage_count: 1 }]);
+
+    // Prefix matching is case-insensitive, and user wildcards are matched literally.
+    assert.deepEqual((await request(`/api/fields/${brand.id}/suggestions?search=pe`)).map(s => s.value), ['Pentax']);
+    assert.deepEqual((await request(`/api/fields/${brand.id}/suggestions?search=%20PE%20`)).map(s => s.value), ['Pentax']);
+    assert.deepEqual(await request(`/api/fields/${brand.id}/suggestions?search=ta`), []);
+    assert.deepEqual(await request(`/api/fields/${brand.id}/suggestions?search=%25`), []);
+
+    // A newly saved value becomes available without any extra administration.
+    await addCamera('Zenit');
+    assert.deepEqual(await request(`/api/fields/${brand.id}/suggestions?search=ze`), [{ value: 'Zenit', usage_count: 1 }]);
+
+    // The default limit is 10 and the maximum is 20, whatever the client asks for.
+    const tagCategory = await request('/api/categories', json('POST', { name: 'Bulk' }));
+    const tag = await request(`/api/categories/${tagCategory.id}/fields`, json('POST', { name: 'Tag', type: 'text' }));
+    for (let index = 0; index < 22; index++) {
+      await request('/api/items', json('POST', { name: `Bulk ${index}`, category_id: tagCategory.id, field_values: { [tag.id]: `Tag ${String(index).padStart(2, '0')}` } }));
+    }
+    assert.equal((await request(`/api/fields/${tag.id}/suggestions`)).length, 10);
+    assert.equal((await request(`/api/fields/${tag.id}/suggestions?limit=5`)).length, 5);
+    assert.equal((await request(`/api/fields/${tag.id}/suggestions?limit=50`)).length, 20);
+
+    // Suggestions exist only for existing text fields.
+    assert.equal(await failedStatus('/api/fields/999999/suggestions'), 404);
+    assert.equal(await failedStatus(`/api/fields/${year.id}/suggestions`), 400);
+  } finally {
+    if (server) await stopServer(server);
+    await rm(dataDir, { recursive: true, force: true });
+  }
+});

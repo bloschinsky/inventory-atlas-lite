@@ -55,7 +55,8 @@ const resolveParentId = (raw, itemId = null) => {
   if (itemId && getDescendantIds(itemId).includes(parentId)) throw Object.assign(new Error('An item cannot be stored inside one of its own contents.'), { status: 400 });
   return parentId;
 };
-const searchLike = value => `%${value.replace(/[\\%_]/g, '\\$&')}%`;
+const escapeLike = value => value.replace(/[\\%_]/g, '\\$&');
+const searchLike = value => `%${escapeLike(value)}%`;
 
 app.get('/api/categories', (_req, res) => {
   res.json(db.prepare(`
@@ -92,6 +93,21 @@ app.post('/api/categories/:id/fields', (req, res) => {
   if (!allowedTypes.has(req.body.type)) return res.status(400).json({ error: 'Invalid field type.' });
   const info = db.prepare('INSERT INTO custom_fields (category_id, name, type) VALUES (?, ?, ?)').run(req.params.id, name, req.body.type);
   res.status(201).json(db.prepare('SELECT * FROM custom_fields WHERE id = ?').get(info.lastInsertRowid));
+});
+app.get('/api/fields/:id/suggestions', (req, res) => {
+  const field = db.prepare('SELECT id, type FROM custom_fields WHERE id = ?').get(req.params.id);
+  if (!field) return res.status(404).json({ error: 'Field not found.' });
+  if (field.type !== 'text') return res.status(400).json({ error: 'Suggestions are available for text fields only.' });
+  const search = String(req.query.search || '').trim();
+  const limit = Math.min(20, Math.max(1, Number.parseInt(req.query.limit) || 10));
+  // Suggestions are the values already saved for this exact field, most used first.
+  res.json(db.prepare(`
+    SELECT MIN(TRIM(value)) AS value, COUNT(*) AS usage_count FROM item_field_values
+    WHERE field_id = @fieldId AND value IS NOT NULL AND TRIM(value) != ''
+      AND TRIM(value) LIKE @search ESCAPE '\\'
+    GROUP BY TRIM(value) COLLATE NOCASE
+    ORDER BY usage_count DESC, value COLLATE NOCASE LIMIT @limit
+  `).all({ fieldId: field.id, search: `${escapeLike(search)}%`, limit }));
 });
 app.delete('/api/fields/:id', (req, res) => {
   const field = db.prepare('SELECT f.*, COUNT(v.id) AS value_count FROM custom_fields f LEFT JOIN item_field_values v ON v.field_id = f.id WHERE f.id = ? GROUP BY f.id').get(req.params.id);

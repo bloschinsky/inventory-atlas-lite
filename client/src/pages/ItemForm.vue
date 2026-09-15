@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { api, jsonOptions } from '../api.js';
+import FieldAutocomplete from '../components/FieldAutocomplete.vue';
 
 const route = useRoute(); const router = useRouter();
 const editing = computed(() => Boolean(route.params.id));
@@ -223,12 +224,18 @@ onMounted(async () => {
                 Yes
               </option>
             </select>
+            <FieldAutocomplete
+              v-else-if="field.type === 'text'"
+              v-model="form.field_values[field.id]"
+              :input-id="`field-${field.id}`"
+              :field-id="field.id"
+            />
             <input
               v-else
               :id="`field-${field.id}`"
               v-model="form.field_values[field.id]"
               class="form-control"
-              :type="field.type === 'text' ? 'text' : field.type"
+              :type="field.type"
             >
           </div>
         </template>

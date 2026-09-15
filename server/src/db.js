@@ -58,6 +58,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_items_category ON items(category_id);
   CREATE INDEX IF NOT EXISTS idx_items_name ON items(name COLLATE NOCASE);
   CREATE INDEX IF NOT EXISTS idx_photos_item ON item_photos(item_id);
+  CREATE INDEX IF NOT EXISTS idx_field_values_field ON item_field_values(field_id, value);
 `);
 
 // Existing databases created before item nesting need the self-referencing column added in place.
