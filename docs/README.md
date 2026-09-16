@@ -4,6 +4,13 @@ The `docs/` directory keeps project planning and implementation history close to
 
 ## Directory structure
 
+### Guides
+
+Markdown files directly in `docs/` are user-facing guides that are too long for the README. The README
+keeps a short summary and links to them.
+
+- [`proxmox.md`](proxmox.md) — installing and maintaining Inventory Atlas Lite on Proxmox VE.
+
 ### `issues/`
 
 Contains tasks, feature specifications, and future plans that may be implemented later. Use descriptive filenames with the `TASK-` prefix, for example `TASK-nested-items.md`.

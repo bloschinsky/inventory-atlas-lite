@@ -59,94 +59,20 @@ Open `http://SERVER_IP:3000`. Set `PORT` to change the port. Set `DATA_DIR` to p
 
 ## Install on Proxmox VE
 
-Open the shell of a Proxmox VE node, log in as `root`, and run:
+Run this in the shell of a Proxmox VE node as `root` to create a dedicated unprivileged Debian LXC
+with Inventory Atlas Lite in it:
 
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/bloschinsky/inventory-atlas-lite/main/scripts/proxmox-install.sh)"
 ```
 
-The script must run on the Proxmox VE host, not inside an existing container. It creates a new
-unprivileged Debian LXC, installs Node.js and Inventory Atlas Lite in it, starts the application as
-a systemd service, and prints the URL:
+The script prints the configuration for confirmation, installs the latest stable release after
+verifying its `SHA256SUMS`, and reports the URL of the running application. Defaults are 1 core,
+1024 MiB RAM, an 8 GiB disk, DHCP on `vmbr0`, and port `3000`.
 
-```text
-Inventory Atlas Lite is ready:
-http://192.168.1.145:3000
-```
-
-Prefer to read the script first:
-
-```bash
-curl -fsSLo proxmox-install.sh https://raw.githubusercontent.com/bloschinsky/inventory-atlas-lite/main/scripts/proxmox-install.sh
-less proxmox-install.sh
-bash proxmox-install.sh
-```
-
-### Container defaults
-
-| Setting | Default |
-| --- | --- |
-| OS | Debian 13 (falls back to Debian 12 when no template is available) |
-| Container type | Unprivileged LXC, no nesting, starts on boot |
-| Hostname | `inventory-atlas-lite` |
-| CPU / RAM / Swap | 1 core / 1024 MiB / 512 MiB |
-| Root disk | 8 GiB |
-| Network | Bridge `vmbr0`, IPv4 via DHCP |
-| Port | `3000` |
-
-The container ID defaults to the next free ID on the node. An existing ID is never reused or
-overwritten. Before creating anything, the script prints the configuration and asks for confirmation.
-
-### Overriding the defaults
-
-Set environment variables in front of the command; `scripts/proxmox-install.sh --help` lists them all.
-
-```bash
-CTID=140 CT_HOSTNAME=atlas STORAGE=local-lvm BRIDGE=vmbr1 DISK_GB=16 CORES=2 RAM_MB=2048 IPV4=192.168.1.50/24 GATEWAY=192.168.1.1 PORT=3000 bash -c "$(curl -fsSL https://raw.githubusercontent.com/bloschinsky/inventory-atlas-lite/main/scripts/proxmox-install.sh)"
-```
-
-By default the latest stable tagged release is installed. `APP_VERSION=v0.5.0` pins a release.
-`APP_BRANCH=main` is a development override that installs an untagged branch without checksum
-verification; do not use it for a production installation.
-
-### Where things live
-
-| Path | Contents |
-| --- | --- |
-| `/opt/inventory-atlas-lite/app` | Application code, replaced on every update |
-| `/var/lib/inventory-atlas-lite` | SQLite database and photos, never replaced |
-| `/var/lib/inventory-atlas-lite/backups` | Pre-update database backups (the last 5 are kept) |
-| `/etc/inventory-atlas-lite.env` | `NODE_ENV`, `PORT`, and `DATA_DIR` |
-
-The service runs as the dedicated non-login user `inventory-atlas`, never as root.
-
-### Administration
-
-Run these inside the container (`pct enter <CTID>` from the host, or `pct exec <CTID> -- <command>`):
-
-```bash
-systemctl status inventory-atlas-lite
-systemctl restart inventory-atlas-lite
-journalctl -u inventory-atlas-lite -f
-inventory-atlas-lite-update
-```
-
-`inventory-atlas-lite-update` installs the latest stable release, or a chosen one with
-`inventory-atlas-lite-update --version v0.5.0`. It writes a consistent SQLite backup first, keeps the
-data directory and the environment file untouched, and restores the previous code automatically if
-the new version fails its `/api/health` check.
-
-### Backups
-
-Proxmox backups (`vzdump`) protect the whole container. The application's **Data / Backup** page
-downloads a portable SQLite snapshot that can be restored into another Inventory Atlas Lite
-installation; the updater stores the same kind of snapshot before every update.
-
-### Security
-
-Inventory Atlas Lite has **no authentication**. Do not forward a router port to it and do not put it
-behind a public reverse proxy. Keep it on a trusted LAN, or reach it remotely through a VPN such as
-WireGuard or Tailscale.
+See [`docs/proxmox.md`](docs/proxmox.md) for the container settings you can override, the release and
+checksum details, where the code and the database are stored, and how to update, inspect, and back up
+the installation.
 
 ## Data and backups
 

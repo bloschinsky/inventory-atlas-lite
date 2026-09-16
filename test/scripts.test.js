@@ -51,13 +51,14 @@ test('shell validators reject unusable or injected values', { skip: !bashAvailab
 });
 
 test('every script documents itself without changing anything', { skip: !bashAvailable }, () => {
+  const treeState = () => bash('git status --porcelain --untracked-files=all scripts deploy').stdout;
+  const before = treeState();
   for (const script of ['proxmox-install.sh', 'install.sh', 'update.sh']) {
     const help = bash(`bash scripts/${script} --help`);
     assert.equal(help.status, 0, `${script} --help exited ${help.status}`);
     assert.match(help.stdout, /^Usage: /m, `${script} --help printed no usage`);
   }
-  const dirty = bash('git status --porcelain scripts deploy');
-  assert.equal(dirty.stdout.includes(' M '), false, 'running --help modified tracked files');
+  assert.equal(treeState(), before, 'running --help changed the working tree');
 });
 
 test('scripts refuse to run outside their expected context', { skip: !bashAvailable }, () => {

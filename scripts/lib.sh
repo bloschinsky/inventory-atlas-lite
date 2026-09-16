@@ -85,34 +85,40 @@ ial_verify_checksum() { # archive sumsfile
   ial_log "Release checksum verified."
 }
 
+ial_download() { # url destination
+  curl -fsSL --proto '=https' --tlsv1.2 --retry 3 --max-time 300 -o "$2" "$1"
+}
+
 # Downloads, verifies and extracts the source archive. Prints the extracted directory.
 # Usage: ial_fetch_source <tag|branch> <ref> <work-dir>
 ial_fetch_source() {
-  local kind=$1 ref=$2 work=$3 url archive sums base
+  local kind=$1 ref=$2 work=$3 base archive sums asset
   base="https://github.com/$IAL_REPO_OWNER/$IAL_REPO_NAME"
   archive="$work/source.tar.gz"
+  sums="$work/SHA256SUMS"
   if [ "$kind" = branch ]; then
-    url="$base/archive/refs/heads/$ref.tar.gz"
+    ial_warn "Installing development ref '$ref' without checksum verification."
+    ial_log "Downloading branch $ref"
+    ial_download "$base/archive/refs/heads/$ref.tar.gz" "$archive"       || ial_die "Could not download branch '$ref'."
   else
-    url="$base/archive/refs/tags/$ref.tar.gz"
-  fi
-  ial_log "Downloading $url"
-  curl -fsSL --proto '=https' --tlsv1.2 --retry 3 --max-time 300 -o "$archive" "$url" \
-    || ial_die "Could not download '$ref'. Check that the release exists and is public."
-  [ -s "$archive" ] || ial_die "The downloaded archive is empty."
-  if [ "$kind" = tag ]; then
-    sums="$work/SHA256SUMS"
-    if curl -fsSL --proto '=https' --tlsv1.2 --max-time 60 -o "$sums" "$base/releases/download/$ref/SHA256SUMS"; then
+    asset="$base/releases/download/$ref/$IAL_REPO_NAME-$ref.tar.gz"
+    if ial_log "Downloading release $ref" && ial_download "$asset" "$archive"; then
+      # A published release always ships its checksums, so verification is mandatory here.
+      ial_download "$base/releases/download/$ref/SHA256SUMS" "$sums"         || ial_die "Release $ref publishes an archive but no SHA256SUMS."
       ial_verify_checksum "$archive" "$sums"
     else
-      ial_warn "Release $ref publishes no SHA256SUMS; the download is protected by HTTPS only."
+      ial_warn "Release $ref has no archive asset; falling back to the GitHub source archive."
+      ial_download "$base/archive/refs/tags/$ref.tar.gz" "$archive"         || ial_die "Could not download '$ref'. Check that the release exists and is public."
+      if ial_download "$base/releases/download/$ref/SHA256SUMS" "$sums"; then
+        ial_verify_checksum "$archive" "$sums"
+      else
+        ial_warn "Release $ref publishes no SHA256SUMS; the download is protected by HTTPS only."
+      fi
     fi
-  else
-    ial_warn "Installing development ref '$ref' without checksum verification."
   fi
+  [ -s "$archive" ] || ial_die "The downloaded archive is empty."
   mkdir -p "$work/source"
-  tar -xzf "$archive" -C "$work/source" --strip-components=1 \
-    || ial_die "Could not extract the downloaded archive."
+  tar -xzf "$archive" -C "$work/source" --strip-components=1     || ial_die "Could not extract the downloaded archive."
   [ -f "$work/source/package.json" ] || ial_die "The downloaded archive does not look like Inventory Atlas Lite."
   printf '%s' "$work/source"
 }
