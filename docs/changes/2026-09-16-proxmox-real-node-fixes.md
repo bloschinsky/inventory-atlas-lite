@@ -57,11 +57,25 @@ A container was created and the application installed, then checked from another
   and the item was still there;
 - the backup endpoint returned a valid SQLite file containing the item, with `integrity_check` `ok`.
 
-The updater was also run against the `v0.5.2` installation and failed at `npm ci`, because the
+The updater was first run against the `v0.5.2` installation and failed at `npm ci`, because the
 `lib.sh` installed next to the application still came from that release and predates the `PATH` fix.
 It failed in the right place: the download and build happen in staging, so the service was never
-stopped, stayed healthy, and the data was untouched. An installation made with `v0.5.3` or later has
-the fixed `lib.sh` and can update normally.
+stopped, stayed healthy, and the data was untouched.
+
+After `v0.5.3` was published, the whole path was repeated from the README one-line command on a fresh
+container, and the updater was run there:
+
+- it wrote `inventory-20260916-135803.sqlite` to the backup directory before changing anything;
+- it stopped the service only for the code swap, restarted it, and waited for `/api/health`;
+- it reported the installed version and the backup path;
+- the seeded item survived, `/opt/inventory-atlas-lite/previous` holds the replaced code for
+  rollback, and the service shows zero restarts;
+- `--version 'v1.0.0; id'` is rejected as an invalid version, `--version v9.9.9` fails on the
+  download, and in both cases the running service was left alone.
+
+Two things are still unobserved on real hardware: an upgrade between two different releases, and the
+rollback that a failed health check triggers. The rollback logic itself is covered by the test that
+exercises `ial_install_code` and `ial_rollback_code`.
 
 ## Local checks
 
