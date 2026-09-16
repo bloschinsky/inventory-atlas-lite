@@ -17,7 +17,7 @@ Proxmox VE host
 Open the shell of a Proxmox VE node, log in as `root`, and run:
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/bloschinsky/inventory-atlas-lite/main/scripts/proxmox-install.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/bloschinsky/inventory-atlas-lite/master/scripts/proxmox-install.sh)"
 ```
 
 The script must run on the Proxmox VE host, not inside an existing container. It prints the
@@ -31,7 +31,7 @@ http://192.168.1.145:3000
 Prefer to read the script before running it:
 
 ```bash
-curl -fsSLo proxmox-install.sh https://raw.githubusercontent.com/bloschinsky/inventory-atlas-lite/main/scripts/proxmox-install.sh
+curl -fsSLo proxmox-install.sh https://raw.githubusercontent.com/bloschinsky/inventory-atlas-lite/master/scripts/proxmox-install.sh
 less proxmox-install.sh
 bash proxmox-install.sh
 ```
@@ -59,7 +59,7 @@ Set environment variables in front of the command. `scripts/proxmox-install.sh -
 ```bash
 CTID=140 CT_HOSTNAME=atlas STORAGE=local-lvm BRIDGE=vmbr1 DISK_GB=16 CORES=2 RAM_MB=2048 \
 IPV4=192.168.1.50/24 GATEWAY=192.168.1.1 PORT=3000 \
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/bloschinsky/inventory-atlas-lite/main/scripts/proxmox-install.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/bloschinsky/inventory-atlas-lite/master/scripts/proxmox-install.sh)"
 ```
 
 | Variable | Meaning |
@@ -94,13 +94,13 @@ checksum does not match or when the archive is present without its checksum file
 never shipped: dependencies are installed inside the container with `npm ci` from the committed
 lockfile, so `better-sqlite3` is always built for the target system.
 
-Pin a specific release with `APP_VERSION=v0.5.0`. Verify an archive by hand with:
+Pin a specific release with `APP_VERSION=v0.5.1`. Verify an archive by hand with:
 
 ```bash
 sha256sum --check SHA256SUMS
 ```
 
-`APP_BRANCH=main` is a documented development override that installs an untagged branch. It skips
+`APP_BRANCH=master` is a documented development override that installs an untagged branch. It skips
 checksum verification and prints a warning; do not use it for a production installation.
 
 ## Where things live
@@ -128,14 +128,14 @@ journalctl -u inventory-atlas-lite -f
 inventory-atlas-lite-update
 ```
 
-`GET /api/health` answers `{"status":"ok","database":"ok","version":"0.5.0"}` while the service is
+`GET /api/health` answers `{"status":"ok","database":"ok","version":"0.5.1"}` while the service is
 running and SQLite is usable. The installer and the updater poll it before reporting success.
 
 ## Updating
 
 ```bash
 inventory-atlas-lite-update                  # latest stable release
-inventory-atlas-lite-update --version v0.5.0 # a specific release
+inventory-atlas-lite-update --version v0.5.1 # a specific release
 ```
 
 The updater resolves and downloads the requested release first, so an unavailable or invalid version

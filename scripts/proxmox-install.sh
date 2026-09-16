@@ -70,7 +70,7 @@ if [ -f "$SCRIPT_DIR/lib.sh" ]; then
   # shellcheck source=scripts/lib.sh
   . "$SCRIPT_DIR/lib.sh"
 else
-  fetch_script "$RAW_BASE/${INSTALLER_REF:-main}/scripts/lib.sh" "$TMPDIR_RUN/lib.sh"
+  fetch_script "$RAW_BASE/${INSTALLER_REF:-master}/scripts/lib.sh" "$TMPDIR_RUN/lib.sh"
   # shellcheck source=scripts/lib.sh
   . "$TMPDIR_RUN/lib.sh"
 fi

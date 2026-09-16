@@ -63,7 +63,7 @@ Run this in the shell of a Proxmox VE node as `root` to create a dedicated unpri
 with Inventory Atlas Lite in it:
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/bloschinsky/inventory-atlas-lite/main/scripts/proxmox-install.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/bloschinsky/inventory-atlas-lite/master/scripts/proxmox-install.sh)"
 ```
 
 The script prints the configuration for confirmation, installs the latest stable release after

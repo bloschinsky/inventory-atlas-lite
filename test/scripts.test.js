@@ -12,6 +12,7 @@ const bash = (script, env = {}) => spawnSync('bash', ['-c', script], {
   cwd: process.cwd(), encoding: 'utf8', env: { ...process.env, ...env }
 });
 const sourced = script => bash(`set -u; . scripts/lib.sh\n${script}`);
+const lines = output => output.trim().split(/\r?\n/).filter(Boolean);
 // Values are passed as single-quoted shell literals so hostile samples are never expanded.
 const accepts = (validator, value) => sourced(`${validator} '${value}'`).status === 0;
 
@@ -112,6 +113,23 @@ test('a failed update restores the previous code and keeps the data', { skip: !b
   assert.match(result.stdout, /data=records/);
   assert.equal(result.stdout.includes('rollback-failed'), false);
   assert.match(result.stdout, /staging-left=app\s*$/m, 'the swap left directories behind');
+});
+
+test('documented raw URLs point at a branch that exists', { skip: !bashAvailable }, () => {
+  // The default branch here is master, so a copied-in raw URL for "main" silently 404s.
+  const sources = ['README.md', 'docs/proxmox.md', 'scripts/proxmox-install.sh'];
+  const refs = new Set();
+  for (const file of sources) {
+    const found = bash(`grep -oE 'raw.githubusercontent.com/[^/]+/[^/]+/[A-Za-z0-9._/-]+/scripts/' ${file}`);
+    for (const line of lines(found.stdout)) refs.add(line.split('/')[3]);
+  }
+  const fallback = bash("grep -oE 'INSTALLER_REF:-[A-Za-z0-9._/-]+' scripts/proxmox-install.sh");
+  for (const line of lines(fallback.stdout)) refs.add(line.split(':-')[1]);
+
+  assert.ok(refs.size > 0, 'no documented raw URLs were found');
+  for (const ref of refs) {
+    assert.equal(bash(`git rev-parse --verify --quiet "refs/heads/${ref}"`).status, 0, `no such branch: ${ref}`);
+  }
 });
 
 test('shell scripts pass shellcheck', { skip: !shellcheckAvailable }, () => {
