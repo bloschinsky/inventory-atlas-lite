@@ -124,6 +124,13 @@ ial_fetch_source() {
   printf '%s' "$work/source"
 }
 
+# Picks the newest Debian template for one architecture. The catalogue lists several
+# architectures under the same name, and a plain version sort would prefer arm64 over amd64.
+ial_resolve_template() { # debian major version, dpkg architecture
+  pveam available --section system 2>/dev/null \
+    | awk '{ print $2 }' | grep -E "^debian-$1-standard_.*_$2\.tar" | sort -V | tail -n 1
+}
+
 ial_app_version() { # source directory
   grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' "$1/package.json" | head -n 1 | sed 's/.*"\([^"]*\)"$/\1/'
 }

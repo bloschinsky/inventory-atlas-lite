@@ -187,20 +187,16 @@ fi
 
 # --- template ---------------------------------------------------------------
 
-resolve_template() { # debian major version
-  pveam available --section system 2>/dev/null \
-    | awk '{ print $2 }' | grep "^debian-$1-standard" | sort -V | tail -n 1
-}
-
+HOST_ARCH=$(dpkg --print-architecture)
 ial_log "Refreshing the template catalogue"
 pveam update >/dev/null 2>&1 || ial_warn "Could not refresh the template catalogue; using the cached list."
-TEMPLATE=$(resolve_template "$OS_VERSION")
+TEMPLATE=$(ial_resolve_template "$OS_VERSION" "$HOST_ARCH")
 if [ -z "$TEMPLATE" ] && [ "$OS_VERSION" = 13 ]; then
   ial_warn "No Debian 13 template is available on this node; falling back to Debian 12."
   OS_VERSION=12
-  TEMPLATE=$(resolve_template 12)
+  TEMPLATE=$(ial_resolve_template 12 "$HOST_ARCH")
 fi
-[ -n "$TEMPLATE" ] || ial_die "No Debian $OS_VERSION LXC template is available on this node."
+[ -n "$TEMPLATE" ] || ial_die "No Debian $OS_VERSION $HOST_ARCH LXC template is available on this node."
 
 if pveam list "$TEMPLATE_STORAGE" 2>/dev/null | grep -qF "$TEMPLATE"; then
   ial_log "Template $TEMPLATE is already present"

@@ -144,6 +144,30 @@ test('progress output never pollutes a captured value', { skip: !bashAvailable }
   assert.equal(captured.stdout, '[/opt/example]');
 });
 
+test('template selection respects the host architecture', { skip: !bashAvailable }, () => {
+  // The real catalogue lists amd64 and arm64 under the same name, and arm64 sorts last.
+  const withStub = body => sourced(`
+stub=$(mktemp -d)
+cat >"$stub/pveam" <<'STUB'
+#!/bin/sh
+cat <<'CATALOGUE'
+system          debian-12-standard_12.12-1_amd64.tar.zst
+system          debian-13-standard_13.1-2_amd64.tar.zst
+system          debian-13-standard_13.6-1_amd64.tar.zst
+system          debian-13-standard_13.6-1_arm64.tar.zst
+CATALOGUE
+STUB
+chmod +x "$stub/pveam"
+PATH="$stub:$PATH"
+${body}
+`);
+
+  assert.equal(withStub('ial_resolve_template 13 amd64').stdout.trim(), 'debian-13-standard_13.6-1_amd64.tar.zst');
+  assert.equal(withStub('ial_resolve_template 13 arm64').stdout.trim(), 'debian-13-standard_13.6-1_arm64.tar.zst');
+  assert.equal(withStub('ial_resolve_template 12 amd64').stdout.trim(), 'debian-12-standard_12.12-1_amd64.tar.zst');
+  assert.equal(withStub('ial_resolve_template 12 arm64').stdout.trim(), '', 'an unavailable architecture must resolve to nothing');
+});
+
 test('shell scripts pass shellcheck', { skip: !shellcheckAvailable }, () => {
   const result = bash('shellcheck --shell=bash --external-sources scripts/*.sh');
   assert.equal(result.status, 0, result.stdout || result.stderr);
