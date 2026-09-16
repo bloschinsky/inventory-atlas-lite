@@ -1,0 +1,29 @@
+[Unit]
+Description=Inventory Atlas Lite
+Documentation=https://github.com/bloschinsky/inventory-atlas-lite
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=inventory-atlas
+Group=inventory-atlas
+WorkingDirectory=/opt/inventory-atlas-lite/app
+EnvironmentFile=/etc/inventory-atlas-lite.env
+ExecStart=/usr/local/bin/node server/src/index.js --production
+Restart=on-failure
+RestartSec=5
+# SQLite needs a moment to checkpoint the WAL and close cleanly.
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ProtectControlGroups=true
+ProtectKernelTunables=true
+ReadWritePaths=/var/lib/inventory-atlas-lite
+
+[Install]
+WantedBy=multi-user.target

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import Database from 'better-sqlite3';
@@ -204,6 +204,25 @@ test('text field suggestions reuse existing values of the same field only', asyn
     // Suggestions exist only for existing text fields.
     assert.equal(await failedStatus('/api/fields/999999/suggestions'), 404);
     assert.equal(await failedStatus(`/api/fields/${year.id}/suggestions`), 400);
+  } finally {
+    if (server) await stopServer(server);
+    await rm(dataDir, { recursive: true, force: true });
+  }
+});
+
+test('the health endpoint reports the running version while SQLite is usable', async () => {
+  const dataDir = await mkdtemp(path.join(os.tmpdir(), 'inventory-test-'));
+  let server;
+  try {
+    server = await startServer(dataDir);
+    const response = await fetch(`${base}/api/health`);
+    assert.equal(response.status, 200);
+    const health = await response.json();
+    const expected = JSON.parse(await readFile('package.json', 'utf8')).version;
+    assert.deepEqual(health, { status: 'ok', database: 'ok', version: expected });
+
+    // Deployment scripts poll this endpoint, so it must not leak paths or other diagnostics.
+    assert.deepEqual(Object.keys(health).sort(), ['database', 'status', 'version']);
   } finally {
     if (server) await stopServer(server);
     await rm(dataDir, { recursive: true, force: true });

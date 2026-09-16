@@ -11,6 +11,7 @@ const app = express();
 const port = Number(process.env.PORT || 3000);
 const isProduction = process.env.NODE_ENV === 'production' || process.argv.includes('--production');
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const appVersion = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version;
 const allowedTypes = new Set(['text', 'number', 'date', 'boolean']);
 const imageTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 const upload = multer({
@@ -229,6 +230,16 @@ app.delete('/api/photos/:id', (req, res) => {
   const info = db.prepare('DELETE FROM item_photos WHERE id = ?').run(req.params.id);
   if (!info.changes) return res.status(404).json({ error: 'Photo not found.' });
   res.status(204).end();
+});
+
+app.get('/api/health', (_req, res) => {
+  // Deployment scripts poll this endpoint, so it stays cheap and free of diagnostic details.
+  try {
+    db.prepare('SELECT 1').get();
+    res.json({ status: 'ok', database: 'ok', version: appVersion });
+  } catch {
+    res.status(503).json({ status: 'error', database: 'error', version: appVersion });
+  }
 });
 
 app.get('/api/backup', async (_req, res, next) => {
