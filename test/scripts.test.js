@@ -132,6 +132,18 @@ test('documented raw URLs point at a branch that exists', { skip: !bashAvailable
   }
 });
 
+test('progress output never pollutes a captured value', { skip: !bashAvailable }, () => {
+  // ial_fetch_source logs while printing the extracted path, and the installer reads that path
+  // with $( ), so anything ial_log writes to stdout would end up inside the path.
+  const logged = sourced("ial_log 'downloading'; ial_warn 'careful'");
+  assert.equal(logged.stdout, '', 'progress output was written to stdout');
+  assert.match(logged.stderr, /downloading/);
+  assert.match(logged.stderr, /careful/);
+
+  const captured = sourced(`value=$(ial_log 'noise'; printf '%s' '/opt/example'); printf '[%s]' "$value"`);
+  assert.equal(captured.stdout, '[/opt/example]');
+});
+
 test('shell scripts pass shellcheck', { skip: !shellcheckAvailable }, () => {
   const result = bash('shellcheck --shell=bash --external-sources scripts/*.sh');
   assert.equal(result.status, 0, result.stdout || result.stderr);

@@ -94,7 +94,7 @@ checksum does not match or when the archive is present without its checksum file
 never shipped: dependencies are installed inside the container with `npm ci` from the committed
 lockfile, so `better-sqlite3` is always built for the target system.
 
-Pin a specific release with `APP_VERSION=v0.5.1`. Verify an archive by hand with:
+Pin a specific release with `APP_VERSION=v0.5.2`. Verify an archive by hand with:
 
 ```bash
 sha256sum --check SHA256SUMS
@@ -128,14 +128,14 @@ journalctl -u inventory-atlas-lite -f
 inventory-atlas-lite-update
 ```
 
-`GET /api/health` answers `{"status":"ok","database":"ok","version":"0.5.1"}` while the service is
+`GET /api/health` answers `{"status":"ok","database":"ok","version":"0.5.2"}` while the service is
 running and SQLite is usable. The installer and the updater poll it before reporting success.
 
 ## Updating
 
 ```bash
 inventory-atlas-lite-update                  # latest stable release
-inventory-atlas-lite-update --version v0.5.1 # a specific release
+inventory-atlas-lite-update --version v0.5.2 # a specific release
 ```
 
 The updater resolves and downloads the requested release first, so an unavailable or invalid version

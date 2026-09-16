@@ -18,7 +18,8 @@ IAL_UPDATE_COMMAND=/usr/local/sbin/inventory-atlas-lite-update
 IAL_NODE_MAJOR=22
 IAL_KEEP_BACKUPS=5
 
-ial_log() { printf '\033[0;32m==>\033[0m %s\n' "$*"; }
+# Progress goes to stderr because callers capture the stdout of several helpers below.
+ial_log() { printf '\033[0;32m==>\033[0m %s\n' "$*" >&2; }
 ial_warn() { printf '\033[0;33m[!]\033[0m %s\n' "$*" >&2; }
 ial_die() { printf '\033[0;31m[x]\033[0m %s\n' "$*" >&2; exit 1; }
 
