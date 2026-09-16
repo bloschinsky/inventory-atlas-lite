@@ -144,6 +144,16 @@ test('progress output never pollutes a captured value', { skip: !bashAvailable }
   assert.equal(captured.stdout, '[/opt/example]');
 });
 
+test('the Node.js install location is always on PATH', { skip: !bashAvailable }, () => {
+  // pct exec hands the container scripts a PATH without /usr/local/bin, where Node.js lives.
+  const minimal = bash('PATH=/sbin:/bin:/usr/sbin:/usr/bin; . scripts/lib.sh; printf "%s" "$PATH"');
+  assert.match(minimal.stdout, /(^|:)\/usr\/local\/bin(:|$)/, '/usr/local/bin was not added to PATH');
+
+  // An existing entry must not be duplicated.
+  const already = bash('PATH=/usr/local/bin:/usr/bin; . scripts/lib.sh; printf "%s" "$PATH"');
+  assert.equal(already.stdout, '/usr/local/bin:/usr/bin');
+});
+
 test('template selection respects the host architecture', { skip: !bashAvailable }, () => {
   // The real catalogue lists amd64 and arm64 under the same name, and arm64 sorts last.
   const withStub = body => sourced(`

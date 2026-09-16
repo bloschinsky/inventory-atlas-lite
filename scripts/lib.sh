@@ -18,6 +18,14 @@ IAL_UPDATE_COMMAND=/usr/local/sbin/inventory-atlas-lite-update
 IAL_NODE_MAJOR=22
 IAL_KEEP_BACKUPS=5
 
+# pct exec provides PATH=/sbin:/bin:/usr/sbin:/usr/bin, without the /usr/local/bin that Node.js is
+# installed into. npm is then unreachable by name, and its "#!/usr/bin/env node" shebang fails too.
+case ":$PATH:" in
+  *:/usr/local/bin:*) ;;
+  *) PATH="/usr/local/bin:$PATH" ;;
+esac
+export PATH
+
 # Progress goes to stderr because callers capture the stdout of several helpers below.
 ial_log() { printf '\033[0;32m==>\033[0m %s\n' "$*" >&2; }
 ial_warn() { printf '\033[0;33m[!]\033[0m %s\n' "$*" >&2; }
