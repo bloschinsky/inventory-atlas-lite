@@ -40,6 +40,7 @@ The data flow is intentionally simple: a Vue page calls the helper in `client/sr
 - `test/e2e/` — Playwright browser tests, their fixtures, shared helpers, and the run launcher.
 - `playwright.config.js` — Playwright projects, isolated test ports, and the API and Vite processes started for the suite.
 - `docs/README.md` — documentation layout and conventions.
+- `docs/HOW-TO.md` — quick user guide for the current application.
 - `docs/issues/` — active tasks, feature specifications, and future work.
 - `docs/features/` — permanent documents for implemented features, with `README.md` as their index.
 - `docs/changes/` — dated records of completed repository changes.
@@ -76,6 +77,16 @@ The data flow is intentionally simple: a Vue page calls the helper in `client/sr
 - Include the completion date, resulting project version, a concise summary of the implementation, and the verification performed, including the Playwright result.
 - Keep planned work and future specifications in `docs/issues/`; keep completed implementation records in `docs/changes/`.
 
+## User guide maintenance
+
+`docs/HOW-TO.md` is the canonical quick user guide for the current application. Keep it true.
+
+- Every new user-facing feature must update the guide before the task is considered complete.
+- Any change to navigation, labels, workflows, validation, limits, backup behavior, security assumptions, or visible limitations must update the affected section in the same change. Removed or renamed features must be removed or renamed there too.
+- Verify every instruction against actual working behavior. Never document planned functionality as implemented.
+- This is an additional step, not a replacement for the permanent feature document in `docs/features/`.
+- Pure internal refactoring with no observable behavior change needs no guide edit. A task whose user-facing documentation is knowingly stale is not complete.
+
 ## Task file lifecycle
 
 Files in `docs/issues/` (`TASK-*.md`, `CODEX-TASK-*.md`) are temporary working specifications, not completion records. Keep a task file while any of its requirements is unimplemented, unverified, blocked, or uncertain.
@@ -86,8 +97,9 @@ Before treating a feature task as finished:
 2. run the relevant tests and verification;
 3. create or update its permanent feature document in `docs/features/`, describing the resulting implementation rather than the plan;
 4. add or update its entry in `docs/features/README.md`, the index of implemented features;
-5. delete the completed task file with normal tracked deletion, never by rewriting Git history;
-6. include the feature document, the index entry, and the task-file deletion in the same commit as the feature whenever practical.
+5. update `docs/HOW-TO.md` when the change is visible to users or operators;
+6. delete the completed task file with normal tracked deletion, never by rewriting Git history;
+7. include the documentation updates and the task-file deletion in the same commit as the feature whenever practical.
 
 Safety rules:
 

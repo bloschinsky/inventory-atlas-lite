@@ -9,6 +9,7 @@ The `docs/` directory keeps project planning and implementation history close to
 Markdown files directly in `docs/` are user-facing guides that are too long for the README. The README
 keeps a short summary and links to them.
 
+- [`HOW-TO.md`](HOW-TO.md) — the canonical quick user guide: what the application does and how to use it.
 - [`proxmox.md`](proxmox.md) — installing and maintaining Inventory Atlas Lite on Proxmox VE.
 
 ### `issues/`
