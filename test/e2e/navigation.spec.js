@@ -2,6 +2,8 @@ import { expect, test } from '@playwright/test';
 
 test('the primary pages are reachable from the navigation bar', async ({ page }) => {
   await page.goto('/');
+  await expect(page).toHaveTitle('Inventory Atlas Lite');
+  await expect(page.getByRole('link', { name: 'Inventory Atlas Lite' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Items', level: 1 })).toBeVisible();
 
   await page.getByRole('link', { name: 'Categories & Fields' }).click();

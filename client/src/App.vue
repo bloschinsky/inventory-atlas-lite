@@ -5,7 +5,7 @@
         class="navbar-brand"
         to="/"
       >
-        Personal Inventory
+        Inventory Atlas Lite
       </RouterLink>
       <div
         id="nav"
