@@ -13,9 +13,17 @@ keeps a short summary and links to them.
 
 ### `issues/`
 
-Contains tasks, feature specifications, and future plans that may be implemented later. Use descriptive filenames with the `TASK-` prefix, for example `TASK-nested-items.md`.
+Contains active tasks, feature specifications, and future plans that may be implemented later. Use descriptive filenames with the `TASK-` prefix, for example `TASK-nested-items.md`.
 
 These documents define desired behavior and acceptance criteria. Treat them as planning material until the corresponding work is implemented and verified.
+
+A task file is temporary. Once its work is implemented and verified, its result is written to `features/`, linked from `features/README.md`, and the task file is deleted. Anything still open stays here.
+
+### `features/`
+
+Contains one permanent document per implemented feature, describing what the application actually does today: user-visible behavior, a short implementation overview, how it was verified, and its limitations.
+
+[`features/README.md`](features/README.md) is the index. Every feature document must be listed there.
 
 ### `changes/`
 

@@ -40,7 +40,8 @@ The data flow is intentionally simple: a Vue page calls the helper in `client/sr
 - `test/e2e/` — Playwright browser tests, their fixtures, shared helpers, and the run launcher.
 - `playwright.config.js` — Playwright projects, isolated test ports, and the API and Vite processes started for the suite.
 - `docs/README.md` — documentation layout and conventions.
-- `docs/issues/` — planned tasks, feature specifications, and future work.
+- `docs/issues/` — active tasks, feature specifications, and future work.
+- `docs/features/` — permanent documents for implemented features, with `README.md` as their index.
 - `docs/changes/` — dated records of completed repository changes.
 - `data/` — local runtime data; SQLite files and backups are ignored by Git.
 - `dist/` — output from `npm run build`; generated automatically and ignored by Git.
@@ -74,6 +75,28 @@ The data flow is intentionally simple: a Vue page calls the helper in `client/sr
 - Name records `YYYY-MM-DD-short-description.md` and write them in English.
 - Include the completion date, resulting project version, a concise summary of the implementation, and the verification performed, including the Playwright result.
 - Keep planned work and future specifications in `docs/issues/`; keep completed implementation records in `docs/changes/`.
+
+## Task file lifecycle
+
+Files in `docs/issues/` (`TASK-*.md`, `CODEX-TASK-*.md`) are temporary working specifications, not completion records. Keep a task file while any of its requirements is unimplemented, unverified, blocked, or uncertain.
+
+Before treating a feature task as finished:
+
+1. implement the requested behavior;
+2. run the relevant tests and verification;
+3. create or update its permanent feature document in `docs/features/`, describing the resulting implementation rather than the plan;
+4. add or update its entry in `docs/features/README.md`, the index of implemented features;
+5. delete the completed task file with normal tracked deletion, never by rewriting Git history;
+6. include the feature document, the index entry, and the task-file deletion in the same commit as the feature whenever practical.
+
+Safety rules:
+
+- Never delete an incomplete, partially implemented, failed, blocked, or uncertain task file; report what is missing instead.
+- Never treat the task text as evidence that something is implemented; verify it against the code and the tests.
+- When a change modifies an already documented feature, update that feature document instead of adding a second one.
+- A small fix needs a new feature document only when it introduces behavior that no existing document covers.
+- These steps are in addition to the `docs/changes/` record, not a replacement for it.
+- If committing is not authorized for a given task, still prepare the complete working tree and report the files that are ready to commit. The Git rules below remain authoritative.
 
 ## Versioning
 
