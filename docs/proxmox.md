@@ -94,7 +94,7 @@ checksum does not match or when the archive is present without its checksum file
 never shipped: dependencies are installed inside the container with `npm ci` from the committed
 lockfile, so `better-sqlite3` is always built for the target system.
 
-Pin a specific release with `APP_VERSION=v0.5.3`. Verify an archive by hand with:
+Pin a specific release with `APP_VERSION=v0.5.6`. Verify an archive by hand with:
 
 ```bash
 sha256sum --check SHA256SUMS
@@ -119,7 +119,7 @@ the environment file.
 
 ## Administration
 
-Run these inside the container, either after `pct enter <CTID>` or as `pct exec <CTID> -- <command>`:
+Open a shell in the container with `pct enter <CTID>` and run:
 
 ```bash
 systemctl status inventory-atlas-lite
@@ -128,14 +128,25 @@ journalctl -u inventory-atlas-lite -f
 inventory-atlas-lite-update
 ```
 
-`GET /api/health` answers `{"status":"ok","database":"ok","version":"0.5.3"}` while the service is
+To run them from the Proxmox host instead, give the updater its full path. `pct exec` uses
+`PATH=/sbin:/bin:/usr/sbin:/usr/bin`, which does not include the `/usr/local/sbin` the updater is
+installed into, so the bare name fails with "Failed to exec". The same applies to a command passed as
+an argument to `ssh`, because that is not a login shell either.
+
+```bash
+pct exec <CTID> -- systemctl status inventory-atlas-lite
+pct exec <CTID> -- journalctl -u inventory-atlas-lite -n 50
+pct exec <CTID> -- /usr/local/sbin/inventory-atlas-lite-update
+```
+
+`GET /api/health` answers `{"status":"ok","database":"ok","version":"0.5.6"}` while the service is
 running and SQLite is usable. The installer and the updater poll it before reporting success.
 
 ## Updating
 
 ```bash
 inventory-atlas-lite-update                  # latest stable release
-inventory-atlas-lite-update --version v0.5.3 # a specific release
+inventory-atlas-lite-update --version v0.5.6 # a specific release
 ```
 
 The updater resolves and downloads the requested release first, so an unavailable or invalid version
