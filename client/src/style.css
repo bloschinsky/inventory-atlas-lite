@@ -21,6 +21,12 @@ body.app-menu-open { overflow: hidden; }
 .app-menu-button { flex: 0 0 auto; width: 44px; height: 44px; }
 .app-offcanvas { max-width: 82vw; }
 
+/* The two-button theme toggle is wider than the folded 4rem rail, so it only shows once the
+   rail expands on hover or keyboard focus, exactly when Tabler reveals the nav labels.
+   Bootstrap's .d-flex carries !important, so the centering is set here instead. */
+.app-sidebar-theme { display: flex; justify-content: center; }
+.navbar-folded-hover:not(:hover):not(:has(:focus-visible)) .app-sidebar-theme { display: none; }
+
 /* Shared surfaces */
 .form-card { max-width: var(--app-form-width); }
 .meta-text { color: var(--tblr-secondary); font-size: .875rem; }

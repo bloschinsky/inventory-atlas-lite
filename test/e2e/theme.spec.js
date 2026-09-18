@@ -17,11 +17,14 @@ test.describe('a dark operating system', () => {
     await page.goto('/');
     expect(await themeOf(page)).toBe('dark');
 
+    // The toggle only shows once the folded desktop rail expands on hover.
+    await page.locator('aside.navbar-vertical').hover();
     await page.getByRole('button', { name: 'Light mode' }).click();
     expect(await themeOf(page)).toBe('light');
 
     await page.reload();
     expect(await themeOf(page)).toBe('light');
+    await page.locator('aside.navbar-vertical').hover();
     await expect(page.getByRole('button', { name: 'Light mode' })).toHaveAttribute('aria-pressed', 'true');
   });
 });
@@ -30,6 +33,8 @@ test('a light operating system can be switched to dark for every page', async ({
   await page.goto('/');
   expect(await themeOf(page)).toBe('light');
 
+  // The toggle only shows once the folded desktop rail expands on hover.
+  await page.locator('aside.navbar-vertical').hover();
   await page.getByRole('button', { name: 'Dark mode' }).click();
   expect(await themeOf(page)).toBe('dark');
 

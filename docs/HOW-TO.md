@@ -26,8 +26,9 @@ inventory, so keep it on a trusted LAN or behind a VPN.
   it slides open over the page with the full labels. On a phone or a narrow tablet the same list
   opens from the **☰** button in the top bar.
 - The application starts in the light or dark colour scheme your operating system uses. The sun and
-  moon buttons — at the bottom of the sidebar on a wide screen, in the top bar on a narrow one —
-  switch it, and your choice is remembered in the browser for the next visit.
+  moon buttons switch it and your choice is remembered in the browser for the next visit; on a wide
+  screen they appear at the bottom of the sidebar once you expand it, on a narrow screen they are
+  always in the top bar.
 - Reach the application over your LAN or a VPN such as WireGuard or Tailscale. Do not forward a
   router port to it.
 - A fresh installation is empty: no categories and no items. The items page shows *No items yet*
@@ -161,8 +162,9 @@ already contains; the server rejects such a move with an error message.
 
 ### Switch between light and dark mode
 
-1. Press the sun button for light mode or the moon button for dark mode. They sit at the bottom of
-   the desktop sidebar and in the top bar on phones and narrow tablets.
+1. Press the sun button for light mode or the moon button for dark mode. On phones and narrow
+   tablets they are always in the top bar; on a wide screen expand the sidebar first (hover it or
+   move keyboard focus into it) to reach them at its bottom.
 2. The choice applies immediately, on every page, and is stored in this browser only. It changes
    nothing on the server, so each browser and device can use a different mode.
 3. Until you press one of them, the application follows your operating system's colour scheme.

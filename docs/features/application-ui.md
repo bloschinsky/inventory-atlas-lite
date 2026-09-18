@@ -38,8 +38,10 @@ presentation layer over the existing API, and no CDN or other runtime internet d
 
 ### Light and dark mode
 
-- Two buttons, **Light mode** and **Dark mode**, sit in the sidebar footer on desktops and in the top
-  bar on narrow screens. The active one is pressed (`aria-pressed`).
+- Two buttons, **Light mode** and **Dark mode**, sit in the top bar on narrow screens, always
+  visible. On desktops they sit in the sidebar footer, but only appear once the folded rail is
+  expanded by hover or keyboard focus — two buttons do not fit the folded 4rem rail. The active one
+  is pressed (`aria-pressed`).
 - On a first visit the application follows the operating system's `prefers-color-scheme`.
 - An explicit choice is stored in `localStorage` under `inventory-atlas-theme` and wins over the
   system preference on every later visit. It is client-side state only: no API call, no schema

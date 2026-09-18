@@ -22,7 +22,9 @@ import ThemeToggle from './ThemeToggle.vue';
         <nav aria-label="Main">
           <AppNavigation />
         </nav>
-        <div class="navbar-footer d-flex justify-content-center">
+        <!-- Two buttons don't fit the 4rem folded rail, so the toggle only shows once the
+             rail expands on hover or keyboard focus, same as the nav labels above it. -->
+        <div class="navbar-footer app-sidebar-theme">
           <ThemeToggle />
         </div>
       </div>
