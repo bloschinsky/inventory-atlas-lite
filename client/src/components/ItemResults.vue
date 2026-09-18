@@ -17,7 +17,10 @@ const editRoute = item => `/items/${item.id}/edit`;
             <th scope="col">
               Photo
             </th>
-            <th scope="col">
+            <th
+              scope="col"
+              class="name-cell"
+            >
               Name
             </th>
             <th scope="col">
@@ -26,8 +29,17 @@ const editRoute = item => `/items/${item.id}/edit`;
             <th scope="col">
               Condition
             </th>
-            <th scope="col">
+            <th
+              scope="col"
+              class="d-none d-xl-table-cell"
+            >
               Location
+            </th>
+            <th
+              scope="col"
+              class="d-none d-xl-table-cell"
+            >
+              Stored inside
             </th>
             <th
               scope="col"
@@ -48,21 +60,44 @@ const editRoute = item => `/items/${item.id}/edit`;
                 :name="item.name"
               />
             </td>
-            <td>
+            <td class="name-cell">
               <RouterLink
                 :to="detailsRoute(item)"
                 class="fw-semibold"
               >
                 {{ item.name }}
               </RouterLink>
+              <span
+                v-if="item.location || item.parent_id"
+                class="d-xl-none d-block meta-text"
+              >
+                <template v-if="item.location">{{ item.location }}</template>
+                <template v-if="item.location && item.parent_id"> · </template>
+                <template v-if="item.parent_id">
+                  Stored inside
+                  <RouterLink :to="`/items/${item.parent_id}`">{{ item.parent_name }}</RouterLink>
+                </template>
+              </span>
             </td>
             <td>{{ item.category_name }}</td>
             <td>{{ item.condition || '—' }}</td>
             <td
-              class="truncate-cell"
+              class="truncate-cell d-none d-xl-table-cell"
               :title="item.location || undefined"
             >
               {{ item.location || '—' }}
+            </td>
+            <td class="truncate-cell d-none d-xl-table-cell">
+              <RouterLink
+                v-if="item.parent_id"
+                :to="`/items/${item.parent_id}`"
+                :title="item.parent_name"
+              >
+                {{ item.parent_name }}
+              </RouterLink>
+              <template v-else>
+                —
+              </template>
             </td>
             <td class="text-end text-nowrap">
               <RouterLink
@@ -108,6 +143,15 @@ const editRoute = item => `/items/${item.id}/edit`;
             </RouterLink>
             <p class="meta-text mb-0">
               {{ item.category_name }}
+            </p>
+            <p
+              v-if="item.parent_id"
+              class="meta-text mb-0"
+            >
+              Stored inside
+              <RouterLink :to="`/items/${item.parent_id}`">
+                {{ item.parent_name }}
+              </RouterLink>
             </p>
             <p
               v-if="item.condition || item.location"

@@ -74,7 +74,8 @@ body.app-menu-open {
 
 .table td, .table th { vertical-align: middle; }
 .table > thead th { color: var(--app-muted); font-size: .8125rem; font-weight: 600; text-transform: uppercase; letter-spacing: .02em; }
-.truncate-cell { max-width: 16rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.name-cell { min-width: 13rem; }
+.truncate-cell { max-width: 13rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Item thumbnails. The fixed frame also keeps a photo that fails to load from stretching a row. */
 .item-thumb { display: grid; place-items: center; width: 48px; height: 48px; flex: 0 0 48px; overflow: hidden; border-radius: .5rem; background: var(--app-hover); border: 1px solid var(--app-border); }

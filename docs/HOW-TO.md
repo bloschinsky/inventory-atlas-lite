@@ -124,9 +124,10 @@ Changing the category while filling in the form loads that category's fields.
    only — not custom field values, condition, or location.
 3. Narrow the list with **Category** (**All categories** by default).
 4. **Sort by** Name, Category, Created, or Updated, with **Direction** Ascending or Descending.
-5. On a wide screen the results are a table with photo, name, category, condition, location, and
-   **View** / **Edit** buttons. On a phone each item is a card with the same information and the same
-   two buttons.
+5. On a wide screen the results are a table with photo, name, category, condition, location,
+   **Stored inside**, and **View** / **Edit** buttons; the container name links to its own page. On a
+   narrower window the location and the container move under the item name, and on a phone each item
+   is a card with the same information and the same two buttons.
 6. The list shows 12 items per page; use **Previous** and **Next** below the results. The total count
    is shown under the **Items** heading.
 

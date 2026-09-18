@@ -135,8 +135,10 @@ app.get('/api/items', (req, res) => {
   const items = db.prepare(`
     SELECT i.id, i.uuid, i.name, i.condition, i.location, i.created_at, i.updated_at,
       c.id AS category_id, c.name AS category_name,
+      parent.id AS parent_id, parent.name AS parent_name,
       (SELECT id FROM item_photos p WHERE p.item_id = i.id ORDER BY p.id LIMIT 1) AS thumbnail_id
-    FROM items i JOIN categories c ON c.id = i.category_id ${clause}
+    FROM items i JOIN categories c ON c.id = i.category_id
+    LEFT JOIN items parent ON parent.id = i.parent_item_id ${clause}
     ORDER BY ${sort} ${direction}, i.id ASC LIMIT @limit OFFSET @offset
   `).all({ ...params, limit: pageSize, offset: (page - 1) * pageSize });
   res.json({ items, pagination: { page, pageSize, total, pages: Math.max(1, Math.ceil(total / pageSize)) } });

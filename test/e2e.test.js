@@ -107,6 +107,10 @@ test('item nesting keeps a valid hierarchy and survives restart and backup', asy
     const nested = await request(`/api/items/${lens.id}`);
     assert.equal(nested.parent_item_id, boxA.id);
     assert.equal(nested.parent.name, 'Box A');
+    // The items list carries the direct parent so it can be shown as a column.
+    const listed = await request(`/api/items?search=Helios`);
+    assert.equal(listed.items[0].parent_id, boxA.id);
+    assert.equal(listed.items[0].parent_name, 'Box A');
     const containerA = await request(`/api/items/${boxA.id}`);
     assert.deepEqual(containerA.children.map(child => child.name), ['Helios 44-2']);
     assert.equal(containerA.children[0].category_name, 'Storage');

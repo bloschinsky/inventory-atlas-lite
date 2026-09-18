@@ -13,6 +13,9 @@ separate container, room, or shelf entity.
 - The selector never offers the edited item itself or anything already stored inside it.
 - **Item details** shows `Stored inside` with a link to the parent, and a **Contents** section
   listing the direct children with their thumbnails and links.
+- The **Items** list shows the direct container in a `Stored inside` column that links to it, and
+  under the item name on narrower screens and on phone cards. Only the direct parent is shown; the
+  list is not a tree.
 - Nesting has no depth limit, and an item has at most one direct parent.
 - The plain-text `Location` field is independent of nesting: `Location` describes where the physical
   object is, `Stored inside` describes which other record holds it.
@@ -29,6 +32,8 @@ separate container, room, or shelf entity.
   `resolveParentId` in `server/src/index.js` rejects an unknown parent, self-parenting, and any move
   into a descendant; descendants are collected with a recursive CTE, so indirect cycles such as
   `A → B → C → A` are refused with HTTP `400`.
+- `GET /api/items` joins the parent row and returns `parent_id` and `parent_name` for each listed
+  item, so the list needs no extra request per row.
 - `GET /api/items/:id` returns `parent_item_id`, a `parent` summary (`id`, `uuid`, `name`), and
   `children` summaries (`id`, `uuid`, `name`, category name, condition, thumbnail ID). The full
   descendant tree is never expanded in a response.
@@ -36,8 +41,9 @@ separate container, room, or shelf entity.
   with the excluded item and its descendants filtered out.
 - `DELETE /api/items/:id` answers HTTP `409` while the item has children. Contained items are never
   deleted automatically and never silently moved to the root.
-- UI: `client/src/pages/ItemForm.vue` (selector) and `client/src/pages/ItemDetails.vue` (parent link
-  and Contents section). The items list is unchanged.
+- UI: `client/src/pages/ItemForm.vue` (selector), `client/src/pages/ItemDetails.vue` (parent link
+  and Contents section), and `client/src/components/ItemResults.vue` (the list column and the card
+  line).
 
 ## Verification
 
@@ -45,10 +51,11 @@ separate container, room, or shelf entity.
   direct/indirect cycle rejections, the `409` on a non-empty container, deletion after the contents
   are moved, and hierarchy survival across a restart and in a downloaded backup.
 - `test/e2e/nesting.spec.js` covers the browser workflow: place an item inside another, follow the
-  parent link, and see it under **Contents**.
+  parent link, see it under **Contents**, and reach the container from the items list column.
 
 ## Notes and limitations
 
 - Cycle protection is enforced on the server; the client filtering is only a convenience.
 - There is no drag-and-drop tree, no bulk move, and no recursively expanded tree on the items list.
+- The items list cannot be filtered or sorted by container; it only displays the direct parent.
 - The SQLite backup contains the hierarchy automatically because it is a plain column on `items`.

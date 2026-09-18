@@ -31,12 +31,14 @@ existing API.
 - One toolbar card groups the labelled **Search**, **Category**, **Sort by**, and **Direction**
   controls. Search keeps its 250 ms debounce, and changing a filter resets to the first page.
 - From `lg` upwards the results are a compact table with the Photo, Name, Category, Condition,
-  Location, and Actions columns. A long location is truncated with its full value in the `title`
-  attribute. Each row carries **View** and **Edit** links whose accessible names include the item
-  name.
+  Location, **Stored inside**, and Actions columns. Location and Stored inside become their own
+  columns from `xl` (`1200px`); between `lg` and `xl` the same two values sit under the item name so
+  the table stays readable. A long value is truncated with its full text in the `title` attribute,
+  and the container is a link to its own page. Each row carries **View** and **Edit** links whose
+  accessible names include the item name.
 - Below `lg` each item is a card with a thumbnail, the name as the primary line, the category, the
-  condition and location when present, and full-width **View** and **Edit** buttons of at least
-  `44px`.
+  container when the item is stored inside another one, the condition and location when present, and
+  full-width **View** and **Edit** buttons of at least `44px`.
 - Pagination keeps Previous/Next with disabled states and the `Page x of y` indicator.
 - An empty inventory shows *No items yet* with an **Add your first item** action; a search or filter
   with no result shows *No matching items* instead. Loading shows a spinner card, so the layout does

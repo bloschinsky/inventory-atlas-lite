@@ -27,4 +27,12 @@ test('stores an item inside another one and links both directions', async ({ pag
 
   await page.getByRole('link', { name: cableName }).click();
   await expect(page.getByRole('heading', { name: cableName })).toBeVisible();
+
+  // The items list names the container on the contained item's row and links to it.
+  await page.getByRole('link', { name: 'Items', exact: true }).click();
+  await page.getByPlaceholder('Search name or description…').fill(cableName);
+  const row = page.getByRole('row').filter({ hasText: cableName });
+  await expect(row.getByRole('link', { name: boxName, exact: true })).toBeVisible();
+  await row.getByRole('link', { name: boxName, exact: true }).click();
+  await expect(page.getByRole('heading', { name: boxName })).toBeVisible();
 });
