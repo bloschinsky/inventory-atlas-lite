@@ -10,7 +10,7 @@ import PageHeader from '../components/PageHeader.vue';
     />
     <section class="card mb-3">
       <div class="card-header">
-        <h2 class="section-title">
+        <h2 class="card-title">
           SQLite backup
         </h2>
       </div>
@@ -24,7 +24,7 @@ import PageHeader from '../components/PageHeader.vue';
     </section>
     <section class="card">
       <div class="card-header">
-        <h2 class="section-title">
+        <h2 class="card-title">
           Where the data lives
         </h2>
       </div>

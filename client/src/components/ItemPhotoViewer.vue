@@ -27,7 +27,7 @@ const move = step => { index.value = (index.value + step + props.photos.length) 
       v-if="!current"
       class="photo-frame"
     >
-      <p class="photo-empty mb-0">
+      <p class="text-secondary text-center m-0 p-4">
         No photos for this item yet.
       </p>
     </div>
@@ -42,7 +42,7 @@ const move = step => { index.value = (index.value + step + props.photos.length) 
         <template v-if="photos.length > 1">
           <button
             type="button"
-            class="btn btn-sm btn-outline-secondary"
+            class="btn btn-sm"
             aria-label="Previous photo"
             @click="move(-1)"
           >
@@ -50,7 +50,7 @@ const move = step => { index.value = (index.value + step + props.photos.length) 
           </button>
           <button
             type="button"
-            class="btn btn-sm btn-outline-secondary"
+            class="btn btn-sm"
             aria-label="Next photo"
             @click="move(1)"
           >
@@ -61,7 +61,7 @@ const move = step => { index.value = (index.value + step + props.photos.length) 
         <span class="meta-text text-truncate flex-grow-1">{{ current.filename }}</span>
         <button
           type="button"
-          class="btn btn-sm btn-outline-danger ms-auto"
+          class="btn btn-sm btn-ghost-danger ms-auto"
           aria-label="Delete photo"
           @click="$emit('delete', current.id)"
         >

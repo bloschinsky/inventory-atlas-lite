@@ -21,8 +21,13 @@ inventory, so keep it on a trusted LAN or behind a VPN.
 - Open the address of your installation in a browser, for example `http://192.168.1.145:3000`. A
   Proxmox installation prints this URL at the end; a manual installation uses the server address and
   `PORT` (default `3000`).
-- Use a current desktop or mobile browser. On a wide screen the three pages sit in a sidebar on the
-  left; on a phone or a narrow tablet the same list opens from the **☰** button in the top bar.
+- Use a current desktop or mobile browser. On a wide screen the three pages sit in a narrow icon
+  sidebar on the left: move the mouse over it — or move the keyboard focus into it with `Tab` — and
+  it slides open over the page with the full labels. On a phone or a narrow tablet the same list
+  opens from the **☰** button in the top bar.
+- The application starts in the light or dark colour scheme your operating system uses. The sun and
+  moon buttons — at the bottom of the sidebar on a wide screen, in the top bar on a narrow one —
+  switch it, and your choice is remembered in the browser for the next visit.
 - Reach the application over your LAN or a VPN such as WireGuard or Tailscale. Do not forward a
   router port to it.
 - A fresh installation is empty: no categories and no items. The items page shows *No items yet*
@@ -153,6 +158,14 @@ already contains; the server rejects such a move with an error message.
 4. Choose one with the mouse, or with `ArrowDown`/`ArrowUp` and `Enter`. `Escape` closes the list and
    `Tab` leaves the field without choosing anything.
 5. You can always type a completely new value. Once saved, it is suggested the next time.
+
+### Switch between light and dark mode
+
+1. Press the sun button for light mode or the moon button for dark mode. They sit at the bottom of
+   the desktop sidebar and in the top bar on phones and narrow tablets.
+2. The choice applies immediately, on every page, and is stored in this browser only. It changes
+   nothing on the server, so each browser and device can use a different mode.
+3. Until you press one of them, the application follows your operating system's colour scheme.
 
 ### Download a backup
 

@@ -15,7 +15,9 @@ This is an MVP without authentication, intended for use on a trusted local netwo
 ## Stack and architecture
 
 - Node.js 20.19+ with a single root npm project using ES modules.
-- Client: Vue 3 Composition API (`<script setup>`), Vue Router, Vite, and Bootstrap 5.
+- Client: Vue 3 Composition API (`<script setup>`), Vue Router, Vite, and the Tabler design system
+  (`@tabler/core`, which already contains Bootstrap 5) with `@tabler/icons-vue`. Bootstrap must never
+  be installed or imported a second time.
 - Server: Express 5 and `multer`; the REST API is available under `/api`.
 - Data: a single SQLite database accessed through `better-sqlite3`. It stores both records and the original photo bytes.
 - In development, Vite runs on `:5173` and proxies `/api` to Express on `PORT` (default `3000`).
@@ -25,15 +27,24 @@ The data flow is intentionally simple: a Vue page calls the helper in `client/sr
 
 ## Repository structure
 
-- `client/src/main.js` — starts Vue, configures the router, and lists application routes.
-- `client/src/App.vue` — shared application shell and primary navigation.
+- `index.html` — page shell; its inline script applies the stored or system color mode before paint.
+- `client/src/main.js` — starts Vue, imports Tabler's stylesheet, configures the router, and lists
+  application routes.
+- `client/src/App.vue` — Tabler page shell that composes the sidebar, the mobile navigation, and the
+  page content area.
+- `client/src/components/AppSidebar.vue` — desktop folded-hover sidebar.
+- `client/src/components/AppMobileNav.vue` — mobile header and offcanvas navigation drawer.
+- `client/src/components/AppNavigation.vue` — navigation list shared by both of them.
+- `client/src/components/AppBrand.vue` — product mark and name.
+- `client/src/components/ThemeToggle.vue` — light/dark control; `client/src/theme.js` holds the state.
 - `client/src/api.js` — shared `fetch` wrapper and helper for JSON requests.
 - `client/src/pages/ItemsList.vue` — item list, search, filtering, sorting, and pagination.
 - `client/src/pages/ItemDetails.vue` — item details, photos, and deletion.
 - `client/src/pages/ItemForm.vue` — item creation/editing, custom field values, and photo uploads.
 - `client/src/pages/Categories.vue` — category and custom field management.
 - `client/src/pages/DataBackup.vue` — SQLite backup download.
-- `client/src/style.css` — small set of global styles layered on Bootstrap.
+- `client/src/style.css` — small set of application styles layered on Tabler, built only from
+  Tabler custom properties so both color modes stay correct.
 - `server/src/index.js` — Express app, all API routes, validation, photo handling, backup, and production static serving.
 - `server/src/db.js` — database path, SQLite connection, PRAGMAs, and current table/index schema.
 - `test/e2e.test.js` — end-to-end acceptance test for the API, persistence, photos, and backups.

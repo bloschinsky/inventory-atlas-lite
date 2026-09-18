@@ -11,7 +11,7 @@ const editRoute = item => `/items/${item.id}/edit`;
 <template>
   <div class="card d-none d-lg-block">
     <div class="table-responsive">
-      <table class="table table-hover align-middle mb-0">
+      <table class="table table-vcenter table-hover card-table">
         <thead>
           <tr>
             <th scope="col">
@@ -102,14 +102,14 @@ const editRoute = item => `/items/${item.id}/edit`;
             <td class="text-end text-nowrap">
               <RouterLink
                 :to="detailsRoute(item)"
-                class="btn btn-sm btn-outline-secondary me-1"
+                class="btn btn-sm me-1"
                 :aria-label="`View ${item.name}`"
               >
                 View
               </RouterLink>
               <RouterLink
                 :to="editRoute(item)"
-                class="btn btn-sm btn-outline-primary"
+                class="btn btn-sm btn-primary"
                 :aria-label="`Edit ${item.name}`"
               >
                 Edit
@@ -172,14 +172,14 @@ const editRoute = item => `/items/${item.id}/edit`;
         <div class="d-flex gap-2 mt-3 justify-content-sm-end">
           <RouterLink
             :to="detailsRoute(item)"
-            class="btn btn-sm btn-outline-secondary flex-fill flex-sm-grow-0 px-sm-4"
+            class="btn btn-sm flex-fill flex-sm-grow-0 px-sm-4"
             :aria-label="`View ${item.name}`"
           >
             View
           </RouterLink>
           <RouterLink
             :to="editRoute(item)"
-            class="btn btn-sm btn-outline-primary flex-fill flex-sm-grow-0 px-sm-4"
+            class="btn btn-sm btn-primary flex-fill flex-sm-grow-0 px-sm-4"
             :aria-label="`Edit ${item.name}`"
           >
             Edit

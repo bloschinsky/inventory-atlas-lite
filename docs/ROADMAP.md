@@ -8,14 +8,11 @@ Implemented behavior is documented separately in [`features/README.md`](features
 
 ## Planned features
 
-1. **Tabler UI design system migration** — High priority, no dependency. Establishes the Tabler
-   application shell, folded desktop navigation, mobile offcanvas navigation, and light/dark modes.
-   It is the prerequisite for the Dashboard work. See
-   [`TASK-tabler-ui-migration.md`](issues/TASK-tabler-ui-migration.md).
-2. **Inventory Dashboard** — High priority, blocked until the Tabler migration is complete. Adds a
+1. **Inventory Dashboard** — High priority, unblocked: the Tabler UI migration it depended on is
+   implemented and documented in [`features/application-ui.md`](features/application-ui.md). Adds a
    default Dashboard route with server-calculated inventory metrics, category filtering, and compact
    category and condition distributions. See [`TASK-dashboard.md`](issues/TASK-dashboard.md).
-3. **Restore database backup** — Planned independently of the UI migration. Adds a validated,
+2. **Restore database backup** — Planned independently of the UI migration. Adds a validated,
    confirmation-protected backup restore workflow with a pre-restore safety backup and rollback
    protections. See [`TASK-restore-database-backup.md`](issues/TASK-restore-database-backup.md).
 

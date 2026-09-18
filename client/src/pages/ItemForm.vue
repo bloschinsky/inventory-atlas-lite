@@ -68,6 +68,7 @@ onMounted(async () => {
     <div
       v-if="!categories.length"
       class="alert alert-warning"
+      role="alert"
     >
       Create a category before adding an item. <RouterLink to="/categories">
         Manage categories
@@ -76,6 +77,7 @@ onMounted(async () => {
     <div
       v-if="error"
       class="alert alert-danger"
+      role="alert"
     >
       {{ error }}
     </div>
@@ -148,7 +150,7 @@ onMounted(async () => {
             v-if="parent"
             class="d-flex align-items-center gap-2 mb-2"
           >
-            <span class="badge text-bg-secondary">{{ parent.name }}</span><button
+            <span class="badge bg-blue-lt">{{ parent.name }}</span><button
               type="button"
               class="btn btn-link btn-sm p-0"
               @click="selectParent(null)"
@@ -201,7 +203,7 @@ onMounted(async () => {
         </div>
         <template v-if="fields.length">
           <hr>
-          <h2 class="section-title mb-3">
+          <h2 class="card-title mb-3">
             Category fields
           </h2>
           <div
@@ -241,7 +243,7 @@ onMounted(async () => {
           </div>
         </template>
         <hr>
-        <h2 class="section-title mb-3">
+        <h2 class="card-title mb-3">
           Photos
         </h2>
         <div
@@ -260,7 +262,7 @@ onMounted(async () => {
             />
             <button
               type="button"
-              class="btn btn-danger btn-sm position-absolute top-0 end-0 py-0 px-1"
+              class="btn btn-danger btn-icon btn-sm position-absolute top-0 end-0 p-0 app-thumb-remove"
               :aria-label="`Delete photo ${photo.filename}`"
               @click="removePhoto(photo.id)"
             >

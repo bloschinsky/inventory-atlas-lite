@@ -28,10 +28,12 @@ failing test makes the command exit non-zero.
   failure. `test/e2e/environment.js` and `test/e2e/helpers.js` hold the shared setup.
 - Express runs with `DATA_DIR` pointing at a temporary directory, so the suite never reads or writes
   `data/inventory.sqlite`.
-- Specs cover the main workflows: `navigation.spec.js`, `categories.spec.js`, `items.spec.js`
+- Specs cover the main workflows: `navigation.spec.js` (reaching every page and the folded desktop
+  sidebar expanding on hover and on keyboard focus), `categories.spec.js`, `items.spec.js`
   (create, search, edit, delete), `photos.spec.js`, `nesting.spec.js`, `suggestions.spec.js`,
-  `backup.spec.js`, and `responsive.spec.js`, which runs at a `390 x 844` phone viewport and covers
-  the offcanvas navigation, the mobile item cards, and the item detail order.
+  `backup.spec.js`, `theme.spec.js` (the system colour scheme, an explicit light/dark choice, and its
+  persistence), and `responsive.spec.js`, which runs at a `390 x 844` phone viewport and covers the
+  offcanvas navigation, the mobile item cards, and the item detail order.
 - Tests locate elements by accessible role, label, and visible name, use unique record names, and
   wait for observable UI state instead of fixed sleeps. Generated reports, traces, screenshots, and
   videos are ignored by Git.

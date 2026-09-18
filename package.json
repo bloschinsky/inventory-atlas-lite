@@ -1,6 +1,6 @@
 {
   "name": "simple-personal-inventory",
-  "version": "0.6.2",
+  "version": "0.7.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -17,8 +17,9 @@
     "test:e2e": "node test/e2e/run.js"
   },
   "dependencies": {
+    "@tabler/core": "1.5.1",
+    "@tabler/icons-vue": "3.46.0",
     "better-sqlite3": "^12.2.0",
-    "bootstrap": "^5.3.8",
     "express": "^5.1.0",
     "multer": "^2.0.2",
     "vue": "^3.5.21",

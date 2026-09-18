@@ -1,103 +1,58 @@
-/* Project layer on top of Bootstrap 5: design tokens, the application shell, and shared surfaces. */
+/*
+  Application layer on top of Tabler. Tabler already ships Bootstrap, the shell, and the
+  color modes, so only application-specific surfaces live here. Every color is taken from a
+  Tabler custom property, which keeps light and dark mode correct without a second palette.
+*/
 :root {
-  --app-bg: #f4f6f8;
-  --app-surface: #fff;
-  --app-border: #e2e6eb;
-  --app-text: #1f2329;
-  --app-muted: #6b7280;
-  --app-hover: #eef1f5;
-  --app-radius: .625rem;
-  --app-shadow: 0 1px 2px rgba(16, 24, 40, .05);
-  --app-sidebar-width: 244px;
-  --app-content-width: 1280px;
+  --app-thumb-size: 48px;
+  --app-thumb-size-lg: 64px;
+  --app-media-bg: var(--tblr-bg-surface-tertiary);
+  --app-form-width: 820px;
 }
 
-body {
-  background: var(--app-bg);
-  color: var(--app-text);
-}
+body.app-menu-open { overflow: hidden; }
 
-body.app-menu-open {
-  overflow: hidden;
-}
+/* Brand */
+.app-brand { display: flex; align-items: center; gap: .5rem; color: var(--tblr-body-color); font-weight: 600; text-decoration: none; }
+.app-brand:hover, .app-brand:focus-visible { color: var(--tblr-primary); }
+.app-brand-mark { flex: 0 0 1.75rem; width: 1.75rem; height: 1.75rem; color: var(--tblr-primary); }
+.app-brand-name { white-space: nowrap; }
 
-/* Shell */
-.app-shell { display: flex; min-height: 100vh; }
-
-.app-sidebar {
-  flex: 0 0 var(--app-sidebar-width);
-  width: var(--app-sidebar-width);
-  flex-direction: column;
-  gap: 1.5rem;
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  padding: 1.25rem 1rem;
-  background: var(--app-surface);
-  border-right: 1px solid var(--app-border);
-}
-
-.app-main { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; }
-
-.app-topbar {
-  position: sticky;
-  top: 0;
-  z-index: 1020;
-  display: flex;
-  align-items: center;
-  gap: .75rem;
-  padding: .5rem .875rem;
-  background: var(--app-surface);
-  border-bottom: 1px solid var(--app-border);
-}
-
-.app-menu-button { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; }
-
-.app-brand { font-weight: 600; font-size: 1.0625rem; color: var(--app-text); text-decoration: none; }
-.app-brand:hover, .app-brand:focus-visible { color: var(--bs-primary); }
-
-.app-content { flex: 1 1 auto; width: 100%; max-width: var(--app-content-width); padding: 1.5rem 1.5rem 3rem; }
-
-.app-nav-link { padding: .5rem .75rem; border-radius: .5rem; color: #3b4149; }
-.app-nav-link:hover { background: var(--app-hover); color: var(--app-text); }
-.app-nav-link.active { background: rgba(var(--bs-primary-rgb), .1); color: var(--bs-primary); font-weight: 600; }
-
+.app-menu-button { flex: 0 0 auto; width: 44px; height: 44px; }
 .app-offcanvas { max-width: 82vw; }
 
 /* Shared surfaces */
-.card { border-color: var(--app-border); border-radius: var(--app-radius); box-shadow: var(--app-shadow); }
-.card-header { background: var(--app-surface); border-bottom-color: var(--app-border); }
-.form-card { max-width: 820px; }
-.page-title { font-size: 1.5rem; font-weight: 600; margin: 0; }
-.section-title { font-size: 1rem; font-weight: 600; margin: 0; }
-.meta-text { color: var(--app-muted); font-size: .875rem; }
-
-.table td, .table th { vertical-align: middle; }
-.table > thead th { color: var(--app-muted); font-size: .8125rem; font-weight: 600; text-transform: uppercase; letter-spacing: .02em; }
-.name-cell { min-width: 13rem; }
+.form-card { max-width: var(--app-form-width); }
+.meta-text { color: var(--tblr-secondary); font-size: .875rem; }
 .truncate-cell { max-width: 13rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.name-cell { min-width: 13rem; }
 
 /* Item thumbnails. The fixed frame also keeps a photo that fails to load from stretching a row. */
-.item-thumb { display: grid; place-items: center; width: 48px; height: 48px; flex: 0 0 48px; overflow: hidden; border-radius: .5rem; background: var(--app-hover); border: 1px solid var(--app-border); }
-.item-thumb-lg { width: 64px; height: 64px; flex-basis: 64px; }
+.item-thumb { display: grid; place-items: center; width: var(--app-thumb-size); height: var(--app-thumb-size); flex: 0 0 var(--app-thumb-size); overflow: hidden; border-radius: var(--tblr-border-radius); background: var(--app-media-bg); border: var(--tblr-border-width) var(--tblr-border-style) var(--tblr-border-color); }
+.item-thumb-lg { width: var(--app-thumb-size-lg); height: var(--app-thumb-size-lg); flex-basis: var(--app-thumb-size-lg); }
 .item-thumb img { width: 100%; height: 100%; object-fit: cover; }
-.item-thumb-empty { color: var(--app-muted); font-size: .625rem; text-align: center; line-height: 1.1; }
+.item-thumb-empty { color: var(--tblr-secondary); font-size: .625rem; text-align: center; line-height: 1.1; }
 
 /* Item cards on narrow screens */
-.item-card-link { color: var(--app-text); font-weight: 600; text-decoration: none; overflow-wrap: anywhere; }
-.item-card-link:hover { color: var(--bs-primary); text-decoration: underline; }
-.item-card .btn { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+.item-card-link { color: var(--tblr-body-color); font-weight: 600; text-decoration: none; overflow-wrap: anywhere; }
+.item-card-link:hover { color: var(--tblr-primary); text-decoration: underline; }
+.item-card .btn { min-height: 44px; }
 
 /* Photo viewer */
-.photo-frame { display: grid; place-items: center; min-height: 260px; max-height: 60vh; background: var(--app-hover); border-radius: var(--app-radius) var(--app-radius) 0 0; overflow: hidden; }
+.photo-frame { display: grid; place-items: center; min-height: 260px; max-height: 60vh; background: var(--app-media-bg); border-radius: var(--tblr-border-radius) var(--tblr-border-radius) 0 0; overflow: hidden; }
 .photo-frame img { max-width: 100%; max-height: 60vh; object-fit: contain; }
-.photo-empty { color: var(--app-muted); font-size: .875rem; padding: 2rem 1rem; text-align: center; }
 
 @media (max-width: 991.98px) {
-  .app-content { padding: 1.25rem 1rem 2.5rem; }
   .photo-frame { min-height: 200px; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
-}
+/* The remove button that overlays an uploaded photo thumbnail in the item form. */
+.app-thumb-remove { width: 1.25rem; height: 1.25rem; line-height: 1; }
+
+/*
+  Tabler styles its sidebar navigation only inside the desktop vertical navbar, so the mobile
+  drawer repeats the same tokens and keeps one navigation look at every width.
+*/
+.app-offcanvas .navbar-nav { --tblr-nav-link-icon-width: 1.5rem; --tblr-nav-link-icon-height: 1.25rem; --tblr-nav-link-icon-margin-end: .5rem; gap: .25rem; }
+.app-offcanvas .nav-link { padding: .75rem; border-radius: var(--tblr-border-radius); }
+.app-offcanvas .nav-item.active > .nav-link { --tblr-nav-link-icon-color: currentColor; font-weight: 600; background: var(--tblr-active-bg, var(--tblr-bg-surface-secondary)); }

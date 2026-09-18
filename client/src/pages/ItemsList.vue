@@ -128,6 +128,7 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
   <div
     v-if="error"
     class="alert alert-danger"
+    role="alert"
   >
     {{ error }}
   </div>
@@ -136,7 +137,7 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
     v-if="loading"
     class="card"
   >
-    <div class="card-body d-flex align-items-center gap-2 meta-text">
+    <div class="card-body d-flex align-items-center gap-2 text-secondary">
       <span
         class="spinner-border spinner-border-sm"
         aria-hidden="true"
@@ -148,20 +149,24 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
     v-else-if="!result.items.length"
     class="card"
   >
-    <div class="card-body text-center py-5">
-      <p class="fw-semibold mb-1">
+    <div class="empty">
+      <p class="empty-title">
         {{ filtered ? 'No matching items' : 'No items yet' }}
       </p>
-      <p class="meta-text mb-3">
+      <p class="empty-subtitle text-secondary">
         {{ filtered ? 'Try a different search term or clear the category filter.' : 'No items found. Add your first item to get started.' }}
       </p>
-      <RouterLink
+      <div
         v-if="!filtered"
-        to="/items/new"
-        class="btn btn-primary"
+        class="empty-action"
       >
-        Add your first item
-      </RouterLink>
+        <RouterLink
+          to="/items/new"
+          class="btn btn-primary"
+        >
+          Add your first item
+        </RouterLink>
+      </div>
     </div>
   </div>
   <ItemResults
@@ -174,22 +179,36 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
     class="mt-3 d-flex flex-wrap gap-2 align-items-center"
     aria-label="Items pagination"
   >
-    <button
-      type="button"
-      class="btn btn-outline-secondary btn-sm"
-      :disabled="filters.page <= 1"
-      @click="filters.page--"
-    >
-      Previous
-    </button>
-    <span class="meta-text">Page {{ result.pagination.page }} of {{ result.pagination.pages }}</span>
-    <button
-      type="button"
-      class="btn btn-outline-secondary btn-sm"
-      :disabled="filters.page >= result.pagination.pages"
-      @click="filters.page++"
-    >
-      Next
-    </button>
+    <ul class="pagination m-0">
+      <li
+        class="page-item"
+        :class="{ disabled: filters.page <= 1 }"
+      >
+        <button
+          type="button"
+          class="page-link"
+          :disabled="filters.page <= 1"
+          @click="filters.page--"
+        >
+          Previous
+        </button>
+      </li>
+      <li class="page-item disabled">
+        <span class="page-link">Page {{ result.pagination.page }} of {{ result.pagination.pages }}</span>
+      </li>
+      <li
+        class="page-item"
+        :class="{ disabled: filters.page >= result.pagination.pages }"
+      >
+        <button
+          type="button"
+          class="page-link"
+          :disabled="filters.page >= result.pagination.pages"
+          @click="filters.page++"
+        >
+          Next
+        </button>
+      </li>
+    </ul>
   </nav>
 </template>

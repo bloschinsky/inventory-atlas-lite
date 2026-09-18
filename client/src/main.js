@@ -1,6 +1,6 @@
 import { createApp } from 'vue';
 import { createRouter, createWebHistory } from 'vue-router';
-import 'bootstrap/dist/css/bootstrap.min.css';
+import '@tabler/core/dist/css/tabler.min.css';
 import './style.css';
 import App from './App.vue';
 import ItemsList from './pages/ItemsList.vue';

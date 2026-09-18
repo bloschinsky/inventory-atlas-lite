@@ -24,6 +24,7 @@ onMounted(() => load().catch(e => error.value = e.message));
   <div
     v-if="error"
     class="alert alert-danger alert-dismissible"
+    role="alert"
   >
     {{ error }}<button
       class="btn-close"
@@ -35,7 +36,7 @@ onMounted(() => load().catch(e => error.value = e.message));
     <div class="col-12 col-lg-6">
       <div class="card">
         <div class="card-header">
-          <h2 class="section-title">
+          <h2 class="card-title">
             Categories
           </h2>
         </div><div class="card-body border-bottom">
@@ -90,7 +91,7 @@ onMounted(() => load().catch(e => error.value = e.message));
     <div class="col-12 col-lg-6">
       <div class="card">
         <div class="card-header">
-          <h2 class="section-title">
+          <h2 class="card-title">
             Fields <span v-if="selected">for {{ selected.name }}</span>
           </h2>
         </div><div
@@ -140,7 +141,7 @@ onMounted(() => load().catch(e => error.value = e.message));
               :key="field.id"
               class="list-group-item d-flex justify-content-between align-items-center"
             >
-              <span>{{ field.name }} <span class="badge text-bg-secondary">{{ field.type }}</span></span><button
+              <span>{{ field.name }} <span class="badge bg-blue-lt">{{ field.type }}</span></span><button
                 class="btn btn-outline-danger btn-sm"
                 @click="removeField(field)"
               >

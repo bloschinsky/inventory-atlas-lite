@@ -30,6 +30,7 @@ onMounted(load);
   <div
     v-if="error"
     class="alert alert-danger"
+    role="alert"
   >
     {{ error }}
   </div>
@@ -37,7 +38,7 @@ onMounted(load);
     v-else-if="!item"
     class="card"
   >
-    <div class="card-body d-flex align-items-center gap-2 meta-text">
+    <div class="card-body d-flex align-items-center gap-2 text-secondary">
       <span
         class="spinner-border spinner-border-sm"
         aria-hidden="true"
@@ -47,36 +48,41 @@ onMounted(load);
   </div>
   <template v-else>
     <!-- The heading block stays first in the DOM so the name precedes the photo on phones. -->
-    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
-      <div class="min-w-0">
-        <p class="meta-text mb-1">
+    <div class="page-header mb-3">
+      <div class="row g-2 align-items-center">
+        <div class="col min-w-0">
+          <ol class="breadcrumb page-pretitle mb-1">
+            <li class="breadcrumb-item">
+              <RouterLink to="/">
+                All items
+              </RouterLink>
+            </li>
+            <li
+              class="breadcrumb-item active"
+              aria-current="page"
+            >
+              {{ item.category_name }}
+            </li>
+          </ol>
+          <h1 class="page-title text-break">
+            {{ item.name }}
+          </h1>
+        </div>
+        <div class="col-auto ms-auto d-flex flex-wrap gap-2">
           <RouterLink
-            to="/"
-            class="text-decoration-none"
+            :to="`/items/${item.id}/edit`"
+            class="btn btn-primary"
           >
-            All items
+            Edit
           </RouterLink>
-          <span aria-hidden="true"> / </span>
-          {{ item.category_name }}
-        </p>
-        <h1 class="page-title text-break">
-          {{ item.name }}
-        </h1>
-      </div>
-      <div class="d-flex flex-wrap gap-2">
-        <RouterLink
-          :to="`/items/${item.id}/edit`"
-          class="btn btn-primary"
-        >
-          Edit
-        </RouterLink>
-        <button
-          type="button"
-          class="btn btn-outline-danger"
-          @click="remove"
-        >
-          Delete
-        </button>
+          <button
+            type="button"
+            class="btn btn-outline-danger"
+            @click="remove"
+          >
+            Delete
+          </button>
+        </div>
       </div>
     </div>
 
@@ -90,7 +96,7 @@ onMounted(load);
       <div class="col-12 col-lg-7 d-grid gap-4">
         <section class="card">
           <div class="card-header">
-            <h2 class="section-title">
+            <h2 class="card-title">
               Details
             </h2>
           </div>
@@ -123,7 +129,7 @@ onMounted(load);
           class="card"
         >
           <div class="card-header">
-            <h2 class="section-title">
+            <h2 class="card-title">
               {{ item.category_name }} fields
             </h2>
           </div>
@@ -152,7 +158,7 @@ onMounted(load);
           class="card"
         >
           <div class="card-header">
-            <h2 class="section-title">
+            <h2 class="card-title">
               Storage
             </h2>
           </div>
@@ -176,7 +182,7 @@ onMounted(load);
           </div>
           <template v-if="item.children.length">
             <div class="card-header border-top">
-              <h3 class="section-title">
+              <h3 class="card-title">
                 Contents
               </h3>
             </div>
@@ -210,7 +216,7 @@ onMounted(load);
 
         <section class="card">
           <div class="card-header">
-            <h2 class="section-title">
+            <h2 class="card-title">
               Record information
             </h2>
           </div>

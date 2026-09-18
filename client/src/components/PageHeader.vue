@@ -6,20 +6,22 @@ defineProps({
 </script>
 
 <template>
-  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
-    <div class="min-w-0">
-      <h1 class="page-title">
-        {{ title }}
-      </h1>
-      <p
-        v-if="subtitle"
-        class="meta-text mb-0"
-      >
-        {{ subtitle }}
-      </p>
-    </div>
-    <div class="d-flex flex-wrap gap-2">
-      <slot name="actions" />
+  <div class="page-header d-print-none mb-3">
+    <div class="row g-2 align-items-center">
+      <div class="col min-w-0">
+        <h1 class="page-title text-break">
+          {{ title }}
+        </h1>
+        <div
+          v-if="subtitle"
+          class="page-subtitle"
+        >
+          {{ subtitle }}
+        </div>
+      </div>
+      <div class="col-auto ms-auto d-flex flex-wrap gap-2">
+        <slot name="actions" />
+      </div>
     </div>
   </div>
 </template>
