@@ -5,6 +5,7 @@ document describes the current behaviour and its boundaries, not the original pl
 
 | Feature | Summary |
 | --- | --- |
+| [Responsive application UI](responsive-ui.md) | One application shell with a desktop sidebar, a mobile offcanvas menu, and responsive item pages. |
 | [Nested items](nested-items.md) | Store an item inside another item and browse its direct contents. |
 | [Custom-field autocomplete](custom-field-autocomplete.md) | Suggest previously saved values for text custom fields. |
 | [Proxmox one-line installer](proxmox-one-line-installer.md) | Create a Debian LXC on Proxmox VE with the application, a systemd service, and an update command. |

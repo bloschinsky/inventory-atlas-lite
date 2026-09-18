@@ -29,8 +29,9 @@ failing test makes the command exit non-zero.
 - Express runs with `DATA_DIR` pointing at a temporary directory, so the suite never reads or writes
   `data/inventory.sqlite`.
 - Specs cover the main workflows: `navigation.spec.js`, `categories.spec.js`, `items.spec.js`
-  (create, search, edit, delete), `photos.spec.js`, `nesting.spec.js`, `suggestions.spec.js`, and
-  `backup.spec.js`.
+  (create, search, edit, delete), `photos.spec.js`, `nesting.spec.js`, `suggestions.spec.js`,
+  `backup.spec.js`, and `responsive.spec.js`, which runs at a `390 x 844` phone viewport and covers
+  the offcanvas navigation, the mobile item cards, and the item detail order.
 - Tests locate elements by accessible role, label, and visible name, use unique record names, and
   wait for observable UI state instead of fixed sleeps. Generated reports, traces, screenshots, and
   videos are ignored by Git.

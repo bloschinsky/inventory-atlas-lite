@@ -21,15 +21,17 @@ inventory, so keep it on a trusted LAN or behind a VPN.
 - Open the address of your installation in a browser, for example `http://192.168.1.145:3000`. A
   Proxmox installation prints this URL at the end; a manual installation uses the server address and
   `PORT` (default `3000`).
-- Use a current desktop or mobile browser. The interface is responsive and works on a phone.
+- Use a current desktop or mobile browser. On a wide screen the three pages sit in a sidebar on the
+  left; on a phone or a narrow tablet the same list opens from the **☰** button in the top bar.
 - Reach the application over your LAN or a VPN such as WireGuard or Tailscale. Do not forward a
   router port to it.
-- A fresh installation is empty: no categories and no items. The items page shows
-  *No items found. Add your first item to get started.*
+- A fresh installation is empty: no categories and no items. The items page shows *No items yet*
+  with an **Add your first item** button. When a search or a category filter matches nothing, the
+  page says *No matching items* instead.
 
 ## 3. Recommended first setup
 
-1. Open **Categories & Fields** in the top navigation and create your first category, for example
+1. Open **Categories & Fields** in the navigation and create your first category, for example
    `Cameras`. Type the name into **New category name** and press **Add**.
 2. Click the category in the list to select it, then add its custom fields on the right: type a
    **Field name**, choose the type (Text, Number, Date, Boolean), and press **Add**.
@@ -109,19 +111,23 @@ Changing the category while filling in the form loads that category's fields.
    files and save.
 2. Up to **10 images per upload, 15 MB each**. Supported formats are JPEG, PNG, WebP, and GIF; other
    files are rejected by the server.
-3. Full-size photos are shown on the item page, and the first photo is used as the thumbnail in the
-   items list.
-4. Delete a photo with **Delete** under it on the item page, or with the **×** button on its
-   thumbnail in the edit form. Both act immediately.
+3. The item page shows one large photo at a time. With several photos, **Previous** and **Next**
+   below it move through them and a `1 / 3` indicator shows where you are. The first photo is used as
+   the thumbnail in the items list.
+4. Delete a photo with **Delete photo** under it on the item page, or with the **×** button on its
+   thumbnail in the edit form. Both act immediately and are separate from deleting the item.
 
 ### Search, filter, sort, and page through items
 
 1. Open **Items**.
-2. Type into **Search name or description…**. The search runs as you type and matches the item name
-   and description only — not custom field values, condition, or location.
-3. Narrow the list with the category filter (**All categories** by default).
-4. Sort by Name, Category, Created, or Updated, Ascending or Descending.
-5. The list shows 12 items per page; use **Previous** and **Next** below the table. The total count
+2. Type into **Search**. The search runs as you type and matches the item name and description
+   only — not custom field values, condition, or location.
+3. Narrow the list with **Category** (**All categories** by default).
+4. **Sort by** Name, Category, Created, or Updated, with **Direction** Ascending or Descending.
+5. On a wide screen the results are a table with photo, name, category, condition, location, and
+   **View** / **Edit** buttons. On a phone each item is a card with the same information and the same
+   two buttons.
+6. The list shows 12 items per page; use **Previous** and **Next** below the results. The total count
    is shown under the **Items** heading.
 
 ### Put an item inside another item
@@ -132,8 +138,8 @@ Changing the category while filling in the form loads that category's fields.
 3. Click the result you want. It appears as a badge above the search box.
 4. Press **Clear** next to the badge to take the item out of its container and make it top-level
    again.
-5. Save. The item page now shows **Stored inside** with a link to the container, and the container's
-   page lists the item under **Contents**.
+5. Save. The item page now shows a **Storage** card with **Stored inside** linking to the container,
+   and the container's page lists the item under **Contents**.
 
 Nesting can go several levels deep. An item cannot be placed inside itself or inside anything it
 already contains; the server rejects such a move with an error message.
@@ -167,7 +173,8 @@ Garage
 2. Create the item `Box A` in `Boxes` with **Location** = `Garage`.
 3. Create `Helios 44-2` in `Lenses` and set **Stored inside** = `Box A`.
 4. Create `Olympus Pen F` in `Cameras` and set **Stored inside** = `Box A`.
-5. Open `Box A`: both items are listed under **Contents**, each linking to its own page.
+5. Open `Box A`: both items are listed under **Contents** in its **Storage** card, each linking to
+   its own page.
 6. Open `Helios 44-2`: **Stored inside** links back to `Box A`.
 7. When the box moves to the attic, change **Location** on `Box A` only. Its contents follow it
    automatically because they have no location of their own.

@@ -1,6 +1,8 @@
 <script setup>
-import { onMounted, reactive, ref, watch } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { api } from '../api.js';
+import ItemResults from '../components/ItemResults.vue';
+import PageHeader from '../components/PageHeader.vue';
 
 const categories = ref([]);
 const result = ref({ items: [], pagination: { page: 1, pages: 1, total: 0 } });
@@ -8,6 +10,9 @@ const loading = ref(true);
 const error = ref('');
 const filters = reactive({ search: '', categoryId: '', sort: 'name', direction: 'asc', page: 1 });
 let timer;
+
+const filtered = computed(() => Boolean(filters.search.trim() || filters.categoryId));
+const countLabel = computed(() => `${result.value.pagination.total} ${result.value.pagination.total === 1 ? 'item' : 'items'}`);
 
 async function load() {
   loading.value = true; error.value = '';
@@ -21,40 +26,50 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
 </script>
 
 <template>
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <div>
-      <h1 class="h3 mb-0">
-        Items
-      </h1><div class="text-secondary">
-        {{ result.pagination.total }} total
-      </div>
-    </div>
-    <RouterLink
-      to="/items/new"
-      class="btn btn-primary"
-    >
-      Add item
-    </RouterLink>
-  </div>
+  <PageHeader
+    title="Items"
+    :subtitle="countLabel"
+  >
+    <template #actions>
+      <RouterLink
+        to="/items/new"
+        class="btn btn-primary"
+      >
+        Add item
+      </RouterLink>
+    </template>
+  </PageHeader>
+
   <div class="card mb-3">
-    <div class="card-body row g-2">
-      <div class="col-md-5">
+    <div class="card-body row g-3 align-items-end">
+      <div class="col-12 col-lg-5">
+        <label
+          class="form-label"
+          for="items-search"
+        >Search</label>
         <input
+          id="items-search"
           v-model="filters.search"
+          type="search"
           class="form-control"
           placeholder="Search name or description…"
         >
       </div>
-      <div class="col-md-3">
+      <div class="col-12 col-sm-6 col-lg-3">
+        <label
+          class="form-label"
+          for="items-category"
+        >Category</label>
         <select
+          id="items-category"
           v-model="filters.categoryId"
           class="form-select"
-          aria-label="Filter by category"
           @change="changed"
         >
           <option value="">
             All categories
-          </option><option
+          </option>
+          <option
             v-for="c in categories"
             :key="c.id"
             :value="c.id"
@@ -63,108 +78,113 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
           </option>
         </select>
       </div>
-      <div class="col-md-2">
+      <div class="col-6 col-sm-3 col-lg-2">
+        <label
+          class="form-label"
+          for="items-sort"
+        >Sort by</label>
         <select
+          id="items-sort"
           v-model="filters.sort"
           class="form-select"
-          aria-label="Sort by"
           @change="changed"
         >
           <option value="name">
             Name
-          </option><option value="category">
+          </option>
+          <option value="category">
             Category
-          </option><option value="created">
+          </option>
+          <option value="created">
             Created
-          </option><option value="updated">
+          </option>
+          <option value="updated">
             Updated
           </option>
         </select>
       </div>
-      <div class="col-md-2">
+      <div class="col-6 col-sm-3 col-lg-2">
+        <label
+          class="form-label"
+          for="items-direction"
+        >Direction</label>
         <select
+          id="items-direction"
           v-model="filters.direction"
           class="form-select"
-          aria-label="Sort direction"
           @change="changed"
         >
           <option value="asc">
             Ascending
-          </option><option value="desc">
+          </option>
+          <option value="desc">
             Descending
           </option>
         </select>
       </div>
     </div>
   </div>
+
   <div
     v-if="error"
     class="alert alert-danger"
   >
     {{ error }}
   </div>
+
   <div
     v-if="loading"
-    class="text-secondary"
+    class="card"
   >
-    Loading…
+    <div class="card-body d-flex align-items-center gap-2 meta-text">
+      <span
+        class="spinner-border spinner-border-sm"
+        aria-hidden="true"
+      />
+      Loading items…
+    </div>
   </div>
   <div
     v-else-if="!result.items.length"
-    class="alert alert-light border"
+    class="card"
   >
-    No items found. Add your first item to get started.
+    <div class="card-body text-center py-5">
+      <p class="fw-semibold mb-1">
+        {{ filtered ? 'No matching items' : 'No items yet' }}
+      </p>
+      <p class="meta-text mb-3">
+        {{ filtered ? 'Try a different search term or clear the category filter.' : 'No items found. Add your first item to get started.' }}
+      </p>
+      <RouterLink
+        v-if="!filtered"
+        to="/items/new"
+        class="btn btn-primary"
+      >
+        Add your first item
+      </RouterLink>
+    </div>
   </div>
-  <div
+  <ItemResults
     v-else
-    class="card table-responsive"
-  >
-    <table class="table table-hover mb-0">
-      <thead><tr><th>Photo</th><th>Name</th><th>Category</th><th>Condition</th><th>Location</th></tr></thead>
-      <tbody>
-        <tr
-          v-for="item in result.items"
-          :key="item.id"
-        >
-          <td>
-            <img
-              v-if="item.thumbnail_id"
-              class="thumbnail"
-              :src="`/api/photos/${item.thumbnail_id}`"
-              :alt="item.name"
-            ><div
-              v-else
-              class="thumbnail empty-thumb"
-            >
-              No photo
-            </div>
-          </td>
-          <td>
-            <RouterLink
-              :to="`/items/${item.id}`"
-              class="fw-semibold"
-            >
-              {{ item.name }}
-            </RouterLink>
-          </td>
-          <td>{{ item.category_name }}</td><td>{{ item.condition || '—' }}</td><td>{{ item.location || '—' }}</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+    :items="result.items"
+  />
+
   <nav
     v-if="result.pagination.pages > 1"
-    class="mt-3 d-flex gap-2 align-items-center"
+    class="mt-3 d-flex flex-wrap gap-2 align-items-center"
+    aria-label="Items pagination"
   >
     <button
+      type="button"
       class="btn btn-outline-secondary btn-sm"
       :disabled="filters.page <= 1"
       @click="filters.page--"
     >
       Previous
     </button>
-    <span>Page {{ result.pagination.page }} of {{ result.pagination.pages }}</span>
+    <span class="meta-text">Page {{ result.pagination.page }} of {{ result.pagination.pages }}</span>
     <button
+      type="button"
       class="btn btn-outline-secondary btn-sm"
       :disabled="filters.page >= result.pagination.pages"
       @click="filters.page++"

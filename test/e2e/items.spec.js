@@ -25,14 +25,14 @@ test('creates an item, finds it in the list, and edits its values', async ({ pag
   // Find the saved item again through the list search and the category filter.
   await page.getByRole('link', { name: 'Items', exact: true }).click();
   await page.getByPlaceholder('Search name or description…').fill(itemName);
-  await expect(page.getByRole('link', { name: itemName })).toBeVisible();
+  await expect(page.getByRole('link', { name: itemName, exact: true })).toBeVisible();
   await expect(page.getByRole('row')).toHaveCount(2);
 
   await page.getByPlaceholder('Search name or description…').fill('');
-  await page.getByLabel('Filter by category').selectOption({ label: categoryName });
-  await expect(page.getByRole('link', { name: itemName })).toBeVisible();
+  await page.getByLabel('Category').selectOption({ label: categoryName });
+  await expect(page.getByRole('link', { name: itemName, exact: true })).toBeVisible();
 
-  await page.getByRole('link', { name: itemName }).click();
+  await page.getByRole('link', { name: itemName, exact: true }).click();
   await expect(detail(page, 'Condition')).toHaveText('Good');
   await expect(detail(page, 'Location')).toHaveText('Shelf A');
   await expect(detail(page, 'Description')).toHaveText('Bought second hand.');
@@ -63,7 +63,7 @@ test('deletes an item and removes it from the list', async ({ page, request }) =
 
   await page.goto('/');
   await page.getByPlaceholder('Search name or description…').fill(itemName);
-  await page.getByRole('link', { name: itemName }).click();
+  await page.getByRole('link', { name: itemName, exact: true }).click();
   await expect(page.getByRole('heading', { name: itemName })).toBeVisible();
 
   page.once('dialog', dialog => dialog.accept());
@@ -71,5 +71,5 @@ test('deletes an item and removes it from the list', async ({ page, request }) =
 
   await expect(page).toHaveURL('/');
   await page.getByPlaceholder('Search name or description…').fill(itemName);
-  await expect(page.getByText('No items found. Add your first item to get started.')).toBeVisible();
+  await expect(page.getByText('No matching items')).toBeVisible();
 });

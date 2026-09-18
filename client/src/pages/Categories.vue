@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue';
 import { api, jsonOptions } from '../api.js';
+import PageHeader from '../components/PageHeader.vue';
 
 defineOptions({ name: 'CategoryManager' });
 
@@ -16,22 +17,27 @@ async function removeField(field) { if (!confirm(`Delete field â€œ${field.name}â
 onMounted(() => load().catch(e => error.value = e.message));
 </script>
 <template>
-  <h1 class="h3 mb-3">
-    Categories &amp; Fields
-  </h1><div
+  <PageHeader
+    title="Categories &amp; Fields"
+    subtitle="Categories group items; custom fields belong to one category."
+  />
+  <div
     v-if="error"
     class="alert alert-danger alert-dismissible"
   >
     {{ error }}<button
       class="btn-close"
+      aria-label="Dismiss error"
       @click="error = ''"
     />
   </div>
   <div class="row g-4">
-    <div class="col-lg-6">
+    <div class="col-12 col-lg-6">
       <div class="card">
-        <div class="card-header fw-semibold">
-          Categories
+        <div class="card-header">
+          <h2 class="section-title">
+            Categories
+          </h2>
         </div><div class="card-body border-bottom">
           <form
             class="input-group"
@@ -53,7 +59,7 @@ onMounted(() => load().catch(e => error.value = e.message));
             :key="c.id"
             role="button"
             tabindex="0"
-            class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+            class="list-group-item list-group-item-action d-flex flex-wrap justify-content-between align-items-center gap-2"
             :class="{ active: selected?.id === c.id }"
             @click="select(c)"
             @keydown.enter="select(c)"
@@ -81,10 +87,12 @@ onMounted(() => load().catch(e => error.value = e.message));
         </div>
       </div>
     </div>
-    <div class="col-lg-6">
+    <div class="col-12 col-lg-6">
       <div class="card">
-        <div class="card-header fw-semibold">
-          Fields <span v-if="selected">for {{ selected.name }}</span>
+        <div class="card-header">
+          <h2 class="section-title">
+            Fields <span v-if="selected">for {{ selected.name }}</span>
+          </h2>
         </div><div
           v-if="!selected"
           class="card-body text-secondary"

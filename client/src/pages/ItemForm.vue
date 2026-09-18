@@ -3,6 +3,8 @@ import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { api, jsonOptions } from '../api.js';
 import FieldAutocomplete from '../components/FieldAutocomplete.vue';
+import ItemThumbnail from '../components/ItemThumbnail.vue';
+import PageHeader from '../components/PageHeader.vue';
 
 const route = useRoute(); const router = useRouter();
 const editing = computed(() => Boolean(route.params.id));
@@ -61,10 +63,8 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="form-card mx-auto">
-    <h1 class="h3 mb-3">
-      {{ editing ? 'Edit item' : 'Add item' }}
-    </h1>
+  <div class="form-card">
+    <PageHeader :title="editing ? 'Edit item' : 'Add item'" />
     <div
       v-if="!categories.length"
       class="alert alert-warning"
@@ -200,7 +200,8 @@ onMounted(async () => {
           />
         </div>
         <template v-if="fields.length">
-          <hr><h2 class="h5 mb-3">
+          <hr>
+          <h2 class="section-title mb-3">
             Category fields
           </h2>
           <div
@@ -239,7 +240,8 @@ onMounted(async () => {
             >
           </div>
         </template>
-        <hr><h2 class="h5 mb-3">
+        <hr>
+        <h2 class="section-title mb-3">
           Photos
         </h2>
         <div
@@ -251,14 +253,15 @@ onMounted(async () => {
             :key="photo.id"
             class="position-relative"
           >
-            <img
-              class="thumbnail"
-              :src="`/api/photos/${photo.id}`"
-              :alt="photo.filename"
-            ><button
+            <ItemThumbnail
+              :photo-id="photo.id"
+              :name="photo.filename"
+              large
+            />
+            <button
               type="button"
               class="btn btn-danger btn-sm position-absolute top-0 end-0 py-0 px-1"
-              title="Delete photo"
+              :aria-label="`Delete photo ${photo.filename}`"
               @click="removePhoto(photo.id)"
             >
               ×
@@ -275,7 +278,8 @@ onMounted(async () => {
         ><div class="form-text">
           Up to 10 images, 15 MB each.
         </div>
-      </div><div class="card-footer d-flex gap-2 justify-content-end">
+      </div>
+      <div class="card-footer d-flex flex-wrap gap-2 justify-content-end">
         <button
           type="button"
           class="btn btn-outline-secondary"

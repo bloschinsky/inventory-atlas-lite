@@ -9,6 +9,8 @@ test('the primary pages are reachable from the navigation bar', async ({ page })
   await page.getByRole('link', { name: 'Categories & Fields' }).click();
   await expect(page).toHaveURL('/categories');
   await expect(page.getByRole('heading', { name: 'Categories & Fields' })).toBeVisible();
+  // The sidebar marks the open page for assistive technology, not only with color.
+  await expect(page.getByRole('link', { name: 'Categories & Fields' })).toHaveAttribute('aria-current', 'page');
 
   await page.getByRole('link', { name: 'Data / Backup' }).click();
   await expect(page).toHaveURL('/data');
@@ -16,6 +18,7 @@ test('the primary pages are reachable from the navigation bar', async ({ page })
 
   await page.getByRole('link', { name: 'Items', exact: true }).click();
   await expect(page).toHaveURL('/');
+  await expect(page.getByRole('link', { name: 'Items', exact: true })).toHaveAttribute('aria-current', 'page');
 
   await page.getByRole('link', { name: 'Add item' }).click();
   await expect(page).toHaveURL('/items/new');
