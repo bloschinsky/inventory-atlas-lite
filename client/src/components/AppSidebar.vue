@@ -23,7 +23,7 @@ import ThemeToggle from './ThemeToggle.vue';
           <AppNavigation />
         </nav>
         <div class="navbar-footer d-flex justify-content-center">
-          <ThemeToggle vertical />
+          <ThemeToggle />
         </div>
       </div>
     </div>

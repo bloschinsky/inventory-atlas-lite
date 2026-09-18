@@ -1,14 +1,11 @@
 <script setup>
 import { IconMoon, IconSun } from '@tabler/icons-vue';
 import { setTheme, theme } from '../theme.js';
-
-// The sidebar rail is only 4rem wide when folded, so it stacks the two modes instead.
-defineProps({ vertical: { type: Boolean, default: false } });
 </script>
 
 <template>
   <div
-    :class="vertical ? 'btn-group-vertical' : 'btn-group'"
+    class="btn-group"
     role="group"
     aria-label="Color mode"
   >
