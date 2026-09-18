@@ -77,6 +77,14 @@ The data flow is intentionally simple: a Vue page calls the helper in `client/sr
 - Include the completion date, resulting project version, a concise summary of the implementation, and the verification performed, including the Playwright result.
 - Keep planned work and future specifications in `docs/issues/`; keep completed implementation records in `docs/changes/`.
 
+## Roadmap overview maintenance
+
+`docs/ROADMAP.md` is the concise overview of active planned features. Keep it synchronized with the task files currently in `docs/issues/`.
+
+- When adding, removing, completing, reprioritizing, or materially changing an active task file, update the corresponding roadmap entry in the same change.
+- Keep each entry limited to its feature, status, dependencies, and a link to the authoritative task file. Detailed requirements and acceptance criteria remain in the task file.
+- Do not list completed features as planned work; their current behavior belongs in `docs/features/`.
+
 ## User guide maintenance
 
 `docs/HOW-TO.md` is the canonical quick user guide for the current application. Keep it true.

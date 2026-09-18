@@ -50,6 +50,10 @@ The browser tests start their own API and Vite processes on separate ports and u
 - [`docs/features/README.md`](docs/features/README.md) — what the application currently does, one document per implemented feature.
 - [`docs/README.md`](docs/README.md) — documentation layout, active tasks, and records of completed changes.
 
+## Roadmap
+
+[`docs/ROADMAP.md`](docs/ROADMAP.md) lists the active planned features and their implementation order.
+
 ## Production
 
 ```bash
