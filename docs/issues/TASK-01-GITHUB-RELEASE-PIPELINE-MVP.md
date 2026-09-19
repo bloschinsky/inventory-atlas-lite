@@ -26,7 +26,7 @@ After the tag is pushed, GitHub Actions must automatically:
 
 1. validate the project;
 2. build and publish the Docker image;
-3. prepare/update the Proxmox distribution flow;
+3. package the source archive consumed by the existing Proxmox installer/updater;
 4. create a GitHub Release for the same tag;
 5. attach the Proxmox release assets/checksums to that GitHub Release.
 
@@ -51,9 +51,12 @@ The project already has:
 
 The current Proxmox deployment installs Node.js directly inside an LXC and downloads a source archive from GitHub Releases.
 
-This task changes the release architecture so that the **Docker image becomes the canonical server runtime artifact**.
+Docker is an additional supported distribution for Docker hosts. Proxmox retains its existing
+unprivileged LXC, Node.js, systemd, and local application build. Local builds are acceptable and
+must not be moved to CI or replaced with prebuilt Proxmox runtime packages in this task.
 
-The Proxmox installation/update flow must consume the published Docker image instead of maintaining a separate application runtime build.
+One release provides two installation paths from the same tagged commit. Existing Proxmox
+instances must be able to update through their already installed updater without a migration.
 
 ---
 
@@ -71,26 +74,24 @@ GitHub Actions
       │      │
       │      └── Publish to GHCR
       │
-      ├── Prepare Proxmox installer assets
+      ├── Package compatible Proxmox source archive
       │
       └── Create GitHub Release
              │
-             ├── Proxmox installer
-             ├── Proxmox support files, if required
+             ├── inventory-atlas-lite-vX.Y.Z.tar.gz
              └── SHA256SUMS
 
 GHCR
  └── ghcr.io/bloschinsky/inventory-atlas-lite:<version>
 
 Proxmox
- └── LXC
-      └── Docker
-           └── same GHCR image
+ └── unprivileged LXC
+      └── Node.js + systemd
+           └── source archive -> local npm install/build
 ```
 
-There must not be a separate application build specifically for Proxmox.
-
-Docker and Proxmox must execute the same published application image for the same release tag.
+Docker and Proxmox must use the same release version and tagged source commit. They do not
+need to use the same runtime artifact. Preserve the existing Proxmox local build commands.
 
 ---
 
@@ -141,7 +142,9 @@ Do not trigger a production release from a normal branch push.
 
 # 2. Resolve version from Git tag
 
-The tag must be the authoritative version for the release.
+The tag identifies the release. Validate that its version matches the committed package.json
+version and the corresponding package-lock.json version fields; fail before publishing if they
+differ. package.json remains the project version source of truth under the repository rules.
 
 For:
 
@@ -184,7 +187,7 @@ npm test
 npm run build
 ```
 
-Run the existing Playwright/E2E tests too if they are stable and practical in GitHub Actions.
+Install Chromium and run npm run test:e2e in CI as part of the required validation gate.
 
 Recommended flow:
 
@@ -211,7 +214,8 @@ A failed validation must prevent publication of:
 
 # 4. Docker image
 
-Create or update the project Docker packaging so the application can run as the supported server distribution.
+Create Docker packaging as an additional supported distribution for Docker hosts. It must not
+become a requirement for installing or updating the Proxmox deployment.
 
 The Docker image must contain everything needed to run Inventory Atlas Lite except persistent user data.
 
@@ -256,6 +260,11 @@ but do not create confusing or inconsistent tag aliases.
 
 Use GitHub Actions + `GITHUB_TOKEN`/GHCR permissions; do not require a manually maintained registry password when GitHub's native token is sufficient.
 
+The published GHCR package must allow anonymous pulls. Document the supported image platforms
+and verify the packaged application, including native better-sqlite3, on those platforms.
+Run a Docker smoke test before publishing the image: check health/version, create data, and
+recreate the container with the same persistent mount to verify records and photos survive.
+
 ---
 
 # 5. Docker image metadata
@@ -278,17 +287,18 @@ The image should be traceable back to:
 
 ---
 
-# 6. Proxmox deployment migration
+# 6. Preserve Proxmox deployment
 
-Update the existing Proxmox installer/updater so Proxmox uses the canonical Docker image produced by this release pipeline.
+Keep the existing Proxmox installer/updater and deployment architecture. Only make changes
+needed for release integration and compatibility; do not introduce a runtime migration.
 
 Target runtime:
 
 ```text
 Proxmox VE host
 └── dedicated LXC
-    └── Docker
-        └── Inventory Atlas Lite image from GHCR
+    └── Node.js + systemd
+        └── Inventory Atlas Lite built locally from the release source archive
 ```
 
 The installer should continue to provide the current simple UX:
@@ -303,10 +313,10 @@ The installer must:
 
 1. run from the Proxmox VE host;
 2. create a dedicated LXC;
-3. configure the minimum LXC features required to run Docker;
-4. install Docker inside the LXC;
+3. retain the existing unprivileged LXC configuration without Docker nesting features;
+4. install Node.js using the existing installation flow;
 5. create the persistent Inventory Atlas Lite data location;
-6. pull the requested Inventory Atlas Lite image from GHCR;
+6. download and verify the compatible source archive, then build locally;
 7. start the application;
 8. wait for the existing health endpoint;
 9. print the final application URL.
@@ -327,6 +337,9 @@ IPV4
 GATEWAY
 PORT
 APP_VERSION
+OS_VERSION
+APP_BRANCH
+INSTALLER_REF
 ```
 
 Do not silently overwrite an existing LXC.
@@ -341,9 +354,14 @@ Application data must survive:
 - Docker image upgrades;
 - Proxmox application updates.
 
-Keep a stable host/LXC data path such as the current Inventory Atlas Lite data location.
+For Proxmox, preserve /var/lib/inventory-atlas-lite and its backups directory, the service
+account, and /etc/inventory-atlas-lite.env (including an existing customized DATA_DIR or PORT).
+Application code remains under /opt/inventory-atlas-lite/app, with previous code kept for rollback.
+Do not relocate, initialize over, or delete an existing database as part of release integration.
 
-The actual application container must mount it as `DATA_DIR`.
+For Docker users, document a persistent volume or bind mount and set DATA_DIR to its path
+inside the container. Ensure the runtime user can write there. Container replacement must reuse
+that mount. A healthy empty database is not evidence that existing data was preserved.
 
 Updating from:
 
@@ -363,7 +381,8 @@ must replace the application runtime only, not the SQLite database.
 
 # 8. Proxmox updater
 
-Update the existing updater so it works with versioned Docker images.
+Keep the existing source-based updater and its local build process. Published assets must work
+with the updater already installed on existing instances, without requiring a prior script update.
 
 Expected UX:
 
@@ -384,24 +403,26 @@ The updater must approximately perform:
 ```text
 resolve requested release
       ↓
-verify release exists
+download source archive and verify SHA256SUMS
       ↓
-create SQLite backup
+run existing npm ci / npm run build / npm prune in staging
       ↓
-pull target Docker image
+create consistent SQLite backup through /api/backup
       ↓
-replace/restart application container
+stop systemd service, swap application code, restart service
       ↓
 wait for /api/health
       ↓
 success
 ```
 
-If the new version fails its health check, restore/restart the previous working image/version where reasonably possible.
+Preserve the existing rollback to previous application code on a failed health check. Do not
+introduce schema changes for the release pipeline. Verify the resulting version as well as health.
 
 Do not delete user data during rollback.
 
-Keep the existing backup-retention behavior unless there is a strong technical reason to change it.
+Keep the existing retention of the last five pre-update backups. Download, checksum, and build
+failures must leave the running installation and database untouched.
 
 ---
 
@@ -429,15 +450,20 @@ ghcr.io/bloschinsky/inventory-atlas-lite:0.8.0
 
 ### Proxmox
 
-A release asset such as:
+The required source archive, with the exact legacy-compatible name:
 
 ```text
-inventory-atlas-lite-proxmox-v0.8.0.tar.gz
+inventory-atlas-lite-v0.8.0.tar.gz
 ```
 
-or a standalone installer asset if that produces a cleaner implementation.
+Package the tagged source with one enclosing directory, compatible with the existing updater's
+tar --strip-components=1 extraction. Include package.json, package-lock.json, client/server source,
+build configuration, scripts/install.sh, scripts/update.sh, scripts/lib.sh, and the deploy systemd
+unit. Use git archive or an equivalent tracked-source packaging step; exclude local databases,
+node_modules, secrets, and generated runtime files. Do not publish a prebuilt Proxmox runtime.
 
-The Proxmox release bundle may contain only deployment/support files. It must not contain another duplicate application runtime if the Docker image already provides it.
+Do not rename this archive to a deployment-only bundle or replace it with a standalone installer.
+The already installed updater expects this exact name and source layout.
 
 ---
 
@@ -453,7 +479,10 @@ SHA256SUMS
 
 The checksum file must cover the manually downloadable artifacts created by this workflow.
 
-The Proxmox installer must verify downloaded release assets where applicable.
+SHA256SUMS must contain the hash and exact filename of the uploaded source archive. The existing
+installer/updater must verify it using its current logic. Do not depend on fallback to GitHub's
+automatically generated source archive: its bytes may differ from the published asset and its
+checksum will not necessarily match. Verify this with the unmodified legacy download helper.
 
 Docker image integrity should rely on the container registry image digest rather than duplicating the image into a `.tar.gz` release asset.
 
@@ -544,6 +573,8 @@ README.md
 docs/proxmox.md
 docs/README.md
 docs/ROADMAP.md
+docs/HOW-TO.md
+docs/features/README.md
 ```
 
 Document:
@@ -552,13 +583,15 @@ Document:
 - tag format;
 - Docker image location;
 - how to run the Docker image;
-- how Proxmox installation works after migration;
+- the two supported paths: Docker image and the existing Proxmox Node.js installation;
 - how Proxmox updates work;
 - where persistent data lives;
 - how to pin a release version;
 - how to find downloads on GitHub Releases.
 
-Remove or rewrite obsolete documentation that claims Proxmox installs the application directly under Node.js without Docker.
+Keep the existing Proxmox Node.js/local-build instructions accurate. Add a permanent feature
+document for the implemented pipeline and update affected existing feature documentation.
+Do not describe planned release behavior as already implemented.
 
 ---
 
@@ -568,9 +601,13 @@ Existing Inventory Atlas Lite SQLite databases must continue to work.
 
 Do not change the database format just for the release pipeline.
 
-The migration from the current Proxmox runtime to Docker must not introduce intentional data loss.
+There is no Proxmox runtime migration. Preserve source asset names, archive layout, checksum
+compatibility, service configuration, data location, and update commands. Verify upgrading a
+real pre-pipeline release (v0.7.0 as the baseline) using its unmodified installed updater and
+lib.sh. Updating those scripts in the repository alone does not establish compatibility.
 
-If existing installed Proxmox instances cannot be automatically migrated safely, document the supported migration procedure rather than implementing a destructive automatic migration.
+Failure of this legacy upgrade scenario blocks completion; a manual migration workaround is
+not a substitute for the required compatibility.
 
 ---
 
@@ -578,6 +615,10 @@ If existing installed Proxmox instances cannot be automatically migrated safely,
 
 Do **not** implement in this task:
 
+- Docker inside the Proxmox LXC or migration of existing Proxmox instances;
+- moving Proxmox local builds to CI or distributing prebuilt Proxmox runtime packages;
+- changes to the existing Proxmox npm build process;
+- native OCI-to-LXC deployment or replacing the LXC with a VM;
 - Electron;
 - Windows `.exe`;
 - Windows installer;
@@ -604,17 +645,22 @@ The task is complete when all of the following are true:
 - [ ] Stable releases update the `latest` Docker tag.
 - [ ] The Docker image uses persistent external storage for SQLite.
 - [ ] The Docker image reports/contains traceable version + commit metadata.
-- [ ] The Proxmox installer deploys the published Docker image rather than a separate source runtime.
-- [ ] The Proxmox updater can install the latest stable image.
+- [ ] The Docker image is publicly pullable and passes its persistence/startup smoke test.
+- [ ] The Proxmox installer retains Node.js, systemd, and the existing local source build.
+- [ ] The source archive name, one-directory layout, and SHA256SUMS work with the unmodified legacy updater.
+- [ ] A pre-pipeline v0.7.0 installation updates successfully without migration or prior script replacement.
+- [ ] The Proxmox updater can install the latest stable source release.
 - [ ] The Proxmox updater can pin/install a specific version.
-- [ ] Proxmox application data survives updates.
+- [ ] Proxmox records, fields, relationships, and photo bytes survive updates; paths and custom PORT/DATA_DIR remain valid.
+- [ ] Failed download/checksum/build leaves the old service running; failed health triggers working code rollback.
 - [ ] A pre-update SQLite backup is created.
 - [ ] The health check is used before an install/update is reported as successful.
 - [ ] A GitHub Release is created automatically for the tag.
 - [ ] The GitHub Release contains the required Proxmox download assets.
 - [ ] `SHA256SUMS` is generated for downloadable release assets.
 - [ ] The GitHub Release documents the corresponding GHCR image/version.
-- [ ] README/Proxmox documentation reflects the new architecture.
+- [ ] Tag/package version mismatches fail before publication; both distributions report the release version.
+- [ ] README, guides, and permanent feature documentation explain both installation paths accurately.
 - [ ] Existing application functionality and SQLite compatibility are preserved.
 
 ---
@@ -636,7 +682,7 @@ and verify:
 5. Confirm GitHub Release is created automatically.
 6. Confirm Proxmox assets are attached.
 7. Install a fresh Proxmox instance using the normal one-line installer.
-8. Confirm the LXC starts Inventory Atlas Lite using the GHCR image.
+8. Confirm the LXC builds locally and starts Inventory Atlas Lite under Node.js/systemd without Docker.
 9. Add a test inventory item.
 10. Release another patch version.
 11. Run the Proxmox updater.
@@ -644,6 +690,22 @@ and verify:
 13. Confirm the test item/database remains intact.
 14. Confirm the backup is created.
 15. Confirm `/api/health` reports a healthy application and the correct release version.
+
+Also verify before completing the task:
+
+1. Install v0.7.0 in a disposable Proxmox LXC using its original scripts. Create categories,
+   custom field values, nested items, and photos; record identifiers and photo hashes.
+2. Run its unmodified installed updater against the first pipeline release. Check archive/checksum
+   compatibility, version, record identifiers, relationships, photo hashes, and backup integrity.
+3. Verify explicit --version and latest, including an installation with customized PORT/DATA_DIR.
+4. Exercise failed downloads, invalid checksums, and failed builds with controlled fixtures; the
+   running service and data must remain intact. Exercise failed startup/health and verify rollback.
+5. Reboot the test LXC and verify service startup and persistent data.
+6. Separately pull the Docker image anonymously, create an item and photo, then recreate/upgrade
+   its container with the same persistent mount. Verify version, records, photo bytes, and backup.
+
+Use isolated test databases and disposable instances. Record actual Proxmox verification results;
+CI and browser tests alone do not prove that the legacy deployment/update path works.
 
 ---
 
@@ -655,11 +717,11 @@ After this task the supported server release model should be:
 ONE TAG
   │
   ▼
-ONE OFFICIAL SERVER IMAGE
+ONE OFFICIAL RELEASE
   │
-  ├── Docker users
-  └── Proxmox installer
-        └── deploys the same image
+  ├── GHCR image -> Docker hosts
+  └── compatible source archive + SHA256SUMS
+        └── Proxmox LXC -> existing local build -> Node.js + systemd
 ```
 
 GitHub Releases become the central human-facing release/distribution page.

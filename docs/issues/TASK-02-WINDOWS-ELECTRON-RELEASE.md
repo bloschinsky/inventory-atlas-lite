@@ -364,7 +364,7 @@ Docker
   ghcr.io/bloschinsky/inventory-atlas-lite:0.8.0
 
 Proxmox
-  inventory-atlas-lite-proxmox-v0.8.0.tar.gz
+  inventory-atlas-lite-v0.8.0.tar.gz
 
 Windows
   Inventory-Atlas-Lite-Setup-0.8.0.exe
