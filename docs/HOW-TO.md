@@ -12,8 +12,10 @@ lenses, cables, spare parts, boxes in the garage. For every item you record a na
 optional condition, location, description, purchase details, serial number, your own custom fields,
 and photos.
 
-Everything lives in one SQLite database on your server, including the original photo bytes. Nothing
-is sent anywhere else and the application needs no Internet connection at runtime.
+All inventory records and original photo bytes live in one SQLite database on your server. Normal
+use needs no external service. The optional **AI Add Item** workflow sends a reduced analysis copy
+of the selected photo, its optional hint, and your category/field schema to OpenAI only after you
+press **Analyze**; it therefore needs Internet access.
 
 **There is no authentication.** Anyone who can open the address can read and change the whole
 inventory, so keep it on a trusted LAN or behind a VPN.
@@ -51,6 +53,10 @@ inventory, so keep it on a trusted LAN or behind a VPN.
 6. Press **Save item**. You land on the item page; check that it also appears on **Items** and that
    the search finds it by name.
 7. Open **Data / Backup** and press **Download backup** to get your first copy of the database.
+
+To use assisted photo entry, open **Settings**, enable AI features, keep **OpenAI** as the provider,
+enter an image-capable model and API key, then press **Save settings**. The saved key is shown only
+as a masked value afterwards.
 
 ## 4. Core concepts
 
@@ -126,6 +132,24 @@ Field types are fixed after creation; to change a type, delete the field and add
 5. Add photos, then press **Save item**.
 
 Changing the category while filling in the form loads that category's fields.
+
+### Create an item from a photo with AI
+
+1. Configure and enable OpenAI under **Settings → AI**. The default model is `gpt-4o-mini`; you can
+   replace it with another OpenAI model that accepts image input and strict structured output.
+2. Open **Items** and press **AI Add Item** next to **Add item**.
+3. Select one JPEG, PNG, WebP, or GIF photo of at most 15 MB. Optionally describe what you know in
+   **Additional description**; visible evidence in the photo takes priority.
+4. Press **Analyze** once. The button shows progress and cannot submit a duplicate request. If the
+   request fails, the selected photo and description stay on the page so you can retry.
+5. The normal item form opens with the suggested existing category, supported base and custom-field
+   values, confidence, any warnings, and the original photo ready to upload. Empty values remain
+   empty. Review and edit every value; AI suggestions are not guaranteed to be correct.
+6. Press **Save item** to create the record through the normal workflow. Leaving or reloading the
+   review page before saving discards the temporary draft, and no inventory record has been written.
+
+The analysis uses one low-detail OpenAI request in the normal path. It does not search the web,
+create categories or fields, remove the background, or retry automatically at higher detail.
 
 ### Edit or delete an item
 
@@ -280,6 +304,10 @@ on a different machine than the server.
 - Custom field types cannot be changed after creation, and categories cannot be merged.
 - There is no restore, import, or export function in the interface beyond the SQLite backup
   download, and no CSV or label printing.
+- AI Add Item uses OpenAI and sends an analysis image copy, the optional hint, and category/field
+  definitions outside the local deployment. The original image is stored only after you confirm the
+  draft. The OpenAI key stays in `ai-settings.json` under `DATA_DIR` and is not part of SQLite
+  backups, so move or reconfigure it separately.
 - Autocomplete is offered for text custom fields only, not for the name, condition, location, or
   description.
 
@@ -294,5 +322,7 @@ on a different machine than the server.
 | A photo is rejected | Only JPEG, PNG, WebP, and GIF are accepted, at most 10 files of 15 MB each per upload. |
 | Search finds nothing | The search matches the name, description, and serial number. Clear the category filter and check that you are on page 1. |
 | No suggestions in a text field | Suggestions come from values already saved for that same field. A newly created field starts empty. |
+| AI Add Item is disabled | Open **Settings**, enable AI features, enter an OpenAI API key and an image-capable model, then save. |
+| AI analysis fails | Read the message for an invalid key, rate limit, unavailable provider, timeout, unsupported image, or missing category. The selected photo and hint remain available for retry. |
 | Which version is this | Open **About** in the navigation. It shows the version, the commit the build came from, and its date. |
 | Where are the logs | On Proxmox, inside the container: `journalctl -u inventory-atlas-lite -f`. See [`proxmox.md`](proxmox.md) for the other service commands. |

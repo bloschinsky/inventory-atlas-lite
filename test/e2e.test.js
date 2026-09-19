@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { createServer } from 'node:http';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -10,11 +11,11 @@ let port = 32000 + Math.floor(Math.random() * 1000);
 let base = `http://127.0.0.1:${port}`;
 
 // Every start claims a fresh port so a previous server socket can never block the next one.
-async function startServer(dataDir) {
+async function startServer(dataDir, environment = {}) {
   port += 1;
   base = `http://127.0.0.1:${port}`;
   const child = spawn(process.execPath, ['server/src/index.js', '--production'], {
-    cwd: process.cwd(), env: { ...process.env, PORT: String(port), DATA_DIR: dataDir }, stdio: 'ignore'
+    cwd: process.cwd(), env: { ...process.env, PORT: String(port), DATA_DIR: dataDir, ...environment }, stdio: 'ignore'
   });
   for (let attempt = 0; attempt < 50; attempt++) {
     if (child.exitCode !== null) throw new Error('Server exited before becoming ready.');
@@ -339,6 +340,96 @@ test('the health endpoint reports the running version while SQLite is usable', a
     assert.deepEqual(Object.keys(health).sort(), ['database', 'status', 'version']);
   } finally {
     if (server) await stopServer(server);
+    await rm(dataDir, { recursive: true, force: true });
+  }
+});
+
+test('AI settings stay server-side and image analysis returns a validated inventory draft', async () => {
+  const dataDir = await mkdtemp(path.join(os.tmpdir(), 'inventory-ai-test-'));
+  let appServer;
+  let providerRequest;
+  const providerServer = createServer(async (req, res) => {
+    let rawBody = '';
+    for await (const chunk of req) rawBody += chunk.toString();
+    providerRequest = {
+      authorization: req.headers.authorization,
+      body: JSON.parse(rawBody)
+    };
+    const prompt = JSON.parse(providerRequest.body.input[0].content[0].text);
+    const cameras = prompt.inventorySchema.categories.find(category => category.name === 'Cameras');
+    const brand = cameras.fields.find(field => field.name === 'Brand');
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify({
+      output_text: JSON.stringify({
+        categoryId: cameras.id,
+        confidence: 0.87,
+        needsDetailedImageAnalysis: false,
+        baseFields: {
+          name: 'Visible camera', description: 'Camera with a visible maker label', condition: null,
+          location: null, purchase_date: null, purchase_price_amount: null,
+          purchase_price_currency: null, serial_number: 'ABC-123'
+        },
+        dynamicFields: [
+          { fieldId: brand.id, value: 'Olympus' },
+          { fieldId: 999999, value: 'discard me' }
+        ],
+        warnings: ['Verify the exact model.']
+      }),
+      usage: { input_tokens: 100, output_tokens: 50 }
+    }));
+  });
+  await new Promise(resolve => providerServer.listen(0, '127.0.0.1', resolve));
+  const providerPort = providerServer.address().port;
+  const imageData = () => {
+    const data = new FormData();
+    data.append('image', new Blob([Buffer.from('89504e470d0a1a0a', 'hex')], { type: 'image/png' }), 'camera.png');
+    data.append('hint', 'The label may say Olympus.');
+    return data;
+  };
+  try {
+    appServer = await startServer(dataDir, { OPENAI_BASE_URL: `http://127.0.0.1:${providerPort}` });
+    assert.equal(await failedStatus('/api/ai/items/analyze', { method: 'POST', body: imageData() }), 409);
+
+    const emptySettings = await request('/api/settings/ai');
+    assert.deepEqual(emptySettings, { enabled: false, provider: 'openai', model: 'gpt-4o-mini', hasApiKey: false, apiKeyMasked: '' });
+    await request('/api/settings/ai', json('PUT', { enabled: true, provider: 'openai', model: 'gpt-4o-mini' }));
+    assert.equal(await failedStatus('/api/ai/items/analyze', { method: 'POST', body: imageData() }), 409);
+
+    const configured = await request('/api/settings/ai', json('PUT', {
+      enabled: true, provider: 'openai', model: 'gpt-4o-mini', apiKey: 'sk-test-not-a-real-secret'
+    }));
+    assert.equal(configured.hasApiKey, true);
+    assert.equal(configured.apiKeyMasked, '••••••••cret');
+    assert.ok(!JSON.stringify(configured).includes('sk-test'));
+
+    const cameras = await request('/api/categories', json('POST', { name: 'Cameras' }));
+    const brand = await request(`/api/categories/${cameras.id}/fields`, json('POST', { name: 'Brand', type: 'text' }));
+    await request('/api/items', json('POST', { name: 'Existing private inventory item', category_id: cameras.id }));
+    const draft = await request('/api/ai/items/analyze', { method: 'POST', body: imageData() });
+    assert.equal(draft.categoryId, cameras.id);
+    assert.equal(draft.baseFields.name, 'Visible camera');
+    assert.equal(draft.baseFields.serial_number, 'ABC-123');
+    assert.equal(draft.dynamicFields[brand.id], 'Olympus');
+    assert.equal(draft.dynamicFields['999999'], undefined);
+    assert.deepEqual(draft.warnings, ['Verify the exact model.']);
+
+    assert.equal(providerRequest.authorization, 'Bearer sk-test-not-a-real-secret');
+    assert.equal(providerRequest.body.model, 'gpt-4o-mini');
+    assert.equal(providerRequest.body.store, false);
+    assert.equal(providerRequest.body.input[0].content[1].detail, 'low');
+    assert.equal(providerRequest.body.text.format.type, 'json_schema');
+    assert.equal(providerRequest.body.text.format.strict, true);
+    assert.ok(!JSON.stringify(providerRequest.body).includes('Existing private inventory item'));
+
+    const invalidImage = new FormData();
+    invalidImage.append('image', new Blob(['not an image'], { type: 'image/png' }), 'fake.png');
+    assert.equal(await failedStatus('/api/ai/items/analyze', { method: 'POST', body: invalidImage }), 400);
+    const unsupportedImage = new FormData();
+    unsupportedImage.append('image', new Blob(['plain text'], { type: 'text/plain' }), 'fake.txt');
+    assert.equal(await failedStatus('/api/ai/items/analyze', { method: 'POST', body: unsupportedImage }), 400);
+  } finally {
+    if (appServer) await stopServer(appServer);
+    await new Promise(resolve => providerServer.close(resolve));
     await rm(dataDir, { recursive: true, force: true });
   }
 });

@@ -11,7 +11,7 @@
 
 # Inventory Atlas Lite
 
-A deliberately small, self-hosted inventory app for physical items. It uses Vue 3, Express, and one SQLite database containing all data and photos. No authentication or Internet connection is required at runtime; access should be limited to a trusted LAN or VPN/Tailscale network.
+A deliberately small, self-hosted inventory app for physical items. It uses Vue 3, Express, and one SQLite database containing all inventory data and photos. No authentication is included, so access should be limited to a trusted LAN or VPN/Tailscale network. Normal use is local; the optional AI Add Item feature contacts OpenAI only when the user requests photo analysis.
 
 ## Requirements
 
@@ -130,5 +130,9 @@ artifact contract and release checks.
 ## Data and backups
 
 The database is created automatically at `data/inventory.sqlite`. It contains items, categories, fields, values, and original photo bytes. The **Data / Backup** page downloads a consistent SQLite snapshot using SQLite's backup API. Back up that downloaded file regularly.
+
+AI configuration is managed in **Settings**. Its API key is stored separately as
+`ai-settings.json` under `DATA_DIR`, is not returned to the browser after saving, and is not included
+in SQLite backups. Back up or reconfigure this secret separately when moving an installation.
 
 Do not expose this application directly to the public Internet: the MVP intentionally has no authentication.

@@ -9,6 +9,8 @@ import ItemForm from './pages/ItemForm.vue';
 import Categories from './pages/Categories.vue';
 import DataBackup from './pages/DataBackup.vue';
 import Dashboard from './pages/Dashboard.vue';
+import AIAddItem from './pages/AIAddItem.vue';
+import Settings from './pages/Settings.vue';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -16,11 +18,13 @@ const router = createRouter({
     { path: '/', redirect: '/dashboard' },
     { path: '/dashboard', component: Dashboard },
     { path: '/items', component: ItemsList },
+    { path: '/items/ai', component: AIAddItem },
     { path: '/items/new', component: ItemForm },
     { path: '/items/:id', component: ItemDetails },
     { path: '/items/:id/edit', component: ItemForm },
     { path: '/categories', component: Categories },
-    { path: '/data', component: DataBackup }
+    { path: '/data', component: DataBackup },
+    { path: '/settings', component: Settings }
   ]
 });
 

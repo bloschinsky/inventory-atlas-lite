@@ -5,11 +5,13 @@ import { api, jsonOptions } from '../api.js';
 import FieldAutocomplete from '../components/FieldAutocomplete.vue';
 import ItemThumbnail from '../components/ItemThumbnail.vue';
 import PageHeader from '../components/PageHeader.vue';
+import { takePendingAiDraft } from '../aiDraft.js';
 
 const route = useRoute(); const router = useRouter();
 const editing = computed(() => Boolean(route.params.id));
 const categories = ref([]); const fields = ref([]); const existingPhotos = ref([]); const photos = ref([]);
 const error = ref(''); const saving = ref(false); const initialized = ref(false);
+const aiDraft = ref(null);
 const currencies = Intl.supportedValuesOf('currency');
 const form = reactive({
   name: '', category_id: '', description: '', condition: '', location: '', purchase_date: '',
@@ -65,6 +67,29 @@ onMounted(async () => {
       for (const field of item.fields) form.field_values[field.id] = field.value ?? (field.type === 'boolean' ? '0' : '');
       existingPhotos.value = item.photos;
       await loadFields(item.category_id);
+    } else {
+      const pending = takePendingAiDraft();
+      if (pending) {
+        aiDraft.value = pending.draft;
+        const base = pending.draft.baseFields || {};
+        form.name = base.name || '';
+        form.category_id = pending.draft.categoryId || '';
+        form.description = base.description || '';
+        form.condition = base.condition || '';
+        form.location = base.location || '';
+        form.purchase_date = base.purchase_date || '';
+        form.purchase_price = base.purchase_price || { amount: '', currency: 'UAH' };
+        form.serial_number = base.serial_number || '';
+        photos.value = [pending.photo];
+        if (form.category_id) {
+          await loadFields(form.category_id);
+          for (const field of fields.value) {
+            if (Object.hasOwn(pending.draft.dynamicFields || {}, field.id)) {
+              form.field_values[field.id] = pending.draft.dynamicFields[field.id];
+            }
+          }
+        }
+      }
     }
     initialized.value = true;
   } catch (e) { error.value = e.message; }
@@ -73,7 +98,26 @@ onMounted(async () => {
 
 <template>
   <div class="form-card">
-    <PageHeader :title="editing ? 'Edit item' : 'Add item'" />
+    <PageHeader :title="editing ? 'Edit item' : (aiDraft ? 'Review AI item' : 'Add item')" />
+    <div
+      v-if="aiDraft"
+      class="alert alert-info"
+      role="status"
+    >
+      Review and edit every suggested value before saving.
+      <span v-if="aiDraft.confidence !== null">AI confidence: {{ Math.round(aiDraft.confidence * 100) }}%.</span>
+      <ul
+        v-if="aiDraft.warnings?.length"
+        class="mb-0 mt-2"
+      >
+        <li
+          v-for="warning in aiDraft.warnings"
+          :key="warning"
+        >
+          {{ warning }}
+        </li>
+      </ul>
+    </div>
     <div
       v-if="!categories.length"
       class="alert alert-warning"
@@ -342,6 +386,7 @@ onMounted(async () => {
           multiple
           @change="photos = Array.from($event.target.files)"
         ><div class="form-text">
+          <span v-if="photos.length">{{ photos.length }} photo{{ photos.length === 1 ? '' : 's' }} ready to upload. Choose files to replace the selection. </span>
           Up to 10 images, 15 MB each.
         </div>
       </div>

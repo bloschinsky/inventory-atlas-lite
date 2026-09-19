@@ -3,7 +3,9 @@ dist/
 data/*.sqlite
 data/*.sqlite-*
 data/backups/
+data/ai-settings.json*
 .env
+.env.local
 *.log
 test-results/
 playwright-report/

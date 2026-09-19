@@ -16,7 +16,7 @@ Background removal must run locally and must not consume OpenAI/LLM tokens.
 
 ## Dependency
 
-This task is BLOCKED until the main **AI Add Item** task is implemented.
+This task builds on the implemented **AI Add Item** feature.
 
 Required existing behavior:
 

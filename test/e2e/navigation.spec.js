@@ -18,11 +18,15 @@ test('the primary pages are reachable from the navigation bar', async ({ page })
   await expect(page).toHaveURL('/data');
   await expect(page.getByRole('heading', { name: 'Data / Backup' })).toBeVisible();
 
+  await page.getByRole('link', { name: 'Settings', exact: true }).click();
+  await expect(page).toHaveURL('/settings');
+  await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
+
   await page.getByRole('link', { name: 'Items', exact: true }).click();
   await expect(page).toHaveURL('/items');
   await expect(page.getByRole('link', { name: 'Items', exact: true })).toHaveAttribute('aria-current', 'page');
 
-  await page.getByRole('link', { name: 'Add item' }).click();
+  await page.getByRole('link', { name: 'Add item', exact: true }).click();
   await expect(page).toHaveURL('/items/new');
   await expect(page.getByRole('heading', { name: 'Add item' })).toBeVisible();
 });

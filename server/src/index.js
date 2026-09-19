@@ -6,6 +6,7 @@ import os from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { db } from './db.js';
+import { analyzeInventoryItem, detectImageMime, publicAiSettings, writeAiSettings } from './ai.js';
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -19,7 +20,8 @@ const upload = multer({
   limits: { fileSize: 15 * 1024 * 1024, files: 10 },
   fileFilter: (_req, file, done) => {
     const valid = imageTypes.has(file.mimetype);
-    done(valid ? null : new Error('Only JPEG, PNG, WebP, and GIF images are allowed.'), valid);
+    const error = valid ? null : Object.assign(new Error('Only JPEG, PNG, WebP, and GIF images are allowed.'), { status: 400 });
+    done(error, valid);
   }
 });
 
@@ -98,6 +100,22 @@ const resolveParentId = (raw, itemId = null) => {
 };
 const escapeLike = value => value.replace(/[\\%_]/g, '\\$&');
 const searchLike = value => `%${escapeLike(value)}%`;
+
+app.get('/api/settings/ai', (_req, res) => res.json(publicAiSettings()));
+app.put('/api/settings/ai', (req, res) => res.json(writeAiSettings(req.body)));
+
+app.post('/api/ai/items/analyze', upload.single('image'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'Choose an image to analyze.' });
+  const mimeType = detectImageMime(req.file.buffer);
+  if (!mimeType || mimeType !== req.file.mimetype) {
+    return res.status(400).json({ error: 'The uploaded file is not a valid JPEG, PNG, WebP, or GIF image.' });
+  }
+  const hint = typeof req.body.hint === 'string' ? req.body.hint.trim() : '';
+  if (hint.length > 2000) return res.status(400).json({ error: 'The description must be 2,000 characters or fewer.' });
+  const categories = db.prepare('SELECT id, name FROM categories ORDER BY name COLLATE NOCASE').all();
+  const fields = db.prepare('SELECT id, category_id, name, type FROM custom_fields ORDER BY category_id, id').all();
+  res.json(await analyzeInventoryItem({ image: req.file.buffer, mimeType, hint, categories, fields }));
+});
 
 app.get('/api/categories', (_req, res) => {
   res.json(db.prepare(`
@@ -400,7 +418,8 @@ if (isProduction) {
 app.use((error, _req, res, _next) => {
   console.error(error);
   const duplicate = error.code === 'SQLITE_CONSTRAINT_UNIQUE';
-  res.status(error.status || (duplicate ? 409 : 500)).json({ error: duplicate ? 'A record with this name already exists.' : (error.message || 'Unexpected server error.') });
+  const uploadError = error instanceof multer.MulterError;
+  res.status(error.status || (duplicate ? 409 : (uploadError ? 400 : 500))).json({ error: duplicate ? 'A record with this name already exists.' : (error.message || 'Unexpected server error.') });
 });
 const server = app.listen(port, '0.0.0.0', () => console.log(`Inventory server listening on http://0.0.0.0:${port}`));
 const shutdown = () => server.close(() => process.exit(0));

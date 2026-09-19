@@ -10,6 +10,7 @@ document describes the current behaviour and its boundaries, not the original pl
 | [Nested items](nested-items.md) | Store an item inside another item and browse its direct contents. |
 | [Custom-field autocomplete](custom-field-autocomplete.md) | Suggest previously saved values for text custom fields. |
 | [Purchase and serial fields](purchase-and-serial-fields.md) | Record an optional purchase date, structured multi-currency price, and serial number on every item. |
+| [AI Add Item](ai-add-item.md) | Analyze one photo with OpenAI, validate a schema-aware draft, and review it in the existing Add Item form before saving. |
 | [Proxmox one-line installer](proxmox-one-line-installer.md) | Create a Debian LXC on Proxmox VE with the application, a systemd service, and an update command. |
 | [About dialog and build metadata](about-dialog.md) | An accessible About modal showing the version, commit, and source date injected at build time. |
 | [Playwright browser tests](playwright-e2e-tests.md) | Chromium end-to-end coverage of the main user workflows. |

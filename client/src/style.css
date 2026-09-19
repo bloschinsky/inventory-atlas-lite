@@ -92,3 +92,9 @@ button.dashboard-bar-button:hover, button.dashboard-bar-button:focus-visible, .d
   .dashboard-toolbar > .btn { flex: 1 1 auto; }
   .dashboard-refresh { flex-basis: 100%; }
 }
+.app-ai-preview {
+  display: block;
+  max-height: 18rem;
+  max-width: min(100%, 26rem);
+  object-fit: contain;
+}

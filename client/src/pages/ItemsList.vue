@@ -3,6 +3,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { api } from '../api.js';
 import ItemResults from '../components/ItemResults.vue';
 import PageHeader from '../components/PageHeader.vue';
+import { IconSparkles } from '@tabler/icons-vue';
 
 const categories = ref([]);
 const result = ref({ items: [], pagination: { page: 1, pages: 1, total: 0 } });
@@ -31,6 +32,16 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
     :subtitle="countLabel"
   >
     <template #actions>
+      <RouterLink
+        to="/items/ai"
+        class="btn btn-outline-primary"
+      >
+        <IconSparkles
+          :size="18"
+          aria-hidden="true"
+        />
+        AI Add Item
+      </RouterLink>
       <RouterLink
         to="/items/new"
         class="btn btn-primary"
@@ -158,8 +169,14 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
       </p>
       <div
         v-if="!filtered"
-        class="empty-action"
+        class="empty-action d-flex flex-wrap justify-content-center gap-2"
       >
+        <RouterLink
+          to="/items/ai"
+          class="btn btn-outline-primary"
+        >
+          AI Add Item
+        </RouterLink>
         <RouterLink
           to="/items/new"
           class="btn btn-primary"
