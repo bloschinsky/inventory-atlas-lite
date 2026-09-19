@@ -16,7 +16,7 @@ const hasStorage = computed(() => Boolean(item.value?.parent || item.value?.chil
 async function load() { try { item.value = await api(`/api/items/${route.params.id}`); } catch (e) { error.value = e.message; } }
 async function remove() {
   if (!confirm(`Delete “${item.value.name}” and its photos?`)) return;
-  try { await api(`/api/items/${item.value.id}`, { method: 'DELETE' }); router.push('/'); } catch (e) { error.value = e.message; }
+  try { await api(`/api/items/${item.value.id}`, { method: 'DELETE' }); router.push('/items'); } catch (e) { error.value = e.message; }
 }
 async function removePhoto(id) {
   if (!confirm('Delete this photo?')) return;
@@ -54,7 +54,7 @@ onMounted(load);
         <div class="col min-w-0">
           <ol class="breadcrumb page-pretitle mb-1">
             <li class="breadcrumb-item">
-              <RouterLink to="/">
+              <RouterLink to="/items">
                 All items
               </RouterLink>
             </li>

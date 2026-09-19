@@ -15,7 +15,7 @@ test.describe('narrow screens', () => {
   test.use({ viewport: phone });
 
   test('the offcanvas menu reaches every page, closes, and restores focus', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/items');
     const menu = page.getByRole('button', { name: 'Open navigation menu' });
     await expect(menu).toBeVisible();
     // The desktop sidebar is not rendered at this width, not even for assistive technology.
@@ -47,7 +47,7 @@ test.describe('narrow screens', () => {
     const itemName = unique('Head torch');
     await createItem(request, { name: itemName, category_id: category.id, condition: 'Good', location: 'Shelf B' });
 
-    await page.goto('/');
+    await page.goto('/items');
     await page.getByPlaceholder('Search name, description or serial number…').fill(itemName);
     // Each row action carries the item name, so the plain name link is matched exactly.
     await expect(page.getByRole('link', { name: itemName, exact: true })).toBeVisible();

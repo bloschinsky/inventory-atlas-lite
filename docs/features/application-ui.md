@@ -17,8 +17,8 @@ presentation layer over the existing API, and no CDN or other runtime internet d
 ### Desktop navigation
 
 - From the Tabler `lg` breakpoint (`992px`) upwards the sidebar rests as a `4rem` icon rail showing
-  the product mark and one Tabler icon per destination: **Items**, **Categories & Fields**, and
-  **Data / Backup**, followed by the **About** entry described in
+  the product mark and one Tabler icon per destination: **Dashboard**, **Items**, **Categories &
+  Fields**, and **Data / Backup**, followed by the **About** entry described in
   [`about-dialog.md`](about-dialog.md).
 - Hovering the rail expands it to `16rem` and reveals the labels and the product name. Tabler's own
   `:has(:focus-visible)` rule expands it for keyboard users too, so tabbing into the sidebar shows
@@ -73,6 +73,10 @@ presentation layer over the existing API, and no CDN or other runtime internet d
 - An empty inventory shows a Tabler empty state, *No items yet* with an **Add your first item**
   action; a search or filter with no result shows *No matching items* instead. Loading shows a
   spinner card, so the layout does not jump.
+
+The root URL redirects to **Dashboard**, while the item list remains available at `/items` and all
+existing `/items/:id` deep links retain their meaning. Dashboard behavior is documented separately
+in [`dashboard.md`](dashboard.md).
 
 ### Item details
 

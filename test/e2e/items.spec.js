@@ -73,7 +73,7 @@ test('deletes an item and removes it from the list', async ({ page, request }) =
   const itemName = unique('Drill');
   await request.post('/api/items', { data: { name: itemName, category_id: category.id } });
 
-  await page.goto('/');
+  await page.goto('/items');
   await page.getByPlaceholder('Search name, description or serial number…').fill(itemName);
   await page.getByRole('link', { name: itemName, exact: true }).click();
   await expect(page.getByRole('heading', { name: itemName })).toBeVisible();
@@ -81,7 +81,7 @@ test('deletes an item and removes it from the list', async ({ page, request }) =
   page.once('dialog', dialog => dialog.accept());
   await page.getByRole('button', { name: 'Delete' }).click();
 
-  await expect(page).toHaveURL('/');
+  await expect(page).toHaveURL('/items');
   await page.getByPlaceholder('Search name, description or serial number…').fill(itemName);
   await expect(page.getByText('No matching items')).toBeVisible();
 });

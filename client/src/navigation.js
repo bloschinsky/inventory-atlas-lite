@@ -1,8 +1,9 @@
-import { IconDatabase, IconPackages, IconTags } from '@tabler/icons-vue';
+import { IconDashboard, IconDatabase, IconPackages, IconTags } from '@tabler/icons-vue';
 
 // Single source of truth for the desktop sidebar and the mobile offcanvas menu.
 export const navigationLinks = [
-  { to: '/', label: 'Items', prefixes: ['/items'], icon: IconPackages },
+  { to: '/dashboard', label: 'Dashboard', prefixes: [], icon: IconDashboard },
+  { to: '/items', label: 'Items', prefixes: ['/items'], icon: IconPackages },
   { to: '/categories', label: 'Categories & Fields', prefixes: [], icon: IconTags },
   { to: '/data', label: 'Data / Backup', prefixes: [], icon: IconDatabase }
 ];

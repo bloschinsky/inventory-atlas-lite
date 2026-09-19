@@ -4,7 +4,9 @@ test('the primary pages are reachable from the navigation bar', async ({ page })
   await page.goto('/');
   await expect(page).toHaveTitle('Inventory Atlas Lite');
   await expect(page.getByRole('link', { name: 'Inventory Atlas Lite' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Items', level: 1 })).toBeVisible();
+  await expect(page).toHaveURL('/dashboard');
+  await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page');
 
   await page.getByRole('link', { name: 'Categories & Fields' }).click();
   await expect(page).toHaveURL('/categories');
@@ -17,7 +19,7 @@ test('the primary pages are reachable from the navigation bar', async ({ page })
   await expect(page.getByRole('heading', { name: 'Data / Backup' })).toBeVisible();
 
   await page.getByRole('link', { name: 'Items', exact: true }).click();
-  await expect(page).toHaveURL('/');
+  await expect(page).toHaveURL('/items');
   await expect(page.getByRole('link', { name: 'Items', exact: true })).toHaveAttribute('aria-current', 'page');
 
   await page.getByRole('link', { name: 'Add item' }).click();

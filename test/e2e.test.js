@@ -71,6 +71,12 @@ test('inventory acceptance path persists and produces a valid backup', async () 
     assert.equal(list.pagination.total, 1);
     assert.ok(list.items[0].thumbnail_id);
 
+    const dashboard = await request(`/api/dashboard?categoryId=${category.id}`);
+    assert.equal(dashboard.totalItems, 1);
+    assert.deepEqual(dashboard.photoCoverage, { withPhotos: 1, withoutPhotos: 0, percentage: 100 });
+    assert.equal(dashboard.placement.directLocation, 1);
+    assert.equal(dashboard.conditionDistribution[0].label, 'Good');
+
     const backupResponse = await fetch(`${base}/api/backup`);
     assert.ok(backupResponse.ok);
     const backupPath = path.join(dataDir, 'checked-backup.sqlite');

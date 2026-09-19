@@ -8,11 +8,14 @@ import ItemDetails from './pages/ItemDetails.vue';
 import ItemForm from './pages/ItemForm.vue';
 import Categories from './pages/Categories.vue';
 import DataBackup from './pages/DataBackup.vue';
+import Dashboard from './pages/Dashboard.vue';
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/', component: ItemsList },
+    { path: '/', redirect: '/dashboard' },
+    { path: '/dashboard', component: Dashboard },
+    { path: '/items', component: ItemsList },
     { path: '/items/new', component: ItemForm },
     { path: '/items/:id', component: ItemDetails },
     { path: '/items/:id/edit', component: ItemForm },

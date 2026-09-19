@@ -5,6 +5,7 @@ document describes the current behaviour and its boundaries, not the original pl
 
 | Feature | Summary |
 | --- | --- |
+| [Inventory Dashboard](dashboard.md) | Server-calculated inventory totals, documentation and placement metrics, plus category and condition distributions. |
 | [Application UI](application-ui.md) | The Tabler application shell: a folded desktop sidebar, a mobile offcanvas drawer, light/dark modes, and responsive pages. |
 | [Nested items](nested-items.md) | Store an item inside another item and browse its direct contents. |
 | [Custom-field autocomplete](custom-field-autocomplete.md) | Suggest previously saved values for text custom fields. |

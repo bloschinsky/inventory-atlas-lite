@@ -23,7 +23,7 @@ inventory, so keep it on a trusted LAN or behind a VPN.
 - Open the address of your installation in a browser, for example `http://192.168.1.145:3000`. A
   Proxmox installation prints this URL at the end; Docker and manual installations use the server
   address and `PORT` (default `3000`).
-- Use a current desktop or mobile browser. On a wide screen the three pages and **About** sit in
+- Use a current desktop or mobile browser. On a wide screen the four pages and **About** sit in
   a narrow icon sidebar on the left: move the mouse over it — or move the keyboard focus into it
   with `Tab` — and it slides open over the page with the full labels. On a phone or a narrow tablet
   the same list opens from the **☰** button in the top bar.
@@ -33,9 +33,9 @@ inventory, so keep it on a trusted LAN or behind a VPN.
   always in the top bar.
 - Reach the application over your LAN or a VPN such as WireGuard or Tailscale. Do not forward a
   router port to it.
-- A fresh installation is empty: no categories and no items. The items page shows *No items yet*
-  with an **Add your first item** button. When a search or a category filter matches nothing, the
-  page says *No matching items* instead.
+- A fresh installation is empty: no categories and no items. The Dashboard and items page both
+  guide you to add the first item. When an item-list search or category filter matches nothing, the
+  items page says *No matching items* instead.
 
 ## 3. Recommended first setup
 
@@ -72,6 +72,26 @@ A custom field belongs to one category only. `Brand` in `Cameras` and `Brand` in
 separate fields, and they keep separate value suggestions.
 
 ## 5. Basic use cases
+
+### Read and filter the Dashboard
+
+1. Open **Dashboard**, the application's default landing page. Its four summary cards show the
+   total item count, the percentage and counts of items with and without photos, physical placement,
+   and items added during the rolling last 30 days.
+2. Use **Category** to limit those four cards and the **Condition breakdown** to one category. The
+   selection is stored in the page URL, so a reload or copied link preserves it. Press **Reset** to
+   return to **All categories**.
+3. **Items by category** always represents the complete inventory for context. The selected category
+   is highlighted; select a visible category bar to apply it as the filter. Only the six largest
+   categories are shown separately, with smaller groups combined under **Other**; an actively
+   selected smaller category remains visible.
+4. **Placement status** counts each item exactly once: first as **Inside a container**, otherwise as
+   **Direct location** when it has location text, or as **Unplaced**. Containers themselves remain
+   normal inventory items.
+5. A category with no items displays a normal zero-data view. If loading fails, press **Retry**.
+
+The database records `created_at` with SQLite `CURRENT_TIMESTAMP`, which is UTC. The Dashboard uses
+SQLite's UTC clock and includes records whose timestamp is at or after 30 days before the request.
 
 ### Create and rename a category
 

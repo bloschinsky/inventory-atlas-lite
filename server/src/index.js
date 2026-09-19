@@ -107,6 +107,92 @@ app.get('/api/categories', (_req, res) => {
     GROUP BY c.id ORDER BY c.name COLLATE NOCASE
   `).all());
 });
+
+const titleCase = value => value.replace(/(^|[\s/-])([a-z])/g, (_match, separator, letter) => `${separator}${letter.toUpperCase()}`);
+const groupedDistribution = (rows, limit, makeEntry) => {
+  const visible = rows.slice(0, limit).map(makeEntry);
+  const otherCount = rows.slice(limit).reduce((sum, row) => sum + row.count, 0);
+  if (otherCount) visible.push({ key: '__other__', label: 'Other', count: otherCount });
+  return visible;
+};
+
+app.get('/api/dashboard', (req, res) => {
+  const rawCategoryId = req.query.categoryId;
+  let category = null;
+  if (rawCategoryId !== undefined) {
+    if (typeof rawCategoryId !== 'string' || !/^[1-9]\d*$/.test(rawCategoryId)) {
+      return res.status(400).json({ error: 'Category ID must be a positive integer.' });
+    }
+    category = getCategory(Number(rawCategoryId));
+    if (!category) return res.status(404).json({ error: 'Category not found.' });
+  }
+
+  const params = category ? { categoryId: category.id } : {};
+  const scopeClause = category ? 'WHERE i.category_id = @categoryId' : '';
+  const metrics = db.prepare(`
+    SELECT COUNT(*) AS totalItems,
+      COALESCE(SUM(EXISTS(SELECT 1 FROM item_photos p WHERE p.item_id = i.id)), 0) AS withPhotos,
+      COALESCE(SUM(CASE WHEN i.parent_item_id IS NOT NULL THEN 1 ELSE 0 END), 0) AS insideContainer,
+      COALESCE(SUM(CASE WHEN i.parent_item_id IS NULL AND TRIM(COALESCE(i.location, '')) != '' THEN 1 ELSE 0 END), 0) AS directLocation,
+      COALESCE(SUM(CASE WHEN i.parent_item_id IS NULL AND TRIM(COALESCE(i.location, '')) = '' THEN 1 ELSE 0 END), 0) AS unplaced,
+      COALESCE(SUM(CASE WHEN i.created_at >= datetime('now', '-30 days') THEN 1 ELSE 0 END), 0) AS addedLast30Days
+    FROM items i ${scopeClause}
+  `).get(params);
+
+  const categoryRows = db.prepare(`
+    SELECT i.category_id AS categoryId, COALESCE(c.name, 'Uncategorized') AS label, COUNT(*) AS count
+    FROM items i LEFT JOIN categories c ON c.id = i.category_id
+    GROUP BY i.category_id, c.name
+    HAVING COUNT(*) > 0
+    ORDER BY count DESC, label COLLATE NOCASE, i.category_id
+  `).all();
+  const leadingCategories = categoryRows.slice(0, 6);
+  const selectedRow = category && !leadingCategories.some(row => row.categoryId === category.id)
+    ? categoryRows.find(row => row.categoryId === category.id) || { categoryId: category.id, label: category.name, count: 0 }
+    : null;
+  const visibleIds = new Set(leadingCategories.map(row => row.categoryId));
+  if (selectedRow) visibleIds.add(selectedRow.categoryId);
+  const categoryDistribution = [...leadingCategories, ...(selectedRow ? [selectedRow] : [])].map(row => ({
+    ...row,
+    selected: row.categoryId === category?.id
+  }));
+  const otherCategoryCount = categoryRows
+    .filter(row => !visibleIds.has(row.categoryId))
+    .reduce((sum, row) => sum + row.count, 0);
+  if (otherCategoryCount) categoryDistribution.push({ categoryId: null, label: 'Other', count: otherCategoryCount, selected: false });
+
+  const conditionRows = db.prepare(`
+    SELECT CASE WHEN TRIM(COALESCE(i.condition, '')) = '' THEN '' ELSE LOWER(TRIM(i.condition)) END AS key,
+      COUNT(*) AS count
+    FROM items i ${scopeClause}
+    GROUP BY key
+    ORDER BY count DESC, key COLLATE NOCASE
+  `).all(params);
+  const conditionDistribution = groupedDistribution(conditionRows, 5, row => ({
+    key: row.key || 'not-specified',
+    label: row.key ? titleCase(row.key) : 'Not specified',
+    count: row.count
+  }));
+
+  res.json({
+    scope: { categoryId: category?.id || null, categoryName: category?.name || null },
+    categories: db.prepare('SELECT id, name FROM categories ORDER BY name COLLATE NOCASE').all(),
+    totalItems: metrics.totalItems,
+    photoCoverage: {
+      withPhotos: metrics.withPhotos,
+      withoutPhotos: metrics.totalItems - metrics.withPhotos,
+      percentage: metrics.totalItems ? Math.round((metrics.withPhotos / metrics.totalItems) * 100) : 0
+    },
+    placement: {
+      insideContainer: metrics.insideContainer,
+      directLocation: metrics.directLocation,
+      unplaced: metrics.unplaced
+    },
+    addedLast30Days: metrics.addedLast30Days,
+    categoryDistribution,
+    conditionDistribution
+  });
+});
 app.post('/api/categories', (req, res) => {
   const info = db.prepare('INSERT INTO categories (name) VALUES (?)').run(requiredText(req.body.name, 'Category name'));
   res.status(201).json(getCategory(info.lastInsertRowid));
