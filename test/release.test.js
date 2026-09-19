@@ -8,11 +8,13 @@ const run = (command, args, options = {}) => spawnSync(command, args, {
 });
 
 test('release version validator accepts only the committed stable version', () => {
-  const valid = run(process.execPath, ['scripts/validate-release-version.mjs', 'v0.8.0']);
+  // Taken from package.json so a normal version bump does not need this test edited.
+  const version = JSON.parse(fs.readFileSync('package.json', 'utf8')).version;
+  const valid = run(process.execPath, ['scripts/validate-release-version.mjs', `v${version}`]);
   assert.equal(valid.status, 0, valid.stderr);
-  assert.equal(valid.stdout, '0.8.0');
+  assert.equal(valid.stdout, version);
 
-  for (const tag of ['0.8.0', 'v0.8', 'v0.8.1', 'v0.8.0-beta.1', 'v01.2.3']) {
+  for (const tag of [version, 'v0.8', `v${version}.1`, `v${version}-beta.1`, 'v01.2.3']) {
     const invalid = run(process.execPath, ['scripts/validate-release-version.mjs', tag]);
     assert.notEqual(invalid.status, 0, `${tag} unexpectedly passed`);
   }

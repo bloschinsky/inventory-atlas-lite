@@ -102,7 +102,8 @@ onBeforeUnmount(() => {
       </div>
       <div class="offcanvas-body">
         <nav aria-label="Main">
-          <AppNavigation />
+          <!-- About opens a dialog instead of a route, so the drawer cannot wait for a navigation. -->
+          <AppNavigation @navigate="closeMenu(false)" />
         </nav>
       </div>
     </div>

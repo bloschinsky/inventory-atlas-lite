@@ -1,4 +1,5 @@
 <script setup>
+import AboutDialog from './components/AboutDialog.vue';
 import AppMobileNav from './components/AppMobileNav.vue';
 import AppSidebar from './components/AppSidebar.vue';
 </script>
@@ -17,4 +18,6 @@ import AppSidebar from './components/AppSidebar.vue';
       </main>
     </div>
   </div>
+  <!-- One dialog for the whole shell: both navigations open the same instance. -->
+  <AboutDialog />
 </template>

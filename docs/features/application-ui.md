@@ -18,7 +18,8 @@ presentation layer over the existing API, and no CDN or other runtime internet d
 
 - From the Tabler `lg` breakpoint (`992px`) upwards the sidebar rests as a `4rem` icon rail showing
   the product mark and one Tabler icon per destination: **Items**, **Categories & Fields**, and
-  **Data / Backup**.
+  **Data / Backup**, followed by the **About** entry described in
+  [`about-dialog.md`](about-dialog.md).
 - Hovering the rail expands it to `16rem` and reveals the labels and the product name. Tabler's own
   `:has(:focus-visible)` rule expands it for keyboard users too, so tabbing into the sidebar shows
   the same labels without any pointer.
@@ -108,9 +109,10 @@ category name.
 - `client/src/components/AppMobileNav.vue` owns the mobile header and the drawer, including the
   scroll lock, the `Escape` handler, the focus handling, and closing on route change. Bootstrap's
   offcanvas markup is driven by Vue state; no Bootstrap or Tabler JavaScript bundle is loaded.
-- `client/src/navigation.js` is the single source of truth for the navigation entries, their icons,
-  and the active-route rule. `RouterLink` alone would mark `/` active everywhere, so the match is
-  explicit.
+- `client/src/navigation.js` is the single source of truth for the navigation destinations, their
+  icons, and the active-route rule. `RouterLink` alone would mark `/` active everywhere, so the
+  match is explicit. `AppNavigation.vue` appends **About** after them as a button, because it opens
+  a dialog instead of leading to a route.
 - `client/src/components/` also holds `AppNavigation.vue`, `AppBrand.vue`, `ThemeToggle.vue`,
   `PageHeader.vue`, `ItemThumbnail.vue`, `ItemResults.vue` (the table and the card list built from
   the same item data), and `ItemPhotoViewer.vue`.

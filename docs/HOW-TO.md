@@ -22,10 +22,10 @@ inventory, so keep it on a trusted LAN or behind a VPN.
 - Open the address of your installation in a browser, for example `http://192.168.1.145:3000`. A
   Proxmox installation prints this URL at the end; Docker and manual installations use the server
   address and `PORT` (default `3000`).
-- Use a current desktop or mobile browser. On a wide screen the three pages sit in a narrow icon
-  sidebar on the left: move the mouse over it — or move the keyboard focus into it with `Tab` — and
-  it slides open over the page with the full labels. On a phone or a narrow tablet the same list
-  opens from the **☰** button in the top bar.
+- Use a current desktop or mobile browser. On a wide screen the three pages and **About** sit in
+  a narrow icon sidebar on the left: move the mouse over it — or move the keyboard focus into it
+  with `Tab` — and it slides open over the page with the full labels. On a phone or a narrow tablet
+  the same list opens from the **☰** button in the top bar.
 - The application starts in the light or dark colour scheme your operating system uses. The sun and
   moon buttons switch it and your choice is remembered in the browser for the next visit; on a wide
   screen they appear at the bottom of the sidebar once you expand it, on a narrow screen they are
@@ -175,6 +175,21 @@ already contains; the server rejects such a move with an error message.
 1. Open **Data / Backup**.
 2. Press **Download backup**. The browser saves a file named `inventory-YYYY-MM-DD.sqlite`.
 
+### Check which version you are running
+
+1. Press **About** at the bottom of the navigation list — in the sidebar on a wide screen, in the
+   **☰** menu on a phone.
+2. The dialog shows the product name, the **Version**, the **Build** (the short Git commit the
+   application was built from), the **Build date** (the date of that commit), the developer, and a
+   link to the GitHub repository.
+3. Close it with the **Close** button, the **×**, `Escape`, or a click outside it.
+
+Quote **Version** and **Build** when you report a problem: together they identify the exact source
+revision. A version ending in `-dev` means the application was built from a working copy rather
+than from a release tag. A **Build** or **Build date** of `unavailable` means the build had no Git
+information — the published release archive has none — and says nothing about the health of your
+installation.
+
 ## 6. Practical example
 
 ```text
@@ -256,4 +271,5 @@ on a different machine than the server.
 | A photo is rejected | Only JPEG, PNG, WebP, and GIF are accepted, at most 10 files of 15 MB each per upload. |
 | Search finds nothing | The search matches only the name and description. Clear the category filter and check that you are on page 1. |
 | No suggestions in a text field | Suggestions come from values already saved for that same field. A newly created field starts empty. |
+| Which version is this | Open **About** in the navigation. It shows the version, the commit the build came from, and its date. |
 | Where are the logs | On Proxmox, inside the container: `journalctl -u inventory-atlas-lite -f`. See [`proxmox.md`](proxmox.md) for the other service commands. |

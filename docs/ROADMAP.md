@@ -19,10 +19,6 @@ Implemented behavior is documented separately in [`features/README.md`](features
    structured multi-currency Purchase Price, and Serial Number fields to every item, including safe
    schema migration, API and form support, and serial-number search. See
    [`TASK-ADD-PURCHASE-AND-SERIAL-BASE-FIELDS.md`](issues/TASK-ADD-PURCHASE-AND-SERIAL-BASE-FIELDS.md).
-4. **About dialog and build metadata** — Planned independently of the release pipeline. Adds an
-   accessible About dialog with automatically injected version, build revision, source date,
-   developer information, and a repository link. See
-   [`TASK-ABOUT-DIALOG-BUILD-METADATA.md`](issues/TASK-ABOUT-DIALOG-BUILD-METADATA.md).
 
 ## Distribution
 
