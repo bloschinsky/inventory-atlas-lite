@@ -7,7 +7,7 @@ export default defineConfig({
   workers: 1,
   // Retries stay off locally so an unstable test is visible while it is being written.
   retries: 0,
-  reporter: 'list',
+  reporter: process.env.CI ? [['list'], ['github']] : 'list',
   use: { baseURL, trace: 'retain-on-failure', screenshot: 'only-on-failure' },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: [

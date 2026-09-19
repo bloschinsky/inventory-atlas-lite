@@ -30,6 +30,9 @@ test('the desktop sidebar rests folded and expands over the page on hover and on
   const sidebar = page.locator('aside.navbar-vertical');
   const label = page.locator('.navbar-vertical .nav-link-title', { hasText: 'Categories & Fields' });
 
+  // Headless Chromium may initialize its pointer at (0, 0), directly over the sidebar.
+  await page.mouse.move(600, 400);
+  await expect.poll(async () => (await label.boundingBox()).width).toBe(0);
   const folded = (await sidebar.boundingBox()).width;
   const content = (await page.locator('.page-wrapper').boundingBox()).x;
   expect(folded).toBeLessThan(100);
