@@ -27,8 +27,9 @@ Express directly with Node.js and systemd. The pipeline does not ship a prebuilt
 
 The tag-only `.github/workflows/release.yml` workflow first validates the tag and committed versions,
 installs dependencies, runs lint, API and shell tests, builds the client, installs Chromium, and runs
-the Playwright suite. Docker publishing and Proxmox asset packaging depend on this validation job;
-the GitHub Release depends on both publishing jobs.
+the Playwright suite. A failed browser run retains its traces and screenshots as a seven-day workflow
+artifact. Docker publishing and Proxmox asset packaging depend on this validation job; the GitHub
+Release depends on both publishing jobs.
 
 Before upload, the Docker job starts the image, checks `/api/health` and its version, creates a
 category, custom field, nested item and photo, then fully recreates the container with the same

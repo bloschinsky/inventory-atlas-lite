@@ -8,5 +8,5 @@ export default defineConfig({
   plugins: [vue()],
   // Tabler and Tabler Icons are MIT licensed: keep their /*! */ copyright banners in the bundles.
   esbuild: { legalComments: 'inline' },
-  server: { host: '0.0.0.0', proxy: { '/api': `http://localhost:${apiPort}` } }
+  server: { host: '0.0.0.0', proxy: { '/api': `http://127.0.0.1:${apiPort}` } }
 });

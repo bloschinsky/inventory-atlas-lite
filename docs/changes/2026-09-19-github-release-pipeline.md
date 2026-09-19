@@ -22,6 +22,9 @@
 - Made the documented-branch test support detached tag checkouts by accepting the fetched
   `origin/master` ref, and documented that the workflow commit must reach `master` before the first
   release tag is pushed.
+- Made the Vite test proxy connect to the IPv4 loopback explicitly, matching the Express listener on
+  Linux runners, and retained Playwright traces and screenshots as workflow artifacts after a
+  browser-test failure.
 - Documented Docker use, official release creation, GitHub Releases, persistent storage, version
   pinning, and the unchanged Proxmox deployment architecture.
 
@@ -42,3 +45,6 @@
   recorded; no release behavior is claimed from those pending checks.
 - The first tag run reached `npm test` but exposed the detached-checkout assumption in the documented
   branch test; the test now accepts either a local branch or the fetched `origin` branch.
+- The second tag run passed lint, Node tests, and build, then exposed that the Vite proxy used
+  `localhost` while Express listened on IPv4. The proxy now uses `127.0.0.1` consistently with the
+  browser suite's base URL.
