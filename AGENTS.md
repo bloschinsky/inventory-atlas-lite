@@ -167,5 +167,6 @@ npm run test:e2e
 ## Git
 
 - After updating the version when applicable and writing the completion record, create a local Git commit with a short, meaningful message written in English.
+- When a completed feature updates the project version, create a new local tag named `v<version>` on the resulting feature commit immediately after committing (for example, version `0.10.0` uses tag `v0.10.0`).
 - Commit only files that belong to the current task; do not include unrelated or pre-existing user changes.
 - Never run `git push`. The user always pushes commits themselves.
