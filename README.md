@@ -115,13 +115,15 @@ the installation.
 Set the same stable version in `package.json` and `package-lock.json`, commit it, then push the tag:
 
 ```bash
+git push origin master
 git tag v0.8.0
 git push origin v0.8.0
 ```
 
-The tag-only GitHub Actions workflow validates the version and full test suite before it publishes
-the Docker image, source archive, `SHA256SUMS`, and GitHub Release. A normal branch push cannot create
-an official release. See
+Push the commit containing the workflow to `master` before creating the tag, especially for the
+first release. The tag-only GitHub Actions workflow validates the version and full test suite before
+it publishes the Docker image, source archive, `SHA256SUMS`, and GitHub Release. A normal branch push
+cannot create an official release. See
 [`docs/features/github-release-pipeline.md`](docs/features/github-release-pipeline.md) for the
 artifact contract and release checks.
 

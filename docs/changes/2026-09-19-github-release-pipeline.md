@@ -19,15 +19,18 @@
   by an automatically generated GitHub Release.
 - Made Proxmox install/update health polling verify the expected application version while retaining
   the existing source build, backup, code swap, rollback, service, environment, and data paths.
+- Made the documented-branch test support detached tag checkouts by accepting the fetched
+  `origin/master` ref, and documented that the workflow commit must reach `master` before the first
+  release tag is pushed.
 - Documented Docker use, official release creation, GitHub Releases, persistent storage, version
   pinning, and the unchanged Proxmox deployment architecture.
 
 ## Verification
 
 - `npm run lint` — passed.
-- `npm test` — passed: 11 executed tests, including the release contract and the unmodified v0.7.0
-  download helper; 11 platform-specific shell tests were skipped because a usable local Bash and
-  shellcheck environment was unavailable.
+- `npm test` — passed: 12 executed tests, including the release contract, detached-checkout branch
+  resolution, and the unmodified v0.7.0 download helper; 10 platform-specific shell tests were
+  skipped because a usable local Bash and shellcheck environment was unavailable.
 - `npm run build` — passed.
 - `npm run test:e2e` — passed: 16 Chromium tests.
 - `npx --yes yaml-lint .github/workflows/release.yml` — passed.
@@ -37,3 +40,5 @@
 - A release was not pushed, and a disposable Proxmox v0.7.0 upgrade was not available in this
   environment. The active task remains in `docs/issues/` until those external acceptance checks are
   recorded; no release behavior is claimed from those pending checks.
+- The first tag run reached `npm test` but exposed the detached-checkout assumption in the documented
+  branch test; the test now accepts either a local branch or the fetched `origin` branch.
