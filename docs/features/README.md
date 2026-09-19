@@ -10,6 +10,7 @@ document describes the current behaviour and its boundaries, not the original pl
 | [Custom-field autocomplete](custom-field-autocomplete.md) | Suggest previously saved values for text custom fields. |
 | [Proxmox one-line installer](proxmox-one-line-installer.md) | Create a Debian LXC on Proxmox VE with the application, a systemd service, and an update command. |
 | [Playwright browser tests](playwright-e2e-tests.md) | Chromium end-to-end coverage of the main user workflows. |
+| [GitHub release pipeline](github-release-pipeline.md) | Validate stable tags and publish the Docker image plus legacy-compatible Proxmox assets. |
 
 These documents describe feature boundaries and implementation. For how a user operates the
 application, see the [quick how-to](../HOW-TO.md).

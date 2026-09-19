@@ -120,7 +120,7 @@ install -m 0750 "$IAL_APP_DIR/scripts/update.sh" "$IAL_UPDATE_COMMAND"
 systemctl daemon-reload
 systemctl start "$IAL_SERVICE"
 
-if ! ial_wait_for_health "$HEALTH_URL" 120; then
+if ! ial_wait_for_health "$HEALTH_URL" 120 "$NEW_VERSION"; then
   ial_warn "Version $NEW_VERSION failed its health check. Restoring $CURRENT_VERSION."
   systemctl stop "$IAL_SERVICE" || true
   if ial_rollback_code; then

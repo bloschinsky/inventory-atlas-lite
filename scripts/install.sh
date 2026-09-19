@@ -160,7 +160,7 @@ install_service
 
 ial_log "Starting $IAL_SERVICE"
 systemctl restart "$IAL_SERVICE"
-if ! ial_wait_for_health "http://127.0.0.1:$PORT/api/health" 120; then
+if ! ial_wait_for_health "http://127.0.0.1:$PORT/api/health" 120 "$(ial_app_version "$IAL_APP_DIR")"; then
   ial_die "The service did not become healthy. Inspect it with: journalctl -u $IAL_SERVICE -n 50"
 fi
 

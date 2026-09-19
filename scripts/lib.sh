@@ -172,13 +172,18 @@ ial_rollback_code() {
   mv "$IAL_APP_ROOT/previous" "$IAL_APP_DIR"
 }
 
-ial_wait_for_health() { # url [timeout-seconds]
-  local deadline now
+ial_wait_for_health() { # url [timeout-seconds] [expected-version]
+  local deadline now response expected_version
+  expected_version=${3:-}
   now=$(date +%s)
   deadline=$(( now + ${2:-120} ))
   while [ "$(date +%s)" -lt "$deadline" ]; do
-    if curl -fsS --max-time 5 "$1" 2>/dev/null | grep -q '"status":"ok"'; then
-      return 0
+    if response=$(curl -fsS --max-time 5 "$1" 2>/dev/null) \
+      && printf '%s' "$response" | grep -Fq '"status":"ok"'; then
+      if [ -z "$expected_version" ] \
+        || printf '%s' "$response" | grep -Fq "\"version\":\"$expected_version\""; then
+        return 0
+      fi
     fi
     sleep 2
   done

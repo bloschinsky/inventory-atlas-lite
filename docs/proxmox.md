@@ -81,8 +81,9 @@ Passing `-y` skips the confirmation prompt, for example when the installer runs 
 
 ## Releases and integrity
 
-By default the installer resolves the latest stable tagged release through the GitHub API. Every
-release publishes two assets:
+By default the installer resolves the latest stable tagged release through the GitHub API.
+[GitHub Releases](https://github.com/bloschinsky/inventory-atlas-lite/releases) is the canonical
+download page. Every release publishes two Proxmox assets:
 
 | Asset | Contents |
 | --- | --- |
@@ -94,7 +95,7 @@ checksum does not match or when the archive is present without its checksum file
 never shipped: dependencies are installed inside the container with `npm ci` from the committed
 lockfile, so `better-sqlite3` is always built for the target system.
 
-Pin a specific release with `APP_VERSION=v0.5.6`. Verify an archive by hand with:
+Pin a specific release with `APP_VERSION=v0.8.0`. Verify an archive by hand with:
 
 ```bash
 sha256sum --check SHA256SUMS
@@ -139,14 +140,15 @@ pct exec <CTID> -- journalctl -u inventory-atlas-lite -n 50
 pct exec <CTID> -- /usr/local/sbin/inventory-atlas-lite-update
 ```
 
-`GET /api/health` answers `{"status":"ok","database":"ok","version":"0.5.6"}` while the service is
-running and SQLite is usable. The installer and the updater poll it before reporting success.
+`GET /api/health` answers `{"status":"ok","database":"ok","version":"0.8.0"}` while the service is
+running and SQLite is usable. The installer and updater require both healthy status and the expected
+version before reporting success.
 
 ## Updating
 
 ```bash
 inventory-atlas-lite-update                  # latest stable release
-inventory-atlas-lite-update --version v0.5.6 # a specific release
+inventory-atlas-lite-update --version v0.8.0 # a specific release
 ```
 
 The updater resolves and downloads the requested release first, so an unavailable or invalid version

@@ -43,8 +43,8 @@ backups.
   runs `npm ci` and the production build in a staging directory, and swaps the code into place.
 - `scripts/update.sh` is installed as `/usr/local/sbin/inventory-atlas-lite-update`. It takes a
   timestamped SQLite backup, builds the new release in staging, stops the service only for the swap,
-  waits for `/api/health`, and restores the previous code if the check fails. It keeps the last 5
-  backups.
+  waits for `/api/health` to report the expected version, and restores the previous code if the
+  check fails. It keeps the last 5 backups.
 - `scripts/lib.sh` holds the shared paths and helpers: service `inventory-atlas-lite`, non-login user
   `inventory-atlas`, code in `/opt/inventory-atlas-lite/app`, data in `/var/lib/inventory-atlas-lite`
   (backups in its `backups/` subdirectory), and the root-owned environment file
@@ -75,5 +75,7 @@ backups.
 - There is no uninstall command and no automatic container removal.
 - The one-line install fetches the scripts over HTTPS; the release archive is additionally verified
   against `SHA256SUMS`. `docs/proxmox.md` documents the inspect-first alternative.
+- Official releases package the same tracked source layout and legacy asset name used by the
+  installer and by updater versions installed before the release pipeline.
 - `raw.githubusercontent.com` can serve a stale script for a few minutes after a push, which matters
   when testing installer changes immediately.

@@ -54,7 +54,37 @@ The browser tests start their own API and Vite processes on separate ports and u
 
 [`docs/ROADMAP.md`](docs/ROADMAP.md) lists the active planned features and their implementation order.
 
-## Production
+## Official releases
+
+[GitHub Releases](https://github.com/bloschinsky/inventory-atlas-lite/releases) is the canonical
+download page. Each stable `vMAJOR.MINOR.PATCH` release provides two server installation paths from
+the same commit:
+
+- `ghcr.io/bloschinsky/inventory-atlas-lite:<version>` for Docker hosts (`linux/amd64`);
+- a checksummed source archive for the existing Proxmox VE installer, which builds and runs the
+  application directly under Node.js and systemd in an unprivileged LXC.
+
+### Docker
+
+The image runs as a non-root user and stores its SQLite database under `/data`. Keep that directory
+on a named volume so replacing the container or upgrading the image does not replace the inventory:
+
+```bash
+docker volume create inventory-atlas-data
+docker run -d --name inventory-atlas-lite \
+  --restart unless-stopped \
+  -p 3000:3000 \
+  -v inventory-atlas-data:/data \
+  -e DATA_DIR=/data \
+  ghcr.io/bloschinsky/inventory-atlas-lite:0.8.0
+```
+
+Open `http://SERVER_IP:3000`. Set both `-p HOST_PORT:CONTAINER_PORT` and `-e PORT=CONTAINER_PORT`
+when changing the container port. Use an explicit version for repeatable deployments; `latest`
+tracks the newest stable release. Upgrade by pulling the new tag and recreating the container with
+the same volume.
+
+## Manual production run
 
 ```bash
 npm run build
@@ -79,6 +109,21 @@ verifying its `SHA256SUMS`, and reports the URL of the running application. Defa
 See [`docs/proxmox.md`](docs/proxmox.md) for the container settings you can override, the release and
 checksum details, where the code and the database are stored, and how to update, inspect, and back up
 the installation.
+
+## Creating an official release
+
+Set the same stable version in `package.json` and `package-lock.json`, commit it, then push the tag:
+
+```bash
+git tag v0.8.0
+git push origin v0.8.0
+```
+
+The tag-only GitHub Actions workflow validates the version and full test suite before it publishes
+the Docker image, source archive, `SHA256SUMS`, and GitHub Release. A normal branch push cannot create
+an official release. See
+[`docs/features/github-release-pipeline.md`](docs/features/github-release-pipeline.md) for the
+artifact contract and release checks.
 
 ## Data and backups
 

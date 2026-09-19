@@ -11,6 +11,7 @@ keeps a short summary and links to them.
 
 - [`HOW-TO.md`](HOW-TO.md) — the canonical quick user guide: what the application does and how to use it.
 - [`proxmox.md`](proxmox.md) — installing and maintaining Inventory Atlas Lite on Proxmox VE.
+- [`../README.md`](../README.md) — Docker installation and the official release procedure.
 
 ### Roadmap
 

@@ -1,7 +1,11 @@
 # Task 01 — GitHub Release Pipeline MVP
 
 ## Status
-Planned / implement first.
+Implemented locally; publication and disposable Proxmox acceptance verification remain open.
+
+The repository implementation and local test suite were completed on 2026-09-19. Keep this task
+open until a pushed release tag has exercised the GitHub workflow, anonymous GHCR pull, and the
+documented v0.7.0-to-v0.8.0 disposable Proxmox upgrade and failure scenarios.
 
 ## Depends on
 None.

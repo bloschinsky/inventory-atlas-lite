@@ -1,6 +1,7 @@
 # Inventory Atlas Lite — Quick How-To
 
 A short guide for someone who has already deployed Inventory Atlas Lite and wants to start using it.
+Official downloads are on [GitHub Releases](https://github.com/bloschinsky/inventory-atlas-lite/releases).
 For installation on Proxmox VE see [`proxmox.md`](proxmox.md); for the technical boundaries of each
 feature see [`features/README.md`](features/README.md).
 
@@ -19,8 +20,8 @@ inventory, so keep it on a trusted LAN or behind a VPN.
 ## 2. Before you start
 
 - Open the address of your installation in a browser, for example `http://192.168.1.145:3000`. A
-  Proxmox installation prints this URL at the end; a manual installation uses the server address and
-  `PORT` (default `3000`).
+  Proxmox installation prints this URL at the end; Docker and manual installations use the server
+  address and `PORT` (default `3000`).
 - Use a current desktop or mobile browser. On a wide screen the three pages sit in a narrow icon
   sidebar on the left: move the mouse over it — or move the keyboard focus into it with `Tab` — and
   it slides open over the page with the full labels. On a phone or a narrow tablet the same list
@@ -207,10 +208,12 @@ Where the live database sits depends on the installation:
 | Installation | Database |
 | --- | --- |
 | Manual / development | `data/inventory.sqlite` under the project directory, or `DATA_DIR` when set |
+| Docker | `/data/inventory.sqlite` on the mounted named volume or bind mount |
 | Proxmox LXC installer | `/var/lib/inventory-atlas-lite/inventory.sqlite` |
 
-The **Data / Backup** page mentions `data/inventory.sqlite`, which is the default path; a Proxmox
-installation uses the path above.
+The **Data / Backup** page mentions `data/inventory.sqlite`, which is the default path; Docker and
+Proxmox installations use the paths above. Always recreate a Docker container with the same `/data`
+mount. A container started without that mount has a separate empty database.
 
 A Proxmox `vzdump` backup protects the whole container and its configuration. The downloaded SQLite
 snapshot is portable: it is what you need to move the inventory to another machine or installation.

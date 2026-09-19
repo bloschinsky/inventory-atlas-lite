@@ -1,0 +1,180 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Validate tag and package versions
+        run: node scripts/validate-release-version.mjs "$GITHUB_REF_NAME"
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - run: npm run test:e2e
+
+  docker:
+    name: Publish Docker image
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE: ghcr.io/bloschinsky/inventory-atlas-lite
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Resolve release version
+        id: version
+        run: echo "version=$(node scripts/validate-release-version.mjs "$GITHUB_REF_NAME")" >> "$GITHUB_OUTPUT"
+      - name: Build smoke-test image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: inventory-atlas-lite:smoke
+          build-args: |
+            RELEASE_VERSION=${{ steps.version.outputs.version }}
+            VCS_REF=${{ github.sha }}
+            SOURCE_URL=${{ github.server_url }}/${{ github.repository }}
+      - name: Verify startup and persistent data
+        shell: bash
+        run: |
+          set -euo pipefail
+          data_dir=$(mktemp -d)
+          chmod 0777 "$data_dir"
+          cleanup() {
+            docker rm --force inventory-atlas-smoke >/dev/null 2>&1 || true
+            rm -rf "$data_dir"
+          }
+          trap cleanup EXIT
+          start_container() {
+            docker run --detach --name inventory-atlas-smoke \
+              --publish 127.0.0.1::3000 --volume "$data_dir:/data" \
+              inventory-atlas-lite:smoke >/dev/null
+            host_port=$(docker port inventory-atlas-smoke 3000/tcp | sed 's/.*://')
+            smoke_url="http://127.0.0.1:$host_port"
+            for attempt in {1..30}; do
+              curl --fail --silent "$smoke_url/api/health" >/dev/null && return
+              sleep 1
+            done
+            docker logs inventory-atlas-smoke
+            return 1
+          }
+          start_container
+          node test/docker-smoke.mjs create "$smoke_url" "${{ steps.version.outputs.version }}"
+          docker rm --force inventory-atlas-smoke >/dev/null
+          start_container
+          node test/docker-smoke.mjs verify "$smoke_url" "${{ steps.version.outputs.version }}"
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish version and latest tags
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ${{ env.IMAGE }}:${{ steps.version.outputs.version }}
+            ${{ env.IMAGE }}:latest
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.version=${{ steps.version.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          build-args: |
+            RELEASE_VERSION=${{ steps.version.outputs.version }}
+            VCS_REF=${{ github.sha }}
+            SOURCE_URL=${{ github.server_url }}/${{ github.repository }}
+      - name: Verify anonymous pull
+        shell: bash
+        run: |
+          docker logout ghcr.io
+          docker image rm "${IMAGE}:${{ steps.version.outputs.version }}" >/dev/null 2>&1 || true
+          for attempt in {1..6}; do
+            docker pull "${IMAGE}:${{ steps.version.outputs.version }}" && exit 0
+            sleep 5
+          done
+          exit 1
+
+  proxmox-assets:
+    name: Package Proxmox source
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build legacy-compatible source archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(node scripts/validate-release-version.mjs "$GITHUB_REF_NAME")
+          mkdir release-assets
+          archive="inventory-atlas-lite-v${version}.tar.gz"
+          git archive --format=tar --prefix="inventory-atlas-lite-v${version}/" "$GITHUB_SHA" \
+            | gzip --no-name --best > "release-assets/$archive"
+          (cd release-assets && sha256sum "$archive" > SHA256SUMS)
+          tar -tzf "release-assets/$archive" | grep -Fx "inventory-atlas-lite-v${version}/package.json"
+          grep -F "  $archive" release-assets/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-assets
+          path: release-assets/
+          if-no-files-found: error
+
+  release:
+    name: Create GitHub Release
+    needs: [docker, proxmox-assets]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-assets
+          path: release-assets
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          version=$(node scripts/validate-release-version.mjs "$GITHUB_REF_NAME")
+          gh release create "$GITHUB_REF_NAME" \
+            "release-assets/inventory-atlas-lite-$GITHUB_REF_NAME.tar.gz" \
+            "release-assets/SHA256SUMS" \
+            --verify-tag \
+            --title "Inventory Atlas Lite $GITHUB_REF_NAME" \
+            --generate-notes \
+            --notes "Docker: \`ghcr.io/bloschinsky/inventory-atlas-lite:$version\` (linux/amd64). Proxmox users can install or update from the attached verified source archive."
