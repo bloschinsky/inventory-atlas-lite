@@ -33,6 +33,7 @@ test('the desktop sidebar rests folded and expands over the page on hover and on
   // Headless Chromium may initialize its pointer at (0, 0), directly over the sidebar.
   await page.mouse.move(600, 400);
   await expect.poll(async () => (await label.boundingBox()).width).toBe(0);
+  await expect.poll(async () => (await sidebar.boundingBox()).width).toBeLessThan(100);
   const folded = (await sidebar.boundingBox()).width;
   const content = (await page.locator('.page-wrapper').boundingBox()).x;
   expect(folded).toBeLessThan(100);

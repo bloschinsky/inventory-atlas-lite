@@ -4,7 +4,10 @@ test('downloads a non-empty SQLite backup', async ({ page }) => {
   await page.goto('/data');
 
   const downloadPromise = page.waitForEvent('download');
-  await page.getByRole('link', { name: 'Download backup' }).click();
+  // The desktop sidebar intentionally overlays the left edge of the page while expanded. Keyboard
+  // activation tests the download itself without making this test depend on the sidebar animation.
+  await page.getByRole('link', { name: 'Download backup' }).focus();
+  await page.keyboard.press('Enter');
   const download = await downloadPromise;
 
   expect(download.suggestedFilename()).toMatch(/^inventory-\d{4}-\d{2}-\d{2}\.sqlite$/);

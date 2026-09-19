@@ -25,10 +25,10 @@
 - Made the Vite test proxy connect to the IPv4 loopback explicitly, matching the Express listener on
   Linux runners, and retained Playwright traces and screenshots as workflow artifacts after a
   browser-test failure.
-- Removed two browser-test platform assumptions: backup bytes are read through Playwright's download
-  stream instead of a browser-managed temporary path, and the pointer is moved outside the folded
-  sidebar before its initial dimensions are measured. CI failures now also produce GitHub check
-  annotations with the exact assertion message.
+- Removed browser-test platform assumptions: backup bytes are read through Playwright's download
+  stream, its link is activated by keyboard so the sidebar overlay cannot intercept a pointer click,
+  and the sidebar test waits for both its labels and width transition to collapse before measuring.
+  CI failures now also produce GitHub check annotations with the exact assertion message.
 - Documented Docker use, official release creation, GitHub Releases, persistent storage, version
   pinning, and the unchanged Proxmox deployment architecture.
 
@@ -52,5 +52,7 @@
 - The second tag run passed lint, Node tests, and build, then exposed that the Vite proxy used
   `localhost` while Express listened on IPv4. The proxy now uses `127.0.0.1` consistently with the
   browser suite's base URL.
-- The third tag run reached the full browser suite and identified Linux-specific failures in the
-  backup download and initial sidebar hover state; both tests now avoid those platform assumptions.
+- The third tag run reached the full browser suite. Its detailed output showed the expanded sidebar
+  intercepting the backup link's pointer click and the sidebar-width assertion reading an in-progress
+  collapse transition. The tests now isolate backup behavior from the sidebar and wait for the
+  observable collapsed width.
