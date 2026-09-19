@@ -22,6 +22,6 @@ test('uploads a photo with a new item and shows it', async ({ page, request }) =
   await expect.poll(() => photo.evaluate(image => image.naturalWidth)).toBeGreaterThan(0);
 
   await page.getByRole('link', { name: 'Items', exact: true }).click();
-  await page.getByPlaceholder('Search name or description…').fill(itemName);
+  await page.getByPlaceholder('Search name, description or serial number…').fill(itemName);
   await expect(page.getByRole('img', { name: itemName })).toBeVisible();
 });

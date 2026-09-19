@@ -9,7 +9,8 @@ feature see [`features/README.md`](features/README.md).
 
 Inventory Atlas Lite is a small self-hosted catalogue of physical things you own: tools, cameras,
 lenses, cables, spare parts, boxes in the garage. For every item you record a name, a category, an
-optional condition, location and description, your own custom fields, and photos.
+optional condition, location, description, purchase details, serial number, your own custom fields,
+and photos.
 
 Everything lives in one SQLite database on your server, including the original photo bytes. Nothing
 is sent anywhere else and the application needs no Internet connection at runtime.
@@ -55,7 +56,7 @@ inventory, so keep it on a trusted LAN or behind a VPN.
 
 | Concept | What it means |
 | --- | --- |
-| **Item** | One physical thing. It always has a name and a category, plus an automatically assigned UUID and created/updated timestamps. |
+| **Item** | One physical thing. It always has a name and a category, plus an automatically assigned UUID and created/updated timestamps. Purchase details and a serial number are optional base fields available in every category. |
 | **Category** | A group of items, such as `Cameras`. Category names are unique and case-insensitive. |
 | **Custom field** | An extra field that belongs to one category. Types: Text, Number, Date, Boolean. Items of that category get the field in their form. |
 | **Location** | A free-text note about where the object physically is, such as `Garage` or `Shelf 2`. It is not linked to anything. |
@@ -96,7 +97,9 @@ Field types are fixed after creation; to change a type, delete the field and add
 1. Open **Items** and press **Add item**. If no category exists yet, the form tells you to create one
    first and links to **Manage categories**.
 2. Fill in **Name** and choose a **Category**. Both are required.
-3. Optionally fill in **Condition**, **Location**, **Stored inside**, and **Description**.
+3. Optionally fill in **Condition**, **Location**, **Purchase Date**, **Purchase Price**, **Serial
+   Number**, **Stored inside**, and **Description**. Purchase Price has separate amount and currency
+   controls; clear the amount to leave the whole price unspecified.
 4. Values for the category's custom fields appear under **Category fields**. Text fields suggest
    values you have already used (see below), boolean fields are a Yes/No list, number and date fields
    use the matching browser control.
@@ -127,8 +130,8 @@ Changing the category while filling in the form loads that category's fields.
 ### Search, filter, sort, and page through items
 
 1. Open **Items**.
-2. Type into **Search**. The search runs as you type and matches the item name and description
-   only — not custom field values, condition, or location.
+2. Type into **Search**. The search runs as you type and matches the item name, description, and
+   serial number — not custom field values, condition, or location.
 3. Narrow the list with **Category** (**All categories** by default).
 4. **Sort by** Name, Category, Created, or Updated, with **Direction** Ascending or Descending.
 5. On a wide screen the results are a table with photo, name, category, condition, location,
@@ -250,7 +253,7 @@ on a different machine than the server.
 - Not intended for direct exposure to the Internet. Use a trusted LAN or a VPN; do not forward a
   router port and do not put it behind a public reverse proxy.
 - Photos: JPEG, PNG, WebP, GIF, up to 10 files of 15 MB each per upload.
-- Search covers the item name and description only.
+- Search covers the item name, description, and serial number.
 - A category used by any item cannot be deleted, and an item containing other items cannot be
   deleted.
 - Deleting a custom field also deletes the values saved for it on every item of that category.
@@ -269,7 +272,7 @@ on a different machine than the server.
 | A category cannot be deleted | Items still use it. The message says how many; move them to another category or delete them. |
 | An item cannot be deleted | It still contains other items. Open it, move or delete everything under **Contents**, then delete it. |
 | A photo is rejected | Only JPEG, PNG, WebP, and GIF are accepted, at most 10 files of 15 MB each per upload. |
-| Search finds nothing | The search matches only the name and description. Clear the category filter and check that you are on page 1. |
+| Search finds nothing | The search matches the name, description, and serial number. Clear the category filter and check that you are on page 1. |
 | No suggestions in a text field | Suggestions come from values already saved for that same field. A newly created field starts empty. |
 | Which version is this | Open **About** in the navigation. It shows the version, the commit the build came from, and its date. |
 | Where are the logs | On Proxmox, inside the container: `journalctl -u inventory-atlas-lite -f`. See [`proxmox.md`](proxmox.md) for the other service commands. |

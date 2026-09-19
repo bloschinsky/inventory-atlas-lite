@@ -48,7 +48,7 @@ test.describe('narrow screens', () => {
     await createItem(request, { name: itemName, category_id: category.id, condition: 'Good', location: 'Shelf B' });
 
     await page.goto('/');
-    await page.getByPlaceholder('Search name or description…').fill(itemName);
+    await page.getByPlaceholder('Search name, description or serial number…').fill(itemName);
     // Each row action carries the item name, so the plain name link is matched exactly.
     await expect(page.getByRole('link', { name: itemName, exact: true })).toBeVisible();
     await expect(page.getByRole('table')).toBeHidden();

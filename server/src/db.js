@@ -27,6 +27,10 @@ db.exec(`
     description TEXT,
     condition TEXT,
     location TEXT,
+    purchase_date TEXT,
+    purchase_price_amount TEXT,
+    purchase_price_currency TEXT,
+    serial_number TEXT,
     parent_item_id INTEGER REFERENCES items(id) ON DELETE RESTRICT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -61,8 +65,16 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_field_values_field ON item_field_values(field_id, value);
 `);
 
-// Existing databases created before item nesting need the self-referencing column added in place.
-if (!db.prepare('PRAGMA table_info(items)').all().some(column => column.name === 'parent_item_id')) {
-  db.exec('ALTER TABLE items ADD COLUMN parent_item_id INTEGER REFERENCES items(id) ON DELETE RESTRICT');
+// Additive migrations keep existing inventories usable without rebuilding their database.
+const itemColumns = new Set(db.prepare('PRAGMA table_info(items)').all().map(column => column.name));
+const missingItemColumns = [
+  ['parent_item_id', 'INTEGER REFERENCES items(id) ON DELETE RESTRICT'],
+  ['purchase_date', 'TEXT'],
+  ['purchase_price_amount', 'TEXT'],
+  ['purchase_price_currency', 'TEXT'],
+  ['serial_number', 'TEXT']
+];
+for (const [name, definition] of missingItemColumns) {
+  if (!itemColumns.has(name)) db.exec(`ALTER TABLE items ADD COLUMN ${name} ${definition}`);
 }
 db.exec('CREATE INDEX IF NOT EXISTS idx_items_parent ON items(parent_item_id)');

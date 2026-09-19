@@ -30,6 +30,46 @@ const requiredText = (value, label) => {
   return value.trim();
 };
 const nullableText = value => typeof value === 'string' && value.trim() ? value.trim() : null;
+const currencyCodes = new Set(Intl.supportedValuesOf('currency'));
+const validatePurchaseDate = value => {
+  if (value === null || value === undefined || value === '') return null;
+  if (typeof value !== 'string') throw Object.assign(new Error('Purchase date must be a valid date.'), { status: 400 });
+  const date = value.trim();
+  if (!date) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || new Date(`${date}T00:00:00Z`).toISOString().slice(0, 10) !== date) {
+    throw Object.assign(new Error('Purchase date must be a valid date.'), { status: 400 });
+  }
+  return date;
+};
+const validatePurchasePrice = value => {
+  if (value === null || value === undefined) return { amount: null, currency: null };
+  if (typeof value !== 'object' || Array.isArray(value)) {
+    throw Object.assign(new Error('Purchase price must contain an amount and currency.'), { status: 400 });
+  }
+  const amount = value.amount === null || value.amount === undefined ? '' : String(value.amount).trim();
+  if (!amount) return { amount: null, currency: null };
+  if (!/^\d{1,12}(?:\.\d{1,4})?$/.test(amount)) {
+    throw Object.assign(new Error('Purchase price amount must be a non-negative decimal with up to four decimal places.'), { status: 400 });
+  }
+  const currency = typeof value.currency === 'string' ? value.currency.trim().toUpperCase() : '';
+  if (!currencyCodes.has(currency)) {
+    throw Object.assign(new Error('Purchase price currency must be a valid ISO 4217 code.'), { status: 400 });
+  }
+  return { amount, currency };
+};
+const validateSerialNumber = value => {
+  if (value === null || value === undefined || value === '') return null;
+  if (typeof value !== 'string') throw Object.assign(new Error('Serial number must be text.'), { status: 400 });
+  const serial = value.trim();
+  if (!serial) return null;
+  if (serial && serial.length > 255) throw Object.assign(new Error('Serial number must be 255 characters or fewer.'), { status: 400 });
+  return serial;
+};
+const itemResponse = item => {
+  if (!item) return item;
+  const { purchase_price_amount: amount, purchase_price_currency: currency, ...rest } = item;
+  return { ...rest, purchase_price: amount === null ? null : { amount, currency } };
+};
 const getCategory = id => db.prepare('SELECT * FROM categories WHERE id = ?').get(id);
 const getItemBase = id => db.prepare(`
   SELECT i.*, c.name AS category_name FROM items i
@@ -128,12 +168,13 @@ app.get('/api/items', (req, res) => {
   const categoryId = Number.parseInt(req.query.categoryId) || null;
   const where = [];
   const params = {};
-  if (search) { where.push('(i.name LIKE @search ESCAPE \'\\\' OR i.description LIKE @search ESCAPE \'\\\')'); params.search = searchLike(search); }
+  if (search) { where.push('(i.name LIKE @search ESCAPE \'\\\' OR i.description LIKE @search ESCAPE \'\\\' OR i.serial_number LIKE @search ESCAPE \'\\\')'); params.search = searchLike(search); }
   if (categoryId) { where.push('i.category_id = @categoryId'); params.categoryId = categoryId; }
   const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
   const total = db.prepare(`SELECT COUNT(*) AS count FROM items i ${clause}`).get(params).count;
   const items = db.prepare(`
-    SELECT i.id, i.uuid, i.name, i.condition, i.location, i.created_at, i.updated_at,
+    SELECT i.id, i.uuid, i.name, i.condition, i.location, i.purchase_date,
+      i.purchase_price_amount, i.purchase_price_currency, i.serial_number, i.created_at, i.updated_at,
       c.id AS category_id, c.name AS category_name,
       parent.id AS parent_id, parent.name AS parent_name,
       (SELECT id FROM item_photos p WHERE p.item_id = i.id ORDER BY p.id LIMIT 1) AS thumbnail_id
@@ -141,7 +182,7 @@ app.get('/api/items', (req, res) => {
     LEFT JOIN items parent ON parent.id = i.parent_item_id ${clause}
     ORDER BY ${sort} ${direction}, i.id ASC LIMIT @limit OFFSET @offset
   `).all({ ...params, limit: pageSize, offset: (page - 1) * pageSize });
-  res.json({ items, pagination: { page, pageSize, total, pages: Math.max(1, Math.ceil(total / pageSize)) } });
+  res.json({ items: items.map(itemResponse), pagination: { page, pageSize, total, pages: Math.max(1, Math.ceil(total / pageSize)) } });
 });
 app.get('/api/items/parent-candidates', (req, res) => {
   const search = String(req.query.search || '').trim();
@@ -165,7 +206,7 @@ app.get('/api/items/:id', (req, res) => {
   item.photos = db.prepare('SELECT id, filename, mime_type, created_at FROM item_photos WHERE item_id = ? ORDER BY id').all(item.id);
   item.parent = item.parent_item_id ? getItemRef(item.parent_item_id) : null;
   item.children = getChildren(item.id);
-  res.json(item);
+  res.json(itemResponse(item));
 });
 
 const validateValues = (categoryId, values = {}) => {
@@ -188,7 +229,14 @@ const createItem = db.transaction(body => {
   if (!getCategory(categoryId)) throw Object.assign(new Error('Valid category is required.'), { status: 400 });
   const values = validateValues(categoryId, body.field_values);
   const parentId = resolveParentId(body.parent_item_id);
-  const info = db.prepare('INSERT INTO items (uuid, name, category_id, description, condition, location, parent_item_id) VALUES (?, ?, ?, ?, ?, ?, ?)').run(randomUUID(), name, categoryId, nullableText(body.description), nullableText(body.condition), nullableText(body.location), parentId);
+  const purchaseDate = validatePurchaseDate(body.purchase_date);
+  const purchasePrice = validatePurchasePrice(body.purchase_price);
+  const serialNumber = validateSerialNumber(body.serial_number);
+  const info = db.prepare(`
+    INSERT INTO items (uuid, name, category_id, description, condition, location, purchase_date,
+      purchase_price_amount, purchase_price_currency, serial_number, parent_item_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(randomUUID(), name, categoryId, nullableText(body.description), nullableText(body.condition), nullableText(body.location), purchaseDate, purchasePrice.amount, purchasePrice.currency, serialNumber, parentId);
   for (const [fieldId, value] of values) saveValue.run(info.lastInsertRowid, fieldId, value);
   return info.lastInsertRowid;
 });
@@ -200,12 +248,19 @@ const updateItem = db.transaction((id, body) => {
   if (!getCategory(categoryId)) throw Object.assign(new Error('Valid category is required.'), { status: 400 });
   const values = validateValues(categoryId, body.field_values);
   const parentId = resolveParentId(body.parent_item_id, current.id);
-  db.prepare('UPDATE items SET name = ?, category_id = ?, description = ?, condition = ?, location = ?, parent_item_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(name, categoryId, nullableText(body.description), nullableText(body.condition), nullableText(body.location), parentId, current.id);
+  const purchaseDate = validatePurchaseDate(body.purchase_date);
+  const purchasePrice = validatePurchasePrice(body.purchase_price);
+  const serialNumber = validateSerialNumber(body.serial_number);
+  db.prepare(`
+    UPDATE items SET name = ?, category_id = ?, description = ?, condition = ?, location = ?,
+      purchase_date = ?, purchase_price_amount = ?, purchase_price_currency = ?, serial_number = ?,
+      parent_item_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+  `).run(name, categoryId, nullableText(body.description), nullableText(body.condition), nullableText(body.location), purchaseDate, purchasePrice.amount, purchasePrice.currency, serialNumber, parentId, current.id);
   for (const [fieldId, value] of values) saveValue.run(current.id, fieldId, value);
   return current.id;
 });
-app.post('/api/items', (req, res) => { const id = createItem(req.body); res.status(201).json(getItemBase(id)); });
-app.put('/api/items/:id', (req, res) => { const id = updateItem(req.params.id, req.body); res.json(getItemBase(id)); });
+app.post('/api/items', (req, res) => { const id = createItem(req.body); res.status(201).json(itemResponse(getItemBase(id))); });
+app.put('/api/items/:id', (req, res) => { const id = updateItem(req.params.id, req.body); res.json(itemResponse(getItemBase(id))); });
 app.delete('/api/items/:id', (req, res) => {
   const item = getItemBase(req.params.id);
   if (!item) return res.status(404).json({ error: 'Item not found.' });

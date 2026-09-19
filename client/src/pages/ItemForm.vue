@@ -10,7 +10,11 @@ const route = useRoute(); const router = useRouter();
 const editing = computed(() => Boolean(route.params.id));
 const categories = ref([]); const fields = ref([]); const existingPhotos = ref([]); const photos = ref([]);
 const error = ref(''); const saving = ref(false); const initialized = ref(false);
-const form = reactive({ name: '', category_id: '', description: '', condition: '', location: '', parent_item_id: null, field_values: {} });
+const currencies = Intl.supportedValuesOf('currency');
+const form = reactive({
+  name: '', category_id: '', description: '', condition: '', location: '', purchase_date: '',
+  purchase_price: { amount: '', currency: 'UAH' }, serial_number: '', parent_item_id: null, field_values: {}
+});
 const itemId = ref(null); const parent = ref(null); const parentSearch = ref(''); const parentResults = ref([]);
 
 async function searchParents() {
@@ -51,7 +55,12 @@ onMounted(async () => {
     categories.value = await api('/api/categories');
     if (editing.value) {
       const item = await api(`/api/items/${route.params.id}`);
-      Object.assign(form, { name: item.name, category_id: item.category_id, description: item.description || '', condition: item.condition || '', location: item.location || '', parent_item_id: item.parent_item_id });
+      Object.assign(form, {
+        name: item.name, category_id: item.category_id, description: item.description || '',
+        condition: item.condition || '', location: item.location || '', purchase_date: item.purchase_date || '',
+        purchase_price: item.purchase_price || { amount: '', currency: 'UAH' },
+        serial_number: item.serial_number || '', parent_item_id: item.parent_item_id
+      });
       itemId.value = item.id; parent.value = item.parent;
       for (const field of item.fields) form.field_values[field.id] = field.value ?? (field.type === 'boolean' ? '0' : '');
       existingPhotos.value = item.photos;
@@ -142,6 +151,61 @@ onMounted(async () => {
               class="form-control"
               placeholder="Garage, box A…"
             >
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label
+              class="form-label"
+              for="item-purchase-date"
+            >Purchase Date</label><input
+              id="item-purchase-date"
+              v-model="form.purchase_date"
+              class="form-control"
+              type="date"
+            >
+          </div><div class="col-md-6 mb-3">
+            <label
+              class="form-label"
+              for="item-serial-number"
+            >Serial Number</label><input
+              id="item-serial-number"
+              v-model="form.serial_number"
+              class="form-control"
+              maxlength="255"
+            >
+          </div>
+        </div>
+        <div class="mb-3">
+          <label
+            class="form-label"
+            for="item-purchase-price"
+          >Purchase Price</label>
+          <div class="input-group">
+            <input
+              id="item-purchase-price"
+              v-model="form.purchase_price.amount"
+              class="form-control"
+              type="text"
+              inputmode="decimal"
+              pattern="[0-9]+([.][0-9]{1,4})?"
+              placeholder="0.00"
+            ><select
+              v-model="form.purchase_price.currency"
+              class="form-select"
+              aria-label="Purchase Price currency"
+            >
+              <option
+                v-for="currency in currencies"
+                :key="currency"
+                :value="currency"
+              >
+                {{ currency }}
+              </option>
+            </select>
+          </div>
+          <div class="form-text">
+            Clear the amount to leave the purchase price unspecified.
           </div>
         </div>
         <div class="mb-3">

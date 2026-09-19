@@ -15,10 +15,6 @@ Implemented behavior is documented separately in [`features/README.md`](features
 2. **Restore database backup** — Planned independently of the UI migration. Adds a validated,
    confirmation-protected backup restore workflow with a pre-restore safety backup and rollback
    protections. See [`TASK-restore-database-backup.md`](issues/TASK-restore-database-backup.md).
-3. **Purchase and serial base fields** — Planned independently. Adds optional Purchase Date,
-   structured multi-currency Purchase Price, and Serial Number fields to every item, including safe
-   schema migration, API and form support, and serial-number search. See
-   [`TASK-ADD-PURCHASE-AND-SERIAL-BASE-FIELDS.md`](issues/TASK-ADD-PURCHASE-AND-SERIAL-BASE-FIELDS.md).
 
 ## Distribution
 

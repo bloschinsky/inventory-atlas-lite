@@ -13,6 +13,10 @@ test('creates an item, finds it in the list, and edits its values', async ({ pag
   await page.getByLabel('Category *').selectOption({ label: categoryName });
   await page.getByLabel('Condition').fill('Good');
   await page.getByLabel('Location').fill('Shelf A');
+  await page.getByLabel('Purchase Date').fill('2024-11-18');
+  await page.getByLabel('Purchase Price', { exact: true }).fill('49.99');
+  await page.getByLabel('Purchase Price currency').selectOption('USD');
+  await page.getByLabel('Serial Number').fill('000123ABC-09');
   await page.getByLabel('Description').fill('Bought second hand.');
   await page.getByLabel('Brand').fill('Nikon');
   await page.getByLabel('Year').fill('1985');
@@ -24,17 +28,20 @@ test('creates an item, finds it in the list, and edits its values', async ({ pag
 
   // Find the saved item again through the list search and the category filter.
   await page.getByRole('link', { name: 'Items', exact: true }).click();
-  await page.getByPlaceholder('Search name or description…').fill(itemName);
+  await page.getByPlaceholder('Search name, description or serial number…').fill('000123ABC-09');
   await expect(page.getByRole('link', { name: itemName, exact: true })).toBeVisible();
   await expect(page.getByRole('row')).toHaveCount(2);
 
-  await page.getByPlaceholder('Search name or description…').fill('');
+  await page.getByPlaceholder('Search name, description or serial number…').fill('');
   await page.getByLabel('Category').selectOption({ label: categoryName });
   await expect(page.getByRole('link', { name: itemName, exact: true })).toBeVisible();
 
   await page.getByRole('link', { name: itemName, exact: true }).click();
   await expect(detail(page, 'Condition')).toHaveText('Good');
   await expect(detail(page, 'Location')).toHaveText('Shelf A');
+  await expect(detail(page, 'Purchase Date')).toContainText('2024');
+  await expect(detail(page, 'Purchase Price')).toHaveText('49.99 USD');
+  await expect(detail(page, 'Serial Number')).toHaveText('000123ABC-09');
   await expect(detail(page, 'Description')).toHaveText('Bought second hand.');
   await expect(detail(page, 'Brand')).toHaveText('Nikon');
   await expect(detail(page, 'Year')).toHaveText('1985');
@@ -45,12 +52,17 @@ test('creates an item, finds it in the list, and edits its values', async ({ pag
   await expect(page.getByLabel('Name *')).toHaveValue(itemName);
   await page.getByLabel('Name *').fill(renamed);
   await page.getByLabel('Condition').fill('Excellent');
+  await page.getByLabel('Purchase Price', { exact: true }).fill('39.50');
+  await page.getByLabel('Purchase Price currency').selectOption('EUR');
+  await page.getByLabel('Serial Number').fill('12A/9382-B');
   await page.getByLabel('Year').fill('1987');
   await page.getByLabel('Insured').selectOption('0');
   await page.getByRole('button', { name: 'Save item' }).click();
 
   await expect(page.getByRole('heading', { name: renamed })).toBeVisible();
   await expect(detail(page, 'Condition')).toHaveText('Excellent');
+  await expect(detail(page, 'Purchase Price')).toHaveText('39.50 EUR');
+  await expect(detail(page, 'Serial Number')).toHaveText('12A/9382-B');
   await expect(detail(page, 'Year')).toHaveText('1987');
   await expect(detail(page, 'Insured')).toHaveText('No');
 });
@@ -62,7 +74,7 @@ test('deletes an item and removes it from the list', async ({ page, request }) =
   await request.post('/api/items', { data: { name: itemName, category_id: category.id } });
 
   await page.goto('/');
-  await page.getByPlaceholder('Search name or description…').fill(itemName);
+  await page.getByPlaceholder('Search name, description or serial number…').fill(itemName);
   await page.getByRole('link', { name: itemName, exact: true }).click();
   await expect(page.getByRole('heading', { name: itemName })).toBeVisible();
 
@@ -70,6 +82,6 @@ test('deletes an item and removes it from the list', async ({ page, request }) =
   await page.getByRole('button', { name: 'Delete' }).click();
 
   await expect(page).toHaveURL('/');
-  await page.getByPlaceholder('Search name or description…').fill(itemName);
+  await page.getByPlaceholder('Search name, description or serial number…').fill(itemName);
   await expect(page.getByText('No matching items')).toBeVisible();
 });

@@ -84,7 +84,8 @@ presentation layer over the existing API, and no CDN or other runtime internet d
 - The photo viewer shows one contained image (`object-fit: contain`), **Previous**/**Next** and a
   `current / total` indicator when the item has more than one photo, the filename, and a separate
   **Delete photo** action. Items without photos get a placeholder frame of the same size.
-- Information is grouped into **Details** (condition, location, description), a card with the
+- Information is grouped into **Details** (condition, location, purchase metadata, serial number,
+  and description), a card with the
   category's custom fields, **Storage** (parent link and the direct contents), and
   **Record information** (UUID, created, updated). The custom-field and storage cards are omitted
   when the item has no custom fields and takes no part in nesting.

@@ -8,6 +8,7 @@ import ItemThumbnail from '../components/ItemThumbnail.vue';
 const route = useRoute(); const router = useRouter();
 const item = ref(null); const error = ref('');
 const formatDate = value => value ? new Date(value.replace(' ', 'T') + 'Z').toLocaleString() : '—';
+const formatPurchaseDate = value => new Date(`${value}T00:00:00Z`).toLocaleDateString(undefined, { dateStyle: 'medium', timeZone: 'UTC' });
 const displayValue = field => field.type === 'boolean' ? (field.value === '1' ? 'Yes' : 'No') : (field.value || '—');
 // An item with neither a container nor contents would only produce an empty storage card.
 const hasStorage = computed(() => Boolean(item.value?.parent || item.value?.children.length));
@@ -114,6 +115,30 @@ onMounted(load);
               <dd class="col-sm-8 text-break">
                 {{ item.location || '—' }}
               </dd>
+              <template v-if="item.purchase_date">
+                <dt class="col-sm-4">
+                  Purchase Date
+                </dt>
+                <dd class="col-sm-8 text-break">
+                  {{ formatPurchaseDate(item.purchase_date) }}
+                </dd>
+              </template>
+              <template v-if="item.purchase_price">
+                <dt class="col-sm-4">
+                  Purchase Price
+                </dt>
+                <dd class="col-sm-8 text-break">
+                  {{ item.purchase_price.amount }} {{ item.purchase_price.currency }}
+                </dd>
+              </template>
+              <template v-if="item.serial_number">
+                <dt class="col-sm-4">
+                  Serial Number
+                </dt>
+                <dd class="col-sm-8 text-break">
+                  {{ item.serial_number }}
+                </dd>
+              </template>
               <dt class="col-sm-4">
                 Description
               </dt>

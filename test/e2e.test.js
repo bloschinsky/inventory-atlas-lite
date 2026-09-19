@@ -91,6 +91,110 @@ test('inventory acceptance path persists and produces a valid backup', async () 
   }
 });
 
+test('existing databases migrate and purchase and serial fields round-trip safely', async () => {
+  const dataDir = await mkdtemp(path.join(os.tmpdir(), 'inventory-purchase-fields-test-'));
+  const databasePath = path.join(dataDir, 'inventory.sqlite');
+  const legacy = new Database(databasePath);
+  legacy.exec(`
+    CREATE TABLE categories (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, created_at TEXT, updated_at TEXT);
+    CREATE TABLE items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, uuid TEXT NOT NULL UNIQUE, name TEXT NOT NULL,
+      category_id INTEGER NOT NULL REFERENCES categories(id), description TEXT, condition TEXT,
+      location TEXT, created_at TEXT, updated_at TEXT
+    );
+    CREATE TABLE custom_fields (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, category_id INTEGER NOT NULL REFERENCES categories(id),
+      name TEXT NOT NULL, type TEXT NOT NULL, created_at TEXT, updated_at TEXT
+    );
+    CREATE TABLE item_field_values (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, item_id INTEGER NOT NULL REFERENCES items(id),
+      field_id INTEGER NOT NULL REFERENCES custom_fields(id), value TEXT, UNIQUE(item_id, field_id)
+    );
+    CREATE TABLE item_photos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, item_id INTEGER NOT NULL REFERENCES items(id),
+      filename TEXT NOT NULL, mime_type TEXT NOT NULL, data BLOB NOT NULL, created_at TEXT
+    );
+    INSERT INTO categories (id, name) VALUES (1, 'Legacy');
+    INSERT INTO items (id, uuid, name, category_id, description) VALUES (7, 'legacy-uuid', 'Existing camera', 1, 'Kept intact');
+    INSERT INTO custom_fields (id, category_id, name, type) VALUES (3, 1, 'Brand', 'text');
+    INSERT INTO item_field_values (item_id, field_id, value) VALUES (7, 3, 'Olympus');
+    INSERT INTO item_photos (item_id, filename, mime_type, data) VALUES (7, 'legacy.png', 'image/png', X'8950');
+  `);
+  legacy.close();
+
+  let server;
+  try {
+    server = await startServer(dataDir);
+
+    const migrated = await request('/api/items/7');
+    assert.equal(migrated.id, 7);
+    assert.equal(migrated.description, 'Kept intact');
+    assert.equal(migrated.purchase_date, null);
+    assert.equal(migrated.purchase_price, null);
+    assert.equal(migrated.serial_number, null);
+    assert.equal(migrated.fields[0].value, 'Olympus');
+    assert.equal(migrated.photos[0].filename, 'legacy.png');
+
+    const migratedDatabase = new Database(databasePath, { readonly: true });
+    const columns = new Map(migratedDatabase.pragma('table_info(items)').map(column => [column.name, column]));
+    for (const name of ['purchase_date', 'purchase_price_amount', 'purchase_price_currency', 'serial_number']) {
+      assert.equal(columns.get(name).notnull, 0);
+    }
+    migratedDatabase.close();
+
+    const createWithPrice = (name, amount, currency, extra = {}) => request('/api/items', json('POST', {
+      name, category_id: 1, purchase_price: { amount, currency }, ...extra
+    }));
+    const item = await createWithPrice('Purchased camera', '49.99', 'USD', {
+      purchase_date: '2024-11-18', serial_number: '  000123ABC-09  '
+    });
+    await createWithPrice('Local purchase', '1000', 'UAH');
+    await createWithPrice('European purchase', '39.50', 'EUR');
+    const zeroPrice = await createWithPrice('Free purchase', '0', 'GBP');
+
+    assert.equal(item.purchase_date, '2024-11-18');
+    assert.deepEqual(item.purchase_price, { amount: '49.99', currency: 'USD' });
+    assert.equal(item.serial_number, '000123ABC-09');
+    assert.deepEqual(zeroPrice.purchase_price, { amount: '0', currency: 'GBP' });
+    assert.equal((await request('/api/items?search=000123ABC-09')).items[0].id, item.id);
+
+    const updated = await request(`/api/items/${item.id}`, json('PUT', {
+      name: item.name, category_id: item.category_id, purchase_date: '2025-02-28',
+      purchase_price: { amount: '39.50', currency: 'EUR' }, serial_number: '12A/9382-B'
+    }));
+    assert.equal(updated.purchase_date, '2025-02-28');
+    assert.deepEqual(updated.purchase_price, { amount: '39.50', currency: 'EUR' });
+    assert.equal(updated.serial_number, '12A/9382-B');
+
+    const cleared = await request(`/api/items/${item.id}`, json('PUT', {
+      name: item.name, category_id: item.category_id, purchase_date: '',
+      purchase_price: { amount: '', currency: 'GBP' }, serial_number: ''
+    }));
+    assert.equal(cleared.purchase_date, null);
+    assert.equal(cleared.purchase_price, null);
+    assert.equal(cleared.serial_number, null);
+
+    assert.equal(await failedStatus('/api/items', json('POST', { name: 'Bad date', category_id: 1, purchase_date: '2025-02-30' })), 400);
+    assert.equal(await failedStatus('/api/items', json('POST', { name: 'Bad amount', category_id: 1, purchase_price: { amount: '50 dollars', currency: 'USD' } })), 400);
+    assert.equal(await failedStatus('/api/items', json('POST', { name: 'Negative amount', category_id: 1, purchase_price: { amount: '-1', currency: 'USD' } })), 400);
+    assert.equal(await failedStatus('/api/items', json('POST', { name: 'Bad currency', category_id: 1, purchase_price: { amount: '50', currency: 'XXX' } })), 400);
+
+    const backupResponse = await fetch(`${base}/api/backup`);
+    assert.ok(backupResponse.ok);
+    const backupPath = path.join(dataDir, 'purchase-fields-backup.sqlite');
+    await writeFile(backupPath, Buffer.from(await backupResponse.arrayBuffer()));
+    const backup = new Database(backupPath, { readonly: true });
+    assert.deepEqual(
+      backup.prepare('SELECT purchase_price_amount, purchase_price_currency FROM items WHERE name = ?').get('European purchase'),
+      { purchase_price_amount: '39.50', purchase_price_currency: 'EUR' }
+    );
+    backup.close();
+  } finally {
+    if (server) await stopServer(server);
+    await rm(dataDir, { recursive: true, force: true });
+  }
+});
+
 test('item nesting keeps a valid hierarchy and survives restart and backup', async () => {
   const dataDir = await mkdtemp(path.join(os.tmpdir(), 'inventory-nesting-test-'));
   let server;
