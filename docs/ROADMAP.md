@@ -26,14 +26,10 @@ Implemented behavior is documented separately in [`features/README.md`](features
 
 ## Distribution
 
-1. **GitHub Release Pipeline MVP** — Implemented locally; publication and disposable Proxmox
-   acceptance verification remain open before this task can close. A release tag validates the
-   project, publishes an additional Docker distribution to GHCR, packages compatible Proxmox source
-   assets, and creates the GitHub Release. Proxmox retains Node.js/systemd and local builds. See
-   [`TASK-01-GITHUB-RELEASE-PIPELINE-MVP.md`](issues/TASK-01-GITHUB-RELEASE-PIPELINE-MVP.md).
-2. **Windows desktop distribution via Electron** — Planned for later and blocked until the GitHub
-   Release Pipeline MVP is stable. Adds Setup and portable Windows executables to the same tagged
-   GitHub Release. See [`TASK-02-WINDOWS-ELECTRON-RELEASE.md`](issues/TASK-02-WINDOWS-ELECTRON-RELEASE.md).
+1. **Windows desktop distribution via Electron** — Planned and unblocked by the completed
+   [GitHub release pipeline](features/github-release-pipeline.md). Adds Setup and portable Windows
+   executables to the same tagged GitHub Release. See
+   [`TASK-02-WINDOWS-ELECTRON-RELEASE.md`](issues/TASK-02-WINDOWS-ELECTRON-RELEASE.md).
 
 ## Maintenance
 

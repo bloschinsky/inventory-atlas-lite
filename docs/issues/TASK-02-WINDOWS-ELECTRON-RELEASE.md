@@ -1,12 +1,12 @@
 # Task 02 — Windows Desktop Distribution via Electron
 
 ## Status
-Planned for later.
+Planned and unblocked.
 
 ## Depends on
-**Task 01 — GitHub Release Pipeline MVP must be completed first.**
+The implemented [GitHub release pipeline](../features/github-release-pipeline.md).
 
-Do not implement this task until the tag-driven GitHub Release flow from Task 01 is stable.
+The tag-driven release flow is stable as of the successful `v0.8.0` release.
 
 ## Goal
 
@@ -25,7 +25,7 @@ Inventory-Atlas-Lite-Setup-X.Y.Z.exe
 Inventory-Atlas-Lite-Portable-X.Y.Z.exe
 ```
 
-and attach both files to the same GitHub Release created by Task 01.
+and attach both files to the same GitHub Release created by the existing pipeline.
 
 GitHub Releases remain the central distribution page.
 
@@ -285,7 +285,7 @@ Handle startup errors with a useful user-facing error instead of showing a blank
 
 # 9. Versioning
 
-The Windows application version must come from the same Git release tag used by Task 01.
+The Windows application version must come from the same Git release tag used by the server pipeline.
 
 For:
 
@@ -313,7 +313,7 @@ Do not require a developer to manually keep a separate Windows version in sync.
 
 # 10. Windows GitHub Actions job
 
-Extend the existing release workflow from Task 01 with a Windows job.
+Extend the existing release workflow with a Windows job.
 
 Conceptual flow:
 
@@ -528,7 +528,7 @@ Those should be separate future tasks.
 
 The task is complete when all of the following are true:
 
-- [ ] Task 01 release pipeline remains functional.
+- [ ] The existing server release pipeline remains functional.
 - [ ] Electron is integrated without creating a separate frontend fork.
 - [ ] The Windows app reuses the existing Inventory Atlas Lite application/backend logic.
 - [ ] The packaged app runs without separately installed Node.js/npm/Docker.
@@ -552,7 +552,7 @@ The task is complete when all of the following are true:
 
 # Manual verification scenario
 
-After Task 01 is stable:
+With the server release pipeline stable:
 
 1. Create a test release tag.
 2. Push the tag.

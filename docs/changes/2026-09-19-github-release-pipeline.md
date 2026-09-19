@@ -42,17 +42,14 @@
 - `npm run test:e2e` — passed: 16 Chromium tests.
 - `npx --yes yaml-lint .github/workflows/release.yml` — passed.
 - `actionlint 1.7.12 .github/workflows/release.yml` — passed.
-- Docker build/smoke was not run locally because the Docker Desktop engine was unavailable. It is a
-  mandatory pre-publish workflow step.
-- A release was not pushed, and a disposable Proxmox v0.7.0 upgrade was not available in this
-  environment. The active task remains in `docs/issues/` until those external acceptance checks are
-  recorded; no release behavior is claimed from those pending checks.
-- The first tag run reached `npm test` but exposed the detached-checkout assumption in the documented
-  branch test; the test now accepts either a local branch or the fetched `origin` branch.
-- The second tag run passed lint, Node tests, and build, then exposed that the Vite proxy used
-  `localhost` while Express listened on IPv4. The proxy now uses `127.0.0.1` consistently with the
-  browser suite's base URL.
-- The third tag run reached the full browser suite. Its detailed output showed the expanded sidebar
-  intercepting the backup link's pointer click and the sidebar-width assertion reading an in-progress
-  collapse transition. The tests now isolate backup behavior from the sidebar and wait for the
-  observable collapsed width.
+- GitHub Actions release run
+  [`35441550220`](https://github.com/bloschinsky/inventory-atlas-lite/actions/runs/35441550220)
+  completed successfully for tag `v0.8.0` and commit `70199a1` on 2026-09-19.
+- [GitHub Release `v0.8.0`](https://github.com/bloschinsky/inventory-atlas-lite/releases/tag/v0.8.0)
+  was published with `inventory-atlas-lite-v0.8.0.tar.gz` and `SHA256SUMS`.
+- The downloaded archive matched its published SHA-256 checksum, contained 122 entries under the
+  single `inventory-atlas-lite-v0.8.0/` directory, and included `package.json` in the expected path.
+- An anonymous GHCR request retrieved `ghcr.io/bloschinsky/inventory-atlas-lite:0.8.0` with manifest
+  digest `sha256:5a5d83f58482d3120b2a728aec29417dd1eb4afd2927b1158684696c36464204`.
+- The operator confirmed that the existing Proxmox installation updated successfully to the new
+  published release through the installed updater.

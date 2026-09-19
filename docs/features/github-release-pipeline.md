@@ -48,12 +48,14 @@ Update `package.json` and `package-lock.json` to the intended stable version and
 release changes. Create and push the matching tag, for example:
 
 ```bash
+git push origin master
 git tag v0.8.0
 git push origin v0.8.0
 ```
 
-Normal branch pushes do not run this workflow. Prerelease tags are intentionally rejected in the
-MVP, so `latest` always names a stable version.
+The release commit must reach `master` before its tag, particularly when the workflow is first added.
+Normal branch pushes do not run this workflow. Prerelease tags are intentionally rejected in the MVP,
+so `latest` always names a stable version.
 
 ## Boundaries
 
@@ -68,5 +70,9 @@ MVP, so `latest` always names a stable version.
 Local tests cover version rejection, the workflow dependency and asset contract, Docker runtime
 requirements, and version-aware health polling. The workflow itself makes lint, API tests, build,
 Playwright, Docker persistence, anonymous GHCR pulling, and archive validation mandatory before it
-creates a GitHub Release. A disposable Proxmox validation of the first published pipeline release is
-still tracked by the active release task.
+creates a GitHub Release.
+
+Release `v0.8.0` completed the workflow successfully on 2026-09-19. The published GHCR tag was
+retrieved anonymously by manifest digest, and the attached source archive matched `SHA256SUMS`, had
+one enclosing directory, and contained the expected source layout. The operator then successfully
+updated the existing Proxmox installation to the published release through the installed updater.
