@@ -31,12 +31,15 @@ failing test makes the command exit non-zero.
 - Specs cover the main workflows: `navigation.spec.js` (reaching every page and the folded desktop
   sidebar expanding on hover and on keyboard focus), `categories.spec.js`, `items.spec.js`
   (create, search, edit, delete), `photos.spec.js`, `nesting.spec.js`, `suggestions.spec.js`,
-  `backup.spec.js`, `theme.spec.js` (the system colour scheme, an explicit light/dark choice, and its
-  persistence), and `responsive.spec.js`, which runs at a `390 x 844` phone viewport and covers the
-  offcanvas navigation, the mobile item cards, and the item detail order.
+  `backup.spec.js`, `ai-add-item.spec.js` (AI-assisted creation, recoverable provider errors, and
+  server-only API key storage), `theme.spec.js` (the system colour scheme, an explicit light/dark
+  choice, and its persistence), and `responsive.spec.js`, which runs at a `390 x 844` phone viewport
+  and covers the offcanvas navigation, the mobile item cards, and the item detail order.
 - Tests locate elements by accessible role, label, and visible name, use unique record names, and
   wait for observable UI state instead of fixed sleeps. Generated reports, traces, screenshots, and
   videos are ignored by Git.
+- Desktop tests that interact directly with page content first move the synthetic pointer away from
+  the folded-hover sidebar when its initial position could otherwise expand the overlay in CI.
 
 ## Verification
 

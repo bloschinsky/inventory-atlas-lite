@@ -88,9 +88,11 @@ test('keeps the selected image and hint after a recoverable analysis error', asy
 
 test('configures AI while returning only a masked API key state to the browser', async ({ page, request }) => {
   await page.goto('/settings');
+  // Headless Chromium on Linux may initialize its pointer over the folded-hover sidebar.
+  await page.mouse.move(600, 400);
   await page.getByLabel('Enable AI features').check();
   await page.getByLabel('Model').fill('gpt-4o-mini');
-  await page.getByLabel('API key').fill('sk-test-browser-secret');
+  await page.getByLabel('API key', { exact: true }).fill('sk-test-browser-secret');
   await page.getByRole('button', { name: 'Save settings' }).click();
   await expect(page.getByRole('status')).toHaveText('AI settings saved.');
   await expect(page.getByText('Saved key: ••••••••cret.')).toBeVisible();
