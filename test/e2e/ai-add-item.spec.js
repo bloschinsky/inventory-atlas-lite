@@ -170,17 +170,32 @@ test('keeps the selected image and hint after a recoverable analysis error', asy
 });
 
 test('configures AI while returning only a masked API key state to the browser', async ({ page, request }) => {
+  let modelRequests = 0;
+  await page.route('**/api/ai/models', route => {
+    modelRequests += 1;
+    return route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ models: [
+        { id: 'gpt-5.6-luna', label: 'GPT-5.6 Luna' },
+        { id: 'gpt-5.6-terra', label: 'GPT-5.6 Terra' }
+      ] })
+    });
+  });
   await page.goto('/settings');
   // Headless Chromium on Linux may initialize its pointer over the folded-hover sidebar.
   await page.mouse.move(600, 400);
   await expect(page.getByLabel('Model')).toHaveValue('gpt-5.6-luna');
+  await expect(page.getByLabel('Model')).toContainText('GPT-5.6 Terra');
   await page.getByLabel('Enable AI features').check();
-  await page.getByLabel('Model').fill('gpt-4o-mini');
+  await page.getByLabel('Model').selectOption('custom');
+  await expect(page.getByLabel('Custom model ID')).toHaveValue('gpt-5.6-luna');
+  await page.getByLabel('Custom model ID').fill('gpt-4o-mini');
   await page.getByLabel('API key', { exact: true }).fill('sk-test-browser-secret');
   await page.getByRole('button', { name: 'Save settings' }).click();
   await expect(page.getByRole('status')).toHaveText('AI settings saved.');
   await expect(page.getByText('Saved key: ••••••••cret.')).toBeVisible();
   await expect(page.getByLabel('API key', { exact: true })).toHaveValue('');
+  await expect.poll(() => modelRequests).toBe(2);
 
   const settings = await (await request.get('/api/settings/ai')).json();
   expect(settings).toEqual({

@@ -348,7 +348,16 @@ test('AI settings stay server-side and image analysis returns a validated invent
   const dataDir = await mkdtemp(path.join(os.tmpdir(), 'inventory-ai-test-'));
   let appServer;
   let providerRequest;
+  let modelsRequest;
   const providerServer = createServer(async (req, res) => {
+    if (req.method === 'GET' && req.url === '/models') {
+      modelsRequest = { authorization: req.headers.authorization };
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ data: [
+        { id: 'gpt-5.6-sol' }, { id: 'gpt-5.6-luna' }, { id: 'gpt-4o-mini' }
+      ] }));
+      return;
+    }
     let rawBody = '';
     for await (const chunk of req) rawBody += chunk.toString();
     providerRequest = {
@@ -396,6 +405,7 @@ test('AI settings stay server-side and image analysis returns a validated invent
 
     const emptySettings = await request('/api/settings/ai');
     assert.deepEqual(emptySettings, { enabled: false, provider: 'openai', model: 'gpt-5.6-luna', hasApiKey: false, apiKeyMasked: '' });
+    assert.equal(await failedStatus('/api/ai/models'), 409);
     await request('/api/settings/ai', json('PUT', { enabled: true, provider: 'openai', model: 'gpt-4o-mini' }));
     assert.equal(await failedStatus('/api/ai/items/analyze', { method: 'POST', body: imageData() }), 409);
 
@@ -405,6 +415,14 @@ test('AI settings stay server-side and image analysis returns a validated invent
     assert.equal(configured.hasApiKey, true);
     assert.equal(configured.apiKeyMasked, '••••••••cret');
     assert.ok(!JSON.stringify(configured).includes('sk-test'));
+
+    assert.deepEqual(await request('/api/ai/models'), {
+      models: [
+        { id: 'gpt-5.6-luna', label: 'GPT-5.6 Luna' },
+        { id: 'gpt-5.6-sol', label: 'GPT-5.6 Sol' }
+      ]
+    });
+    assert.equal(modelsRequest.authorization, 'Bearer sk-test-not-a-real-secret');
 
     const audioCards = await request('/api/categories', json('POST', { name: 'Audio Cards' }));
     const tradeName = await request(`/api/categories/${audioCards.id}/fields`, json('POST', { name: 'Trade Name', type: 'text' }));

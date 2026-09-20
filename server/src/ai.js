@@ -4,6 +4,11 @@ import { dataDir } from './db.js';
 
 const settingsPath = path.join(dataDir, 'ai-settings.json');
 const defaults = { enabled: false, provider: 'openai', model: 'gpt-5.6-luna', apiKey: '' };
+const preferredOpenAiModels = [
+  { id: 'gpt-5.6-luna', label: 'GPT-5.6 Luna' },
+  { id: 'gpt-5.6-terra', label: 'GPT-5.6 Terra' },
+  { id: 'gpt-5.6-sol', label: 'GPT-5.6 Sol' }
+];
 const baseFieldNames = [
   'name', 'description', 'condition', 'location', 'purchase_date',
   'purchase_price_amount', 'purchase_price_currency', 'serial_number'
@@ -55,6 +60,38 @@ export function writeAiSettings(input) {
   fs.renameSync(temporaryPath, settingsPath);
   try { fs.chmodSync(settingsPath, 0o600); } catch { /* Windows may not apply POSIX file modes. */ }
   return publicAiSettings();
+}
+
+export async function listAvailableOpenAiModels() {
+  const settings = readAiSettings();
+  if (!settings.apiKey) throw httpError('Add an OpenAI API key in Settings before loading models.', 409);
+
+  const baseUrl = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '');
+  let response;
+  try {
+    response = await fetch(`${baseUrl}/models`, {
+      headers: { Authorization: `Bearer ${settings.apiKey}` },
+      signal: AbortSignal.timeout(15_000)
+    });
+  } catch (error) {
+    if (error.name === 'TimeoutError' || error.name === 'AbortError') {
+      throw httpError('OpenAI model list timed out. Try again.', 504);
+    }
+    throw httpError('OpenAI model list is unavailable. Try again later.', 502);
+  }
+
+  if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      throw httpError('OpenAI rejected the API key. Check it in Settings.', 502);
+    }
+    if (response.status === 429) throw httpError('OpenAI rate limit reached. Try again later.', 503);
+    throw httpError('OpenAI could not load the model list. Try again later.', 502);
+  }
+
+  const result = await response.json().catch(() => null);
+  if (!Array.isArray(result?.data)) throw httpError('OpenAI returned an invalid model list.', 502);
+  const availableIds = new Set(result.data.map(model => model?.id).filter(id => typeof id === 'string'));
+  return preferredOpenAiModels.filter(model => availableIds.has(model.id));
 }
 
 export function detectImageMime(buffer) {

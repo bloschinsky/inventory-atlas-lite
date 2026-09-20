@@ -55,8 +55,10 @@ inventory, so keep it on a trusted LAN or behind a VPN.
 7. Open **Data / Backup** and press **Download backup** to get your first copy of the database.
 
 To use assisted photo entry, open **Settings**, enable AI features, keep **OpenAI** as the provider,
-enter an image-capable model and API key, then press **Save settings**. The saved key is shown only
-as a masked value afterwards.
+enter an API key, then press **Save settings**. The model selector loads the supported models that
+are available to that key; choose one and save the setting. Use **Custom model...** to enter a model
+ID that is not yet listed, and use **Refresh models** after access to the OpenAI account changes.
+The saved key is shown only as a masked value afterwards.
 
 ## 4. Core concepts
 

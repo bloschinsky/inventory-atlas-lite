@@ -6,7 +6,7 @@ import os from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { db } from './db.js';
-import { analyzeInventoryItem, detectImageMime, publicAiSettings, writeAiSettings } from './ai.js';
+import { analyzeInventoryItem, detectImageMime, listAvailableOpenAiModels, publicAiSettings, writeAiSettings } from './ai.js';
 import { removeBackground } from './backgroundRemoval.js';
 
 const app = express();
@@ -104,6 +104,7 @@ const searchLike = value => `%${escapeLike(value)}%`;
 
 app.get('/api/settings/ai', (_req, res) => res.json(publicAiSettings()));
 app.put('/api/settings/ai', (req, res) => res.json(writeAiSettings(req.body)));
+app.get('/api/ai/models', async (_req, res) => res.json({ models: await listAvailableOpenAiModels() }));
 
 app.post('/api/ai/items/analyze', upload.single('image'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Choose an image to analyze.' });

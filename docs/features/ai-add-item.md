@@ -7,8 +7,9 @@ writes anything to SQLite.
 
 ## User workflow
 
-1. Configure OpenAI under **Settings → AI**: enable AI, enter the provider API key, and choose a
-   model that accepts image input and structured output.
+1. Configure OpenAI under **Settings → AI**: enable AI, enter the provider API key, save it, and
+   choose one of the available curated models. Choose **Custom model...** to retain or test another
+   model ID, and use **Refresh models** when account access changes.
 2. Open **Items** and select **AI Add Item** next to the manual **Add item** action.
 3. Choose one JPEG, PNG, WebP, or GIF image of at most 15 MB, optionally add a hint, and optionally
    enable **Remove background**. Background removal is off by default.
@@ -38,6 +39,12 @@ and hidden specifications must not be guessed. The server validates the response
 category must exist, dynamic field IDs must belong to it, and values must match text, number, date,
 or boolean field types. Unknown dynamic fields and invalid values are discarded. The internal
 markings are not sent to the item form, and no second AI request is made.
+
+`GET /api/ai/models` keeps OpenAI communication on the server. It lists models for the saved API
+key, then returns only the curated image-analysis choices: GPT-5.6 Luna, GPT-5.6 Terra, and GPT-5.6
+Sol when they are available. The Settings page loads the list once when opened, refreshes it after a
+new key is saved or when requested, and falls back to the saved custom ID with a warning if listing
+fails. Raw provider errors and the API key never reach the browser.
 
 The in-memory client draft contains the normalized values and proposed photo `File`. Navigating directly
 to Add Item does not use a draft, so the manual workflow is unchanged. Reloading the review page
