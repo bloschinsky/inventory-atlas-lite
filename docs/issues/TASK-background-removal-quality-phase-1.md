@@ -152,6 +152,13 @@ Add a regression set based on real-world failure patterns similar to:
 2. small boxed consumer item held in hand;
 3. PCB / expansion card photographed on bubble wrap or textured surface.
 
+### Provided regression asset
+
+[`phase-1-sound-blaster-audigy-ls-on-bubble-wrap.jpg`](assets/phase-1-sound-blaster-audigy-ls-on-bubble-wrap.jpg)
+shows a Sound Blaster Audigy LS sound card on textured bubble wrap. Use it to evaluate surface
+cleanup, preservation of the card silhouette, and the removal of background fragments without
+target-aware object selection.
+
 These regression cases should be used to validate that Phase 1 improves:
 
 - background cleanliness;

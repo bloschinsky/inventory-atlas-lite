@@ -181,6 +181,13 @@ Add or reuse real regression examples similar to:
 3. PCB / item on textured packing material;
 4. item with nearby clutter or support object.
 
+### Provided regression asset
+
+[`phase-2-svema-ds-4-film-boxes-in-hand.jpg`](assets/phase-2-svema-ds-4-film-boxes-in-hand.jpg)
+shows a pair of Svema DS-4 film boxes held in a hand against bubble wrap. Use it to evaluate
+target-aware selection: preserve the intended film-box group while excluding the hand and
+surrounding background.
+
 The regression focus for Phase 2 is not just “clean mask”, but specifically:
 
 - **correct item selection**;
