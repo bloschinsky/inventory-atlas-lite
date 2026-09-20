@@ -1,13 +1,14 @@
 <script setup>
 import { onBeforeUnmount, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { api } from '../api.js';
+import { api, apiBlob } from '../api.js';
 import { setPendingAiDraft } from '../aiDraft.js';
 import PageHeader from '../components/PageHeader.vue';
 
 const router = useRouter();
 const image = ref(null);
 const hint = ref('');
+const removeBackground = ref(false);
 const previewUrl = ref('');
 const error = ref('');
 const analyzing = ref(false);
@@ -25,8 +26,23 @@ async function analyze() {
     const data = new FormData();
     data.append('image', image.value);
     if (hint.value.trim()) data.append('hint', hint.value.trim());
-    const draft = await api('/api/ai/items/analyze', { method: 'POST', body: data });
-    setPendingAiDraft(draft, image.value);
+    const analysis = api('/api/ai/items/analyze', { method: 'POST', body: data });
+    const background = removeBackground.value
+      ? apiBlob('/api/images/remove-background', { method: 'POST', body: data })
+      : Promise.resolve(null);
+    const [analysisResult, backgroundResult] = await Promise.allSettled([analysis, background]);
+    if (analysisResult.status === 'rejected') throw analysisResult.reason;
+    let finalPhoto = image.value;
+    let photoWarning = '';
+    if (removeBackground.value) {
+      if (backgroundResult.status === 'fulfilled') {
+        const originalName = image.value.name.replace(/\.[^.]+$/, '') || 'item';
+        finalPhoto = new File([backgroundResult.value], `${originalName}-background-removed.jpg`, { type: 'image/jpeg' });
+      } else {
+        photoWarning = 'Background removal failed. The original photo will be used instead.';
+      }
+    }
+    setPendingAiDraft(analysisResult.value, finalPhoto, photoWarning);
     await router.push('/items/new');
   } catch (caught) {
     error.value = caught.message;
@@ -70,7 +86,7 @@ onBeforeUnmount(() => { if (previewUrl.value) URL.revokeObjectURL(previewUrl.val
             @change="selectImage"
           >
           <div class="form-text">
-            JPEG, PNG, WebP, or GIF; up to 15 MB. The original photo is kept for the item.
+            JPEG, PNG, WebP, or GIF; up to 15 MB. The original photo is always used for AI analysis.
           </div>
         </div>
         <img
@@ -79,6 +95,17 @@ onBeforeUnmount(() => { if (previewUrl.value) URL.revokeObjectURL(previewUrl.val
           alt="Selected item preview"
           class="img-thumbnail mb-3 app-ai-preview"
         >
+        <label class="form-check mb-2">
+          <input
+            v-model="removeBackground"
+            class="form-check-input"
+            type="checkbox"
+          >
+          <span class="form-check-label">Remove background</span>
+        </label>
+        <div class="form-text mb-3">
+          Runs locally and affects only the final inventory photo. AI analysis still uses the original.
+        </div>
         <div class="mb-3">
           <label
             class="form-label"

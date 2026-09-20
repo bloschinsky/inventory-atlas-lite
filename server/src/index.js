@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { db } from './db.js';
 import { analyzeInventoryItem, detectImageMime, publicAiSettings, writeAiSettings } from './ai.js';
+import { removeBackground } from './backgroundRemoval.js';
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -115,6 +116,19 @@ app.post('/api/ai/items/analyze', upload.single('image'), async (req, res) => {
   const categories = db.prepare('SELECT id, name FROM categories ORDER BY name COLLATE NOCASE').all();
   const fields = db.prepare('SELECT id, category_id, name, type FROM custom_fields ORDER BY category_id, id').all();
   res.json(await analyzeInventoryItem({ image: req.file.buffer, mimeType, hint, categories, fields }));
+});
+
+app.post('/api/images/remove-background', upload.single('image'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'Choose an image to process.' });
+  const mimeType = detectImageMime(req.file.buffer);
+  if (!mimeType || mimeType !== req.file.mimetype) {
+    return res.status(400).json({ error: 'The uploaded file is not a valid JPEG, PNG, WebP, or GIF image.' });
+  }
+  const image = await removeBackground(req.file.buffer);
+  const baseName = path.parse(req.file.originalname).name.slice(0, 180) || 'item';
+  res.type('image/jpeg')
+    .set('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(`${baseName}-background-removed.jpg`)}`)
+    .send(image);
 });
 
 app.get('/api/categories', (_req, res) => {

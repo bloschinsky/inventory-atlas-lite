@@ -98,3 +98,4 @@ button.dashboard-bar-button:hover, button.dashboard-bar-button:focus-visible, .d
   max-width: min(100%, 26rem);
   object-fit: contain;
 }
+.app-selected-photo-preview { width: 10rem; height: 10rem; object-fit: contain; }

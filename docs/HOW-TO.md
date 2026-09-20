@@ -139,18 +139,24 @@ Changing the category while filling in the form loads that category's fields.
    replace it with another OpenAI model that accepts image input and strict structured output.
 2. Open **Items** and press **AI Add Item** next to **Add item**.
 3. Select one JPEG, PNG, WebP, or GIF photo of at most 15 MB. Optionally describe what you know in
-   **Additional description**; visible evidence in the photo takes priority.
+   **Additional description**; visible evidence in the photo takes priority. Enable **Remove
+   background** if you want a locally processed final photo with the item centered on white. The
+   option is off by default.
 4. Press **Analyze** once. The button shows progress and cannot submit a duplicate request. If the
    request fails, the selected photo and description stay on the page so you can retry.
 5. The normal item form opens with the suggested existing category, supported base and custom-field
-   values, confidence, any warnings, and the original photo ready to upload. Empty values remain
-   empty. Review and edit every value; AI suggestions are not guaranteed to be correct.
+   values, confidence, any warnings, and a preview of the photo ready to upload. When background
+   removal succeeds, this is a JPEG with a white background; otherwise the original is retained and
+   a warning explains the fallback. Choose another photo in the normal file control at any time.
+   Empty values remain empty. Review and edit every value; AI suggestions are not guaranteed to be
+   correct.
 6. Press **Save item** to create the record through the normal workflow. Leaving or reloading the
    review page before saving discards the temporary draft, and no inventory record has been written.
 
-The analysis uses one original-detail OpenAI request so visible brand, family, model, part, and
-serial markings remain readable. It does not search the web, create categories or fields, remove
-the background, or make a second AI request.
+The analysis always uses one original-detail OpenAI request so visible brand, family, model, part,
+and serial markings remain readable. Background removal runs independently on the local CPU with
+U2NetP and never sends an additional provider request or consumes tokens. It does not search the
+web, create categories or fields, or make a second AI request.
 
 ### Edit or delete an item
 

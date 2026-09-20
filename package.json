@@ -1,12 +1,13 @@
 {
   "name": "simple-personal-inventory",
-  "version": "0.12.2",
+  "version": "0.13.0",
   "private": true,
   "type": "module",
   "engines": {
     "node": ">=20.19"
   },
   "scripts": {
+    "postinstall": "node scripts/prepare-background-model.mjs",
     "dev": "concurrently -k -n server,client -c blue,green \"npm:dev:server\" \"npm:dev:client\"",
     "dev:server": "node --watch server/src/index.js",
     "dev:client": "vite",
@@ -22,6 +23,8 @@
     "better-sqlite3": "^12.2.0",
     "express": "^5.1.0",
     "multer": "^2.0.2",
+    "onnxruntime-node": "^1.30.0",
+    "sharp": "^0.35.4",
     "vue": "^3.5.21",
     "vue-router": "^4.5.1"
   },

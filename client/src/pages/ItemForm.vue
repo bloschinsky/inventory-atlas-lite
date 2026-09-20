@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { api, jsonOptions } from '../api.js';
 import FieldAutocomplete from '../components/FieldAutocomplete.vue';
@@ -12,6 +12,8 @@ const editing = computed(() => Boolean(route.params.id));
 const categories = ref([]); const fields = ref([]); const existingPhotos = ref([]); const photos = ref([]);
 const error = ref(''); const saving = ref(false); const initialized = ref(false);
 const aiDraft = ref(null);
+const photoWarning = ref('');
+const photoPreviews = ref([]);
 const currencies = Intl.supportedValuesOf('currency');
 const form = reactive({
   name: '', category_id: '', description: '', condition: '', location: '', purchase_date: '',
@@ -35,6 +37,13 @@ async function loadFields(categoryId) {
   for (const field of fields.value) if (!(field.id in form.field_values)) form.field_values[field.id] = field.type === 'boolean' ? '0' : '';
 }
 watch(() => form.category_id, async id => { if (initialized.value) await loadFields(id); });
+watch(photos, selected => {
+  for (const preview of photoPreviews.value) URL.revokeObjectURL(preview.url);
+  photoPreviews.value = selected.map(photo => ({ name: photo.name, url: URL.createObjectURL(photo) }));
+});
+onBeforeUnmount(() => {
+  for (const preview of photoPreviews.value) URL.revokeObjectURL(preview.url);
+});
 async function save() {
   saving.value = true; error.value = '';
   try {
@@ -71,6 +80,7 @@ onMounted(async () => {
       const pending = takePendingAiDraft();
       if (pending) {
         aiDraft.value = pending.draft;
+        photoWarning.value = pending.photoWarning;
         const base = pending.draft.baseFields || {};
         form.name = base.name || '';
         form.category_id = pending.draft.categoryId || '';
@@ -117,6 +127,13 @@ onMounted(async () => {
           {{ warning }}
         </li>
       </ul>
+    </div>
+    <div
+      v-if="photoWarning"
+      class="alert alert-warning"
+      role="alert"
+    >
+      {{ photoWarning }}
     </div>
     <div
       v-if="!categories.length"
@@ -385,7 +402,20 @@ onMounted(async () => {
           accept="image/*"
           multiple
           @change="photos = Array.from($event.target.files)"
-        ><div class="form-text">
+        >
+        <div
+          v-if="photoPreviews.length"
+          class="d-flex flex-wrap gap-2 mt-3"
+        >
+          <img
+            v-for="preview in photoPreviews"
+            :key="preview.url"
+            :src="preview.url"
+            :alt="preview.name"
+            class="img-thumbnail app-selected-photo-preview"
+          >
+        </div>
+        <div class="form-text">
           <span v-if="photos.length">{{ photos.length }} photo{{ photos.length === 1 ? '' : 's' }} ready to upload. Choose files to replace the selection. </span>
           Up to 10 images, 15 MB each.
         </div>

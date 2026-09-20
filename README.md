@@ -25,6 +25,9 @@ npm install
 npm run dev
 ```
 
+Installation also downloads the pinned 4.6 MB U2NetP model and verifies its SHA-256. The model is
+used only for optional local background removal and requires no network access after installation.
+
 Open `http://localhost:5173`. The development server listens on the local network as well. Set `PORT` to move the API off port `3000`; the development proxy follows it.
 
 ## Checks

@@ -8,16 +8,11 @@ Implemented behavior is documented separately in [`features/README.md`](features
 
 ## Product features
 
-1. **AI Add Item local background removal** - Planned. Adds an optional local
-   background-removal step that creates a white-background inventory photo without consuming AI
-   provider tokens. See
-   [`TASK-AI-ADD-ITEM-BACKGROUND-REMOVAL.md`](issues/TASK-AI-ADD-ITEM-BACKGROUND-REMOVAL.md).
-
-2. **Self-update from About** - Planned. Lets the About dialog check the latest GitHub release
+1. **Self-update from About** - Planned. Lets the About dialog check the latest GitHub release
    and initiate the existing safe updater only on supported deployments. See
    [`TASK-SELF-UPDATE-FROM-ABOUT.md`](issues/TASK-SELF-UPDATE-FROM-ABOUT.md).
 
-1. **Restore database backup** — Planned independently of the UI migration. Adds a validated,
+2. **Restore database backup** — Planned independently of the UI migration. Adds a validated,
    confirmation-protected backup restore workflow with a pre-restore safety backup and rollback
    protections. See [`TASK-restore-database-backup.md`](issues/TASK-restore-database-backup.md).
 
