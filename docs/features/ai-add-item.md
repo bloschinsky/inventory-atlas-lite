@@ -15,9 +15,10 @@ writes anything to SQLite.
 5. Review the suggested category, base values, category fields, warnings, and original photo in the
    normal Add Item form. Edit any value and select **Save item** only when the draft is correct.
 
-The browser creates a JPEG analysis copy with a maximum dimension of 1,280 pixels when it can decode
-the source image. The server asks OpenAI to process it at low image detail. The untouched selected
-file remains in browser memory and is uploaded as the inventory photo after confirmation.
+The browser sends the selected file without resizing or JPEG recompression, and the server asks
+OpenAI to process it at original image detail so small branding and model labels remain readable.
+The same untouched selected file remains in browser memory and is uploaded as the inventory photo
+after confirmation.
 
 ## Implementation and validation
 
@@ -27,11 +28,13 @@ field names, existing categories, and their current custom-field definitions. Ex
 never included.
 
 The OpenAI provider uses the Responses API in one stateless request with strict JSON Schema output.
-Its instruction requires null values for uncertain facts and forbids invented specifications,
-purchase data, and locations. The server validates the response again: a suggested category must
-exist, dynamic field IDs must belong to it, and values must match text, number, date, or boolean
-field types. Unknown dynamic fields and invalid values are discarded. No automatic detailed retry
-is made even when the response reports that more detail could help.
+The model first records important visible branding and labels in an internal `observedMarkings`
+array, then maps them to the most specific reliable commercial product name, model or part fields,
+and serial number. Visible printed text counts as direct evidence, while unknown values remain null
+and hidden specifications must not be guessed. The server validates the response again: a suggested
+category must exist, dynamic field IDs must belong to it, and values must match text, number, date,
+or boolean field types. Unknown dynamic fields and invalid values are discarded. The internal
+markings are not sent to the item form, and no second AI request is made.
 
 The in-memory client draft contains the normalized values and original `File`. Navigating directly
 to Add Item does not use a draft, so the manual workflow is unchanged. Reloading the review page
@@ -44,15 +47,16 @@ the operating system supports them. It is outside SQLite, excluded from Git, and
 downloaded database backups. Settings responses contain only whether a key exists and its last four
 characters. The key, request image, and image payload are not logged.
 
-When AI is enabled and the user selects Analyze, the server sends the analysis image copy, optional
+When AI is enabled and the user selects Analyze, the server sends the selected image, optional
 hint, model instruction, and inventory category/field schema to OpenAI. Normal inventory browsing,
 manual item creation, and backups do not contact OpenAI.
 
 ## Verification
 
 The API acceptance test uses a local mock provider to verify credential masking, request scope,
-low-detail strict structured output, schema normalization, invalid images, and disabled or missing
-configuration. Playwright covers Settings, the full photo-to-review-to-save browser workflow, the
+original-detail strict structured output, visible-marking extraction, the Sound Blaster Audigy LS
+regression case, schema normalization, invalid images, and disabled or missing configuration.
+Playwright covers Settings, the full photo-to-review-to-save browser workflow, the
 absence of a database record before confirmation, original-photo persistence, editable suggestions,
 and retention of inputs after a recoverable provider error.
 
@@ -62,5 +66,5 @@ and retention of inputs after a recoverable provider error.
 - The deployment needs Internet access to OpenAI only when analysis is requested.
 - The application still has no authentication; protect the whole installation with a trusted LAN or
   VPN, including Settings.
-- Background removal and automatic high-detail retries are outside this phase.
+- Background removal and additional AI calls are outside this phase.
 - The draft is temporary browser memory and does not survive a reload of the review page.

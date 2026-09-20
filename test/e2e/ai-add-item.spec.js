@@ -19,7 +19,9 @@ test('uses AI suggestions in the normal editable Add Item form and saves only af
 
   await page.route('**/api/ai/items/analyze', async route => {
     analyzeCalls += 1;
-    expect(route.request().postDataBuffer()).toBeTruthy();
+    const requestBody = route.request().postDataBuffer();
+    expect(requestBody).toBeTruthy();
+    expect(requestBody.toString('latin1')).toContain('filename="sample-photo.png"');
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -90,6 +92,7 @@ test('configures AI while returning only a masked API key state to the browser',
   await page.goto('/settings');
   // Headless Chromium on Linux may initialize its pointer over the folded-hover sidebar.
   await page.mouse.move(600, 400);
+  await expect(page.getByLabel('Model')).toHaveValue('gpt-5.6-luna');
   await page.getByLabel('Enable AI features').check();
   await page.getByLabel('Model').fill('gpt-4o-mini');
   await page.getByLabel('API key', { exact: true }).fill('sk-test-browser-secret');

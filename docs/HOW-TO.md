@@ -13,8 +13,8 @@ optional condition, location, description, purchase details, serial number, your
 and photos.
 
 All inventory records and original photo bytes live in one SQLite database on your server. Normal
-use needs no external service. The optional **AI Add Item** workflow sends a reduced analysis copy
-of the selected photo, its optional hint, and your category/field schema to OpenAI only after you
+use needs no external service. The optional **AI Add Item** workflow sends the selected photo at
+original image detail, its optional hint, and your category/field schema to OpenAI only after you
 press **Analyze**; it therefore needs Internet access.
 
 **There is no authentication.** Anyone who can open the address can read and change the whole
@@ -135,7 +135,7 @@ Changing the category while filling in the form loads that category's fields.
 
 ### Create an item from a photo with AI
 
-1. Configure and enable OpenAI under **Settings → AI**. The default model is `gpt-4o-mini`; you can
+1. Configure and enable OpenAI under **Settings → AI**. The default model is `gpt-5.6-luna`; you can
    replace it with another OpenAI model that accepts image input and strict structured output.
 2. Open **Items** and press **AI Add Item** next to **Add item**.
 3. Select one JPEG, PNG, WebP, or GIF photo of at most 15 MB. Optionally describe what you know in
@@ -148,8 +148,9 @@ Changing the category while filling in the form loads that category's fields.
 6. Press **Save item** to create the record through the normal workflow. Leaving or reloading the
    review page before saving discards the temporary draft, and no inventory record has been written.
 
-The analysis uses one low-detail OpenAI request in the normal path. It does not search the web,
-create categories or fields, remove the background, or retry automatically at higher detail.
+The analysis uses one original-detail OpenAI request so visible brand, family, model, part, and
+serial markings remain readable. It does not search the web, create categories or fields, remove
+the background, or make a second AI request.
 
 ### Edit or delete an item
 
@@ -304,10 +305,10 @@ on a different machine than the server.
 - Custom field types cannot be changed after creation, and categories cannot be merged.
 - There is no restore, import, or export function in the interface beyond the SQLite backup
   download, and no CSV or label printing.
-- AI Add Item uses OpenAI and sends an analysis image copy, the optional hint, and category/field
-  definitions outside the local deployment. The original image is stored only after you confirm the
-  draft. The OpenAI key stays in `ai-settings.json` under `DATA_DIR` and is not part of SQLite
-  backups, so move or reconfigure it separately.
+- AI Add Item uses OpenAI and sends the selected image at original detail, the optional hint, and
+  category/field definitions outside the local deployment. The original image is stored only after
+  you confirm the draft. The OpenAI key stays in `ai-settings.json` under `DATA_DIR` and is not part
+  of SQLite backups, so move or reconfigure it separately.
 - Autocomplete is offered for text custom fields only, not for the name, condition, location, or
   description.
 

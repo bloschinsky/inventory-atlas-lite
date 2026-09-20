@@ -3,7 +3,7 @@ import path from 'node:path';
 import { dataDir } from './db.js';
 
 const settingsPath = path.join(dataDir, 'ai-settings.json');
-const defaults = { enabled: false, provider: 'openai', model: 'gpt-4o-mini', apiKey: '' };
+const defaults = { enabled: false, provider: 'openai', model: 'gpt-5.6-luna', apiKey: '' };
 const baseFieldNames = [
   'name', 'description', 'condition', 'location', 'purchase_date',
   'purchase_price_amount', 'purchase_price_currency', 'serial_number'
@@ -71,8 +71,9 @@ function responseSchema(categories) {
   return {
     type: 'object',
     additionalProperties: false,
-    required: ['categoryId', 'confidence', 'needsDetailedImageAnalysis', 'baseFields', 'dynamicFields', 'warnings'],
+    required: ['observedMarkings', 'categoryId', 'confidence', 'needsDetailedImageAnalysis', 'baseFields', 'dynamicFields', 'warnings'],
     properties: {
+      observedMarkings: { type: 'array', items: { type: 'string' } },
       categoryId: { type: ['integer', 'null'], enum: [null, ...categories.map(category => category.id)] },
       confidence: { type: 'number', minimum: 0, maximum: 1 },
       needsDetailedImageAnalysis: { type: 'boolean' },
@@ -116,12 +117,16 @@ async function analyzeWithOpenAI({ settings, image, mimeType, hint, categories, 
   const body = {
     model: settings.model,
     store: false,
-    instructions: 'Create a conservative inventory draft from the image and optional hint. Use only visible facts or explicit hint details. Never invent values or technical specifications. Use null when uncertain. Choose only a supplied category and only its field IDs. Do not infer purchase data or physical location. Return JSON only.',
+    instructions: `Create a conservative inventory draft from the image and optional hint.
+First record important visible branding, product labels, model numbers, part numbers, and serial numbers in observedMarkings, preserving their useful wording.
+For name, use the most specific commercial product name that can be reliably identified from the image and user hint. Prioritize exact product branding, family names, and model names visibly printed on the item. Visible printed text is direct evidence, not speculation. Do not replace a specific visible product name with a generic item type.
+Distinguish the commercial product name from model numbers, part numbers, serial numbers, and generic item types. If a specific product name is visible, use it in name. Use observedMarkings when mapping name, model or part number fields, serial number, and other supported fields.
+Use only visible facts or explicit hint details. Never invent unsupported values or hidden technical specifications. Use null when a value is unknown. Choose only a supplied category and only its field IDs. Do not infer purchase data or physical location. Return JSON only.`,
     input: [{
       role: 'user',
       content: [
         { type: 'input_text', text: JSON.stringify({ hint: hint || null, inventorySchema: inventorySchema(categories, fields) }) },
-        { type: 'input_image', image_url: `data:${mimeType};base64,${image.toString('base64')}`, detail: 'low' }
+        { type: 'input_image', image_url: `data:${mimeType};base64,${image.toString('base64')}`, detail: 'original' }
       ]
     }],
     text: { format: { type: 'json_schema', name: 'inventory_item_draft', strict: true, schema: responseSchema(categories) } }
@@ -157,10 +162,11 @@ function cleanString(value, maximum = 5000) {
 
 function normalizeDraft(raw, categories, fields) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw httpError('OpenAI returned an invalid structured response.', 502);
-  const topLevelNames = ['categoryId', 'confidence', 'needsDetailedImageAnalysis', 'baseFields', 'dynamicFields', 'warnings'];
+  const topLevelNames = ['observedMarkings', 'categoryId', 'confidence', 'needsDetailedImageAnalysis', 'baseFields', 'dynamicFields', 'warnings'];
   if (Object.keys(raw).some(name => !topLevelNames.includes(name)) ||
       (raw.categoryId !== null && !Number.isInteger(raw.categoryId)) ||
       !Number.isFinite(raw.confidence) || typeof raw.needsDetailedImageAnalysis !== 'boolean' ||
+      !Array.isArray(raw.observedMarkings) || raw.observedMarkings.some(value => typeof value !== 'string') ||
       !raw.baseFields || typeof raw.baseFields !== 'object' || Array.isArray(raw.baseFields) ||
       !Array.isArray(raw.dynamicFields) || !Array.isArray(raw.warnings)) {
     throw httpError('OpenAI returned an invalid structured response.', 502);

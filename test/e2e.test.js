@@ -356,24 +356,28 @@ test('AI settings stay server-side and image analysis returns a validated invent
       body: JSON.parse(rawBody)
     };
     const prompt = JSON.parse(providerRequest.body.input[0].content[0].text);
-    const cameras = prompt.inventorySchema.categories.find(category => category.name === 'Cameras');
-    const brand = cameras.fields.find(field => field.name === 'Brand');
+    const audioCards = prompt.inventorySchema.categories.find(category => category.name === 'Audio Cards');
+    const tradeName = audioCards.fields.find(field => field.name === 'Trade Name');
+    const modelNumber = audioCards.fields.find(field => field.name === 'Model Number');
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify({
       output_text: JSON.stringify({
-        categoryId: cameras.id,
-        confidence: 0.87,
+        observedMarkings: ['Sound Blaster Audigy LS', 'MODEL: SB0310'],
+        categoryId: audioCards.id,
+        confidence: 0.96,
         needsDetailedImageAnalysis: false,
         baseFields: {
-          name: 'Visible camera', description: 'Camera with a visible maker label', condition: null,
+          name: 'Creative Sound Blaster Audigy LS',
+          description: 'Creative Sound Blaster Audigy LS PCI audio card.', condition: null,
           location: null, purchase_date: null, purchase_price_amount: null,
-          purchase_price_currency: null, serial_number: 'ABC-123'
+          purchase_price_currency: null, serial_number: 'C6SB0312418000742R'
         },
         dynamicFields: [
-          { fieldId: brand.id, value: 'Olympus' },
+          { fieldId: tradeName.id, value: 'Creative Labs' },
+          { fieldId: modelNumber.id, value: 'SB0310' },
           { fieldId: 999999, value: 'discard me' }
         ],
-        warnings: ['Verify the exact model.']
+        warnings: []
       }),
       usage: { input_tokens: 100, output_tokens: 50 }
     }));
@@ -382,8 +386,8 @@ test('AI settings stay server-side and image analysis returns a validated invent
   const providerPort = providerServer.address().port;
   const imageData = () => {
     const data = new FormData();
-    data.append('image', new Blob([Buffer.from('89504e470d0a1a0a', 'hex')], { type: 'image/png' }), 'camera.png');
-    data.append('hint', 'The label may say Olympus.');
+    data.append('image', new Blob([Buffer.from('89504e470d0a1a0a', 'hex')], { type: 'image/png' }), 'sound-card.png');
+    data.append('hint', 'Audio card. Soundblaster. Trade Name: Creative Labs. Model Number: SB0310. Serial No: C6SB0312418000742R');
     return data;
   };
   try {
@@ -391,7 +395,7 @@ test('AI settings stay server-side and image analysis returns a validated invent
     assert.equal(await failedStatus('/api/ai/items/analyze', { method: 'POST', body: imageData() }), 409);
 
     const emptySettings = await request('/api/settings/ai');
-    assert.deepEqual(emptySettings, { enabled: false, provider: 'openai', model: 'gpt-4o-mini', hasApiKey: false, apiKeyMasked: '' });
+    assert.deepEqual(emptySettings, { enabled: false, provider: 'openai', model: 'gpt-5.6-luna', hasApiKey: false, apiKeyMasked: '' });
     await request('/api/settings/ai', json('PUT', { enabled: true, provider: 'openai', model: 'gpt-4o-mini' }));
     assert.equal(await failedStatus('/api/ai/items/analyze', { method: 'POST', body: imageData() }), 409);
 
@@ -402,23 +406,31 @@ test('AI settings stay server-side and image analysis returns a validated invent
     assert.equal(configured.apiKeyMasked, '••••••••cret');
     assert.ok(!JSON.stringify(configured).includes('sk-test'));
 
-    const cameras = await request('/api/categories', json('POST', { name: 'Cameras' }));
-    const brand = await request(`/api/categories/${cameras.id}/fields`, json('POST', { name: 'Brand', type: 'text' }));
-    await request('/api/items', json('POST', { name: 'Existing private inventory item', category_id: cameras.id }));
+    const audioCards = await request('/api/categories', json('POST', { name: 'Audio Cards' }));
+    const tradeName = await request(`/api/categories/${audioCards.id}/fields`, json('POST', { name: 'Trade Name', type: 'text' }));
+    const modelNumber = await request(`/api/categories/${audioCards.id}/fields`, json('POST', { name: 'Model Number', type: 'text' }));
+    await request('/api/items', json('POST', { name: 'Existing private inventory item', category_id: audioCards.id }));
     const draft = await request('/api/ai/items/analyze', { method: 'POST', body: imageData() });
-    assert.equal(draft.categoryId, cameras.id);
-    assert.equal(draft.baseFields.name, 'Visible camera');
-    assert.equal(draft.baseFields.serial_number, 'ABC-123');
-    assert.equal(draft.dynamicFields[brand.id], 'Olympus');
+    assert.equal(draft.categoryId, audioCards.id);
+    assert.equal(draft.baseFields.name, 'Creative Sound Blaster Audigy LS');
+    assert.equal(draft.baseFields.description, 'Creative Sound Blaster Audigy LS PCI audio card.');
+    assert.equal(draft.baseFields.serial_number, 'C6SB0312418000742R');
+    assert.equal(draft.dynamicFields[tradeName.id], 'Creative Labs');
+    assert.equal(draft.dynamicFields[modelNumber.id], 'SB0310');
     assert.equal(draft.dynamicFields['999999'], undefined);
-    assert.deepEqual(draft.warnings, ['Verify the exact model.']);
+    assert.equal(draft.observedMarkings, undefined);
+    assert.deepEqual(draft.warnings, []);
 
     assert.equal(providerRequest.authorization, 'Bearer sk-test-not-a-real-secret');
     assert.equal(providerRequest.body.model, 'gpt-4o-mini');
     assert.equal(providerRequest.body.store, false);
-    assert.equal(providerRequest.body.input[0].content[1].detail, 'low');
+    assert.equal(providerRequest.body.input[0].content[1].detail, 'original');
     assert.equal(providerRequest.body.text.format.type, 'json_schema');
     assert.equal(providerRequest.body.text.format.strict, true);
+    assert.ok(providerRequest.body.text.format.schema.required.includes('observedMarkings'));
+    assert.match(providerRequest.body.instructions, /most specific commercial product name/);
+    assert.match(providerRequest.body.instructions, /Visible printed text is direct evidence/);
+    assert.match(providerRequest.body.instructions, /Do not replace a specific visible product name with a generic item type/);
     assert.ok(!JSON.stringify(providerRequest.body).includes('Existing private inventory item'));
 
     const invalidImage = new FormData();

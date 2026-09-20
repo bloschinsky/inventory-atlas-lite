@@ -5,7 +5,7 @@ import PageHeader from '../components/PageHeader.vue';
 
 defineOptions({ name: 'SettingsPage' });
 
-const form = reactive({ enabled: false, provider: 'openai', model: 'gpt-4o-mini', apiKey: '', clearApiKey: false });
+const form = reactive({ enabled: false, provider: 'openai', model: 'gpt-5.6-luna', apiKey: '', clearApiKey: false });
 const maskedKey = ref('');
 const hasApiKey = ref(false);
 const loading = ref(true);

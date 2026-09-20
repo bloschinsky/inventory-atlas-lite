@@ -18,32 +18,12 @@ function selectImage(event) {
   previewUrl.value = image.value ? URL.createObjectURL(image.value) : '';
 }
 
-async function analysisCopy(file) {
-  try {
-    const bitmap = await createImageBitmap(file);
-    const maximum = 1280;
-    const scale = Math.min(1, maximum / Math.max(bitmap.width, bitmap.height));
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
-    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
-    const context = canvas.getContext('2d');
-    context.fillStyle = '#fff';
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    bitmap.close();
-    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.82));
-    return blob ? new File([blob], 'analysis.jpg', { type: 'image/jpeg' }) : file;
-  } catch {
-    return file;
-  }
-}
-
 async function analyze() {
   if (!image.value) { error.value = 'Choose an image to analyze.'; return; }
   analyzing.value = true; error.value = '';
   try {
     const data = new FormData();
-    data.append('image', await analysisCopy(image.value));
+    data.append('image', image.value);
     if (hint.value.trim()) data.append('hint', hint.value.trim());
     const draft = await api('/api/ai/items/analyze', { method: 'POST', body: data });
     setPendingAiDraft(draft, image.value);
