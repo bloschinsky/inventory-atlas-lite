@@ -109,6 +109,8 @@ test('uses the original for analysis and the local white-background result as th
   });
 
   await page.goto('/items/ai');
+  // Linux Chromium can begin over the folded-hover sidebar, which intentionally overlays the page.
+  await page.mouse.move(600, 400);
   await page.getByLabel('Item photo *').setInputFiles(fixture);
   await page.getByLabel('Remove background').check();
   await page.getByRole('button', { name: 'Analyze' }).click();
@@ -142,6 +144,8 @@ test('keeps the AI draft and original photo when local background removal fails'
   }));
 
   await page.goto('/items/ai');
+  // Linux Chromium can begin over the folded-hover sidebar, which intentionally overlays the page.
+  await page.mouse.move(600, 400);
   await page.getByLabel('Item photo *').setInputFiles(fixture);
   await page.getByLabel('Remove background').check();
   await page.getByRole('button', { name: 'Analyze' }).click();
