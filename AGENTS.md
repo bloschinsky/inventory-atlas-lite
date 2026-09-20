@@ -148,6 +148,7 @@ Playwright is the browser-level safety net for user-facing behavior. It compleme
 - Run `npm run test:e2e` during development once the implementation is integrated, and again as one of the final checks.
 - Locate elements by accessible role, label, and visible name. Add a stable test ID only when the interface offers no user-facing locator.
 - Never use fixed sleeps; wait for observable UI state. Keep tests independent and give created records unique names.
+- In Linux headless Chromium desktop tests, a new page can retain the pointer at `(0, 0)`. This expands the folded-hover sidebar, which intentionally overlays controls on the left of the page. After a direct `page.goto()` to a page with such controls, move the pointer into the page work area (for example, `await page.mouse.move(600, 400)`) before the locator action.
 - The suite uses a temporary SQLite database and its own ports. It must never touch `data/inventory.sqlite`.
 - Run `npx playwright install chromium` once before the first run in a new environment.
 
