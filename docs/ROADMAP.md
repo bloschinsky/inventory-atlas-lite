@@ -16,6 +16,18 @@ Implemented behavior is documented separately in [`features/README.md`](features
    confirmation-protected backup restore workflow with a pre-restore safety backup and rollback
    protections. See [`TASK-restore-database-backup.md`](issues/TASK-restore-database-backup.md).
 
+3. **OpenAI model selector** — Planned. Replaces the free-text AI model setting with a curated
+   selector of models available to the configured API key, while retaining a custom-model option.
+   See [`TASK-AI-MODEL-SELECTOR.md`](issues/TASK-AI-MODEL-SELECTOR.md).
+
+4. **AI background-removal quality, Phase 1** — Planned. Strengthens the local cutout model and
+   mask cleanup to produce cleaner white-background inventory photos with a subtle synthetic shadow.
+   See [`TASK-background-removal-quality-phase-1.md`](issues/TASK-background-removal-quality-phase-1.md).
+
+5. **AI background-removal quality, Phase 2** — Planned; blocked by Phase 1. Adds target-aware
+   extraction so the cutout favors the intended inventory item over hands and surrounding clutter.
+   See [`TASK-background-removal-quality-phase-2.md`](issues/TASK-background-removal-quality-phase-2.md).
+
 ## Distribution
 
 1. **Windows desktop distribution via Electron** — Planned and unblocked by the completed
