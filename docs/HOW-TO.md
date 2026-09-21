@@ -120,6 +120,34 @@ SQLite's UTC clock and includes records whose timestamp is at or after 30 days b
 
 Field types are fixed after creation; to change a type, delete the field and add a new one.
 
+### Add several fields at once
+
+1. Select a category and press **Batch Add Fields** under the field form.
+2. Paste a field-definition document. It lists up to 50 fields, each with a `name`, a `type`
+   (`text`, `number`, `date`, or `boolean`), and an optional `"required": false`:
+
+   ```json
+   {
+     "version": 1,
+     "fields": [
+       { "name": "Brand", "type": "text", "required": false },
+       { "name": "Release Year", "type": "number", "required": false }
+     ]
+   }
+   ```
+
+3. Press **Preview**. Nothing is saved yet. An unreadable document is reported as a single message;
+   a readable one becomes an editable row per field.
+4. Review the rows. Each one shows its status — *New*, *Already exists*, *Duplicate in batch*,
+   *Invalid type*, or *Invalid configuration* — with the reason. Correct the name or the type in
+   place, or press **Remove** to drop that field from the batch. Removing a row changes only this
+   draft, never the fields the category already has. **Edit JSON** goes back to the pasted text.
+5. Press **Create N Fields** to save them. The button counts the valid new fields and stays disabled
+   while any row is still blocked. The whole batch is created at once: if anything fails, no field
+   is created. **Cancel** or `Escape` discards the draft.
+
+Required custom fields do not exist yet, so `"required": true` is rejected instead of being ignored.
+
 ### Create an item
 
 1. Open **Items** and press **Add item**. If no category exists yet, the form tells you to create one
@@ -310,7 +338,8 @@ on a different machine than the server.
 - A category used by any item cannot be deleted, and an item containing other items cannot be
   deleted.
 - Deleting a custom field also deletes the values saved for it on every item of that category.
-- Custom field types cannot be changed after creation, and categories cannot be merged.
+- Custom field types cannot be changed after creation, and categories cannot be merged. The batch
+  editor only creates new fields; it never renames or retypes existing ones.
 - There is no restore, import, or export function in the interface beyond the SQLite backup
   download, and no CSV or label printing.
 - AI Add Item uses OpenAI and sends the selected image at original detail, the optional hint, and

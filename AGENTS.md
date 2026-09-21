@@ -45,6 +45,7 @@ The data flow is intentionally simple: a Vue page calls the helper in `client/sr
 - `client/src/pages/DataBackup.vue` — SQLite backup download.
 - `client/src/style.css` — small set of application styles layered on Tabler, built only from
   Tabler custom properties so both color modes stay correct.
+- `shared/fieldDefinitions.js` — application-level custom field-definition format and validation, imported by both the client and the server.
 - `server/src/index.js` — Express app, all API routes, validation, photo handling, backup, and production static serving.
 - `server/src/db.js` — database path, SQLite connection, PRAGMAs, and current table/index schema.
 - `test/e2e.test.js` — end-to-end acceptance test for the API, persistence, photos, and backups.

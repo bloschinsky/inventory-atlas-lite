@@ -2,17 +2,19 @@
 import { onMounted, ref } from 'vue';
 import { api, jsonOptions } from '../api.js';
 import PageHeader from '../components/PageHeader.vue';
+import BatchAddFieldsDialog from '../components/BatchAddFieldsDialog.vue';
 
 defineOptions({ name: 'CategoryManager' });
 
 const categories = ref([]); const selected = ref(null); const fields = ref([]); const categoryName = ref('');
-const newField = ref({ name: '', type: 'text' }); const error = ref('');
+const newField = ref({ name: '', type: 'text' }); const error = ref(''); const batchOpen = ref(false);
 async function load() { categories.value = await api('/api/categories'); if (selected.value) selected.value = categories.value.find(c => c.id === selected.value.id) || null; }
 async function select(category) { selected.value = category; fields.value = await api(`/api/categories/${category.id}/fields`); }
 async function addCategory() { try { await api('/api/categories', jsonOptions('POST', { name: categoryName.value })); categoryName.value = ''; await load(); } catch (e) { error.value = e.message; } }
 async function rename(category) { const name = prompt('New category name:', category.name); if (!name || name === category.name) return; try { await api(`/api/categories/${category.id}`, jsonOptions('PUT', { name })); await load(); } catch (e) { error.value = e.message; } }
 async function removeCategory(category) { if (!confirm(`Delete category “${category.name}”?`)) return; try { await api(`/api/categories/${category.id}`, { method: 'DELETE' }); if (selected.value?.id === category.id) { selected.value = null; fields.value = []; } await load(); } catch (e) { error.value = e.message; } }
 async function addField() { try { await api(`/api/categories/${selected.value.id}/fields`, jsonOptions('POST', newField.value)); newField.value = { name: '', type: 'text' }; await select(selected.value); await load(); } catch (e) { error.value = e.message; } }
+async function batchCreated() { batchOpen.value = false; await select(selected.value); await load(); }
 async function removeField(field) { if (!confirm(`Delete field “${field.name}”? Saved values may also be deleted.`)) return; try { await api(`/api/fields/${field.id}?confirm=true`, { method: 'DELETE' }); await select(selected.value); await load(); } catch (e) { error.value = e.message; } }
 onMounted(() => load().catch(e => error.value = e.message));
 </script>
@@ -134,6 +136,15 @@ onMounted(() => load().catch(e => error.value = e.message));
                 </button>
               </div>
             </form>
+            <div class="mt-2">
+              <button
+                type="button"
+                class="btn btn-outline-primary btn-sm"
+                @click="batchOpen = true"
+              >
+                Batch Add Fields
+              </button>
+            </div>
           </div>
           <ul class="list-group list-group-flush">
             <li
@@ -158,4 +169,11 @@ onMounted(() => load().catch(e => error.value = e.message));
       </div>
     </div>
   </div>
+  <BatchAddFieldsDialog
+    v-if="batchOpen && selected"
+    :category="selected"
+    :existing-fields="fields"
+    @close="batchOpen = false"
+    @created="batchCreated"
+  />
 </template>

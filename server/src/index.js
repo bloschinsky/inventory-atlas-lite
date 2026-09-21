@@ -8,13 +8,14 @@ import { fileURLToPath } from 'node:url';
 import { db } from './db.js';
 import { analyzeInventoryItem, detectImageMime, listAvailableOpenAiModels, publicAiSettings, writeAiSettings } from './ai.js';
 import { removeBackground } from './backgroundRemoval.js';
+import { FIELD_TYPES, blockingRows, creatableFields, readFieldDefinitionDocument, reviewFieldDefinitions } from '../../shared/fieldDefinitions.js';
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
 const isProduction = process.env.NODE_ENV === 'production' || process.argv.includes('--production');
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const appVersion = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version;
-const allowedTypes = new Set(['text', 'number', 'date', 'boolean']);
+const allowedTypes = new Set(FIELD_TYPES.map(type => type.value));
 const imageTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -253,6 +254,27 @@ app.post('/api/categories/:id/fields', (req, res) => {
   if (!allowedTypes.has(req.body.type)) return res.status(400).json({ error: 'Invalid field type.' });
   const info = db.prepare('INSERT INTO custom_fields (category_id, name, type) VALUES (?, ?, ?)').run(req.params.id, name, req.body.type);
   res.status(201).json(db.prepare('SELECT * FROM custom_fields WHERE id = ?').get(info.lastInsertRowid));
+});
+const categoryFieldNames = categoryId => db.prepare('SELECT name FROM custom_fields WHERE category_id = ?').all(categoryId).map(field => field.name);
+const insertField = db.prepare('INSERT INTO custom_fields (category_id, name, type) VALUES (?, ?, ?)');
+// One transaction per batch: an unexpected failure leaves the category exactly as it was.
+const createFieldsBatch = db.transaction((categoryId, fields) => fields.map(field => insertField.run(categoryId, field.name, field.type).lastInsertRowid));
+
+app.post('/api/categories/:id/fields/batch', (req, res) => {
+  const category = getCategory(req.params.id);
+  if (!category) return res.status(404).json({ error: 'Category not found.' });
+  let drafts;
+  try {
+    drafts = readFieldDefinitionDocument(req.body);
+  } catch (error) {
+    throw Object.assign(error, { status: 400 });
+  }
+  // The review runs again here: the client preview is convenience, not the authority.
+  const rows = reviewFieldDefinitions(drafts, categoryFieldNames(category.id));
+  const blocked = blockingRows(rows);
+  if (blocked.length) return res.status(400).json({ error: blocked[0].message });
+  const ids = createFieldsBatch(category.id, creatableFields(rows));
+  res.status(201).json(db.prepare(`SELECT * FROM custom_fields WHERE id IN (${ids.map(() => '?').join(',')}) ORDER BY id`).all(...ids));
 });
 app.get('/api/fields/:id/suggestions', (req, res) => {
   const field = db.prepare('SELECT id, type FROM custom_fields WHERE id = ?').get(req.params.id);

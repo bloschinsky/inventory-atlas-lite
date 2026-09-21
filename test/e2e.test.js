@@ -325,6 +325,52 @@ test('text field suggestions reuse existing values of the same field only', asyn
   }
 });
 
+test('batch field creation validates the whole document and commits it atomically', async () => {
+  const dataDir = await mkdtemp(path.join(os.tmpdir(), 'inventory-batch-fields-test-'));
+  let server;
+  const batch = (categoryId, fields, version = 1) => fetch(`${base}/api/categories/${categoryId}/fields/batch`, json('POST', { version, fields }));
+  const rejected = async (categoryId, fields, version) => {
+    const response = await batch(categoryId, fields, version);
+    assert.equal(response.status, 400);
+    return (await response.json()).error;
+  };
+  try {
+    server = await startServer(dataDir);
+    const category = await request('/api/categories', json('POST', { name: 'Cameras' }));
+    await request(`/api/categories/${category.id}/fields`, json('POST', { name: 'Brand', type: 'text' }));
+
+    const created = await request(`/api/categories/${category.id}/fields/batch`, json('POST', {
+      version: 1,
+      fields: [
+        { name: 'Model', type: 'text', required: false },
+        { name: ' Release Year ', type: 'number' },
+        { name: 'Working', type: 'boolean' }
+      ]
+    }));
+    assert.deepEqual(created.map(field => [field.name, field.type]), [['Model', 'text'], ['Release Year', 'number'], ['Working', 'boolean']]);
+    assert.equal((await request(`/api/categories/${category.id}/fields`)).length, 4);
+
+    // Every blocking rule is reported, and a rejected batch leaves the category untouched.
+    assert.match(await rejected(category.id, [{ name: 'Weight', type: 'number' }, { name: 'brand', type: 'text' }]), /already exists/);
+    assert.match(await rejected(category.id, [{ name: 'Weight', type: 'number' }, { name: 'weight', type: 'text' }]), /more than once/);
+    assert.match(await rejected(category.id, [{ name: 'Colour', type: 'select' }]), /Unsupported field type: select/);
+    assert.match(await rejected(category.id, [{ name: '   ', type: 'text' }]), /Field name is required/);
+    assert.match(await rejected(category.id, [{ name: 'Location', type: 'text' }]), /built-in item attribute/);
+    assert.match(await rejected(category.id, [{ name: 'Weight', type: 'number', required: true }]), /Required custom fields are not supported/);
+    assert.match(await rejected(category.id, [{ name: 'Colour', type: 'select', options: ['Red'] }]), /unsupported property "options"/);
+    assert.match(await rejected(category.id, [{ name: 'Weight', type: 'number' }], 2), /Unsupported document version/);
+    assert.match(await rejected(category.id, 'nope'), /"fields" array/);
+    assert.match(await rejected(category.id, []), /does not contain any fields/);
+    assert.match(await rejected(category.id, Array.from({ length: 51 }, (_value, index) => ({ name: `Spec ${index}`, type: 'text' }))), /at most 50 fields/);
+    assert.equal((await request(`/api/categories/${category.id}/fields`)).length, 4);
+
+    assert.equal((await batch(999999, [{ name: 'Weight', type: 'number' }])).status, 404);
+  } finally {
+    if (server) await stopServer(server);
+    await rm(dataDir, { recursive: true, force: true });
+  }
+});
+
 test('the health endpoint reports the running version while SQLite is usable', async () => {
   const dataDir = await mkdtemp(path.join(os.tmpdir(), 'inventory-test-'));
   let server;
