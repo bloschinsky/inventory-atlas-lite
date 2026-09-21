@@ -100,6 +100,7 @@ The project stays small and readable. Do not add:
 - `client/src/components/AppBrand.vue` — product mark and name.
 - `client/src/components/ThemeToggle.vue` — light/dark control; `client/src/theme.js` holds the state.
 - `client/src/api.js` — shared `fetch` wrapper and helper for JSON requests.
+- `client/src/update.js` — shared state and polling of the update panel in the About dialog.
 - `client/src/pages/ItemsList.vue` — item list, search, filtering, sorting, and pagination.
 - `client/src/pages/ItemDetails.vue` — item details, photos, and deletion.
 - `client/src/pages/ItemForm.vue` — item creation/editing, custom field values, and photo uploads.
@@ -113,8 +114,9 @@ The project stays small and readable. Do not add:
 - `server/src/routes/` — thin Express route tables; they parse the request, call one service, and shape the response.
 - `server/src/services/` — application and business logic, independent of Express request and response objects.
 - `server/src/repositories/` — all SQL and row mapping for the inventory tables.
-- `server/src/integrations/` — adapters for external or heavy dependencies: OpenAI and the local background-removal model.
+- `server/src/integrations/` — adapters for external or heavy dependencies: OpenAI, the GitHub release API, and the local background-removal model.
 - `server/src/restore/` — restore configuration, staged-upload sessions, and the SQLite file checks used by the restore service.
+- `server/src/update/` — deployment capability, version comparison, the updater's status file, and the privileged update trigger.
 - `server/src/http/` — transport middleware: uploads, the maintenance guard, and the central error handler.
 - `server/src/db.js` — database path, SQLite connection, PRAGMAs, and current table/index schema.
 - `test/e2e.test.js` — end-to-end acceptance test for the API, persistence, photos, and backups.

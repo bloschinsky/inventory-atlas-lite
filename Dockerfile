@@ -29,9 +29,12 @@ LABEL org.opencontainers.image.source=$SOURCE_URL \
   org.opencontainers.image.version=$RELEASE_VERSION \
   org.opencontainers.image.revision=$VCS_REF
 
+# The container has no access to its own Docker host - and must not be given any - so it reports
+# itself as a Docker deployment: the About dialog then checks for updates but offers no self-update.
 ENV NODE_ENV=production \
   PORT=3000 \
-  DATA_DIR=/data
+  DATA_DIR=/data \
+  DEPLOYMENT_TYPE=docker
 
 WORKDIR /app
 

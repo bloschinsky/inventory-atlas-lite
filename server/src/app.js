@@ -10,7 +10,12 @@ import { ItemPhotoRepository } from './repositories/itemPhotoRepository.js';
 import { ItemRepository } from './repositories/itemRepository.js';
 import { RestoreStagingStore } from './restore/stagingStore.js';
 import { maxUploadBytes, safetyBackupDir, stagingDir, tokenTtlMs } from './restore/restoreConfig.js';
+import { releaseCacheTtlMs, releaseRepository, updatePathUnitFile, updateRequestFile, updateStartTimeoutMs, updateStatusFile } from './update/updateConfig.js';
+import { resolveDeployment } from './update/deployment.js';
+import { UpdateStatusStore } from './update/updateStatusStore.js';
+import { SystemdUpdateTrigger } from './update/updateTrigger.js';
 import { removeBackground } from './integrations/backgroundRemoval.js';
+import { GitHubReleaseClient } from './integrations/githubReleaseClient.js';
 import { OpenAiClient } from './integrations/openAiClient.js';
 import { AiFieldService } from './services/aiFieldService.js';
 import { AiItemAnalysisService } from './services/aiItemAnalysisService.js';
@@ -23,6 +28,7 @@ import { ImageService } from './services/imageService.js';
 import { ItemService } from './services/itemService.js';
 import { PhotoService } from './services/photoService.js';
 import { RestoreService } from './services/restoreService.js';
+import { UpdateService } from './services/updateService.js';
 import { errorHandler, maintenanceGuard } from './http/errorHandler.js';
 import { createImageUpload, createRestoreUpload } from './http/uploads.js';
 import { createAiRoutes } from './routes/aiRoutes.js';
@@ -34,6 +40,7 @@ import { createImageRoutes } from './routes/imageRoutes.js';
 import { createItemRoutes } from './routes/itemRoutes.js';
 import { createPhotoRoutes } from './routes/photoRoutes.js';
 import { createSystemRoutes } from './routes/systemRoutes.js';
+import { createUpdateRoutes } from './routes/updateRoutes.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -63,6 +70,20 @@ export function createApp({ production = false } = {}) {
     safetyBackupDir
   });
 
+  const deployment = resolveDeployment();
+  const updateService = new UpdateService({
+    appVersion,
+    deployment,
+    releaseClient: new GitHubReleaseClient({
+      owner: releaseRepository.owner,
+      repository: releaseRepository.name,
+      cacheTtlMs: releaseCacheTtlMs
+    }),
+    statusStore: new UpdateStatusStore({ file: updateStatusFile }),
+    trigger: new SystemdUpdateTrigger({ requestFile: updateRequestFile, pathUnitFile: updatePathUnitFile }),
+    startTimeoutMs: updateStartTimeoutMs
+  });
+
   const openAiClient = new OpenAiClient();
   const aiSettingsService = new AiSettingsService({ settingsPath: path.join(dataDir, 'ai-settings.json'), openAiClient });
   const categoryService = new CategoryService(categoryRepository);
@@ -90,6 +111,7 @@ export function createApp({ production = false } = {}) {
   app.use(createItemRoutes({ itemService }));
   app.use(createPhotoRoutes({ photoService, imageUpload }));
   app.use(createSystemRoutes({ restoreService, db, appVersion }));
+  app.use(createUpdateRoutes({ updateService }));
   app.use(createBackupRoutes({ backupService, restoreService, restoreUpload }));
 
   if (production) {
@@ -98,5 +120,5 @@ export function createApp({ production = false } = {}) {
   }
   app.use(errorHandler);
 
-  return { app, staging, restoreService, appVersion };
+  return { app, staging, restoreService, updateService, appVersion };
 }

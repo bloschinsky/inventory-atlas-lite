@@ -85,6 +85,8 @@ body.app-menu-open { overflow: hidden; }
 .app-about-meta { display: grid; grid-template-columns: auto auto; justify-content: center; gap: .125rem .75rem; margin: 0; }
 .app-about-meta dt { font-weight: 400; color: var(--tblr-secondary); text-align: end; }
 .app-about-meta dd { margin: 0; text-align: start; overflow-wrap: anywhere; }
+/* The update panel is separated from the identity block it sits under. */
+.app-about-update { border-top: var(--tblr-border-width) solid var(--tblr-border-color); }
 
 /* Dashboard */
 .dashboard-toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: .75rem; }

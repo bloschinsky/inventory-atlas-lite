@@ -1,0 +1,16 @@
+[Unit]
+Description=Inventory Atlas Lite update
+Documentation=https://github.com/bloschinsky/inventory-atlas-lite
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# A separate oneshot unit, so the updater survives stopping and restarting the application service
+# it is updating: it never runs inside the application's own cgroup or process tree.
+Type=oneshot
+# The request marker is removed before the update starts, so the watcher is armed again for the
+# next request and a finished update can never trigger itself a second time.
+ExecStartPre=/bin/rm -f /var/lib/inventory-atlas-lite/update-requested
+ExecStart=/usr/local/sbin/inventory-atlas-lite-update
+# Building the client and installing dependencies in a small container takes a while.
+TimeoutStartSec=3600

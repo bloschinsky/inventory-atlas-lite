@@ -112,7 +112,11 @@ checksum verification and prints a warning; do not use it for a production insta
 | `/opt/inventory-atlas-lite/previous` | The code replaced by the last update, kept for rollback |
 | `/var/lib/inventory-atlas-lite` | SQLite database and photos, never replaced |
 | `/var/lib/inventory-atlas-lite/backups` | Pre-update database backups (the last 5 are kept) |
-| `/etc/inventory-atlas-lite.env` | `NODE_ENV`, `PORT`, and `DATA_DIR` |
+| `/var/lib/inventory-atlas-lite/update-status.json` | Progress of the last update, written by the updater |
+| `/var/lib/inventory-atlas-lite/update-requested` | The marker the application creates to ask for an update |
+| `/etc/inventory-atlas-lite.env` | `NODE_ENV`, `PORT`, `DATA_DIR`, and `DEPLOYMENT_TYPE` |
+| `/etc/systemd/system/inventory-atlas-lite-update.service` | The privileged updater, a oneshot unit of its own |
+| `/etc/systemd/system/inventory-atlas-lite-update.path` | The watcher that starts it when the marker appears |
 
 The service runs as the dedicated non-login user `inventory-atlas`, never as root. The code is owned
 by root and is only readable by the service user, so the application cannot modify its own code or
@@ -140,6 +144,13 @@ pct exec <CTID> -- journalctl -u inventory-atlas-lite -n 50
 pct exec <CTID> -- /usr/local/sbin/inventory-atlas-lite-update
 ```
 
+The updater started from the application runs as its own unit, so its output is inspected there:
+
+```bash
+systemctl status inventory-atlas-lite-update
+journalctl -u inventory-atlas-lite-update -n 50
+```
+
 `GET /api/health` answers `{"status":"ok","database":"ok","version":"0.8.0"}` while the service is
 running and SQLite is usable. The installer and updater require both healthy status and the expected
 version before reporting success.
@@ -151,11 +162,23 @@ inventory-atlas-lite-update                  # latest stable release
 inventory-atlas-lite-update --version v0.8.0 # a specific release
 ```
 
+The same update can be started from the application: **About → Check for updates → Update to
+`<version>`**. It runs exactly this updater and is described in
+[`features/self-update.md`](features/self-update.md). Progress is shown in the dialog and the page
+reloads when the new version is healthy.
+
+An installation created before this feature existed registers the updater units during its next
+command-line update, but that run is still driven by the previous release's script. Run
+`inventory-atlas-lite-update` once more afterwards, or re-run the installer, so the units are
+registered; until then **About** reports that this installation cannot update itself.
+
 The updater resolves and downloads the requested release first, so an unavailable or invalid version
 fails before the running installation is touched. It then writes a consistent SQLite backup to
 `/var/lib/inventory-atlas-lite/backups`, stops the service only for the final code swap, and restarts
 it. If the new version does not pass its `/api/health` check within the timeout, the previous code is
-restored and restarted automatically. The data directory and the environment file are never replaced.
+restored and restarted automatically, together with the database backup it took before the update,
+because a failed release may already have migrated the schema. The data directory and the
+environment file are never replaced.
 
 The last 5 pre-update backups are kept. Older ones are removed; nothing else in the data directory is
 ever deleted.
@@ -175,6 +198,15 @@ whole inventory.
 - Do not forward a router port to the container.
 - Do not put it behind a public reverse proxy.
 - Keep it on a trusted LAN, or reach it remotely through a VPN such as WireGuard or Tailscale.
+
+Updating from the application does not change this. The web application keeps running as
+`inventory-atlas` with `NoNewPrivileges=true` and is given no sudo rights at all: it can only create
+the marker file `/var/lib/inventory-atlas-lite/update-requested` in its own data directory, which a
+systemd path unit turns into a start of the one predefined updater unit. No command, version, URL,
+repository, or argument can be passed from the browser into that privileged unit, only published
+stable releases of the official repository are installed, and their checksums are verified as
+before. Anyone who can reach the unauthenticated interface can start an update, which is one more
+reason to keep it off the public Internet.
 
 The installer does not change the Proxmox firewall, does not configure DNS, TLS, or a domain, and
 grants the container no extra features, device access, nesting, or privileged mode.

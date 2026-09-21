@@ -85,7 +85,9 @@ docker run -d --name inventory-atlas-lite \
 Open `http://SERVER_IP:3000`. Set both `-p HOST_PORT:CONTAINER_PORT` and `-e PORT=CONTAINER_PORT`
 when changing the container port. Use an explicit version for repeatable deployments; `latest`
 tracks the newest stable release. Upgrade by pulling the new tag and recreating the container with
-the same volume.
+the same volume. The container reports itself as `DEPLOYMENT_TYPE=docker`, so **About**
+checks for newer releases but never updates the container itself; it is not given access to the
+Docker socket. See [`docs/features/self-update.md`](docs/features/self-update.md).
 
 ## Manual production run
 
@@ -95,6 +97,11 @@ npm start
 ```
 
 Open `http://SERVER_IP:3000`. Set `PORT` to change the port. Set `DATA_DIR` to place persistent data in another directory. These environment variables work on Linux/macOS and in PowerShell (`$env:PORT=3001`).
+
+`DEPLOYMENT_TYPE` tells the application how it was deployed: `proxmox-lxc`, `docker`, `manual`, or
+`development`. It decides whether **About** may offer to install an update, and only the Proxmox/LXC
+installation, which ships the privileged updater, may. It defaults to `manual` in production and to
+`development` otherwise, so a manual installation checks for updates but never updates itself.
 
 ## Install on Proxmox VE
 

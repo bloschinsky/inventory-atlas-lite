@@ -13,7 +13,11 @@ Defaults to the latest stable tagged release.
 Before the update it stores a consistent SQLite backup in
 /var/lib/inventory-atlas-lite/backups. The data directory and
 /etc/inventory-atlas-lite.env are never replaced. If the new version fails its
-health check, the previous code is restored and restarted automatically.
+health check, the previous code and that backup are restored and restarted
+automatically.
+
+Progress is written to /var/lib/inventory-atlas-lite/update-status.json, which the
+About dialog reads while an update started from the application is running.
 
 Environment variables APP_VERSION and APP_BRANCH work like the matching options.
 TXT
@@ -39,6 +43,10 @@ else
   exit 1
 fi
 
+# An installation updated from a release older than the status file still has that release's
+# lib.sh in place until the swap below replaces it.
+command -v ial_update_status >/dev/null 2>&1 || ial_update_status() { :; }
+
 ial_require_root
 [ -d "$IAL_APP_DIR" ] || ial_die "No installation found in $IAL_APP_DIR."
 [ -f "$IAL_ENV_FILE" ] || ial_die "No environment file found at $IAL_ENV_FILE."
@@ -58,14 +66,26 @@ PORT=${PORT:-3000}
 ial_check "port in $IAL_ENV_FILE" "$PORT" ial_valid_port
 HEALTH_URL="http://127.0.0.1:$PORT/api/health"
 
+IAL_STATUS_STARTED=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+IAL_STATUS_FROM=$(ial_app_version "$IAL_APP_DIR")
+IAL_STATUS_TO=''
+# Set once a final state has been reported, so the exit trap does not overwrite it.
+STATUS_REPORTED=0
+
 WORK=''
 STAGING=''
 cleanup() {
+  local code=$?
   if [ -n "$WORK" ] && [ -d "$WORK" ]; then rm -rf "$WORK"; fi
   if [ -n "$STAGING" ] && [ -d "$STAGING" ]; then rm -rf "$STAGING"; fi
+  if [ "$code" != 0 ] && [ "$STATUS_REPORTED" = 0 ]; then
+    ial_update_status failed "The update did not complete"
+  fi
 }
 trap cleanup EXIT
 trap 'ial_warn "Update failed at line $LINENO."' ERR
+
+ial_update_status preparing "Preparing the update"
 
 # The application's backup endpoint uses SQLite's online backup API, so it stays consistent
 # while the service keeps writing in WAL mode.
@@ -91,6 +111,7 @@ backup_database() {
 }
 
 WORK=$(mktemp -d)
+ial_update_status downloading "Downloading the new version"
 if [ "$REF_KIND" = tag ] && [ "$REF" = latest ]; then
   REF=$(ial_latest_tag)
   ial_log "Latest release resolved to $REF"
@@ -104,7 +125,10 @@ SOURCE=$(ial_fetch_source "$REF_KIND" "$REF" "$WORK")
 . "$SOURCE/scripts/lib.sh"
 CURRENT_VERSION=$(ial_app_version "$IAL_APP_DIR")
 NEW_VERSION=$(ial_app_version "$SOURCE")
+IAL_STATUS_FROM=$CURRENT_VERSION
+IAL_STATUS_TO=$NEW_VERSION
 ial_log "Updating Inventory Atlas Lite $CURRENT_VERSION to $NEW_VERSION ($REF)"
+ial_update_status preparing "Preparing version $NEW_VERSION"
 ial_build_app "$SOURCE"
 
 STAGING=$(mktemp -d "$IAL_APP_ROOT/.staging.XXXXXX")
@@ -112,8 +136,10 @@ cp -a "$SOURCE/." "$STAGING/"
 chown -R root:root "$STAGING"
 chmod -R u=rwX,go=rX "$STAGING"
 
+ial_update_status backing_up "Creating a database backup"
 backup_database
 
+ial_update_status installing "Installing version $NEW_VERSION"
 ial_log "Stopping $IAL_SERVICE for the code swap"
 systemctl stop "$IAL_SERVICE"
 ial_install_code "$STAGING"
@@ -121,22 +147,41 @@ STAGING=''
 install -m 0644 "$IAL_APP_DIR/deploy/$IAL_SERVICE.service" "/etc/systemd/system/$IAL_SERVICE.service"
 install -m 0755 "$IAL_APP_DIR/scripts/lib.sh" "$IAL_APP_ROOT/lib.sh"
 install -m 0750 "$IAL_APP_DIR/scripts/update.sh" "$IAL_UPDATE_COMMAND"
+ial_ensure_env_value DEPLOYMENT_TYPE "$IAL_DEPLOYMENT_TYPE"
+ial_install_update_units
 systemctl daemon-reload
+ial_update_status restarting "Restarting the application"
 systemctl start "$IAL_SERVICE"
 
+ial_update_status verifying "Verifying version $NEW_VERSION"
 if ! ial_wait_for_health "$HEALTH_URL" 120 "$NEW_VERSION"; then
   ial_warn "Version $NEW_VERSION failed its health check. Restoring $CURRENT_VERSION."
+  ial_update_status installing "Restoring version $CURRENT_VERSION"
   systemctl stop "$IAL_SERVICE" || true
   if ial_rollback_code; then
+    # The failed release may already have migrated the schema, so the database goes back to the
+    # pre-update backup together with the code it belongs to.
+    ial_restore_database "$BACKUP_PATH" \
+      || ial_warn "Could not restore the pre-update database from $BACKUP_PATH."
     install -m 0644 "$IAL_APP_DIR/deploy/$IAL_SERVICE.service" "/etc/systemd/system/$IAL_SERVICE.service"
     systemctl daemon-reload
     systemctl start "$IAL_SERVICE"
-    ial_wait_for_health "$HEALTH_URL" 120 \
-      && ial_die "Update to $NEW_VERSION failed; $CURRENT_VERSION was restored. Backup: $BACKUP_PATH"
+    if ial_wait_for_health "$HEALTH_URL" 120 "$CURRENT_VERSION"; then
+      IAL_STATUS_TO=$CURRENT_VERSION
+      ial_update_status rolled_back "Update failed; version $CURRENT_VERSION was restored"
+      STATUS_REPORTED=1
+      ial_die "Update to $NEW_VERSION failed; $CURRENT_VERSION was restored. Backup: $BACKUP_PATH"
+    fi
+    ial_update_status failed "Update failed and the restored version is not healthy"
+    STATUS_REPORTED=1
     ial_die "Update to $NEW_VERSION failed and the restored code is not healthy. Backup: $BACKUP_PATH"
   fi
+  ial_update_status failed "Update failed and no previous version was available"
+  STATUS_REPORTED=1
   ial_die "Update to $NEW_VERSION failed and no previous code was available. Backup: $BACKUP_PATH"
 fi
 
+ial_update_status success "Update completed"
+STATUS_REPORTED=1
 ial_log "Inventory Atlas Lite $(ial_app_version "$IAL_APP_DIR") is running and healthy."
 ial_log "Pre-update backup: $BACKUP_PATH"

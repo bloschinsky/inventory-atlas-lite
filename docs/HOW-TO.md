@@ -330,6 +330,33 @@ than from a release tag. A **Build** or **Build date** of `unavailable` means th
 information — the published release archive has none — and says nothing about the health of your
 installation.
 
+### Check for a newer version and update
+
+1. Open **About** and press **Check for updates**. The application asks the server, which compares
+   the running version with the latest stable release on GitHub. Nothing is downloaded yet.
+2. When you already run the newest release, it says *Inventory Atlas Lite is up to date.*
+3. When a newer release exists, it shows its version. What happens next depends on how this
+   installation was set up:
+   - **Proxmox/LXC installation**: press **Update to `<version>`**. A confirmation shows
+     `current → new` and reminds you that a database backup is created automatically and that the
+     application is briefly unavailable. Press **Update** to start, or **Cancel** to do nothing.
+   - **Docker, a manual Node.js installation, or development**: the application cannot update itself.
+     It says so and offers **View release**, which opens the release page on GitHub. Update the
+     container or the installation the way you normally deploy it.
+4. During an update the panel reports each step: preparing, downloading, creating a database backup,
+   installing, restarting, and verifying. The application restarts while this runs, so short
+   connection failures are expected; the page waits for it to come back.
+5. When the new version is running, the panel reports *Update completed successfully.* and reloads
+   the page. You may close the dialog while the update runs — it keeps going, and reopening **About**
+   shows the same progress.
+6. If the new version does not start correctly, the updater puts the previous version and the
+   pre-update database back and the panel reports *Update failed.* with the restored version. The
+   inventory is preserved. The technical details are in the container log
+   (`journalctl -u inventory-atlas-lite-update`).
+
+Only published stable releases are ever installed, and only from the official repository. Updating
+from the container shell with `inventory-atlas-lite-update` still works exactly as before.
+
 ## 6. Practical example
 
 ```text
@@ -413,6 +440,12 @@ on a different machine than the server.
   of SQLite backups, so move or reconfigure it separately.
 - Autocomplete is offered for text custom fields only, not for the name, condition, location, or
   description.
+- Updating from **About** is available on the Proxmox/LXC installation only. Docker, manual, and
+  development installations can check for a newer release but must be updated where they are
+  deployed. Only published stable releases are offered, always from the official repository, and the
+  application never gains any other privilege on the machine.
+- Anyone who reaches the unauthenticated interface can start such an update. Keep the application on
+  a trusted LAN or VPN.
 
 ## 9. Quick troubleshooting
 

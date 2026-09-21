@@ -14,6 +14,12 @@ IAL_DATA_DIR=/var/lib/inventory-atlas-lite
 IAL_BACKUP_DIR=$IAL_DATA_DIR/backups
 IAL_ENV_FILE=/etc/inventory-atlas-lite.env
 IAL_UPDATE_COMMAND=/usr/local/sbin/inventory-atlas-lite-update
+# The privileged updater unit and the marker the application creates to ask for it. The application
+# runs unprivileged and cannot start a unit; a systemd path unit watches for the marker instead.
+IAL_UPDATE_SERVICE=inventory-atlas-lite-update
+IAL_STATUS_FILE=$IAL_DATA_DIR/update-status.json
+IAL_REQUEST_FILE=$IAL_DATA_DIR/update-requested
+IAL_DEPLOYMENT_TYPE=proxmox-lxc
 # Pinned Node.js LTS major; the exact patch release inside this line is resolved at install time.
 IAL_NODE_MAJOR=22
 IAL_KEEP_BACKUPS=5
@@ -139,6 +145,27 @@ ial_resolve_template() { # debian major version, dpkg architecture
     | awk '{ print $2 }' | grep -E "^debian-$1-standard_.*_$2\.tar" | sort -V | tail -n 1
 }
 
+# --- update status ----------------------------------------------------------
+# The updater is the only writer of the status file; the application only ever reads it, so the
+# About dialog can follow an update that outlives the request which started it.
+
+IAL_STATUS_FROM=${IAL_STATUS_FROM:-}
+IAL_STATUS_TO=${IAL_STATUS_TO:-}
+IAL_STATUS_STARTED=${IAL_STATUS_STARTED:-}
+
+ial_json_escape() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
+
+ial_update_status() { # state [message]
+  local tmp
+  [ -d "$IAL_DATA_DIR" ] || return 0
+  tmp=$(mktemp "$IAL_DATA_DIR/.update-status.XXXXXX") || return 0
+  printf '{"state":"%s","fromVersion":"%s","toVersion":"%s","startedAt":"%s","message":"%s"}\n' \
+    "$(ial_json_escape "$1")" "$(ial_json_escape "$IAL_STATUS_FROM")" "$(ial_json_escape "$IAL_STATUS_TO")" \
+    "$(ial_json_escape "$IAL_STATUS_STARTED")" "$(ial_json_escape "${2:-}")" >"$tmp"
+  chmod 0644 "$tmp"
+  mv -f "$tmp" "$IAL_STATUS_FILE"
+}
+
 ial_app_version() { # source directory
   grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' "$1/package.json" | head -n 1 | sed 's/.*"\([^"]*\)"$/\1/'
 }
@@ -174,6 +201,39 @@ ial_rollback_code() {
   [ -d "$IAL_APP_ROOT/previous" ] || return 1
   rm -rf "$IAL_APP_DIR"
   mv "$IAL_APP_ROOT/previous" "$IAL_APP_DIR"
+}
+
+# Restoring the code is not enough when the failed release already migrated the schema, so a
+# rollback puts the pre-update database back as well. The service must be stopped when this runs.
+ial_restore_database() { # backup file
+  [ -s "$1" ] || return 1
+  cp -f "$1" "$IAL_DATA_DIR/inventory.sqlite" || return 1
+  chown "$IAL_USER":"$IAL_USER" "$IAL_DATA_DIR/inventory.sqlite" || return 1
+  chmod 0640 "$IAL_DATA_DIR/inventory.sqlite"
+  # The restored file is a complete database, so the journal of the failed release must not survive.
+  rm -f "$IAL_DATA_DIR/inventory.sqlite-wal" "$IAL_DATA_DIR/inventory.sqlite-shm"
+}
+
+# --- privileged update trigger ---------------------------------------------
+
+# Adds a key to the environment file when it is not configured there yet. Existing values are kept,
+# so an installation that was configured by hand is never overwritten.
+ial_ensure_env_value() { # key value
+  grep -Eq "^$1=" "$IAL_ENV_FILE" && return 0
+  printf '%s=%s\n' "$1" "$2" >>"$IAL_ENV_FILE"
+  ial_log "Added $1=$2 to $IAL_ENV_FILE"
+}
+
+# Installs the dedicated updater unit and the path unit that starts it. The application is given no
+# sudo and no general privileges: creating one marker file in its own data directory is all it can
+# do, and this watcher turns that into exactly one predefined privileged action.
+ial_install_update_units() {
+  install -m 0644 "$IAL_APP_DIR/deploy/$IAL_UPDATE_SERVICE.service" "/etc/systemd/system/$IAL_UPDATE_SERVICE.service"
+  install -m 0644 "$IAL_APP_DIR/deploy/$IAL_UPDATE_SERVICE.path" "/etc/systemd/system/$IAL_UPDATE_SERVICE.path"
+  rm -f "$IAL_REQUEST_FILE"
+  systemctl daemon-reload
+  systemctl enable "$IAL_UPDATE_SERVICE.path" >/dev/null
+  systemctl is-active --quiet "$IAL_UPDATE_SERVICE.path" || systemctl start "$IAL_UPDATE_SERVICE.path"
 }
 
 ial_wait_for_health() { # url [timeout-seconds] [expected-version]

@@ -17,6 +17,9 @@ Environment variables:
 
 Persistent data stays in /var/lib/inventory-atlas-lite and is never replaced by
 an installation or an update.
+
+The installation also registers the privileged updater unit that the About dialog
+in the application can ask for, without giving the application any other privilege.
 TXT
 }
 
@@ -111,6 +114,9 @@ create_account() {
 write_env_file() {
   if [ -f "$IAL_ENV_FILE" ]; then
     ial_log "Keeping the existing $IAL_ENV_FILE"
+    # The deployment type decides what the About dialog may offer, so an installation made before
+    # the update feature existed is told what it is without touching its other settings.
+    ial_ensure_env_value DEPLOYMENT_TYPE "$IAL_DEPLOYMENT_TYPE"
     return 0
   fi
   ial_log "Writing $IAL_ENV_FILE"
@@ -118,6 +124,7 @@ write_env_file() {
 NODE_ENV=production
 PORT=$PORT
 DATA_DIR=$IAL_DATA_DIR
+DEPLOYMENT_TYPE=$IAL_DEPLOYMENT_TYPE
 ENV
   chown root:"$IAL_USER" "$IAL_ENV_FILE"
   chmod 0640 "$IAL_ENV_FILE"
@@ -128,6 +135,8 @@ install_service() {
   install -m 0644 "$IAL_APP_DIR/deploy/$IAL_SERVICE.service" "/etc/systemd/system/$IAL_SERVICE.service"
   install -m 0755 "$IAL_APP_DIR/scripts/lib.sh" "$IAL_APP_ROOT/lib.sh"
   install -m 0750 "$IAL_APP_DIR/scripts/update.sh" "$IAL_UPDATE_COMMAND"
+  # The privileged updater and the watcher that lets the About dialog ask for it.
+  ial_install_update_units
   systemctl daemon-reload
   systemctl enable "$IAL_SERVICE" >/dev/null
 }

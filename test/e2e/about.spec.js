@@ -2,6 +2,29 @@ import { expect, test } from '@playwright/test';
 import { detail } from './helpers.js';
 
 const repository = 'https://github.com/bloschinsky/inventory-atlas-lite';
+const releaseUrl = `${repository}/releases/tag/v9.9.9`;
+
+/*
+  The update panel is driven by the backend, and the backend is driven by GitHub and by a privileged
+  updater that no test may run. The browser tests therefore answer the update endpoints themselves
+  and cover what belongs to the browser: the states of the panel and the way it survives a restart.
+*/
+const answerUpdateApi = async (page, { check, status, health } = {}) => {
+  const json = body => ({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+  if (check) await page.route('**/api/update/check', route => route.fulfill(json(check)));
+  if (status) {
+    await page.route('**/api/update/apply', route => route.fulfill({ ...json(status.at(0)), status: 202 }));
+    let index = 0;
+    await page.route('**/api/update/status', route => route.fulfill(json(status[Math.min(index++, status.length - 1)])));
+  }
+  if (health) await page.route('**/api/health', route => route.fulfill(json(health)));
+};
+
+const openAbout = async page => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'About' }).click();
+  return page.getByRole('dialog', { name: 'About' });
+};
 
 test('the About dialog shows the build metadata and is operated with the keyboard', async ({ page }) => {
   await page.goto('/');
@@ -52,4 +75,99 @@ test('the About entry in the mobile drawer replaces it with the dialog', async (
   await expect(dialog.getByRole('link', { name: 'GitHub repository' })).toHaveAttribute('href', repository);
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
+});
+
+test('the About dialog reports an installation that is already up to date', async ({ page }) => {
+  await answerUpdateApi(page, {
+    check: {
+      currentVersion: '9.9.9', latestVersion: '9.9.9', updateAvailable: false,
+      releaseUrl, publishedAt: '2026-09-19T12:00:00Z', deploymentType: 'proxmox-lxc', canSelfUpdate: true
+    }
+  });
+  const dialog = await openAbout(page);
+
+  await dialog.getByRole('button', { name: 'Check for updates' }).click();
+  await expect(dialog.getByText('Inventory Atlas Lite is up to date.')).toBeVisible();
+});
+
+test('a deployment that cannot update itself offers the release page instead', async ({ page }) => {
+  await answerUpdateApi(page, {
+    check: {
+      currentVersion: '0.9.0', latestVersion: '9.9.9', updateAvailable: true,
+      releaseUrl, publishedAt: '2026-09-19T12:00:00Z', deploymentType: 'docker', canSelfUpdate: false
+    }
+  });
+  const dialog = await openAbout(page);
+
+  await dialog.getByRole('button', { name: 'Check for updates' }).click();
+  await expect(dialog.getByText('New version available: 9.9.9')).toBeVisible();
+  await expect(dialog.getByText('This Docker installation cannot update itself automatically.')).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Update to 9.9.9' })).toHaveCount(0);
+  await expect(dialog.getByRole('link', { name: 'View release' })).toHaveAttribute('href', releaseUrl);
+});
+
+test('a supported deployment asks for confirmation before it updates', async ({ page }) => {
+  await answerUpdateApi(page, {
+    check: {
+      currentVersion: '0.9.0', latestVersion: '9.9.9', updateAvailable: true,
+      releaseUrl, publishedAt: '2026-09-19T12:00:00Z', deploymentType: 'proxmox-lxc', canSelfUpdate: true
+    }
+  });
+  const dialog = await openAbout(page);
+
+  await dialog.getByRole('button', { name: 'Check for updates' }).click();
+  await dialog.getByRole('button', { name: 'Update to 9.9.9' }).click();
+
+  await expect(dialog.getByText('Update Inventory Atlas Lite')).toBeVisible();
+  await expect(dialog.getByText('0.9.0 → 9.9.9')).toBeVisible();
+  await expect(dialog.getByText('A database backup will be created automatically.')).toBeVisible();
+
+  // Nothing is started until the confirmation is given.
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect(dialog.getByRole('button', { name: 'Update to 9.9.9' })).toBeVisible();
+});
+
+test('the update panel follows the updater through the restart and reloads the page', async ({ page }) => {
+  await answerUpdateApi(page, {
+    check: {
+      currentVersion: '0.9.0', latestVersion: '9.9.9', updateAvailable: true,
+      releaseUrl, publishedAt: '2026-09-19T12:00:00Z', deploymentType: 'proxmox-lxc', canSelfUpdate: true
+    },
+    status: [
+      { state: 'preparing', fromVersion: '0.9.0', toVersion: '9.9.9' },
+      { state: 'installing', fromVersion: '0.9.0', toVersion: '9.9.9' },
+      { state: 'success', fromVersion: '0.9.0', toVersion: '9.9.9' }
+    ],
+    health: { status: 'ok', database: 'ok', version: '9.9.9' }
+  });
+  const dialog = await openAbout(page);
+
+  await dialog.getByRole('button', { name: 'Check for updates' }).click();
+  await dialog.getByRole('button', { name: 'Update to 9.9.9' }).click();
+  await dialog.getByRole('button', { name: 'Update', exact: true }).click();
+
+  // The panel follows the status the updater reports, which it polls every few seconds.
+  await expect(dialog.getByText('Preparing the update...')).toBeVisible();
+  await expect(dialog.getByText('Installing the update...')).toBeVisible({ timeout: 15000 });
+  await expect(dialog.getByText('Update completed successfully.')).toBeVisible({ timeout: 15000 });
+  // The new version is running, so the page reloads itself and the dialog is gone with it.
+  await expect(dialog).toBeHidden({ timeout: 15000 });
+});
+
+test('a failed update reports the version that was restored', async ({ page }) => {
+  await answerUpdateApi(page, {
+    check: {
+      currentVersion: '0.9.0', latestVersion: '9.9.9', updateAvailable: true,
+      releaseUrl, publishedAt: '2026-09-19T12:00:00Z', deploymentType: 'proxmox-lxc', canSelfUpdate: true
+    },
+    status: [{ state: 'rolled_back', fromVersion: '0.9.0', toVersion: '0.9.0' }]
+  });
+  const dialog = await openAbout(page);
+
+  await dialog.getByRole('button', { name: 'Check for updates' }).click();
+  await dialog.getByRole('button', { name: 'Update to 9.9.9' }).click();
+  await dialog.getByRole('button', { name: 'Update', exact: true }).click();
+
+  await expect(dialog.getByText('Update failed.')).toBeVisible();
+  await expect(dialog.getByText('Inventory Atlas Lite was restored to version 0.9.0. Your database was preserved.')).toBeVisible();
 });

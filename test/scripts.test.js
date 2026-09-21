@@ -115,6 +115,76 @@ test('a failed update restores the previous code and keeps the data', { skip: !b
   assert.match(result.stdout, /staging-left=app\s*$/m, 'the swap left directories behind');
 });
 
+test('the updater reports progress and rolls the database back with the code', { skip: !bashAvailable }, () => {
+  const result = sourced(`
+    root=$(mktemp -d)
+    IAL_DATA_DIR="$root/var"
+    IAL_STATUS_FILE="$IAL_DATA_DIR/update-status.json"
+    IAL_ENV_FILE="$root/inventory-atlas-lite.env"
+    IAL_USER=$(id -un)
+    # Only root can hand the restored database to the service account, so ownership is stubbed here.
+    chown() { :; }
+    mkdir -p "$IAL_DATA_DIR"
+    IAL_STATUS_FROM=0.9.0
+    IAL_STATUS_TO=0.10.0
+    IAL_STATUS_STARTED=2026-09-19T15:00:00Z
+    ial_update_status installing 'Installing "version" 0.10.0'
+    echo "status=$(cat "$IAL_STATUS_FILE")"
+
+    echo migrated >"$IAL_DATA_DIR/inventory.sqlite"
+    echo journal >"$IAL_DATA_DIR/inventory.sqlite-wal"
+    echo "before update" >"$IAL_DATA_DIR/backup.sqlite"
+    ial_restore_database "$IAL_DATA_DIR/backup.sqlite" || echo "restore-failed"
+    echo "database=$(cat "$IAL_DATA_DIR/inventory.sqlite")"
+    echo "journals=$(ls "$IAL_DATA_DIR" | grep -c sqlite-)"
+    ial_restore_database "$IAL_DATA_DIR/missing.sqlite" || echo "missing-backup-refused"
+
+    echo PORT=3000 >"$IAL_ENV_FILE"
+    ial_ensure_env_value DEPLOYMENT_TYPE proxmox-lxc
+    ial_ensure_env_value PORT 9999
+    echo "env=$(grep -c . "$IAL_ENV_FILE") $(grep '^PORT=' "$IAL_ENV_FILE") $(grep '^DEPLOYMENT_TYPE=' "$IAL_ENV_FILE")"
+  `);
+  assert.equal(result.status, 0, result.stderr);
+
+  // The About dialog parses this file, so it has to be valid JSON with the documented fields.
+  const status = JSON.parse(/status=(.*)/.exec(result.stdout)[1]);
+  assert.deepEqual(status, {
+    state: 'installing', fromVersion: '0.9.0', toVersion: '0.10.0',
+    startedAt: '2026-09-19T15:00:00Z', message: 'Installing "version" 0.10.0'
+  });
+
+  // A release that already migrated the schema is rolled back with its database, not only its code.
+  assert.equal(result.stdout.includes('restore-failed'), false);
+  assert.match(result.stdout, /database=before update/);
+  assert.match(result.stdout, /journals=0/, 'the journal of the failed release survived the rollback');
+  assert.match(result.stdout, /missing-backup-refused/);
+
+  // The deployment type is added once and an existing setting is never overwritten.
+  assert.match(result.stdout, /env=2 PORT=3000 DEPLOYMENT_TYPE=proxmox-lxc/);
+});
+
+test('the privileged updater is a unit of its own that the application can only trigger', () => {
+  const updater = readFileSync('deploy/inventory-atlas-lite-update.service', 'utf8');
+  const watcher = readFileSync('deploy/inventory-atlas-lite-update.path', 'utf8');
+  const application = readFileSync('deploy/inventory-atlas-lite.service', 'utf8');
+
+  // A oneshot unit of its own, so it survives stopping and restarting the service it updates.
+  assert.match(updater, /^Type=oneshot$/m);
+  assert.match(updater, /^ExecStart=\/usr\/local\/sbin\/inventory-atlas-lite-update$/m);
+  assert.doesNotMatch(updater, /^(WantedBy|RequiredBy)=/m, 'the updater must only run when it is asked for');
+
+  // The marker the application writes is the only thing that starts it, and it is removed first.
+  assert.match(watcher, /^PathExists=\/var\/lib\/inventory-atlas-lite\/update-requested$/m);
+  assert.match(watcher, /^Unit=inventory-atlas-lite-update\.service$/m);
+  assert.match(updater, /^ExecStartPre=\/bin\/rm -f \/var\/lib\/inventory-atlas-lite\/update-requested$/m);
+
+  // The application keeps running unprivileged, without sudo and without a way to gain privileges.
+  assert.match(application, /^User=inventory-atlas$/m);
+  assert.match(application, /^NoNewPrivileges=true$/m);
+  assert.doesNotMatch(application, /sudo/);
+  assert.doesNotMatch(readFileSync('server/src/update/updateTrigger.js', 'utf8'), /child_process|systemctl/);
+});
+
 test('dependency installs never download the unused ONNX Runtime GPU providers', () => {
   // onnxruntime-node fetches the CUDA and TensorRT providers on linux/x64 unless it is told not to.
   // They unpack to more than a gigabyte, which the OOM killer stops in a default 1 GiB container.

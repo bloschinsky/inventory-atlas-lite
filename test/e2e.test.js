@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
+import { existsSync } from 'node:fs';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -384,6 +385,30 @@ test('the health endpoint reports the running version while SQLite is usable', a
 
     // Deployment scripts poll this endpoint, so it must not leak paths or other diagnostics.
     assert.deepEqual(Object.keys(health).sort(), ['critical', 'database', 'ready', 'restoring', 'status', 'version']);
+  } finally {
+    if (server) await stopServer(server);
+    await rm(dataDir, { recursive: true, force: true });
+  }
+});
+
+test('a deployment without a privileged updater refuses to update itself', async () => {
+  const dataDir = await mkdtemp(path.join(os.tmpdir(), 'inventory-test-'));
+  let server;
+  try {
+    // The update check itself needs GitHub, so only the parts that must work offline are asserted.
+    server = await startServer(dataDir, { DEPLOYMENT_TYPE: 'development' });
+    assert.deepEqual(await request('/api/update/status'),
+      { state: 'idle', fromVersion: null, toVersion: null, startedAt: null, message: null, reportedAt: null });
+
+    const refused = await fetch(`${base}/api/update/apply`, { method: 'POST' });
+    assert.equal(refused.status, 501);
+    assert.deepEqual(await refused.json(), { error: 'This installation cannot update itself automatically.' });
+
+    const crossSite = await fetch(`${base}/api/update/apply`, { method: 'POST', headers: { 'sec-fetch-site': 'cross-site' } });
+    assert.equal(crossSite.status, 403);
+
+    // Nothing may be created in the data directory by a refused update.
+    assert.equal(existsSync(path.join(dataDir, 'update-requested')), false);
   } finally {
     if (server) await stopServer(server);
     await rm(dataDir, { recursive: true, force: true });

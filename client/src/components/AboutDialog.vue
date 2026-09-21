@@ -4,6 +4,7 @@ import { IconBrandGithub } from '@tabler/icons-vue';
 import AppBrand from './AppBrand.vue';
 import { aboutOpen, closeAbout } from '../about.js';
 import { appInfo } from '../build-info.js';
+import AboutUpdate from './AboutUpdate.vue';
 
 const panel = ref(null);
 const closeButton = ref(null);
@@ -100,6 +101,7 @@ onBeforeUnmount(release);
               />
               GitHub repository
             </a>
+            <AboutUpdate />
           </div>
           <div class="modal-footer">
             <button

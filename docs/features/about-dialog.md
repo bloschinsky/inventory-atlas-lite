@@ -21,8 +21,12 @@ file is edited by hand for a release.
   moves the focus to the header close button and keeps the focus inside; `Escape`, the header close
   button, the footer **Close** button, and a click on the backdrop all close it and return the focus
   to the entry that opened it. The page behind it does not scroll.
-- The dialog is an overlay only: it changes no route, loads no data, and calls no API. It always
-  opens, whatever the build metadata turned out to be.
+- The dialog is an overlay only: it changes no route and always opens, whatever the build metadata
+  turned out to be. Its identity block loads nothing; the update panel below it is the only part
+  that calls the API, and only when it is asked to.
+- Under the metadata it carries the update panel described in
+  [Self-update from About](self-update.md): **Check for updates** and, where the deployment supports
+  it, the confirmation and progress of an update.
 - Both colour modes are covered, because the dialog is Tabler's own modal and the few extra rules
   use Tabler custom properties.
 
@@ -72,6 +76,8 @@ the About component knows which distribution it is running in.
 - `client/src/components/AboutDialog.vue` renders Bootstrap's modal markup from Vue state and owns
   the scroll lock, the `Escape` handler, the focus containment, and the focus restore. As with the
   mobile drawer, no Bootstrap or Tabler JavaScript bundle is loaded.
+- `client/src/components/AboutUpdate.vue` renders the update panel inside the dialog body; its state
+  lives in `client/src/update.js`, outside the component, so an update survives closing the dialog.
 - `client/src/App.vue` renders one instance for the whole shell, so both navigations open the same
   dialog.
 - `client/src/components/AppNavigation.vue` appends the **About** entry as a `button` styled as a
@@ -95,8 +101,8 @@ the About component knows which distribution it is running in.
 
 ## Notes and limitations
 
-- The dialog shows identity and build metadata only. Changelog, diagnostics, system or database
-  information, licence text, and update controls are deliberately out of scope.
+- The dialog shows identity, build metadata, and the update panel. Changelog, diagnostics, system or
+  database information, and licence text are deliberately out of scope.
 - The repository has no logo image, so the dialog reuses the inline brand mark of the shell.
 - `Version` may legitimately read `0.9.0-dev` locally; that marker means the working copy is not at
   a tag, not that anything is wrong.

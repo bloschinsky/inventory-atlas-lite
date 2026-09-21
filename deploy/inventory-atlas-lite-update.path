@@ -1,0 +1,13 @@
+[Unit]
+Description=Inventory Atlas Lite update request watcher
+Documentation=https://github.com/bloschinsky/inventory-atlas-lite
+
+[Path]
+# The only thing the unprivileged application can do towards an update: create this marker in its
+# own data directory. The file carries no command, version, URL, or argument; it starts exactly
+# this one predefined unit, which is why the application needs no sudo and no privileges at all.
+PathExists=/var/lib/inventory-atlas-lite/update-requested
+Unit=inventory-atlas-lite-update.service
+
+[Install]
+WantedBy=multi-user.target
