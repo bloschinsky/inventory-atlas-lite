@@ -380,10 +380,10 @@ test('the health endpoint reports the running version while SQLite is usable', a
     assert.equal(response.status, 200);
     const health = await response.json();
     const expected = JSON.parse(await readFile('package.json', 'utf8')).version;
-    assert.deepEqual(health, { status: 'ok', database: 'ok', version: expected });
+    assert.deepEqual(health, { status: 'ok', database: 'ok', version: expected, ready: true, restoring: false, critical: false });
 
     // Deployment scripts poll this endpoint, so it must not leak paths or other diagnostics.
-    assert.deepEqual(Object.keys(health).sort(), ['database', 'status', 'version']);
+    assert.deepEqual(Object.keys(health).sort(), ['critical', 'database', 'ready', 'restoring', 'status', 'version']);
   } finally {
     if (server) await stopServer(server);
     await rm(dataDir, { recursive: true, force: true });

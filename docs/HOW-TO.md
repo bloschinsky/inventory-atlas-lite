@@ -71,6 +71,7 @@ The saved key is shown only as a masked value afterwards.
 | **Stored inside** | A real link to another item that contains this one, such as a lens inside `Box A`. |
 | **Photo** | An image stored inside the database together with the item. |
 | **Backup** | A downloadable copy of the whole SQLite database, photos included. |
+| **Restore** | Replacing the whole inventory with the contents of such a backup file. |
 
 **Location and Stored inside are different things and work well together.** `Box A` has
 `Location = Garage`; the lens inside it has `Stored inside = Box A` and usually no location of its
@@ -277,6 +278,33 @@ already contains; the server rejects such a move with an error message.
 1. Open **Data / Backup**.
 2. Press **Download backup**. The browser saves a file named `inventory-YYYY-MM-DD.sqlite`.
 
+### Restore a backup
+
+Restoring **replaces the whole inventory**. Everything added or changed after the selected backup
+was created disappears from the active database. It is not a merge or an import.
+
+1. Open **Data / Backup** and find **Restore from backup**.
+2. Press **Choose File** and select a backup downloaded from this application
+   (`.sqlite`, `.sqlite3`, or `.db`). The selected name and size are shown; the contents are checked,
+   not the file name.
+3. Press **Validate backup**. The file is uploaded and checked on the server. Nothing has changed yet.
+4. Read the **Validation result**: the file name and size, the compatibility line, and how many
+   categories, items, custom fields, values, and photos the backup contains. If these numbers do not
+   match the backup you expect, stop here and select another file.
+5. Read the red warning. Before the replacement the application writes a **pre-restore safety
+   backup** of the current database on the server, and during the final swap it refuses changes for
+   a few seconds.
+6. Type `RESTORE` in the confirmation field. The **Restore backup** button stays disabled until the
+   word matches.
+7. Press **Restore backup** and wait. When the application is ready again it reports
+   `Backup restored successfully`, names the safety backup file that holds your previous data, and
+   opens the items list with the restored inventory.
+
+If the file is not a valid, compatible Inventory Atlas Lite backup, validation fails with a short
+explanation and the current data is left untouched. A validated file is kept on the server for ten
+minutes; after that, validate it again. Only one restore runs at a time, and a backup download
+cannot overlap the final swap.
+
 ### Check which version you are running
 
 1. Press **About** at the bottom of the navigation list — in the sidebar on a wide screen, in the
@@ -337,10 +365,14 @@ snapshot is portable: it is what you need to move the inventory to another machi
 The Proxmox updater also writes such a snapshot before every update, keeping the last five in
 `/var/lib/inventory-atlas-lite/backups`. See [`proxmox.md`](proxmox.md).
 
-**There is no restore button.** Restoring a snapshot is a manual server-side operation: stop the
-application, put the file in place of the live `inventory.sqlite` (removing any `-wal` and `-shm`
-files next to it), and start the application again. Never copy a live database file while the
-application is writing to it — download a backup instead.
+**Data / Backup → Restore from backup** puts such a snapshot back. The upload is validated before
+anything changes, the current database is copied to `pre-restore-backups/` next to the live database
+first, and a failure during the replacement rolls that copy back automatically. The ten most recent
+pre-restore copies are kept; older ones are removed after a successful restore, and a failed cleanup
+never deletes user data. Operators can also copy one of these files back manually while the
+application is stopped. `RESTORE_MAX_UPLOAD_MB` limits the size of an uploaded backup; the default is
+512 MB, and a larger file is refused. Never copy a live database file while the application is
+writing to it — download a backup instead.
 
 For a personal homelab, download a backup after every larger cataloguing session, and keep the copies
 on a different machine than the server.
@@ -358,8 +390,10 @@ on a different machine than the server.
 - Deleting a custom field also deletes the values saved for it on every item of that category.
 - Custom field types cannot be changed after creation, and categories cannot be merged. The batch
   editor only creates new fields; it never renames or retypes existing ones.
-- There is no restore, import, or export function in the interface beyond the SQLite backup
-  download, and no CSV or label printing.
+- Restore replaces the whole inventory from a full SQLite backup. There is no merge, no selective
+  restore of single items or categories, no CSV or JSON import or export, and no label printing.
+- Anyone who reaches the unauthenticated interface can restore a backup and therefore replace all
+  current data. Keep the application on a trusted LAN or VPN.
 - AI Add Fields sends your description, the category name, its field names, and the built-in
   attribute names to OpenAI. It only proposes fields; the fields are created by the same reviewed
   batch as a pasted document, and a failed request changes nothing.

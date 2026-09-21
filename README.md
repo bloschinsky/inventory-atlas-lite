@@ -134,6 +134,15 @@ artifact contract and release checks.
 
 The database is created automatically at `data/inventory.sqlite`. It contains items, categories, fields, values, and original photo bytes. The **Data / Backup** page downloads a consistent SQLite snapshot using SQLite's backup API. Back up that downloaded file regularly.
 
+The same page restores such a snapshot: the upload is validated on the server, the current database
+is copied to `pre-restore-backups/` under `DATA_DIR` first, and the active file is then replaced
+atomically. A failure during replacement rolls that safety copy back automatically. The ten most
+recent safety copies are kept; older ones are removed after a successful restore. Restoring replaces
+the whole inventory, so anyone who can reach the unauthenticated interface can destroy the current
+data — one more reason to keep the application on a trusted network only. Set
+`RESTORE_MAX_UPLOAD_MB` to change the maximum size of an uploaded backup; the default is `512`.
+See [`docs/features/database-backup-and-restore.md`](docs/features/database-backup-and-restore.md).
+
 AI configuration is managed in **Settings**. Its API key is stored separately as
 `ai-settings.json` under `DATA_DIR`, is not returned to the browser after saving, and is not included
 in SQLite backups. Back up or reconfigure this secret separately when moving an installation.

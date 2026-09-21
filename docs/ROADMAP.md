@@ -12,16 +12,12 @@ Implemented behavior is documented separately in [`features/README.md`](features
    and initiate the existing safe updater only on supported deployments. See
    [`TASK-SELF-UPDATE-FROM-ABOUT.md`](issues/TASK-SELF-UPDATE-FROM-ABOUT.md).
 
-2. **Restore database backup** — Planned independently of the UI migration. Adds a validated,
-   confirmation-protected backup restore workflow with a pre-restore safety backup and rollback
-   protections. See [`TASK-restore-database-backup.md`](issues/TASK-restore-database-backup.md).
-
-3. **AI background-removal quality, Phase 1** — Planned. Strengthens the local cutout model and
+2. **AI background-removal quality, Phase 1** — Planned. Strengthens the local cutout model and
    mask cleanup to produce cleaner white-background inventory photos with a subtle synthetic shadow.
    Includes a Sound Blaster-on-bubble-wrap regression asset. See
    [`TASK-background-removal-quality-phase-1.md`](issues/TASK-background-removal-quality-phase-1.md).
 
-4. **AI background-removal quality, Phase 2** — Planned; blocked by Phase 1. Adds target-aware
+3. **AI background-removal quality, Phase 2** — Planned; blocked by Phase 1. Adds target-aware
    extraction so the cutout favors the intended inventory item over hands and surrounding clutter.
    Includes a film-boxes-in-hand regression asset. See
    [`TASK-background-removal-quality-phase-2.md`](issues/TASK-background-removal-quality-phase-2.md).

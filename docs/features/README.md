@@ -5,6 +5,7 @@ document describes the current behaviour and its boundaries, not the original pl
 
 | Feature | Summary |
 | --- | --- |
+| [Database backup and restore](database-backup-and-restore.md) | Download a consistent SQLite snapshot, and restore one with server-side validation, a pre-restore safety backup, and automatic rollback. |
 | [Inventory Dashboard](dashboard.md) | Server-calculated inventory totals, documentation and placement metrics, plus category and condition distributions. |
 | [Application UI](application-ui.md) | The Tabler application shell: a folded desktop sidebar, a mobile offcanvas drawer, light/dark modes, and responsive pages. |
 | [Nested items](nested-items.md) | Store an item inside another item and browse its direct contents. |

@@ -6,6 +6,11 @@ import os from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { db } from './db.js';
+import {
+  applyRestore, beginBackupDownload, clearAllSessions, createSession,
+  discardStagedUpload, endBackupDownload, isMaintenance, maxUploadBytes, resetStaging, restoreStatus,
+  stagedFileName, stagingDir, sweepExpiredSessions, validateStagedDatabase
+} from './restore.js';
 import { analyzeInventoryItem, detectImageMime, generateCategoryFields, listAvailableOpenAiModels, publicAiSettings, writeAiSettings } from './ai.js';
 import { removeBackground } from './backgroundRemoval.js';
 import { FIELD_TYPES, blockingRows, creatableFields, readFieldDefinitionDocument, reviewFieldDefinitions } from '../../shared/fieldDefinitions.js';
@@ -27,7 +32,29 @@ const upload = multer({
   }
 });
 
+// Leftover staged uploads from a previous run are never resumable, so they are cleared at startup.
+resetStaging();
+
+// Database backups carry photo BLOBs, so the upload is streamed to a private staging file on disk
+// and never buffered in memory like the photo uploads above.
+const restoreUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, done) => done(null, stagingDir),
+    filename: (_req, _file, done) => done(null, stagedFileName())
+  }),
+  limits: { fileSize: maxUploadBytes, files: 1 }
+}).single('backup');
+
 app.use(express.json({ limit: '1mb' }));
+
+// While the active database is being replaced, nothing may write to the connection being swapped.
+app.use((req, res, next) => {
+  const writes = req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH' || req.method === 'DELETE';
+  if (writes && !req.path.startsWith('/api/restore/') && isMaintenance()) {
+    return res.status(503).json({ error: 'A backup is being restored. Try again in a moment.' });
+  }
+  next();
+});
 
 const requiredText = (value, label) => {
   if (typeof value !== 'string' || !value.trim()) throw Object.assign(new Error(`${label} is required.`), { status: 400 });
@@ -256,9 +283,13 @@ app.post('/api/categories/:id/fields', (req, res) => {
   res.status(201).json(db.prepare('SELECT * FROM custom_fields WHERE id = ?').get(info.lastInsertRowid));
 });
 const categoryFieldNames = categoryId => db.prepare('SELECT name FROM custom_fields WHERE category_id = ?').all(categoryId).map(field => field.name);
-const insertField = db.prepare('INSERT INTO custom_fields (category_id, name, type) VALUES (?, ?, ?)');
-// One transaction per batch: an unexpected failure leaves the category exactly as it was.
-const createFieldsBatch = db.transaction((categoryId, fields) => fields.map(field => insertField.run(categoryId, field.name, field.type).lastInsertRowid));
+// Statements and transactions are built when they are used: a restore replaces the connection, and
+// anything prepared at module load would stay bound to the database that was swapped out.
+const createFieldsBatch = (categoryId, fields) => db.transaction(() => {
+  const insertField = db.prepare('INSERT INTO custom_fields (category_id, name, type) VALUES (?, ?, ?)');
+  // One transaction per batch: an unexpected failure leaves the category exactly as it was.
+  return fields.map(field => insertField.run(categoryId, field.name, field.type).lastInsertRowid);
+})();
 
 app.post('/api/categories/:id/fields/batch', (req, res) => {
   const category = getCategory(req.params.id);
@@ -375,8 +406,10 @@ const validateValues = (categoryId, values = {}) => {
     return [Number(fieldId), type === 'boolean' ? (['true', true, 1, '1'].includes(raw) ? '1' : '0') : String(raw)];
   });
 };
-const saveValue = db.prepare('INSERT INTO item_field_values (item_id, field_id, value) VALUES (?, ?, ?) ON CONFLICT(item_id, field_id) DO UPDATE SET value = excluded.value');
-const createItem = db.transaction(body => {
+const saveValue = (itemId, fieldId, value) => db
+  .prepare('INSERT INTO item_field_values (item_id, field_id, value) VALUES (?, ?, ?) ON CONFLICT(item_id, field_id) DO UPDATE SET value = excluded.value')
+  .run(itemId, fieldId, value);
+const createItem = body => db.transaction(() => {
   const name = requiredText(body.name, 'Item name');
   const categoryId = Number.parseInt(body.category_id);
   if (!getCategory(categoryId)) throw Object.assign(new Error('Valid category is required.'), { status: 400 });
@@ -390,10 +423,10 @@ const createItem = db.transaction(body => {
       purchase_price_amount, purchase_price_currency, serial_number, parent_item_id)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(randomUUID(), name, categoryId, nullableText(body.description), nullableText(body.condition), nullableText(body.location), purchaseDate, purchasePrice.amount, purchasePrice.currency, serialNumber, parentId);
-  for (const [fieldId, value] of values) saveValue.run(info.lastInsertRowid, fieldId, value);
+  for (const [fieldId, value] of values) saveValue(info.lastInsertRowid, fieldId, value);
   return info.lastInsertRowid;
-});
-const updateItem = db.transaction((id, body) => {
+})();
+const updateItem = (id, body) => db.transaction(() => {
   const current = getItemBase(id);
   if (!current) throw Object.assign(new Error('Item not found.'), { status: 404 });
   const name = requiredText(body.name, 'Item name');
@@ -409,9 +442,9 @@ const updateItem = db.transaction((id, body) => {
       purchase_date = ?, purchase_price_amount = ?, purchase_price_currency = ?, serial_number = ?,
       parent_item_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
   `).run(name, categoryId, nullableText(body.description), nullableText(body.condition), nullableText(body.location), purchaseDate, purchasePrice.amount, purchasePrice.currency, serialNumber, parentId, current.id);
-  for (const [fieldId, value] of values) saveValue.run(current.id, fieldId, value);
+  for (const [fieldId, value] of values) saveValue(current.id, fieldId, value);
   return current.id;
-});
+})();
 app.post('/api/items', (req, res) => { const id = createItem(req.body); res.status(201).json(itemResponse(getItemBase(id))); });
 app.put('/api/items/:id', (req, res) => { const id = updateItem(req.params.id, req.body); res.json(itemResponse(getItemBase(id))); });
 app.delete('/api/items/:id', (req, res) => {
@@ -444,20 +477,67 @@ app.delete('/api/photos/:id', (req, res) => {
 
 app.get('/api/health', (_req, res) => {
   // Deployment scripts poll this endpoint, so it stays cheap and free of diagnostic details.
+  // During a restore the database is deliberately closed for a moment; the process itself is fine.
+  if (isMaintenance()) return res.json({ status: 'ok', database: 'maintenance', version: appVersion, ...restoreStatus() });
   try {
     db.prepare('SELECT 1').get();
-    res.json({ status: 'ok', database: 'ok', version: appVersion });
+    res.json({ status: 'ok', database: 'ok', version: appVersion, ...restoreStatus() });
   } catch {
-    res.status(503).json({ status: 'error', database: 'error', version: appVersion });
+    res.status(503).json({ status: 'error', database: 'error', version: appVersion, ...restoreStatus() });
   }
 });
+
+// Readiness the restore page polls while the application finishes swapping the database.
+app.get('/api/restore/status', (_req, res) => res.json(restoreStatus()));
 
 app.get('/api/backup', async (_req, res, next) => {
   const backupPath = path.join(os.tmpdir(), `inventory-backup-${randomUUID()}.sqlite`);
   try {
+    // A download and the final restore swap must never overlap.
+    beginBackupDownload();
+  } catch (error) { return next(error); }
+  try {
     await db.backup(backupPath);
     res.download(backupPath, `inventory-${new Date().toISOString().slice(0, 10)}.sqlite`, () => fs.rm(backupPath, { force: true }, () => {}));
-  } catch (error) { fs.rm(backupPath, { force: true }, () => {}); next(error); }
+  } catch (error) { fs.rm(backupPath, { force: true }, () => {}); next(error); } finally { endBackupDownload(); }
+});
+
+/*
+  Restore is deliberately two staged requests. The upload is streamed to a private file and only
+  described back to the user; replacing the active database needs the short-lived single-use token
+  from this response plus the explicit confirmation phrase.
+*/
+app.post('/api/restore/validate', (req, res, next) => {
+  restoreUpload(req, res, error => {
+    if (error) {
+      discardStagedUpload(req.file?.path);
+      if (error.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({ error: `The backup is larger than the ${Math.round(maxUploadBytes / (1024 * 1024))} MB restore limit.` });
+      }
+      if (error.code === 'LIMIT_FILE_COUNT' || error.code === 'LIMIT_UNEXPECTED_FILE') {
+        return res.status(400).json({ error: 'Select exactly one backup file.' });
+      }
+      return next(error);
+    }
+    if (!req.file) return res.status(400).json({ error: 'Choose a backup file to validate.' });
+    sweepExpiredSessions();
+    try {
+      const summary = validateStagedDatabase(req.file.path);
+      // The original name is only echoed back; the staged path is generated by the server.
+      res.json(createSession(req.file.path, summary, req.file.originalname, req.file.size));
+    } catch (validationError) {
+      // A rejected upload never stays on disk.
+      discardStagedUpload(req.file.path);
+      next(validationError);
+    }
+  });
+});
+
+app.post('/api/restore/apply', async (req, res, next) => {
+  try {
+    const result = await applyRestore(req.body?.restore_token, req.body?.confirmation);
+    res.json({ message: 'Backup restored successfully', ...result });
+  } catch (error) { next(error); }
 });
 
 if (isProduction) {
@@ -471,6 +551,9 @@ app.use((error, _req, res, _next) => {
   res.status(error.status || (duplicate ? 409 : (uploadError ? 400 : 500))).json({ error: duplicate ? 'A record with this name already exists.' : (error.message || 'Unexpected server error.') });
 });
 const server = app.listen(port, '0.0.0.0', () => console.log(`Inventory server listening on http://0.0.0.0:${port}`));
-const shutdown = () => server.close(() => process.exit(0));
+const shutdown = () => {
+  clearAllSessions();
+  server.close(() => process.exit(0));
+};
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
