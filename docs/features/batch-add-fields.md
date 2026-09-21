@@ -82,7 +82,8 @@ category templates.
 
 ## Boundaries
 
-- Phase 1 has no AI dependency: no OpenAI call is made and no key is needed.
+- Pasting a document has no AI dependency: no OpenAI call is made and no key is needed.
+  [AI Add Fields](ai-add-fields.md) reuses this editor to review an OpenAI-generated document.
 - Category templates, schema export, and import from an uploaded file are not part of this feature.
 - Existing fields cannot be renamed or retyped from the batch editor; it only creates new fields.
 

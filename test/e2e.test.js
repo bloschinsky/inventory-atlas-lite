@@ -509,3 +509,85 @@ test('AI settings stay server-side and image analysis returns a validated invent
     await rm(dataDir, { recursive: true, force: true });
   }
 });
+
+test('AI field generation returns a reviewable draft and never writes to the category', async () => {
+  const dataDir = await mkdtemp(path.join(os.tmpdir(), 'inventory-ai-fields-test-'));
+  let appServer;
+  let providerRequest;
+  let providerReply = null;
+  const providerServer = createServer(async (req, res) => {
+    let rawBody = '';
+    for await (const chunk of req) rawBody += chunk.toString();
+    providerRequest = { authorization: req.headers.authorization, body: JSON.parse(rawBody) };
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify({ output_text: JSON.stringify(providerReply), usage: { input_tokens: 40, output_tokens: 30 } }));
+  });
+  await new Promise(resolve => providerServer.listen(0, '127.0.0.1', resolve));
+  const providerPort = providerServer.address().port;
+  const generate = (categoryId, description = 'Vintage computer expansion cards.') =>
+    fetch(`${base}/api/categories/${categoryId}/fields/ai`, json('POST', { description }));
+
+  try {
+    appServer = await startServer(dataDir, { OPENAI_BASE_URL: `http://127.0.0.1:${providerPort}` });
+    const category = await request('/api/categories', json('POST', { name: 'Expansion Cards' }));
+    await request(`/api/categories/${category.id}/fields`, json('POST', { name: 'Brand', type: 'text' }));
+
+    // AI must be configured first, and an unknown category is rejected before any provider call.
+    assert.equal((await generate(category.id)).status, 409);
+    await request('/api/settings/ai', json('PUT', { enabled: true, provider: 'openai', model: 'gpt-4o-mini' }));
+    assert.equal((await generate(category.id)).status, 409);
+    await request('/api/settings/ai', json('PUT', {
+      enabled: true, provider: 'openai', model: 'gpt-4o-mini', apiKey: 'sk-test-not-a-real-secret'
+    }));
+    assert.equal((await generate(999999)).status, 404);
+    assert.equal((await generate(category.id, '   ')).status, 400);
+    assert.equal((await generate(category.id, 'x'.repeat(2001))).status, 400);
+    assert.equal(providerRequest, undefined);
+
+    providerReply = {
+      version: 1,
+      fields: [
+        { name: 'Bus', type: 'text', required: false },
+        { name: 'Release Year', type: 'number', required: false },
+        { name: 'brand', type: 'text', required: false }
+      ]
+    };
+    const draft = await request(`/api/categories/${category.id}/fields/ai`, json('POST', { description: 'Vintage computer expansion cards.' }));
+    assert.deepEqual(draft, providerReply);
+
+    // The request carries the schema context the model needs and the key never leaves the server.
+    assert.equal(providerRequest.authorization, 'Bearer sk-test-not-a-real-secret');
+    assert.equal(providerRequest.body.model, 'gpt-4o-mini');
+    assert.equal(providerRequest.body.store, false);
+    assert.equal(providerRequest.body.text.format.type, 'json_schema');
+    assert.equal(providerRequest.body.text.format.strict, true);
+    assert.deepEqual(providerRequest.body.text.format.schema.properties.fields.items.properties.type.enum, ['text', 'number', 'date', 'boolean']);
+    const prompt = JSON.parse(providerRequest.body.input[0].content[0].text);
+    assert.equal(prompt.description, 'Vintage computer expansion cards.');
+    assert.equal(prompt.categoryName, 'Expansion Cards');
+    assert.deepEqual(prompt.existingFields, ['Brand']);
+    assert.ok(prompt.builtInFields.includes('Purchase Date'));
+    assert.deepEqual(prompt.supportedTypes, ['text', 'number', 'date', 'boolean']);
+
+    // Generation alone changes nothing; the existing batch endpoint stays the only create path.
+    assert.equal((await request(`/api/categories/${category.id}/fields`)).length, 1);
+    assert.match((await (await fetch(`${base}/api/categories/${category.id}/fields/batch`, json('POST', draft))).json()).error, /already exists/);
+    const created = await request(`/api/categories/${category.id}/fields/batch`, json('POST', {
+      version: 1, fields: draft.fields.filter(field => field.name !== 'brand')
+    }));
+    assert.deepEqual(created.map(field => field.name), ['Bus', 'Release Year']);
+
+    // Untrusted answers: a malformed document and an empty batch are reported, not stored.
+    providerReply = { version: 1, fields: [{ name: 'Colour', type: 'select', options: ['Red'] }] };
+    assert.equal((await generate(category.id)).status, 502);
+    providerReply = { version: 1, fields: [] };
+    assert.equal((await generate(category.id)).status, 422);
+    providerReply = { nope: true };
+    assert.equal((await generate(category.id)).status, 502);
+    assert.equal((await request(`/api/categories/${category.id}/fields`)).length, 3);
+  } finally {
+    if (appServer) await stopServer(appServer);
+    await new Promise(resolve => providerServer.close(resolve));
+    await rm(dataDir, { recursive: true, force: true });
+  }
+});

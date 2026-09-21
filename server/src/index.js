@@ -6,7 +6,7 @@ import os from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { db } from './db.js';
-import { analyzeInventoryItem, detectImageMime, listAvailableOpenAiModels, publicAiSettings, writeAiSettings } from './ai.js';
+import { analyzeInventoryItem, detectImageMime, generateCategoryFields, listAvailableOpenAiModels, publicAiSettings, writeAiSettings } from './ai.js';
 import { removeBackground } from './backgroundRemoval.js';
 import { FIELD_TYPES, blockingRows, creatableFields, readFieldDefinitionDocument, reviewFieldDefinitions } from '../../shared/fieldDefinitions.js';
 
@@ -275,6 +275,18 @@ app.post('/api/categories/:id/fields/batch', (req, res) => {
   if (blocked.length) return res.status(400).json({ error: blocked[0].message });
   const ids = createFieldsBatch(category.id, creatableFields(rows));
   res.status(201).json(db.prepare(`SELECT * FROM custom_fields WHERE id IN (${ids.map(() => '?').join(',')}) ORDER BY id`).all(...ids));
+});
+/*
+  Draft generation only: the response is a field-definition document the user still reviews and
+  confirms. Nothing is written here; /fields/batch remains the single create path.
+*/
+app.post('/api/categories/:id/fields/ai', async (req, res) => {
+  const category = getCategory(req.params.id);
+  if (!category) return res.status(404).json({ error: 'Category not found.' });
+  const description = typeof req.body?.description === 'string' ? req.body.description.trim() : '';
+  if (!description) return res.status(400).json({ error: 'Describe the fields you need.' });
+  if (description.length > 2000) return res.status(400).json({ error: 'The description must be 2,000 characters or fewer.' });
+  res.json(await generateCategoryFields({ description, category, existingFieldNames: categoryFieldNames(category.id) }));
 });
 app.get('/api/fields/:id/suggestions', (req, res) => {
   const field = db.prepare('SELECT id, type FROM custom_fields WHERE id = ?').get(req.params.id);

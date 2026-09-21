@@ -3,12 +3,15 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { api, jsonOptions } from '../api.js';
 import {
   FIELD_TYPES, MAX_BATCH_FIELDS, STATUS_LABELS, blockingRows, creatableFields,
-  fieldDefinitionDocument, fieldTypeLabel, parseFieldDefinitionDocument, reviewFieldDefinitions
+  fieldDefinitionDocument, fieldTypeLabel, parseFieldDefinitionDocument, readFieldDefinitionDocument,
+  reviewFieldDefinitions
 } from '../../../shared/fieldDefinitions.js';
 
 const props = defineProps({
   category: { type: Object, required: true },
-  existingFields: { type: Array, required: true }
+  existingFields: { type: Array, required: true },
+  // 'json' pastes a document, 'ai' asks OpenAI for one; both end in the same review below.
+  mode: { type: String, default: 'json' }
 });
 const emit = defineEmits(['close', 'created']);
 
@@ -18,10 +21,15 @@ const example = JSON.stringify(fieldDefinitionDocument([
   { name: 'Release Year', type: 'number', required: false }
 ]), null, 2);
 
+const ai = computed(() => props.mode === 'ai');
+const title = computed(() => ai.value ? 'AI Add Fields' : 'Batch Add Fields');
+
 const source = ref('');
+const description = ref('');
 const drafts = ref(null);
 const error = ref('');
 const saving = ref(false);
+const generating = ref(false);
 const editor = ref(null);
 
 // Recalculated on every edit or removal, so the statuses always describe the current batch.
@@ -38,7 +46,22 @@ function preview() {
     error.value = parseError.message;
   }
 }
-function backToJson() {
+// The AI answer is untrusted input: it is read with the same reader the pasted document uses.
+async function generate() {
+  generating.value = true;
+  error.value = '';
+  try {
+    const document = await api(`/api/categories/${props.category.id}/fields/ai`, jsonOptions('POST', { description: description.value.trim() }));
+    drafts.value = readFieldDefinitionDocument(document);
+  } catch (generateError) {
+    drafts.value = null;
+    error.value = generateError.message;
+  } finally {
+    generating.value = false;
+  }
+}
+// The original prompt or document stays available, so a failed attempt can be retried or corrected.
+function backToInput() {
   drafts.value = null;
   error.value = '';
   nextTick(() => editor.value?.focus());
@@ -87,12 +110,12 @@ onBeforeUnmount(() => {
             id="batch-fields-title"
             class="modal-title"
           >
-            Batch Add Fields <span class="text-secondary">for {{ category.name }}</span>
+            {{ title }} <span class="text-secondary">for {{ category.name }}</span>
           </h2>
           <button
             type="button"
             class="btn-close"
-            aria-label="Close batch add fields"
+            :aria-label="`Close ${title.toLowerCase()}`"
             @click="emit('close')"
           />
         </div>
@@ -104,7 +127,29 @@ onBeforeUnmount(() => {
           >
             {{ error }}
           </div>
-          <template v-if="!drafts">
+          <template v-if="!drafts && ai">
+            <p class="text-secondary">
+              Describe the category and the kind of fields you need. OpenAI only proposes a draft:
+              you review, edit, and confirm every field before it is created. A batch accepts at
+              most {{ MAX_BATCH_FIELDS }} fields.
+            </p>
+            <textarea
+              ref="editor"
+              v-model="description"
+              class="form-control"
+              rows="6"
+              aria-label="Field description"
+              :disabled="generating"
+              placeholder="Suggest useful fields for a category containing vintage computer expansion cards such as graphics cards, sound cards, network cards and controllers."
+            />
+            <p
+              v-if="generating"
+              class="text-secondary mt-2 mb-0"
+            >
+              Generating fields…
+            </p>
+          </template>
+          <template v-else-if="!drafts">
             <p class="text-secondary">
               Paste a field-definition document, then review every field before it is created.
               A batch accepts at most {{ MAX_BATCH_FIELDS }} fields.
@@ -208,7 +253,16 @@ onBeforeUnmount(() => {
             Cancel
           </button>
           <button
-            v-if="!drafts"
+            v-if="!drafts && ai"
+            type="button"
+            class="btn btn-primary"
+            :disabled="generating || !description.trim()"
+            @click="generate"
+          >
+            {{ generating ? 'Generating…' : 'Generate Fields' }}
+          </button>
+          <button
+            v-else-if="!drafts"
             type="button"
             class="btn btn-primary"
             :disabled="!source.trim()"
@@ -220,9 +274,9 @@ onBeforeUnmount(() => {
             <button
               type="button"
               class="btn"
-              @click="backToJson"
+              @click="backToInput"
             >
-              Edit JSON
+              {{ ai ? 'Edit Description' : 'Edit JSON' }}
             </button>
             <button
               type="button"

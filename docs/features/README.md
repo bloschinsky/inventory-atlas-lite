@@ -9,6 +9,7 @@ document describes the current behaviour and its boundaries, not the original pl
 | [Application UI](application-ui.md) | The Tabler application shell: a folded desktop sidebar, a mobile offcanvas drawer, light/dark modes, and responsive pages. |
 | [Nested items](nested-items.md) | Store an item inside another item and browse its direct contents. |
 | [Batch Add Fields](batch-add-fields.md) | Paste a field-definition document, review and edit the proposed fields, and create them in one atomic batch. |
+| [AI Add Fields](ai-add-fields.md) | Describe a category in natural language and review the OpenAI-drafted fields in the batch editor before creating them. |
 | [Custom-field autocomplete](custom-field-autocomplete.md) | Suggest previously saved values for text custom fields. |
 | [Purchase and serial fields](purchase-and-serial-fields.md) | Record an optional purchase date, structured multi-currency price, and serial number on every item. |
 | [AI Add Item](ai-add-item.md) | Choose an available OpenAI model, analyze the original photo, optionally remove its background locally, and review the editable draft before saving. |

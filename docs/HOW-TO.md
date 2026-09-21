@@ -148,6 +148,24 @@ Field types are fixed after creation; to change a type, delete the field and add
 
 Required custom fields do not exist yet, so `"required": true` is rejected instead of being ignored.
 
+### Let AI suggest the fields for a category
+
+1. Configure and enable OpenAI under **Settings → AI**, the same setup **AI Add Item** uses.
+2. Select a category and press **AI Add Fields** under the field form.
+3. Describe the category and the fields you need, for example *Suggest useful fields for a category
+   containing vintage computer expansion cards such as graphics cards, sound cards, network cards
+   and controllers*, then press **Generate Fields**.
+4. The suggestion arrives in the same review as a pasted document, with the same per-row statuses.
+   Rename a field, change its type, or press **Remove** to drop it. Nothing is saved yet.
+   **Edit Description** goes back to your text so you can generate again.
+5. Press **Create N Fields** to save the fields you approved. **Cancel** or `Escape` discards
+   everything.
+
+Only the four supported types can be suggested, and the category name, its existing field names, and
+the built-in item attributes are sent with your description so the model avoids duplicates. The
+usual review still blocks a name that already exists. If the request fails or the answer is
+unusable, the message explains why and your description stays in the modal for a retry.
+
 ### Create an item
 
 1. Open **Items** and press **Add item**. If no category exists yet, the form tells you to create one
@@ -342,6 +360,9 @@ on a different machine than the server.
   editor only creates new fields; it never renames or retypes existing ones.
 - There is no restore, import, or export function in the interface beyond the SQLite backup
   download, and no CSV or label printing.
+- AI Add Fields sends your description, the category name, its field names, and the built-in
+  attribute names to OpenAI. It only proposes fields; the fields are created by the same reviewed
+  batch as a pasted document, and a failed request changes nothing.
 - AI Add Item uses OpenAI and sends the selected image at original detail, the optional hint, and
   category/field definitions outside the local deployment. The original image is stored only after
   you confirm the draft. The OpenAI key stays in `ai-settings.json` under `DATA_DIR` and is not part
@@ -361,6 +382,7 @@ on a different machine than the server.
 | Search finds nothing | The search matches the name, description, and serial number. Clear the category filter and check that you are on page 1. |
 | No suggestions in a text field | Suggestions come from values already saved for that same field. A newly created field starts empty. |
 | AI Add Item is disabled | Open **Settings**, enable AI features, enter an OpenAI API key and an image-capable model, then save. |
+| AI Add Fields suggests nothing usable | The message reports an empty or malformed answer. Describe the category in more detail and press **Generate Fields** again; your description is kept. |
 | AI analysis fails | Read the message for an invalid key, rate limit, unavailable provider, timeout, unsupported image, or missing category. The selected photo and hint remain available for retry. |
 | Which version is this | Open **About** in the navigation. It shows the version, the commit the build came from, and its date. |
 | Where are the logs | On Proxmox, inside the container: `journalctl -u inventory-atlas-lite -f`. See [`proxmox.md`](proxmox.md) for the other service commands. |

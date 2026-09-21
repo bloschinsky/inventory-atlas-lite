@@ -1,6 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { dataDir } from './db.js';
+import {
+  FIELD_DEFINITION_VERSION, FIELD_TYPES, MAX_BATCH_FIELDS, MAX_FIELD_NAME_LENGTH,
+  RESERVED_FIELD_NAMES, readFieldDefinitionDocument
+} from '../../shared/fieldDefinitions.js';
 
 const settingsPath = path.join(dataDir, 'ai-settings.json');
 const defaults = { enabled: false, provider: 'openai', model: 'gpt-5.6-luna', apiKey: '' };
@@ -149,8 +153,35 @@ function outputText(response) {
   return '';
 }
 
-async function analyzeWithOpenAI({ settings, image, mimeType, hint, categories, fields }) {
+// One place for the /responses request, its timeout, and the provider error mapping.
+async function requestOpenAiResponse({ settings, body, failureMessage }) {
   const baseUrl = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '');
+  let response;
+  try {
+    response = await fetch(`${baseUrl}/responses`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${settings.apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(45_000)
+    });
+  } catch (error) {
+    if (error.name === 'TimeoutError' || error.name === 'AbortError') throw httpError('The AI request timed out. Try again.', 504);
+    throw httpError('OpenAI is unavailable. Try again later.', 502);
+  }
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    if (response.status === 401 || response.status === 403) throw httpError('OpenAI rejected the API key. Check it in Settings.', 502);
+    if (response.status === 429) throw httpError('OpenAI rate limit reached. Try again later.', 503);
+    throw httpError(failureMessage, 502);
+  }
+  const text = outputText(result);
+  if (!text) throw httpError('OpenAI returned no usable result.', 502);
+  let parsed;
+  try { parsed = JSON.parse(text); } catch { throw httpError('OpenAI returned an invalid structured response.', 502); }
+  return { parsed, usage: result.usage || null };
+}
+
+async function analyzeWithOpenAI({ settings, image, mimeType, hint, categories, fields }) {
   const body = {
     model: settings.model,
     store: false,
@@ -168,30 +199,103 @@ Use only visible facts or explicit hint details. Never invent unsupported values
     }],
     text: { format: { type: 'json_schema', name: 'inventory_item_draft', strict: true, schema: responseSchema(categories) } }
   };
-  let response;
-  try {
-    response = await fetch(`${baseUrl}/responses`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${settings.apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(45_000)
-    });
-  } catch (error) {
-    if (error.name === 'TimeoutError' || error.name === 'AbortError') throw httpError('AI analysis timed out. Try again.', 504);
-    throw httpError('OpenAI is unavailable. Try again later.', 502);
-  }
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    if (response.status === 401 || response.status === 403) throw httpError('OpenAI rejected the API key. Check it in Settings.', 502);
-    if (response.status === 429) throw httpError('OpenAI rate limit reached. Try again later.', 503);
-    throw httpError('OpenAI could not analyze the image. Try again later.', 502);
-  }
-  const text = outputText(result);
-  if (!text) throw httpError('OpenAI returned no usable result.', 502);
-  try { return { draft: JSON.parse(text), usage: result.usage || null }; } catch { throw httpError('OpenAI returned an invalid structured response.', 502); }
+  const { parsed, usage } = await requestOpenAiResponse({ settings, body, failureMessage: 'OpenAI could not analyze the image. Try again later.' });
+  return { draft: parsed, usage };
 }
 
 const providers = { openai: analyzeWithOpenAI };
+
+const supportedFieldTypes = FIELD_TYPES.map(type => type.value);
+
+// The same field-definition document the batch editor accepts, expressed as a strict output schema.
+const fieldDefinitionSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['version', 'fields'],
+  properties: {
+    version: { type: 'integer', enum: [FIELD_DEFINITION_VERSION] },
+    fields: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['name', 'type', 'required'],
+        properties: {
+          name: { type: 'string' },
+          type: { type: 'string', enum: supportedFieldTypes },
+          required: { type: 'boolean', enum: [false] }
+        }
+      }
+    }
+  }
+};
+
+const fieldInstructions = `Propose custom inventory fields for one category of a personal inventory application.
+Return only a field-definition document: {"version": ${FIELD_DEFINITION_VERSION}, "fields": [{"name": "Brand", "type": "text", "required": false}]}.
+Use only these field types: ${supportedFieldTypes.join(', ')}. There is no select, list, or multi-value type, so express such data as a text field.
+Field names are short, human-readable English labels of at most ${MAX_FIELD_NAME_LENGTH} characters. Propose at most ${MAX_BATCH_FIELDS} fields.
+Never repeat a name listed in existingFields or builtInFields, and never propose the same name twice.
+Required fields are not supported, so "required" is always false.
+Prefer a small set of practical fields a collector would actually fill in for every item of the category. Avoid redundant, overly specific, or speculative fields.`;
+
+async function generateFieldsWithOpenAI({ settings, description, category, existingFieldNames }) {
+  const body = {
+    model: settings.model,
+    store: false,
+    instructions: fieldInstructions,
+    input: [{
+      role: 'user',
+      content: [{
+        type: 'input_text',
+        text: JSON.stringify({
+          description,
+          categoryName: category.name,
+          existingFields: existingFieldNames,
+          builtInFields: RESERVED_FIELD_NAMES,
+          supportedTypes: supportedFieldTypes,
+          maxFields: MAX_BATCH_FIELDS
+        })
+      }]
+    }],
+    text: { format: { type: 'json_schema', name: 'field_definition_document', strict: true, schema: fieldDefinitionSchema } }
+  };
+  const { parsed, usage } = await requestOpenAiResponse({ settings, body, failureMessage: 'OpenAI could not suggest fields. Try again later.' });
+  return { document: parsed, usage };
+}
+
+const fieldProviders = { openai: generateFieldsWithOpenAI };
+
+/*
+  Returns a draft document only. The generated fields are untrusted input: they are parsed with the
+  same reader the pasted JSON uses, then reviewed and created by the existing batch pipeline.
+*/
+export async function generateCategoryFields({ description, category, existingFieldNames }) {
+  const settings = readAiSettings();
+  if (!settings.enabled) throw httpError('AI features are disabled. Enable them in Settings.', 409);
+  if (!settings.apiKey) throw httpError('Add an OpenAI API key in Settings before generating fields.', 409);
+  const provider = fieldProviders[settings.provider];
+  if (!provider) throw httpError('The configured AI provider is not supported.', 409);
+  const started = Date.now();
+  let result;
+  try {
+    result = await provider({ settings, description, category, existingFieldNames });
+  } catch (error) {
+    console.info('AI field generation', { provider: settings.provider, model: settings.model, durationMs: Date.now() - started, success: false });
+    throw error;
+  }
+  const document = result.document;
+  if (document && typeof document === 'object' && Array.isArray(document.fields) && !document.fields.length) {
+    throw httpError('The AI did not suggest any fields. Describe the category in more detail and try again.', 422);
+  }
+  let drafts;
+  try {
+    drafts = readFieldDefinitionDocument(document);
+  } catch (error) {
+    throw httpError(`OpenAI returned fields that do not match the supported format. ${error.message}`, 502);
+  }
+  console.info('AI field generation', { provider: settings.provider, model: settings.model, durationMs: Date.now() - started, success: true, fields: drafts.length, usage: result.usage });
+  return { version: FIELD_DEFINITION_VERSION, fields: drafts };
+}
 
 function cleanString(value, maximum = 5000) {
   return typeof value === 'string' && value.trim() ? value.trim().slice(0, maximum) : null;
