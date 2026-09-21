@@ -125,7 +125,7 @@ test('dependency installs never download the unused ONNX Runtime GPU providers',
   assert.match(readFileSync('scripts/lib.sh', 'utf8'), /ONNXRUNTIME_NODE_INSTALL=skip npm ci/);
   assert.match(readFileSync('Dockerfile', 'utf8'), /ONNXRUNTIME_NODE_INSTALL=skip npm ci/);
   assert.match(readFileSync('Dockerfile', 'utf8'), /^COPY package\.json package-lock\.json \.npmrc \.\/$/m);
-  assert.doesNotMatch(readFileSync('server/src/backgroundRemoval.js', 'utf8'), /cuda|tensorrt/i);
+  assert.doesNotMatch(readFileSync('server/src/integrations/backgroundRemoval.js', 'utf8'), /cuda|tensorrt/i);
 });
 
 test('the updater takes its build steps from the release it installs', () => {

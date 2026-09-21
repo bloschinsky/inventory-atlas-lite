@@ -41,7 +41,7 @@ Description → POST /api/categories/:id/fields/ai → field-definition document
 
 ## Implementation overview
 
-- `generateCategoryFields({ description, category, existingFieldNames })` in `server/src/ai.js`
+- `AiFieldService` in `server/src/services/aiFieldService.js`
   reuses the stored AI settings — the same enable flag, provider, model, and API key as
   [AI Add Item](ai-add-item.md). There is no second OpenAI configuration.
 - The request is schema-constrained: `text.format` is a strict `json_schema` that allows only
@@ -54,13 +54,14 @@ Description → POST /api/categories/:id/fields/ai → field-definition document
   `readFieldDefinitionDocument` used for pasted JSON: an empty batch is `422`, anything that does
   not match the format is `502` with the underlying reason, and the client reads the response a
   second time before showing it.
-- `POST /api/categories/:id/fields/ai` in `server/src/index.js` validates the description
+- `POST /api/categories/:id/fields/ai` in `server/src/routes/fieldRoutes.js` calls that service,
+  which validates the description
   (required, at most 2,000 characters), returns `404` for an unknown category, and answers with the
   draft document. It performs no write of any kind.
 - `client/src/components/BatchAddFieldsDialog.vue` gained a `mode` prop (`json` or `ai`). Only the
   first step and the footer buttons differ; the preview, the review, and the create request are the
   Phase 1 code path unchanged.
-- `requestOpenAiResponse` in `server/src/ai.js` is the one place that performs an OpenAI
+- `OpenAiClient` in `server/src/integrations/openAiClient.js` is the one place that performs an OpenAI
   `/responses` call, applies the 45-second timeout, and maps provider failures to status codes; both
   AI features use it.
 

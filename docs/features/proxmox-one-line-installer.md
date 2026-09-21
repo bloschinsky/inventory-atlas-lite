@@ -51,7 +51,7 @@ backups.
   `/etc/inventory-atlas-lite.env` with `NODE_ENV`, `PORT`, and `DATA_DIR`.
 - `deploy/inventory-atlas-lite.service` runs the application as the dedicated user with
   `Restart=on-failure`, an `EnvironmentFile`, and a stop timeout that lets SQLite close cleanly.
-- `GET /api/health` in `server/src/index.js` returns `{ "status": "ok", "database": "ok", "version": … }`
+- `GET /api/health` in `server/src/routes/systemRoutes.js` returns `{ "status": "ok", "database": "ok", "version": … }`
   after a minimal SQLite query succeeds, and `503` otherwise. It exposes no paths, environment, or
   stack traces, and both scripts poll it as their readiness check.
 

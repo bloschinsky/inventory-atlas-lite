@@ -6,7 +6,7 @@ import sharp from 'sharp';
 const MODEL_SIZE = 320;
 const MAX_SOURCE_DIMENSION = 2048;
 const MAX_INPUT_PIXELS = 40_000_000;
-const modelPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../models/u2netp.onnx');
+const modelPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../models/u2netp.onnx');
 
 let sessionPromise;
 let processingQueue = Promise.resolve();

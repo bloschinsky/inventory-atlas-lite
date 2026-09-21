@@ -66,11 +66,13 @@ category templates.
     and `MAX_BATCH_FIELDS` are the shared helpers used by the UI and the API.
   - Structural errors are thrown at parse time; everything a user can fix in the preview is a row
     status instead, so an imperfect document stays editable.
-- `POST /api/categories/:id/fields/batch` in `server/src/index.js` accepts the same document,
+- `POST /api/categories/:id/fields/batch` in `server/src/routes/fieldRoutes.js` accepts the same
+  document through `CustomFieldService`,
   returns `404` for an unknown category, and re-runs the full review against the category's current
   fields rather than trusting the client. The first blocking row's message is returned as `400`.
   Accepted batches are inserted inside one `db.transaction`, so a category either gains all the
   fields or none of them; the `UNIQUE(category_id, name)` constraint is the last line of defence.
+  The transaction itself lives in `CustomFieldRepository.insertMany`.
 - `client/src/components/BatchAddFieldsDialog.vue` is the editor and preview. The drafts are plain
   reactive objects and the review is a computed value, which is what keeps the statuses and the
   **Create N Fields** count correct after each edit or removal. It uses the same Vue-driven
@@ -78,7 +80,7 @@ category templates.
 - `client/src/pages/Categories.vue` owns the button and reloads its fields and category counters
   through the existing `select`/`load` pair once the dialog reports a successful create.
 - The Docker image copies `shared/` into both stages: the build stage needs it for `vite build`,
-  and the runtime stage needs it because `server/src/index.js` imports it at startup.
+  and the runtime stage needs it because the server imports it at startup.
 
 ## Boundaries
 

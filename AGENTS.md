@@ -108,9 +108,17 @@ The project stays small and readable. Do not add:
 - `client/src/style.css` — small set of application styles layered on Tabler, built only from
   Tabler custom properties so both color modes stay correct.
 - `shared/fieldDefinitions.js` — application-level custom field-definition format and validation, imported by both the client and the server.
-- `server/src/index.js` — Express app, all API routes, validation, photo handling, backup, and production static serving.
+- `server/src/index.js` — process entry point: port and production flag, the HTTP listener, and shutdown.
+- `server/src/app.js` — composition root: builds every repository, service, upload, and route table and assembles the Express app, including production static serving.
+- `server/src/routes/` — thin Express route tables; they parse the request, call one service, and shape the response.
+- `server/src/services/` — application and business logic, independent of Express request and response objects.
+- `server/src/repositories/` — all SQL and row mapping for the inventory tables.
+- `server/src/integrations/` — adapters for external or heavy dependencies: OpenAI and the local background-removal model.
+- `server/src/restore/` — restore configuration, staged-upload sessions, and the SQLite file checks used by the restore service.
+- `server/src/http/` — transport middleware: uploads, the maintenance guard, and the central error handler.
 - `server/src/db.js` — database path, SQLite connection, PRAGMAs, and current table/index schema.
 - `test/e2e.test.js` — end-to-end acceptance test for the API, persistence, photos, and backups.
+- `test/services.test.js` — service-level regression tests that run without HTTP against a temporary database.
 - `test/e2e/` — Playwright browser tests, their fixtures, shared helpers, and the run launcher.
 - `playwright.config.js` — Playwright projects, isolated test ports, and the API and Vite processes started for the suite.
 - `docs/README.md` — documentation layout and conventions.

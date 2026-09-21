@@ -29,7 +29,7 @@ separate container, room, or shelf entity.
   `idx_items_parent`. Databases created before the feature receive the column through an in-place
   `ALTER TABLE` in `server/src/db.js`, so existing data stays valid with `parent_item_id = NULL`.
 - `POST /api/items` and `PUT /api/items/:id` accept `parent_item_id` (an item ID or `null`).
-  `resolveParentId` in `server/src/index.js` rejects an unknown parent, self-parenting, and any move
+  `ItemService.resolveParentId` rejects an unknown parent, self-parenting, and any move
   into a descendant; descendants are collected with a recursive CTE, so indirect cycles such as
   `A → B → C → A` are refused with HTTP `400`.
 - `GET /api/items` joins the parent row and returns `parent_id` and `parent_name` for each listed

@@ -33,13 +33,6 @@ Implemented behavior is documented separately in [`features/README.md`](features
    executables to the same tagged GitHub Release. See
    [`TASK-02-WINDOWS-ELECTRON-RELEASE.md`](issues/TASK-02-WINDOWS-ELECTRON-RELEASE.md).
 
-## Maintenance
-
-1. **Backend structural refactor** — Planned and unblocked by the backend architecture rules now
-   recorded in `AGENTS.md`. Refactors backend responsibilities into proportionate controller,
-   service, and repository boundaries without changing application behavior. See
-   [`TASK_backend_structural_refactor.md`](issues/TASK_backend_structural_refactor.md).
-
 Update this file in the same change whenever an active task file is added, removed, reprioritized, or
 materially changed. Remove completed work from this roadmap when its task file moves through the
 repository documentation lifecycle.

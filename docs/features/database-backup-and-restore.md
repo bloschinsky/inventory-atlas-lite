@@ -41,7 +41,7 @@ backup become the active database. It is not a merge, an import, or a selective 
 
 - `server/src/db.js` keeps the `better-sqlite3` connection behind a proxy. Every module reaches the
   connection that is open *now*, so replacing the database file does not leave anything bound to a
-  closed connection. Statements and transactions in `server/src/index.js` are therefore built when
+  closed connection. Statements and transactions in the repositories are therefore built when
   they are used, never at module load.
 - `applySchema()` creates the tables, runs the additive column migrations, and stamps
   `PRAGMA user_version` with `SCHEMA_VERSION` (currently `1`). Databases written before this feature
@@ -70,7 +70,9 @@ backup become the active database. It is not a merge, an import, or a selective 
 
 ### Safe replacement
 
-`server/src/restore.js` performs the swap in one serialized operation:
+`RestoreService` in `server/src/services/restoreService.js` performs the swap in one serialized
+operation, with the staged uploads and their tokens held by `server/src/restore/stagingStore.js` and
+the SQLite file checks in `server/src/restore/databaseFile.js`:
 
 1. only one restore runs at a time, and it waits for in-flight backup downloads;
 2. while it runs, every `POST`, `PUT`, `PATCH`, and `DELETE` outside `/api/restore/` answers HTTP

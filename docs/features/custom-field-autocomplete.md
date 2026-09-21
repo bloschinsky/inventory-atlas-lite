@@ -25,7 +25,8 @@ input: suggestions speed up typing, they do not restrict what can be saved.
 
 ## Implementation overview
 
-- `GET /api/fields/:id/suggestions?search=&limit=` in `server/src/index.js` groups non-empty
+- `GET /api/fields/:id/suggestions?search=&limit=` is served by `CustomFieldService` over
+  `CustomFieldRepository`, which groups non-empty
   `item_field_values` by `TRIM(value) COLLATE NOCASE` for that `field_id`, orders by usage count and
   then alphabetically, and returns `[{ "value": "Pentax", "usage_count": 7 }]`. `limit` defaults to
   `10` and is capped at `20`. The endpoint returns `404` for an unknown field and `400` for a

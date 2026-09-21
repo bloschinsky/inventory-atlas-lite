@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import sharp from 'sharp';
-import { removeBackgroundWithSession } from '../server/src/backgroundRemoval.js';
+import { removeBackgroundWithSession } from '../server/src/integrations/backgroundRemoval.js';
 
 test('background removal isolates, centers, and places a subject on a white JPEG canvas', async () => {
   const source = await sharp({ create: { width: 400, height: 300, channels: 3, background: '#ffffff' } })
