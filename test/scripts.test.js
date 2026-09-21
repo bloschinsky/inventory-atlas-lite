@@ -115,6 +115,30 @@ test('a failed update restores the previous code and keeps the data', { skip: !b
   assert.match(result.stdout, /staging-left=app\s*$/m, 'the swap left directories behind');
 });
 
+test('dependency installs never download the unused ONNX Runtime GPU providers', () => {
+  // onnxruntime-node fetches the CUDA and TensorRT providers on linux/x64 unless it is told not to.
+  // They unpack to more than a gigabyte, which the OOM killer stops in a default 1 GiB container.
+  assert.match(readFileSync('.npmrc', 'utf8'), /^onnxruntime-node-install=skip$/m);
+
+  // The scripts pass the supported environment variable; .npmrc only covers the case they cannot
+  // reach, which is an older installed updater running the install step from its own copy.
+  assert.match(readFileSync('scripts/lib.sh', 'utf8'), /ONNXRUNTIME_NODE_INSTALL=skip npm ci/);
+  assert.match(readFileSync('Dockerfile', 'utf8'), /ONNXRUNTIME_NODE_INSTALL=skip npm ci/);
+  assert.match(readFileSync('Dockerfile', 'utf8'), /^COPY package\.json package-lock\.json \.npmrc \.\/$/m);
+  assert.doesNotMatch(readFileSync('server/src/backgroundRemoval.js', 'utf8'), /cuda|tensorrt/i);
+});
+
+test('the updater takes its build steps from the release it installs', () => {
+  // The updater starts from the installed lib.sh. Re-sourcing the downloaded one is what lets a
+  // release fix the install step that installs it, instead of only the update after that.
+  const updater = readFileSync('scripts/update.sh', 'utf8');
+  const fetched = updater.indexOf('SOURCE=$(ial_fetch_source');
+  const resourced = updater.indexOf('. "$SOURCE/scripts/lib.sh"');
+  const build = updater.indexOf('ial_build_app "$SOURCE"');
+  assert.ok(fetched > 0 && resourced > 0 && build > 0, 'the updater no longer has the expected steps');
+  assert.ok(fetched < resourced && resourced < build, 'the release helpers must load before the build');
+});
+
 test('documented raw URLs point at a branch that exists', () => {
   // The default branch here is master, so a copied-in raw URL for "main" silently 404s.
   const sources = ['README.md', 'docs/proxmox.md', 'scripts/proxmox-install.sh'];

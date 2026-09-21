@@ -98,6 +98,10 @@ fi
 
 # Everything below the swap happens in staging first, so a bad release never reaches the live code.
 SOURCE=$(ial_fetch_source "$REF_KIND" "$REF" "$WORK")
+# This updater runs from the installed lib.sh, so until now a release could not fix the update
+# steps that install it. The downloaded release provides them from here on.
+# shellcheck source=scripts/lib.sh
+. "$SOURCE/scripts/lib.sh"
 CURRENT_VERSION=$(ial_app_version "$IAL_APP_DIR")
 NEW_VERSION=$(ial_app_version "$SOURCE")
 ial_log "Updating Inventory Atlas Lite $CURRENT_VERSION to $NEW_VERSION ($REF)"

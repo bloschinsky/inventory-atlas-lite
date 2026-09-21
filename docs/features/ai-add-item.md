@@ -59,9 +59,11 @@ model session is reused, large decoded images are bounded and resized to at most
 side, and no temporary files are created.
 
 Sessions are always created with the `cpu` execution provider, so the Docker build and the Proxmox
-installer both install the dependencies with `ONNXRUNTIME_NODE_INSTALL=skip`. Without it,
-`onnxruntime-node` downloads the CUDA and TensorRT providers from NuGet on `linux/x64` and unpacks
-over a gigabyte of unused libraries, which the OOM killer stops in a default 1 GiB container.
+installer both install the dependencies with `ONNXRUNTIME_NODE_INSTALL=skip`, and the repository
+`.npmrc` repeats it for an already installed, older updater that runs `npm ci` from its own copy of
+`lib.sh`. Without it, `onnxruntime-node` downloads the CUDA and TensorRT providers from NuGet on
+`linux/x64` and unpacks over a gigabyte of unused libraries, which the OOM killer stops in a default
+1 GiB container.
 
 The subject mask is resized to the source dimensions, its visible bounds are detected, and the
 undistorted subject is centered with padding on a white canvas that retains the source aspect ratio.

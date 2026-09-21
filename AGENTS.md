@@ -58,6 +58,7 @@ The data flow is intentionally simple: a Vue page calls the helper in `client/sr
 - `docs/changes/` — dated records of completed repository changes.
 - `data/` — local runtime data; SQLite files and backups are ignored by Git.
 - `dist/` — output from `npm run build`; generated automatically and ignored by Git.
+- `.npmrc` — project npm settings that must travel with the release archive and the build context.
 - `eslint.config.js` — recommended ESLint rules for JavaScript and Vue files, plus browser and Node.js globals.
 - `vite.config.js` — Vue plugin and development proxy configuration.
 - `README.md` — setup, production, and backup instructions.
