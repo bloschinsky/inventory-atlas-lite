@@ -58,6 +58,11 @@ decodes one in-memory image, and runs the lightweight U2NetP segmentation model 
 model session is reused, large decoded images are bounded and resized to at most 2048 pixels per
 side, and no temporary files are created.
 
+Sessions are always created with the `cpu` execution provider, so the Docker build and the Proxmox
+installer both install the dependencies with `ONNXRUNTIME_NODE_INSTALL=skip`. Without it,
+`onnxruntime-node` downloads the CUDA and TensorRT providers from NuGet on `linux/x64` and unpacks
+over a gigabyte of unused libraries, which the OOM killer stops in a default 1 GiB container.
+
 The subject mask is resized to the source dimensions, its visible bounds are detected, and the
 undistorted subject is centered with padding on a white canvas that retains the source aspect ratio.
 The endpoint returns a quality-90 JPEG. If any processing step fails, the browser keeps the completed

@@ -147,7 +147,10 @@ ial_app_version() { # source directory
 
 ial_build_app() { # source directory
   ial_log "Installing dependencies from the committed lockfile"
-  ( cd "$1" && npm ci --no-audit --no-fund ) || ial_die "npm ci failed."
+  # On linux/x64 onnxruntime-node downloads the CUDA and TensorRT execution providers from NuGet and
+  # unpacks more than a gigabyte of shared libraries. The application only ever creates CPU sessions,
+  # and a default container has 1 GiB of memory, so that download is skipped instead of being killed.
+  ( cd "$1" && ONNXRUNTIME_NODE_INSTALL=skip npm ci --no-audit --no-fund ) || ial_die "npm ci failed."
   ial_log "Building the production client"
   ( cd "$1" && npm run build ) || ial_die "The production build failed."
   ial_log "Removing development-only dependencies"

@@ -10,7 +10,9 @@ COPY package.json package-lock.json ./
 COPY scripts/prepare-background-model.mjs ./scripts/prepare-background-model.mjs
 COPY server ./server
 COPY shared ./shared
-RUN npm ci --no-audit --no-fund
+# The application only creates CPU inference sessions, so the CUDA and TensorRT execution providers
+# onnxruntime-node would fetch on linux/x64 are skipped: they add over a gigabyte to the image.
+RUN ONNXRUNTIME_NODE_INSTALL=skip npm ci --no-audit --no-fund
 
 COPY index.html vite.config.js ./
 COPY client ./client
