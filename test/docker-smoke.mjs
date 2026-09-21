@@ -21,7 +21,12 @@ const json = (method, body) => ({
 });
 
 const health = await (await request('/api/health')).json();
-assert.deepEqual(health, { status: 'ok', database: 'ok', version: expectedVersion });
+// The body also carries the restore readiness flags, so this smoke test checks the fields it is
+// about instead of the exact shape of the response.
+assert.equal(health.status, 'ok');
+assert.equal(health.database, 'ok');
+assert.equal(health.version, expectedVersion);
+assert.equal(health.ready, true, 'the container answers outside restore maintenance');
 
 if (mode === 'create') {
   const category = await (await request('/api/categories', json('POST', { name: 'Docker smoke category' }))).json();
