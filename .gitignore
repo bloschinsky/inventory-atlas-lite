@@ -4,6 +4,8 @@ dist/
 data/*.sqlite
 data/*.sqlite-*
 data/backups/
+data/pre-restore-backups/
+data/restore-staging/
 data/ai-settings.json*
 .env
 .env.local
