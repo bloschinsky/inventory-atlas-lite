@@ -22,6 +22,14 @@ Implemented behavior is documented separately in [`features/README.md`](features
    Includes a film-boxes-in-hand regression asset. See
    [`TASK-background-removal-quality-phase-2.md`](issues/TASK-background-removal-quality-phase-2.md).
 
+4. **Effective location inheritance** — Planned. Displays a nested item's location from its parent
+   container hierarchy while preserving the item's own stored location for editing. See
+   [`TASK-effective-location-inheritance.md`](issues/TASK-effective-location-inheritance.md).
+
+5. **Tabler photo carousel** — Planned. Replaces Item Photo Viewer's text navigation with a
+   touch-friendly Tabler/Bootstrap carousel, indicators, and accessible controls. See
+   [`TASK-tabler-photo-carousel.md`](issues/TASK-tabler-photo-carousel.md).
+
 ## Distribution
 
 1. **Windows desktop distribution via Electron** — Planned and unblocked by the completed
@@ -30,6 +38,15 @@ Implemented behavior is documented separately in [`features/README.md`](features
    [`TASK-02-WINDOWS-ELECTRON-RELEASE.md`](issues/TASK-02-WINDOWS-ELECTRON-RELEASE.md).
 
 ## Maintenance
+
+1. **Backend OOP/SOLID development rules** — Planned. Adds pragmatic backend responsibility and
+   anti-overengineering rules to the project instructions. See
+   [`TASK_backend_oop_solid_agent_rules.md`](issues/TASK_backend_oop_solid_agent_rules.md).
+
+2. **Backend structural refactor** — Planned; blocked by Backend OOP/SOLID development rules.
+   Refactors backend responsibilities into proportionate controller, service, and repository
+   boundaries without changing application behavior. See
+   [`TASK_backend_structural_refactor.md`](issues/TASK_backend_structural_refactor.md).
 
 Update this file in the same change whenever an active task file is added, removed, reprioritized, or
 materially changed. Remove completed work from this roadmap when its task file moves through the
