@@ -9,6 +9,7 @@ RUN apt-get update \
 COPY package.json package-lock.json ./
 COPY scripts/prepare-background-model.mjs ./scripts/prepare-background-model.mjs
 COPY server ./server
+COPY shared ./shared
 RUN npm ci --no-audit --no-fund
 
 COPY index.html vite.config.js ./
@@ -36,6 +37,7 @@ COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/server ./server
+COPY --from=build /app/shared ./shared
 COPY LICENSES ./LICENSES
 
 RUN mkdir -p /data && chown node:node /data

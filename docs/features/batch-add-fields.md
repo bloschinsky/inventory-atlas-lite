@@ -77,6 +77,8 @@ category templates.
   Bootstrap modal markup as the About dialog, without Bootstrap JavaScript.
 - `client/src/pages/Categories.vue` owns the button and reloads its fields and category counters
   through the existing `select`/`load` pair once the dialog reports a successful create.
+- The Docker image copies `shared/` into both stages: the build stage needs it for `vite build`,
+  and the runtime stage needs it because `server/src/index.js` imports it at startup.
 
 ## Boundaries
 
