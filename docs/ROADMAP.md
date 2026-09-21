@@ -39,13 +39,9 @@ Implemented behavior is documented separately in [`features/README.md`](features
 
 ## Maintenance
 
-1. **Backend OOP/SOLID development rules** — Planned. Adds pragmatic backend responsibility and
-   anti-overengineering rules to the project instructions. See
-   [`TASK_backend_oop_solid_agent_rules.md`](issues/TASK_backend_oop_solid_agent_rules.md).
-
-2. **Backend structural refactor** — Planned; blocked by Backend OOP/SOLID development rules.
-   Refactors backend responsibilities into proportionate controller, service, and repository
-   boundaries without changing application behavior. See
+1. **Backend structural refactor** — Planned and unblocked by the backend architecture rules now
+   recorded in `AGENTS.md`. Refactors backend responsibilities into proportionate controller,
+   service, and repository boundaries without changing application behavior. See
    [`TASK_backend_structural_refactor.md`](issues/TASK_backend_structural_refactor.md).
 
 Update this file in the same change whenever an active task file is added, removed, reprioritized, or

@@ -23,7 +23,69 @@ This is an MVP without authentication, intended for use on a trusted local netwo
 - In development, Vite runs on `:5173` and proxies `/api` to Express on `PORT` (default `3000`).
 - In production, Express serves the built client from `dist/` and listens on `PORT` (default `3000`).
 
-The data flow is intentionally simple: a Vue page calls the helper in `client/src/api.js`, an Express route validates the request and works directly with SQLite, and then returns JSON. Do not introduce additional layers without a concrete need.
+The data flow is intentionally simple: a Vue page calls the helper in `client/src/api.js`, the Express backend validates the request, applies the logic it needs, reads or writes SQLite, and then returns JSON. Organize server code according to the backend rules below, and do not introduce additional layers without a concrete need.
+
+## Backend architecture and code organization
+
+These rules are mandatory for all backend work. They describe how server code must be organized;
+they do not require rewriting existing code outside the scope of the task at hand.
+
+### Principles
+
+- Apply SOLID principles pragmatically, as guidance for responsibility boundaries, not as a checklist.
+- Use OOP where it measurably improves separation of responsibilities, maintainability, testability,
+  extensibility, or dependency management. Do not use it for simple pure functions or trivial
+  utilities, where a plain function or module is clearer.
+- Prefer composition over inheritance. Deep inheritance hierarchies are not acceptable.
+- Keep every class or module focused on a single clear responsibility.
+- Prefer explicit dependencies passed in over hidden global state and implicit singletons.
+- Keep HTTP/API handling, business logic, persistence, and external integrations separated.
+
+### Responsibility flow
+
+Prefer this flow where it applies:
+
+```text
+Controller / Route
+    ↓
+Service
+    ↓
+Repository
+    ↓
+Database / External dependency
+```
+
+- **Controllers/routes** stay thin: parse and validate the request, call one service, shape the
+  response. They must not contain persistence code or substantial business logic.
+- **Services** contain application and business logic and orchestrate the work of repositories and
+  integrations.
+- **Repositories** encapsulate database access and persistence details, including SQL and row
+  mapping. Nothing above them should depend on the shape of the storage.
+- **External integrations** are isolated behind dedicated services or adapters where practical, so
+  the rest of the backend depends on the project's own interface rather than on a third-party client.
+- Dependencies point inward, toward application abstractions, rather than forcing business logic to
+  depend directly on infrastructure details.
+- Design important business logic so it can be tested without the HTTP layer or a real database where
+  practical.
+
+### Anti-overengineering constraints
+
+The project stays small and readable. Do not add:
+
+- abstractions without a concrete current need;
+- deep inheritance hierarchies;
+- one interface per class by default;
+- `Interface -> Implementation` duplication where only one implementation exists and no substitution,
+  testing, or isolation benefit is gained;
+- unnecessary factories, builders, managers, or providers;
+- trivial logic split across an excessive number of classes and files;
+- enterprise-style architecture that adds complexity without improving this project.
+
+### Decision rule
+
+> Use OOP and SOLID pragmatically. Introduce an abstraction only when it provides a clear benefit for
+> responsibility separation, substitution, testing, reuse, or dependency isolation. Prefer the
+> simplest structure that preserves clean boundaries.
 
 ## Repository structure
 
