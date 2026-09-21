@@ -221,9 +221,11 @@ web, create categories or fields, or make a second AI request.
    files and save.
 2. Up to **10 images per upload, 15 MB each**. Supported formats are JPEG, PNG, WebP, and GIF; other
    files are rejected by the server.
-3. The item page shows one large photo at a time. With several photos, **Previous** and **Next**
-   below it move through them and a `1 / 3` indicator shows where you are. The first photo is used as
-   the thumbnail in the items list.
+3. The item page shows one large photo at a time. With several photos it becomes a carousel: the
+   arrows over the left and right edge of the image move one photo, the small bars at the bottom of
+   the image jump straight to a photo, and a `1 / 3` counter below shows where you are. You can also
+   swipe on a touch screen or drag with the mouse. Nothing changes on its own. The first photo is
+   used as the thumbnail in the items list.
 4. Delete a photo with **Delete photo** under it on the item page, or with the **×** button on its
    thumbnail in the edit form. Both act immediately and are separate from deleting the item.
 

@@ -26,10 +26,6 @@ Implemented behavior is documented separately in [`features/README.md`](features
    container hierarchy while preserving the item's own stored location for editing. See
    [`TASK-effective-location-inheritance.md`](issues/TASK-effective-location-inheritance.md).
 
-5. **Tabler photo carousel** — Planned. Replaces Item Photo Viewer's text navigation with a
-   touch-friendly Tabler/Bootstrap carousel, indicators, and accessible controls. See
-   [`TASK-tabler-photo-carousel.md`](issues/TASK-tabler-photo-carousel.md).
-
 ## Distribution
 
 1. **Windows desktop distribution via Electron** — Planned and unblocked by the completed

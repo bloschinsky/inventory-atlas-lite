@@ -52,6 +52,18 @@ body.app-menu-open { overflow: hidden; }
   .photo-frame { min-height: 200px; }
 }
 
+/*
+  Carousel controls sit on top of the photo itself, so they keep one light appearance in both
+  color modes instead of following the Tabler light/dark tokens. A shadow on the arrows and a
+  translucent backdrop behind the compact indicators keep them readable on any image.
+*/
+.photo-carousel { --tblr-carousel-indicator-active-bg: #fff; --tblr-carousel-control-icon-filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .8)); }
+.photo-carousel .carousel-control-prev, .photo-carousel .carousel-control-next { opacity: .75; }
+.photo-carousel .carousel-indicators { inset-inline: 0; width: fit-content; margin: 0 auto .75rem; padding-inline: .5rem; background: rgba(0, 0, 0, .3); border-radius: 999px; }
+.photo-carousel .carousel-indicators [data-bs-target] { width: 1.25rem; border-top-width: 6px; border-bottom-width: 6px; }
+/* Dragging the photo itself would start a native image drag instead of a swipe. */
+.photo-carousel img { user-select: none; -webkit-user-drag: none; }
+
 /* The remove button that overlays an uploaded photo thumbnail in the item form. */
 .app-thumb-remove { width: 1.25rem; height: 1.25rem; line-height: 1; }
 
