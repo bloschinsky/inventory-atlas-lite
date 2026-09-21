@@ -212,6 +212,13 @@ onMounted(async () => {
               class="form-control"
               placeholder="Garage, box A…"
             >
+            <div
+              v-if="form.parent_item_id"
+              class="form-text"
+            >
+              Displayed location is inherited from the parent container. This field keeps this
+              item's own saved location.
+            </div>
           </div>
         </div>
         <div class="row">
@@ -312,7 +319,8 @@ onMounted(async () => {
             </li>
           </ul>
           <div class="form-text">
-            Leave empty to keep this item top-level.
+            Leave empty to keep this item top-level. While an item is stored inside another one, its
+            displayed location is inherited from the parent container.
           </div>
         </div>
         <div class="mb-3">

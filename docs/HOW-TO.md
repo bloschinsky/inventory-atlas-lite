@@ -67,15 +67,21 @@ The saved key is shown only as a masked value afterwards.
 | **Item** | One physical thing. It always has a name and a category, plus an automatically assigned UUID and created/updated timestamps. Purchase details and a serial number are optional base fields available in every category. |
 | **Category** | A group of items, such as `Cameras`. Category names are unique and case-insensitive. |
 | **Custom field** | An extra field that belongs to one category. Types: Text, Number, Date, Boolean. Items of that category get the field in their form. |
-| **Location** | A free-text note about where the object physically is, such as `Garage` or `Shelf 2`. It is not linked to anything. |
+| **Location** | A free-text note about where the object physically is, such as `Garage` or `Shelf 2`. An item stored inside another item is displayed at the location of its outermost container instead. |
 | **Stored inside** | A real link to another item that contains this one, such as a lens inside `Box A`. |
 | **Photo** | An image stored inside the database together with the item. |
 | **Backup** | A downloadable copy of the whole SQLite database, photos included. |
 | **Restore** | Replacing the whole inventory with the contents of such a backup file. |
 
 **Location and Stored inside are different things and work well together.** `Box A` has
-`Location = Garage`; the lens inside it has `Stored inside = Box A` and usually no location of its
-own. The box tells you where things are; the nesting tells you what is in what.
+`Location = Garage`; the lens inside it has `Stored inside = Box A`, so it is displayed in the
+`Garage` too. The box tells you where things are; the nesting tells you what is in what.
+
+**A contained item inherits its displayed location.** While an item is stored inside another one,
+every view shows the location of the outermost container of the chain, through as many levels as
+there are. The item's own **Location** text is never overwritten: the form still edits it, and it
+becomes visible again as soon as the item is taken out of its container. If no container in the
+chain has location text, the location is displayed as empty.
 
 A custom field belongs to one category only. `Brand` in `Cameras` and `Brand` in `Lenses` are two
 separate fields, and they keep separate value suggestions.
@@ -95,8 +101,8 @@ separate fields, and they keep separate value suggestions.
    categories are shown separately, with smaller groups combined under **Other**; an actively
    selected smaller category remains visible.
 4. **Placement status** counts each item exactly once: first as **Inside a container**, otherwise as
-   **Direct location** when it has location text, or as **Unplaced**. Containers themselves remain
-   normal inventory items.
+   **Direct location** when it has location text, or as **Unplaced**. It uses each item's own saved
+   location, not the inherited one. Containers themselves remain normal inventory items.
 5. A category with no items displays a normal zero-data view. If loading fails, press **Retry**.
 
 The database records `created_at` with SQLite `CURRENT_TIMESTAMP`, which is UTC. The Dashboard uses
@@ -239,7 +245,8 @@ web, create categories or fields, or make a second AI request.
 5. On a wide screen the results are a table with photo, name, category, condition, location,
    **Stored inside**, and **View** / **Edit** buttons; the container name links to its own page. On a
    narrower window the location and the container move under the item name, and on a phone each item
-   is a card with the same information and the same two buttons.
+   is a card with the same information and the same two buttons. The location shown is the inherited
+   one for items that sit inside a container.
 6. The list shows 12 items per page; use **Previous** and **Next** below the results. The total count
    is shown under the **Items** heading.
 
@@ -252,7 +259,8 @@ web, create categories or fields, or make a second AI request.
 4. Press **Clear** next to the badge to take the item out of its container and make it top-level
    again.
 5. Save. The item page now shows a **Storage** card with **Stored inside** linking to the container,
-   and the container's page lists the item under **Contents**.
+   and the container's page lists the item under **Contents**. **Location** on the item page now
+   shows the container's location with a short note that it is inherited.
 
 Nesting can go several levels deep. An item cannot be placed inside itself or inside anything it
 already contains; the server rejects such a move with an error message.
@@ -340,8 +348,8 @@ Garage
 5. Open `Box A`: both items are listed under **Contents** in its **Storage** card, each linking to
    its own page.
 6. Open `Helios 44-2`: **Stored inside** links back to `Box A`.
-7. When the box moves to the attic, change **Location** on `Box A` only. Its contents follow it
-   automatically because they have no location of their own.
+7. When the box moves to the attic, change **Location** on `Box A` only. Its contents immediately
+   display the attic as well, because a contained item is shown at the location of its container.
 
 ## 7. Backup and data safety
 

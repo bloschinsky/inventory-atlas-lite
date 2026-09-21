@@ -22,10 +22,6 @@ Implemented behavior is documented separately in [`features/README.md`](features
    Includes a film-boxes-in-hand regression asset. See
    [`TASK-background-removal-quality-phase-2.md`](issues/TASK-background-removal-quality-phase-2.md).
 
-4. **Effective location inheritance** — Planned. Displays a nested item's location from its parent
-   container hierarchy while preserving the item's own stored location for editing. See
-   [`TASK-effective-location-inheritance.md`](issues/TASK-effective-location-inheritance.md).
-
 ## Distribution
 
 1. **Windows desktop distribution via Electron** — Planned and unblocked by the completed

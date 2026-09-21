@@ -68,11 +68,11 @@ const editRoute = item => `/items/${item.id}/edit`;
                 {{ item.name }}
               </RouterLink>
               <span
-                v-if="item.location || item.parent_id"
+                v-if="item.effective_location || item.parent_id"
                 class="d-xl-none d-block meta-text"
               >
-                <template v-if="item.location">{{ item.location }}</template>
-                <template v-if="item.location && item.parent_id"> · </template>
+                <template v-if="item.effective_location">{{ item.effective_location }}</template>
+                <template v-if="item.effective_location && item.parent_id"> · </template>
                 <template v-if="item.parent_id">
                   Stored inside
                   <RouterLink :to="`/items/${item.parent_id}`">{{ item.parent_name }}</RouterLink>
@@ -83,9 +83,9 @@ const editRoute = item => `/items/${item.id}/edit`;
             <td>{{ item.condition || '—' }}</td>
             <td
               class="truncate-cell d-none d-xl-table-cell"
-              :title="item.location || undefined"
+              :title="item.effective_location || undefined"
             >
-              {{ item.location || '—' }}
+              {{ item.effective_location || '—' }}
             </td>
             <td class="truncate-cell d-none d-xl-table-cell">
               <RouterLink
@@ -154,17 +154,17 @@ const editRoute = item => `/items/${item.id}/edit`;
               </RouterLink>
             </p>
             <p
-              v-if="item.condition || item.location"
+              v-if="item.condition || item.effective_location"
               class="meta-text mb-0"
             >
               <template v-if="item.condition">
                 {{ item.condition }}
               </template>
-              <template v-if="item.condition && item.location">
+              <template v-if="item.condition && item.effective_location">
                 ·
               </template>
-              <template v-if="item.location">
-                {{ item.location }}
+              <template v-if="item.effective_location">
+                {{ item.effective_location }}
               </template>
             </p>
           </div>

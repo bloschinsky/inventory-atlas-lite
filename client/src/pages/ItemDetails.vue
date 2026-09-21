@@ -113,7 +113,13 @@ onMounted(load);
                 Location
               </dt>
               <dd class="col-sm-8 text-break">
-                {{ item.location || '—' }}
+                {{ item.effective_location || '—' }}
+                <span
+                  v-if="item.effective_location_source"
+                  class="d-block meta-text"
+                >
+                  Displayed location is inherited from the parent container.
+                </span>
               </dd>
               <template v-if="item.purchase_date">
                 <dt class="col-sm-4">

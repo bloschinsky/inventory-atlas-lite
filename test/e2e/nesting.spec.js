@@ -36,3 +36,36 @@ test('stores an item inside another one and links both directions', async ({ pag
   await row.getByRole('link', { name: boxName, exact: true }).click();
   await expect(page.getByRole('heading', { name: boxName })).toBeVisible();
 });
+
+test('displays the location inherited from the container and restores the own one', async ({ page, request }) => {
+  const categoryName = unique('Inherited');
+  const category = await createCategory(request, categoryName);
+  const shelfLocation = unique('Home');
+  const ownLocation = unique('Garage');
+  const boxName = unique('Crate');
+  const box = await createItem(request, { name: boxName, category_id: category.id, location: shelfLocation });
+  const lensName = unique('Lens');
+  const lens = await createItem(request, {
+    name: lensName, category_id: category.id, location: ownLocation, parent_item_id: box.id
+  });
+
+  await page.goto(`/items/${lens.id}`);
+  await expect(detail(page, 'Location')).toContainText(shelfLocation);
+  await expect(detail(page, 'Location')).toContainText('inherited from the parent container');
+
+  // The items list shows the same inherited location on the contained item's row.
+  await page.goto('/items');
+  await page.mouse.move(600, 400);
+  await page.getByPlaceholder('Search name, description or serial number…').fill(lensName);
+  await expect(page.getByRole('row').filter({ hasText: lensName })).toContainText(shelfLocation);
+
+  // Editing still works on the item's own saved location, and removing the container shows it again.
+  await page.goto(`/items/${lens.id}/edit`);
+  await page.mouse.move(600, 400);
+  await expect(page.getByLabel('Location', { exact: true })).toHaveValue(ownLocation);
+  await page.getByRole('button', { name: 'Clear' }).click();
+  await page.getByRole('button', { name: 'Save item' }).click();
+  await expect(page.getByRole('heading', { name: lensName })).toBeVisible();
+  await expect(detail(page, 'Location')).toContainText(ownLocation);
+  await expect(detail(page, 'Location')).not.toContainText('inherited from the parent container');
+});

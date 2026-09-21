@@ -591,3 +591,45 @@ test('AI field generation returns a reviewable draft and never writes to the cat
     await rm(dataDir, { recursive: true, force: true });
   }
 });
+
+test('the API returns the inherited effective location without rewriting saved locations', async () => {
+  const dataDir = await mkdtemp(path.join(os.tmpdir(), 'inventory-location-test-'));
+  let server;
+  try {
+    server = await startServer(dataDir);
+    const category = await request('/api/categories', json('POST', { name: 'Containers' }));
+    const create = (name, location, parent) => request('/api/items', json('POST', {
+      name, category_id: category.id, location, parent_item_id: parent ? parent.id : null
+    }));
+    const box = await create('Box', 'Home');
+    const bag = await create('Camera Bag', 'Office', box);
+    const camera = await create('Camera', 'Garage', bag);
+
+    // Every level of the chain is displayed at the location of the top-most container.
+    const nested = await request(`/api/items/${camera.id}`);
+    assert.equal(nested.location, 'Garage');
+    assert.equal(nested.effective_location, 'Home');
+    assert.equal(nested.effective_location_source.name, 'Box');
+    assert.equal((await request(`/api/items/${bag.id}`)).effective_location, 'Home');
+    assert.equal((await request(`/api/items/${box.id}`)).effective_location_source, null);
+    const listed = await request('/api/items?sort=name');
+    assert.deepEqual(listed.items.map(item => [item.name, item.location, item.effective_location]),
+      [['Box', 'Home', 'Home'], ['Camera', 'Garage', 'Home'], ['Camera Bag', 'Office', 'Home']]);
+
+    // Moving the container moves its contents; the stored rows of the contents never change.
+    await request(`/api/items/${box.id}`, saveItem(box, { location: 'Storage unit' }));
+    assert.equal((await request(`/api/items/${camera.id}`)).effective_location, 'Storage unit');
+    const database = new Database(path.join(dataDir, 'inventory.sqlite'), { readonly: true });
+    assert.equal(database.prepare('SELECT location FROM items WHERE id = ?').get(camera.id).location, 'Garage');
+    database.close();
+
+    // Leaving the container restores the item's own location, and an empty chain stays empty.
+    await request(`/api/items/${camera.id}`, saveItem(camera, { location: 'Garage', parent_item_id: null }));
+    assert.equal((await request(`/api/items/${camera.id}`)).effective_location, 'Garage');
+    await request(`/api/items/${box.id}`, saveItem(box, { location: '' }));
+    assert.equal((await request(`/api/items/${bag.id}`)).effective_location, null);
+  } finally {
+    if (server) await stopServer(server);
+    await rm(dataDir, { recursive: true, force: true });
+  }
+});

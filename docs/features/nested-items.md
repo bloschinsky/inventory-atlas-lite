@@ -17,8 +17,10 @@ separate container, room, or shelf entity.
   under the item name on narrower screens and on phone cards. Only the direct parent is shown; the
   list is not a tree.
 - Nesting has no depth limit, and an item has at most one direct parent.
-- The plain-text `Location` field is independent of nesting: `Location` describes where the physical
-  object is, `Stored inside` describes which other record holds it.
+- The plain-text `Location` field keeps describing where the physical object is, while
+  `Stored inside` describes which other record holds it. A contained item is displayed at the
+  location of its outermost container; its own saved `Location` is untouched and still editable. See
+  [Effective location inheritance](effective-location-inheritance.md).
 - An item that still contains other items cannot be deleted; its contents must be moved or deleted
   first.
 - Changing the parent never affects the category, custom field values, or photos.

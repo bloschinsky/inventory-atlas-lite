@@ -192,3 +192,64 @@ test('the dashboard summarizes the inventory and its optional category scope', (
   failure(() => dashboardService.overview({ categoryId: 'all' }), 400, 'Category ID must be a positive integer.');
   failure(() => dashboardService.overview({ categoryId: '999' }), 404, 'Category not found.');
 });
+
+test('the displayed location is inherited from the top-most container', () => {
+  const { categoryService, itemService } = build();
+  const category = categoryService.create({ name: 'Gear' });
+  const save = (item, changes) => itemService.update(item.id, {
+    name: item.name, category_id: category.id, location: item.location, parent_item_id: item.parent_item_id, ...changes
+  });
+
+  const box = itemService.create({ name: 'Box', category_id: category.id, location: 'Home' });
+  const bag = itemService.create({ name: 'Camera Bag', category_id: category.id, location: 'Office', parent_item_id: box.id });
+  const camera = itemService.create({ name: 'Camera', category_id: category.id, location: 'Garage', parent_item_id: bag.id });
+
+  // A top-level item keeps its own location; nested ones resolve through every parent level.
+  assert.equal(itemService.get(box.id).effective_location, 'Home');
+  assert.equal(itemService.get(bag.id).effective_location, 'Home');
+  const nested = itemService.get(camera.id);
+  assert.equal(nested.effective_location, 'Home');
+  assert.deepEqual(nested.effective_location_source, { id: box.id, uuid: box.uuid, name: 'Box' });
+  assert.equal(itemService.get(box.id).effective_location_source, null);
+  // The saved location of the nested item is never rewritten.
+  assert.equal(nested.location, 'Garage');
+  assert.deepEqual(
+    itemService.list({ sort: 'name' }).items.map(item => [item.name, item.location, item.effective_location]),
+    [['Box', 'Home', 'Home'], ['Camera', 'Garage', 'Home'], ['Camera Bag', 'Office', 'Home']]
+  );
+
+  // Moving the container moves every descendant without touching their rows.
+  save(box, { location: 'Storage unit' });
+  assert.equal(itemService.get(camera.id).effective_location, 'Storage unit');
+  assert.equal(itemService.get(camera.id).location, 'Garage');
+
+  // Taking an item out of its container shows its own saved location again, with no migration.
+  const freed = save(camera, { parent_item_id: null });
+  assert.equal(freed.effective_location, 'Garage');
+  assert.equal(freed.effective_location_source, null);
+  save(camera, { parent_item_id: bag.id });
+
+  // A chain without any location resolves to nothing, so the views show their empty state.
+  save(box, { location: '' });
+  assert.equal(itemService.get(camera.id).effective_location, null);
+  assert.equal(itemService.list({ search: 'Camera Bag' }).items[0].effective_location, null);
+});
+
+test('the item list resolves every effective location in one query', () => {
+  const { db, categoryService, itemService } = build();
+  const category = categoryService.create({ name: 'Crates' });
+  let parentId = null;
+  for (const name of ['Crate', 'Tray', 'Pouch', 'Tag']) {
+    parentId = itemService.create({ name, category_id: category.id, location: name, parent_item_id: parentId }).id;
+  }
+
+  const prepare = db.prepare.bind(db);
+  let statements = 0;
+  db.prepare = sql => { statements += 1; return prepare(sql); };
+  const listed = itemService.list({ pageSize: '100', sort: 'name' });
+  db.prepare = prepare;
+
+  assert.deepEqual(listed.items.map(item => item.effective_location), ['Crate', 'Crate', 'Crate', 'Crate']);
+  // One statement counts the matches and one reads the page, whatever the nesting depth is.
+  assert.equal(statements, 2);
+});

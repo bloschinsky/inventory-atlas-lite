@@ -8,6 +8,22 @@ const itemResponse = item => {
   return { ...rest, purchase_price: amount === null ? null : { amount, currency } };
 };
 
+const presentLocation = value => (value && value.trim() ? value : null);
+
+// A nested item is displayed at the location of the top-most container that holds it, while its own
+// saved location stays untouched in the database. `root` is that container, or the item itself.
+const withEffectiveLocation = (item, root) => ({
+  ...item,
+  effective_location: presentLocation(root ? root.location : item.location),
+  effective_location_source: root && root.id !== item.id ? { id: root.id, uuid: root.uuid, name: root.name } : null
+});
+
+// The list query labels every row with its root in one pass, so no extra query is made per item.
+const listedItemResponse = row => {
+  const { root_id: id, root_uuid: uuid, root_name: name, root_location: location, ...rest } = row;
+  return withEffectiveLocation(itemResponse(rest), id ? { id, uuid, name, location } : null);
+};
+
 export class ItemService {
   constructor({ itemRepository, customFieldRepository, itemPhotoRepository, categoryRepository }) {
     this.items = itemRepository;
@@ -22,6 +38,11 @@ export class ItemService {
     return item;
   }
 
+  // Single-item responses resolve the chain upwards from the item itself.
+  present(item) {
+    return withEffectiveLocation(itemResponse(item), this.items.findRoot(item.id));
+  }
+
   list(query = {}) {
     const page = Math.max(1, Number.parseInt(query.page) || 1);
     const pageSize = Math.min(100, Math.max(1, Number.parseInt(query.pageSize) || 12));
@@ -34,7 +55,7 @@ export class ItemService {
       offset: (page - 1) * pageSize
     });
     return {
-      items: rows.map(itemResponse),
+      items: rows.map(listedItemResponse),
       pagination: { page, pageSize, total, pages: Math.max(1, Math.ceil(total / pageSize)) }
     };
   }
@@ -54,7 +75,7 @@ export class ItemService {
     item.photos = this.photos.listMetadata(item.id);
     item.parent = item.parent_item_id ? this.items.findRef(item.parent_item_id) : null;
     item.children = this.items.listChildren(item.id);
-    return itemResponse(item);
+    return this.present(item);
   }
 
   resolveParentId(raw, itemId = null) {
@@ -116,7 +137,7 @@ export class ItemService {
       for (const [fieldId, value] of values) this.items.saveFieldValue(itemId, fieldId, value);
       return itemId;
     });
-    return itemResponse(this.items.findDetailed(id));
+    return this.present(this.items.findDetailed(id));
   }
 
   update(id, body) {
@@ -127,7 +148,7 @@ export class ItemService {
       for (const [fieldId, value] of values) this.items.saveFieldValue(current.id, fieldId, value);
       return current.id;
     });
-    return itemResponse(this.items.findDetailed(updatedId));
+    return this.present(this.items.findDetailed(updatedId));
   }
 
   remove(id) {

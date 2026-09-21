@@ -1,6 +1,15 @@
 import { randomUUID } from 'node:crypto';
 import { containsLike } from './sql.js';
 
+// Every item is walked down from its top-level container, so one pass labels the whole table with
+// the root that provides its effective location. Items inside a cycle are simply never reached.
+const ROOTS_CTE = `
+  WITH RECURSIVE roots(id, root_id) AS (
+    SELECT id, id FROM items WHERE parent_item_id IS NULL
+    UNION ALL SELECT i.id, r.root_id FROM items i JOIN roots r ON i.parent_item_id = r.id
+  )
+`;
+
 const SORT_COLUMNS = {
   name: 'i.name COLLATE NOCASE',
   category: 'c.name COLLATE NOCASE',
@@ -28,6 +37,18 @@ export class ItemRepository {
 
   findRef(id) {
     return this.db.prepare('SELECT id, uuid, name FROM items WHERE id = ?').get(id);
+  }
+
+  // The top-most container of the chain, or the item itself when it is top-level. The depth guard
+  // keeps a damaged row from looping forever even though cycles cannot be created through the API.
+  findRoot(id) {
+    return this.db.prepare(`
+      WITH RECURSIVE chain(id, uuid, name, location, parent_item_id, depth) AS (
+        SELECT id, uuid, name, location, parent_item_id, 0 FROM items WHERE id = @id
+        UNION ALL SELECT p.id, p.uuid, p.name, p.location, p.parent_item_id, chain.depth + 1
+        FROM items p JOIN chain ON p.id = chain.parent_item_id WHERE chain.depth < 100
+      ) SELECT id, uuid, name, location FROM chain ORDER BY depth DESC LIMIT 1
+    `).get({ id });
   }
 
   listDescendantIds(id) {
@@ -72,13 +93,17 @@ export class ItemRepository {
     const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
     const total = this.db.prepare(`SELECT COUNT(*) AS count FROM items i ${clause}`).get(params).count;
     const rows = this.db.prepare(`
+      ${ROOTS_CTE}
       SELECT i.id, i.uuid, i.name, i.condition, i.location, i.purchase_date,
         i.purchase_price_amount, i.purchase_price_currency, i.serial_number, i.created_at, i.updated_at,
         c.id AS category_id, c.name AS category_name,
         parent.id AS parent_id, parent.name AS parent_name,
+        root.id AS root_id, root.uuid AS root_uuid, root.name AS root_name, root.location AS root_location,
         (SELECT id FROM item_photos p WHERE p.item_id = i.id ORDER BY p.id LIMIT 1) AS thumbnail_id
       FROM items i JOIN categories c ON c.id = i.category_id
-      LEFT JOIN items parent ON parent.id = i.parent_item_id ${clause}
+      LEFT JOIN items parent ON parent.id = i.parent_item_id
+      LEFT JOIN roots ON roots.id = i.id
+      LEFT JOIN items root ON root.id = roots.root_id ${clause}
       ORDER BY ${column} ${order}, i.id ASC LIMIT @limit OFFSET @offset
     `).all({ ...params, limit, offset });
     return { rows, total };

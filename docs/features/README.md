@@ -10,6 +10,7 @@ document describes the current behaviour and its boundaries, not the original pl
 | [Application UI](application-ui.md) | The Tabler application shell: a folded desktop sidebar, a mobile offcanvas drawer, light/dark modes, and responsive pages. |
 | [Item photo carousel](item-photo-carousel.md) | Browse an item's photos in a Tabler carousel with arrows, indicators, swipe, and drag, and keep a valid slide after a deletion. |
 | [Nested items](nested-items.md) | Store an item inside another item and browse its direct contents. |
+| [Effective location inheritance](effective-location-inheritance.md) | Display a contained item at the location of its outermost container while its own saved location stays editable. |
 | [Batch Add Fields](batch-add-fields.md) | Paste a field-definition document, review and edit the proposed fields, and create them in one atomic batch. |
 | [AI Add Fields](ai-add-fields.md) | Describe a category in natural language and review the OpenAI-drafted fields in the batch editor before creating them. |
 | [Custom-field autocomplete](custom-field-autocomplete.md) | Suggest previously saved values for text custom fields. |
