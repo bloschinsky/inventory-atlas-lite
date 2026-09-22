@@ -113,3 +113,13 @@ button.dashboard-bar-button:hover, button.dashboard-bar-button:focus-visible, .d
   object-fit: contain;
 }
 .app-selected-photo-preview { width: 10rem; height: 10rem; object-fit: contain; }
+
+/*
+  Version History opens over the still visible About dialog, so it needs the layer above Bootstrap's
+  own modal and backdrop. Its timeline is Tabler's vertical steps, reading from Tabler tokens only.
+*/
+.app-modal-stacked { z-index: 1065; }
+.app-modal-stacked-backdrop { z-index: 1060; }
+.app-version-history .steps-vertical .step-item { padding-bottom: 1.25rem; }
+.app-version-history .steps-vertical .step-item:last-child { padding-bottom: 0; }
+.app-version-history .steps .step-item ul { color: var(--tblr-secondary); }

@@ -1,8 +1,8 @@
 <script setup>
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
-import { IconBrandGithub } from '@tabler/icons-vue';
+import { IconBrandGithub, IconHistory } from '@tabler/icons-vue';
 import AppBrand from './AppBrand.vue';
-import { aboutOpen, closeAbout } from '../about.js';
+import { aboutOpen, closeAbout, openVersionHistory, versionHistoryOpen } from '../about.js';
 import { appInfo } from '../build-info.js';
 import AboutUpdate from './AboutUpdate.vue';
 
@@ -10,11 +10,13 @@ const panel = ref(null);
 const closeButton = ref(null);
 let opener = null;
 
+// Version History opens on top of this dialog and owns the keyboard and the focus while it is up.
 function onKeydown(event) {
-  if (event.key === 'Escape') closeAbout();
+  if (event.key === 'Escape' && !versionHistoryOpen.value) closeAbout();
 }
 // Keeps the focus inside the open dialog without a dedicated focus-trap dependency.
 function onFocusIn(event) {
+  if (versionHistoryOpen.value) return;
   if (panel.value && !panel.value.contains(event.target)) closeButton.value?.focus();
 }
 function release() {
@@ -101,6 +103,19 @@ onBeforeUnmount(release);
               />
               GitHub repository
             </a>
+            <button
+              type="button"
+              class="btn btn-outline-secondary w-100 mt-2"
+              @click="openVersionHistory()"
+            >
+              <IconHistory
+                class="me-1"
+                :size="18"
+                :stroke-width="1.75"
+                aria-hidden="true"
+              />
+              Version History
+            </button>
             <AboutUpdate />
           </div>
           <div class="modal-footer">

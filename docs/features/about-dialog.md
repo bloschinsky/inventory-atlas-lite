@@ -24,6 +24,10 @@ file is edited by hand for a release.
 - The dialog is an overlay only: it changes no route and always opens, whatever the build metadata
   turned out to be. Its identity block loads nothing; the update panel below it is the only part
   that calls the API, and only when it is asked to.
+- A **Version History** button under the repository link opens the bundled release timeline
+  described in [Version History](version-history.md). It opens as a separate, wider dialog above
+  this one; the About dialog stays open behind it and takes neither the keyboard nor the focus until
+  the history is closed.
 - Under the metadata it carries the update panel described in
   [Self-update from About](self-update.md): **Check for updates** and, where the deployment supports
   it, the confirmation and progress of an update.
@@ -101,8 +105,9 @@ the About component knows which distribution it is running in.
 
 ## Notes and limitations
 
-- The dialog shows identity, build metadata, and the update panel. Changelog, diagnostics, system or
-  database information, and licence text are deliberately out of scope.
+- The dialog shows identity, build metadata, the Version History action, and the update panel.
+  Diagnostics, system or database information, and licence text are deliberately out of scope; the
+  changelog lives in its own dialog.
 - The repository has no logo image, so the dialog reuses the inline brand mark of the shell.
 - `Version` may legitimately read `0.9.0-dev` locally; that marker means the working copy is not at
   a tag, not that anything is wrong.

@@ -27,6 +27,8 @@ jobs:
           cache: npm
       - name: Validate tag and package versions
         run: node scripts/validate-release-version.mjs "$GITHUB_REF_NAME"
+      - name: Validate the release-history entry
+        run: node scripts/release-notes.mjs "$GITHUB_REF_NAME" > /dev/null
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run lint
@@ -179,10 +181,16 @@ jobs:
         shell: bash
         run: |
           version=$(node scripts/validate-release-version.mjs "$GITHUB_REF_NAME")
+          # The user-facing bullets come from shared/release-history.json, the same entry the
+          # About dialog shows, so release notes are never maintained twice.
+          node scripts/release-notes.mjs "$GITHUB_REF_NAME" > release-notes.md
+          {
+            echo
+            echo "Docker: \`ghcr.io/bloschinsky/inventory-atlas-lite:$version\` (linux/amd64). Proxmox users can install or update from the attached verified source archive."
+          } >> release-notes.md
           gh release create "$GITHUB_REF_NAME" \
             "release-assets/inventory-atlas-lite-$GITHUB_REF_NAME.tar.gz" \
             "release-assets/SHA256SUMS" \
             --verify-tag \
             --title "Inventory Atlas Lite $GITHUB_REF_NAME" \
-            --generate-notes \
-            --notes "Docker: \`ghcr.io/bloschinsky/inventory-atlas-lite:$version\` (linux/amd64). Proxmox users can install or update from the attached verified source archive."
+            --notes-file release-notes.md

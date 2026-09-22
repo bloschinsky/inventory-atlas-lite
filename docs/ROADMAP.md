@@ -26,10 +26,6 @@ Implemented behavior is documented separately in [`features/README.md`](features
    AI entry points and direct AI-page navigation while retaining the existing backend guards. See
    [`TASK-ai-feature-visibility.md`](issues/TASK-ai-feature-visibility.md).
 
-5. **Version History in About** — Planned. Adds an offline, bundled release timeline to the About
-   experience and a structured source for concise user-facing release changes. See
-   [`TASK-version-history-about.md`](issues/TASK-version-history-about.md).
-
 ## Distribution
 
 1. **Windows desktop distribution via Electron** — Planned and unblocked by the completed

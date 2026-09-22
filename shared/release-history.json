@@ -1,0 +1,210 @@
+[
+  {
+    "version": "0.21.0",
+    "date": "2026-09-22",
+    "changes": [
+      "Added Version History to the About dialog: a bundled timeline of releases and their user-visible changes.",
+      "Improved offline use: the release history is part of the application and needs no internet connection."
+    ]
+  },
+  {
+    "version": "0.20.1",
+    "date": "2026-09-22",
+    "changes": [
+      "Added a field-definition template that can be inserted into the Batch Add Fields editor."
+    ]
+  },
+  {
+    "version": "0.20.0",
+    "date": "2026-09-22",
+    "changes": [
+      "Added an update panel to the About dialog that checks for a newer stable release.",
+      "Added a confirmed self-update for Proxmox/LXC installations, with an automatic database backup and rollback.",
+      "Improved Docker installations: they report that the container must be updated from the Docker host."
+    ]
+  },
+  {
+    "version": "0.19.0",
+    "date": "2026-09-21",
+    "changes": [
+      "Improved contained items: they are displayed at the location of their outermost container while their own saved location stays editable."
+    ]
+  },
+  {
+    "version": "0.18.0",
+    "date": "2026-09-21",
+    "changes": [
+      "Maintenance release: the server was reorganized into route, service, and repository layers without changing any workflow."
+    ]
+  },
+  {
+    "version": "0.17.1",
+    "date": "2026-09-21",
+    "changes": [
+      "Fixed the release check of the Docker image so published images are verified against the current health response."
+    ]
+  },
+  {
+    "version": "0.17.0",
+    "date": "2026-09-21",
+    "changes": [
+      "Added a photo carousel to item details, with arrows, indicators, swipe, and drag."
+    ]
+  },
+  {
+    "version": "0.16.1",
+    "date": "2026-09-21",
+    "changes": [
+      "Maintenance release: documented the backend architecture rules used for further development."
+    ]
+  },
+  {
+    "version": "0.16.0",
+    "date": "2026-09-21",
+    "changes": [
+      "Added database restore from a downloaded backup, with server-side validation, a pre-restore safety backup, and automatic rollback.",
+      "Fixed backup handling so restore working directories are never picked up as repository content."
+    ]
+  },
+  {
+    "version": "0.15.0",
+    "date": "2026-09-21",
+    "changes": [
+      "Added AI-generated field drafts: describe a category and review the proposed fields in the batch editor before creating them."
+    ]
+  },
+  {
+    "version": "0.14.3",
+    "date": "2026-09-21",
+    "changes": [
+      "Added Batch Add Fields: paste a field-definition document, review and edit it, and create the fields in one batch.",
+      "Fixed the Docker image, which was missing the shared field-definition module.",
+      "Improved installation size and reliability by skipping the unused GPU inference providers."
+    ]
+  },
+  {
+    "version": "0.13.2",
+    "date": "2026-09-20",
+    "changes": [
+      "Added an OpenAI model selector to the AI settings."
+    ]
+  },
+  {
+    "version": "0.13.1",
+    "date": "2026-09-20",
+    "changes": [
+      "Maintenance release: stabilized the automated browser tests for AI background removal."
+    ]
+  },
+  {
+    "version": "0.13.0",
+    "date": "2026-09-20",
+    "changes": [
+      "Added local AI background removal for item photos, which runs on the server without an external service."
+    ]
+  },
+  {
+    "version": "0.12.2",
+    "date": "2026-09-20",
+    "changes": [
+      "Improved the quality of AI item identification from a photo."
+    ]
+  },
+  {
+    "version": "0.12.1",
+    "date": "2026-09-20",
+    "changes": [
+      "Maintenance release: stabilized the automated browser test for the AI settings."
+    ]
+  },
+  {
+    "version": "0.12.0",
+    "date": "2026-09-20",
+    "changes": [
+      "Added AI-assisted item creation: analyze a photo and review the editable draft before saving it."
+    ]
+  },
+  {
+    "version": "0.11.0",
+    "date": "2026-09-19",
+    "changes": [
+      "Added the inventory dashboard with totals, documentation and placement metrics, and category and condition distributions."
+    ]
+  },
+  {
+    "version": "0.10.0",
+    "date": "2026-09-19",
+    "changes": [
+      "Added an optional purchase date, a multi-currency price, and a serial number to every item."
+    ]
+  },
+  {
+    "version": "0.9.0",
+    "date": "2026-09-19",
+    "changes": [
+      "Added the About dialog, which shows the version, the build revision, and the source date of the running build."
+    ]
+  },
+  {
+    "version": "0.8.0",
+    "date": "2026-09-19",
+    "changes": [
+      "Added published releases: every stable tag now ships a Docker image and a verified source archive for Proxmox.",
+      "Fixed the stability of the automated browser tests."
+    ]
+  },
+  {
+    "version": "0.7.0",
+    "date": "2026-09-18",
+    "changes": [
+      "Improved the whole interface by migrating it to the Tabler design system.",
+      "Fixed the light/dark toggle in the folded desktop sidebar."
+    ]
+  },
+  {
+    "version": "0.6.1",
+    "date": "2026-09-18",
+    "changes": [
+      "Improved the interface on phones and tablets with a responsive redesign.",
+      "Added a Stored inside column to the items list."
+    ]
+  },
+  {
+    "version": "0.5.6",
+    "date": "2026-09-17",
+    "changes": [
+      "Added the application title Inventory Atlas Lite to the interface.",
+      "Added a quick user guide to the repository documentation."
+    ]
+  },
+  {
+    "version": "0.5.3",
+    "date": "2026-09-16",
+    "changes": [
+      "Fixed the Proxmox installer: it now picks the container template matching the host architecture and finds the container scripts."
+    ]
+  },
+  {
+    "version": "0.5.2",
+    "date": "2026-09-16",
+    "changes": [
+      "Fixed the progress output of the Proxmox installer."
+    ]
+  },
+  {
+    "version": "0.5.1",
+    "date": "2026-09-16",
+    "changes": [
+      "Fixed the download addresses used by the Proxmox installer."
+    ]
+  },
+  {
+    "version": "0.5.0",
+    "date": "2026-09-16",
+    "changes": [
+      "Added nested items: an item can be stored inside another item and its direct contents can be browsed.",
+      "Added value suggestions for text custom fields.",
+      "Added the one-line Proxmox installer that creates a ready LXC container."
+    ]
+  }
+]

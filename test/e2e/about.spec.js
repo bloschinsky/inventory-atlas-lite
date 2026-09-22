@@ -39,6 +39,8 @@ test('the About dialog shows the build metadata and is operated with the keyboar
   await expect(dialog.getByText('Inventory Atlas Lite', { exact: true })).toBeVisible();
   await expect(dialog.getByText('Developed by Artem Bloschinsky')).toBeVisible();
   await expect(dialog.getByRole('link', { name: 'GitHub repository' })).toHaveAttribute('href', repository);
+  // The release timeline is reached from here; test/e2e/version-history.spec.js covers it.
+  await expect(dialog.getByRole('button', { name: 'Version History' })).toBeVisible();
 
   // The values belong to the build that is running, so only their presence is asserted.
   for (const label of ['Version', 'Build', 'Build date']) {

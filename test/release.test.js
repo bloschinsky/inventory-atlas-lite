@@ -29,6 +29,11 @@ test('release workflow gates both distributions and preserves the legacy asset c
   assert.match(workflow, /inventory-atlas-lite-v\$\{version\}\.tar\.gz/);
   assert.match(workflow, /sha256sum "\$archive" > SHA256SUMS/);
   assert.match(workflow, /git archive[\s\S]*--prefix="inventory-atlas-lite-v\$\{version\}\//);
+  // The user-facing notes come from shared/release-history.json, and the tag is checked against it
+  // in the validation job, so a release without an entry fails before anything is published.
+  assert.match(workflow, /validate:[\s\S]*scripts\/release-notes\.mjs/);
+  assert.match(workflow, /release-notes\.mjs "\$GITHUB_REF_NAME" > release-notes\.md[\s\S]*--notes-file release-notes\.md/);
+  assert.doesNotMatch(workflow, /--generate-notes/);
 });
 
 test('Docker image runs as a non-root user with external data and traceable labels', () => {

@@ -334,6 +334,17 @@ than from a release tag. A **Build** or **Build date** of `unavailable` means th
 information — the published release archive has none — and says nothing about the health of your
 installation.
 
+### See what changed between releases
+
+1. Open **About** and press **Version History**.
+2. A larger dialog lists the releases, newest first, with their date and the changes you can notice
+   in the application. The release you are running is marked **Installed**.
+3. Scroll the list for older releases. Close it with **Close**, the **×**, `Escape`, or a click
+   outside it; the About dialog stays open behind it.
+
+The history is part of the application, so it works without an internet connection. It lists the
+releases known when your installation was built; newer ones appear after you update.
+
 ### Check for a newer version and update
 
 1. Open **About** and press **Check for updates**. The application asks the server, which compares
@@ -465,5 +476,5 @@ on a different machine than the server.
 | AI Add Item is disabled | Open **Settings**, enable AI features, enter an OpenAI API key and an image-capable model, then save. |
 | AI Add Fields suggests nothing usable | The message reports an empty or malformed answer. Describe the category in more detail and press **Generate Fields** again; your description is kept. |
 | AI analysis fails | Read the message for an invalid key, rate limit, unavailable provider, timeout, unsupported image, or missing category. The selected photo and hint remain available for retry. |
-| Which version is this | Open **About** in the navigation. It shows the version, the commit the build came from, and its date. |
+| Which version is this | Open **About** in the navigation. It shows the version, the commit the build came from, and its date. **Version History** in the same dialog lists what changed in each release. |
 | Where are the logs | On Proxmox, inside the container: `journalctl -u inventory-atlas-lite -f`. See [`proxmox.md`](proxmox.md) for the other service commands. |

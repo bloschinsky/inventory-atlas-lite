@@ -25,8 +25,8 @@ Express directly with Node.js and systemd. The pipeline does not ship a prebuilt
 
 ## Release gate and job flow
 
-The tag-only `.github/workflows/release.yml` workflow first validates the tag and committed versions,
-installs dependencies, runs lint, API and shell tests, builds the client, installs Chromium, and runs
+The tag-only `.github/workflows/release.yml` workflow first validates the tag and committed versions
+and the release entry the tag must have in `shared/release-history.json`, installs dependencies, runs lint, API and shell tests, builds the client, installs Chromium, and runs
 the Playwright suite. A failed browser run retains its traces and screenshots as a seven-day workflow
 artifact. Docker publishing and Proxmox asset packaging depend on this validation job; the GitHub
 Release depends on both publishing jobs.
@@ -38,14 +38,19 @@ backup after recreation. Publishing with the repository `GITHUB_TOKEN` and sourc
 package to this public repository so it inherits public visibility. The job then logs out of GHCR
 and verifies a pull without registry credentials.
 
+The user-facing notes of the release are printed from that same structured history by
+`scripts/release-notes.mjs`, and the publishing job appends only the deployment line about the Docker
+image and the source archive to them. The release bullets therefore exist once, in
+[Version History](version-history.md), rather than being maintained again per release.
+
 The source job uses `git archive`, generates `SHA256SUMS`, and asserts the enclosing-directory
 layout. This excludes ignored working data, dependencies, secrets, and generated output by
 construction.
 
 ## Creating a release
 
-Update `package.json` and `package-lock.json` to the intended stable version and commit them with the
-release changes. Create and push the matching tag, for example:
+Update `package.json` and `package-lock.json` to the intended stable version, add the release entry
+to `shared/release-history.json`, and commit them with the release changes. Create and push the matching tag, for example:
 
 ```bash
 git push origin master
