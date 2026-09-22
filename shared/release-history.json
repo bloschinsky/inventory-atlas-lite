@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.26.0",
+    "date": "2026-09-22",
+    "changes": [
+      "Added Scan QR: point the camera at an item label and the item opens.",
+      "When the camera is not available, for example over plain HTTP, a code can be read from a photo or screenshot with Scan from image.",
+      "Codes are decoded in the browser; camera frames and images are never uploaded, and only Inventory Atlas item codes are opened."
+    ]
+  },
+  {
     "version": "0.25.1",
     "date": "2026-09-22",
     "changes": [

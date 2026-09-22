@@ -5,8 +5,10 @@ import { mkdtemp } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import Database from 'better-sqlite3';
+import jsQR from 'jsqr';
 import qrcode from 'qrcode-generator';
 import { decodeItemQrPayload, encodeItemQrPayload } from '../shared/itemQr.js';
+import { readScannedText } from '../client/src/qrScan.js';
 
 process.env.DATA_DIR = await mkdtemp(path.join(os.tmpdir(), 'inventory-qr-test-'));
 const { applySchema } = await import('../server/src/db.js');
@@ -47,6 +49,39 @@ test('the bundled generator turns the payload into a QR matrix without any netwo
   assert.ok(qr.getModuleCount() >= 21);
   // The three finder patterns are what a scanner looks for; their corners must be dark.
   assert.ok(qr.isDark(0, 0) && qr.isDark(0, qr.getModuleCount() - 1) && qr.isDark(qr.getModuleCount() - 1, 0));
+});
+
+test('the bundled scanner decoder reads a generated item code back from its pixels', () => {
+  const qr = qrcode(0, 'M');
+  qr.addData(encodeItemQrPayload(uuid));
+  qr.make();
+  // Four pixels per module and a four-module quiet zone, painted as RGBA like a canvas frame.
+  const scale = 4;
+  const size = (qr.getModuleCount() + 8) * scale;
+  const pixels = new Uint8ClampedArray(size * size * 4).fill(255);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const row = Math.floor(y / scale) - 4;
+      const column = Math.floor(x / scale) - 4;
+      const dark = row >= 0 && column >= 0 && row < qr.getModuleCount() && column < qr.getModuleCount() && qr.isDark(row, column);
+      if (dark) pixels.fill(0, (y * size + x) * 4, (y * size + x) * 4 + 3);
+    }
+  }
+  const text = jsQR(pixels, size, size).data;
+  assert.deepEqual(readScannedText(text), { uuid });
+});
+
+test('scanned text is classified into an item, a foreign code, or a broken item code', () => {
+  assert.deepEqual(readScannedText(` ial:item:v1:${uuid}
+`), { uuid });
+  const foreign = 'This is not an Inventory Atlas QR code.';
+  const broken = 'This Inventory Atlas QR code is invalid or uses an unsupported format.';
+  for (const value of [`https://example.com/items/${uuid}`, uuid, '', `ial:box:v1:${uuid}`]) {
+    assert.deepEqual(readScannedText(value), { error: foreign }, JSON.stringify(value));
+  }
+  for (const value of [`ial:item:v2:${uuid}`, 'ial:item:v1:not-a-uuid', 'ial:item:v1', `ial:item:v1:${uuid}:extra`]) {
+    assert.deepEqual(readScannedText(value), { error: broken }, JSON.stringify(value));
+  }
 });
 
 test('QR identity adds no database schema of its own', () => {

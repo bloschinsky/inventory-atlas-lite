@@ -25,7 +25,7 @@ inventory, so keep it on a trusted LAN or behind a VPN.
 - Open the address of your installation in a browser, for example `http://192.168.1.145:3000`. A
   Proxmox installation prints this URL at the end; Docker and manual installations use the server
   address and `PORT` (default `3000`).
-- Use a current desktop or mobile browser. On a wide screen the four pages and **About** sit in
+- Use a current desktop or mobile browser. On a wide screen the pages and **About** sit in
   a narrow icon sidebar on the left: move the mouse over it — or move the keyboard focus into it
   with `Tab` — and it slides open over the page with the full labels. On a phone or a narrow tablet
   the same list opens from the **☰** button in the top bar.
@@ -81,7 +81,7 @@ features off in the same save, and they stay off until a new key is saved.
 | **Custom field** | An extra field that belongs to one category. Types: Text, Number, Date, Boolean. Items of that category get the field in their form. |
 | **Location** | A free-text note about where the object physically is, such as `Garage` or `Shelf 2`. An item stored inside another item is displayed at the location of its outermost container instead. |
 | **Stored inside** | A real link to another item that contains this one, such as a lens inside `Box A`. |
-| **QR code** | A code generated from the item's UUID, shown on request from the item page. It identifies the record and contains no address of your server. |
+| **QR code** | A code generated from the item's UUID, shown on request from the item page. It identifies the record and contains no address of your server. **Scan QR** reads it back and opens the item. |
 | **Photo** | An image stored inside the database together with the item. |
 | **Backup** | A downloadable copy of the whole SQLite database, photos included. |
 | **Restore** | Replacing the whole inventory with the contents of such a backup file. |
@@ -274,6 +274,33 @@ web, create categories or fields, or make a second AI request.
 5. Boxes and other containers are ordinary items, so they get their code the same way.
 6. The code is generated in your browser and is never stored or uploaded; no Internet access is
    needed for it.
+
+### Scan a QR code to open an item
+
+1. Open **Scan QR** in the navigation. On a phone it is in the **☰** menu.
+2. Allow the camera when the browser asks. The rear camera is used when the device has one.
+3. Point the camera at an Inventory Atlas label. As soon as the code is read the camera turns off
+   and the item page opens.
+4. If the camera cannot start, the page says why and stays usable. Press **Scan from image** and
+   choose a photo or a screenshot that shows the code; on a phone this can also take a new photo.
+5. Only codes of the form `ial:item:v1:<uuid>` are accepted. Other results are shown on the page
+   without leaving it:
+   - *This is not an Inventory Atlas QR code.* — the code holds something else, such as a web
+     address. It is never opened.
+   - *This Inventory Atlas QR code is invalid or uses an unsupported format.* — the code starts like
+     one of ours but is damaged or from another format version.
+   - *Item not found.* — the code is valid but that item no longer exists in this database.
+   - *No QR code was found in this image.* — try a sharper or closer picture.
+6. Press **Scan again** to turn the camera back on, or **Scan from image** to try another picture.
+   No page reload is needed.
+7. Codes are read entirely in your browser. Camera frames and chosen images are never uploaded or
+   stored; only the decoded item UUID is looked up on your server.
+
+**Live camera needs HTTPS or localhost.** Browsers only allow camera access on secure pages. When
+the application is opened over plain HTTP on a LAN address, such as `http://192.168.1.145:3000`,
+**Scan QR** shows *Camera unavailable* and only **Scan from image** works. Opening the application
+through HTTPS — for example with a reverse proxy on your LAN or with Tailscale HTTPS certificates —
+enables the live camera.
 
 ### Search, filter, sort, and page through items
 
@@ -499,6 +526,9 @@ on a different machine than the server.
   of SQLite backups, so move or reconfigure it separately.
 - Autocomplete is offered for text custom fields only, not for the name, condition, location, or
   description.
+- The live camera in **Scan QR** needs the application to be opened over HTTPS or on `localhost`.
+  Over plain HTTP only **Scan from image** is available. The scanner reads Inventory Atlas item
+  codes only; it does not open other QR codes or read barcodes.
 - Updating from **About** is available on the Proxmox/LXC installation only. Docker, manual, and
   development installations can check for a newer release but must be updated where they are
   deployed. Only published stable releases are offered, always from the official repository, and the
@@ -521,5 +551,6 @@ on a different machine than the server.
 | Enable AI features cannot be ticked | No API key is saved, and AI cannot run without one. Enter a key in the same form; the switch becomes available at once. |
 | AI Add Fields suggests nothing usable | The message reports an empty or malformed answer. Describe the category in more detail and press **Generate Fields** again; your description is kept. |
 | AI analysis fails | Read the message for an invalid key, rate limit, unavailable provider, timeout, unsupported image, or missing category. The selected photo and description remain available for retry. |
+| Scan QR says *Camera unavailable* | Over plain HTTP the browser does not offer the camera; use **Scan from image** or open the application over HTTPS. If camera access was denied, allow it for this site in the browser settings and reload the page. |
 | Which version is this | Open **About** in the navigation. It shows the version, the commit the build came from, and its date. **Version History** in the same dialog lists what changed in each release. |
 | Where are the logs | On Proxmox, inside the container: `journalctl -u inventory-atlas-lite -f`. See [`proxmox.md`](proxmox.md) for the other service commands. |

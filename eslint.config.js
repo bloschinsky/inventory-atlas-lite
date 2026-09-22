@@ -22,6 +22,13 @@ export default [
     }
   },
   {
+    // Playwright specs also contain callbacks that run inside the page.
+    files: ['test/e2e/**/*.js'],
+    languageOptions: {
+      globals: { ...globals.node, ...globals.browser }
+    }
+  },
+  {
     rules: {
       'no-unused-vars': ['error', { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }]
     }

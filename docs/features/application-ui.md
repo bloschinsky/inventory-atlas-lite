@@ -17,9 +17,9 @@ presentation layer over the existing API, and no CDN or other runtime internet d
 ### Desktop navigation
 
 - From the Tabler `lg` breakpoint (`992px`) upwards the sidebar rests as a `4rem` icon rail showing
-  the product mark and one Tabler icon per destination: **Dashboard**, **Items**, **Categories &
-  Fields**, and **Data / Backup**, followed by the **About** entry described in
-  [`about-dialog.md`](about-dialog.md).
+  the product mark and one Tabler icon per destination: **Dashboard**, **Items**, **Scan QR**,
+  **Categories & Fields**, **Data / Backup**, and **Settings**, followed by the **About** entry
+  described in [`about-dialog.md`](about-dialog.md).
 - Hovering the rail expands it to `16rem` and reveals the labels and the product name. Tabler's own
   `:has(:focus-visible)` rule expands it for keyboard users too, so tabbing into the sidebar shows
   the same labels without any pointer.

@@ -129,3 +129,5 @@ button.dashboard-bar-button:hover, button.dashboard-bar-button:focus-visible, .d
 /* The phases of an update; the hint line keeps its height so the panel does not jump between steps. */
 .app-update-phases { padding-inline-start: 0; }
 .app-update-hint { min-height: 1.25rem; }
+/* The live scanner preview: a square viewfinder that never outgrows a phone screen. */
+.app-scan-preview { display: block; width: 100%; max-height: 70vh; aspect-ratio: 1; object-fit: cover; border-radius: var(--tblr-border-radius); background: #000; }

@@ -105,6 +105,8 @@ The project stays small and readable. Do not add:
 - `client/src/pages/ItemsList.vue` — item list, search, filtering, sorting, and pagination.
 - `client/src/pages/ItemDetails.vue` — item details, photos, and deletion.
 - `client/src/pages/ItemForm.vue` — item creation/editing, custom field values, and photo uploads.
+- `client/src/pages/ScanQr.vue` — `/scan`: live camera and image QR scanning that opens the matching item.
+- `client/src/qrScan.js` — local QR decoding with the bundled `jsqr` and classification of the scanned text.
 - `client/src/pages/Categories.vue` — category and custom field management.
 - `client/src/pages/DataBackup.vue` — SQLite backup download.
 - `client/src/style.css` — small set of application styles layered on Tabler, built only from

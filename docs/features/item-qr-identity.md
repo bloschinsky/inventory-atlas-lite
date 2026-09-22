@@ -36,8 +36,8 @@ ial:item:v1:<uuid>
   - `encodeItemQrPayload(uuid)` trims and lowercases the UUID, rejects anything that is not a
     canonical `8-4-4-4-12` UUID, and returns the payload above.
   - `decodeItemQrPayload(value)` accepts only this exact format and returns the UUID. It reports an
-    unknown prefix, an unsupported version, and a malformed UUID as three distinct errors, so a
-    later scanner can explain what it read.
+    unknown prefix, an unsupported version, and a malformed UUID as three distinct errors, so the
+    scanner can explain what it read.
 - The `v1` component is what a future format change would increment; `decodeItemQrPayload` refuses
   every other version instead of guessing.
 
@@ -73,8 +73,9 @@ ial:item:v1:<uuid>
 
 ## Notes and limitations
 
-- Reading a code back is out of scope here: the scanner, `/scan`, label printing, batch selection,
-  and PDF export are separate tasks that reuse `shared/itemQr.js` and `ItemQrCode.vue`.
+- Reading a code back is described in [`in-app-qr-scanner.md`](in-app-qr-scanner.md), which uses
+  `decodeItemQrPayload`. Label printing, batch selection, and PDF export are a separate task that
+  reuses `shared/itemQr.js` and `ItemQrCode.vue`.
 - Codes are generated on demand and never persisted, so a reprint after an item is deleted is not
   possible, and no cleanup is needed.
 - Error correction level `M` with automatic version selection is used, which is enough for the

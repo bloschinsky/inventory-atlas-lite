@@ -14,6 +14,7 @@ document describes the current behaviour and its boundaries, not the original pl
 | [Batch Add Fields](batch-add-fields.md) | Paste a field-definition document, review and edit the proposed fields, and create them in one atomic batch. |
 | [AI Add Fields](ai-add-fields.md) | Describe a category in natural language and review the OpenAI-drafted fields in the batch editor before creating them. |
 | [Item QR identity](item-qr-identity.md) | Generate a deployment-independent QR code from an item's UUID locally and open it from a modal on the item page. |
+| [In-app QR scanner](in-app-qr-scanner.md) | Read an item QR code with the camera or from an image, locally in the browser, and open the matching item. |
 | [Custom-field autocomplete](custom-field-autocomplete.md) | Suggest previously saved values for text custom fields. |
 | [Purchase and serial fields](purchase-and-serial-fields.md) | Record an optional purchase date, structured multi-currency price, and serial number on every item. |
 | [AI feature visibility](ai-feature-visibility.md) | Hide every AI action and the AI page while **Enable AI features** is off, without weakening the server-side AI guards. |

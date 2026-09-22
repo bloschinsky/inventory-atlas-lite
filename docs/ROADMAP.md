@@ -18,11 +18,6 @@ Implemented behavior is documented separately in [`features/README.md`](features
    label-printing view that reuses the canonical QR payload. See
    [`TASK-select-and-print-qr-labels.md`](issues/TASK-select-and-print-qr-labels.md).
 
-3. **In-app QR scanner** — Planned and unblocked by the completed
-   [item QR identity](features/item-qr-identity.md). Adds a mobile-first scanner with camera and
-   local image fallback that opens the matching inventory item. See
-   [`TASK-in-app-qr-scanner.md`](issues/TASK-in-app-qr-scanner.md).
-
 ## Distribution
 
 1. **Windows desktop distribution via Electron** — Planned and unblocked by the completed
