@@ -143,13 +143,17 @@ Field types are fixed after creation; to change a type, delete the field and add
    }
    ```
 
-3. Press **Preview**. Nothing is saved yet. An unreadable document is reported as a single message;
+3. Press **Insert Template** under the editor to start from that example instead of typing it.
+   An empty editor is filled immediately; if you already wrote something else, the action asks
+   before replacing it, and cancelling keeps your text. The action is not available in
+   **AI Add Fields**, which uses a description instead of JSON.
+4. Press **Preview**. Nothing is saved yet. An unreadable document is reported as a single message;
    a readable one becomes an editable row per field.
-4. Review the rows. Each one shows its status — *New*, *Already exists*, *Duplicate in batch*,
+5. Review the rows. Each one shows its status — *New*, *Already exists*, *Duplicate in batch*,
    *Invalid type*, or *Invalid configuration* — with the reason. Correct the name or the type in
    place, or press **Remove** to drop that field from the batch. Removing a row changes only this
    draft, never the fields the category already has. **Edit JSON** goes back to the pasted text.
-5. Press **Create N Fields** to save them. The button counts the valid new fields and stays disabled
+6. Press **Create N Fields** to save them. The button counts the valid new fields and stays disabled
    while any row is still blocked. The whole batch is created at once: if anything fails, no field
    is created. **Cancel** or `Escape` discards the draft.
 

@@ -48,6 +48,12 @@ category templates.
 - Names are compared case-insensitively and trimmed, matching the category's unique field names. A
   name that collides with a built-in item attribute (`Name`, `Description`, `Category`, `Condition`,
   `Location`, `Purchase Date`, `Purchase Price`, `Serial Number`, `Photos`) is rejected.
+- **Insert Template** sits under the JSON editor and writes the same example document the editor
+  shows as its placeholder, then focuses the editor so it can be edited immediately. An empty editor
+  is filled straight away; an editor that already holds different text asks for confirmation first,
+  and cancelling leaves the current JSON untouched. The action needs no clipboard permission, so it
+  also works over plain HTTP on a local network. It is shown in this JSON mode only, never in
+  [AI Add Fields](ai-add-fields.md), which takes a natural-language description instead.
 - **Edit JSON** returns to the editor with the pasted text intact.
 - The confirmation button reads **Create N Fields**, where `N` counts the rows that are currently
   valid and new. It stays disabled while any blocking row remains or nothing is left to create.
@@ -73,7 +79,11 @@ category templates.
   Accepted batches are inserted inside one `db.transaction`, so a category either gains all the
   fields or none of them; the `UNIQUE(category_id, name)` constraint is the last line of defence.
   The transaction itself lives in `CustomFieldRepository.insertMany`.
-- `client/src/components/BatchAddFieldsDialog.vue` is the editor and preview. The drafts are plain
+- `client/src/components/BatchAddFieldsDialog.vue` is the editor and preview. Its `example`
+  constant is built once from `fieldDefinitionDocument(...)` and serves as both the textarea
+  placeholder and the inserted template, so the two can never drift into separate formats.
+  `insertTemplate()` guards a non-empty, different editor with the same plain `confirm` the rest of
+  the project uses. The drafts are plain
   reactive objects and the review is a computed value, which is what keeps the statuses and the
   **Create N Fields** count correct after each edit or removal. It uses the same Vue-driven
   Bootstrap modal markup as the About dialog, without Bootstrap JavaScript.
@@ -97,3 +107,7 @@ category templates.
 - `test/e2e/categories.spec.js` — `batch add fields reviews a pasted document before creating the
   fields`: paste, preview, per-row statuses, the disabled confirmation, removing an existing-name
   row, correcting an unsupported type, and the resulting fields and category counter.
+- `test/e2e/categories.spec.js` — `insert template fills the batch editor with the canonical example
+  and protects existing JSON`: the action's presence in JSON mode and absence in AI mode, insertion
+  into an empty editor, the inserted document passing **Preview**, a dismissed confirmation keeping
+  the user's JSON, and a confirmed one replacing it with the canonical example.

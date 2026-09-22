@@ -60,6 +60,13 @@ async function generate() {
     generating.value = false;
   }
 }
+// The placeholder example is also the inserted template, so both can never drift apart.
+function insertTemplate() {
+  const current = source.value.trim();
+  if (current && current !== example.trim() && !confirm('Replace the current JSON with the example document?')) return;
+  source.value = example;
+  nextTick(() => editor.value?.focus());
+}
 // The original prompt or document stays available, so a failed attempt can be retried or corrected.
 function backToInput() {
   drafts.value = null;
@@ -163,6 +170,15 @@ onBeforeUnmount(() => {
               spellcheck="false"
               :placeholder="example"
             />
+            <div class="mt-2">
+              <button
+                type="button"
+                class="btn btn-link link-secondary p-0"
+                @click="insertTemplate"
+              >
+                Insert Template
+              </button>
+            </div>
           </template>
           <div
             v-else

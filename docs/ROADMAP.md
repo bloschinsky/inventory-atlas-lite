@@ -26,11 +26,7 @@ Implemented behavior is documented separately in [`features/README.md`](features
    AI entry points and direct AI-page navigation while retaining the existing backend guards. See
    [`TASK-ai-feature-visibility.md`](issues/TASK-ai-feature-visibility.md).
 
-5. **Batch Fields Insert Template** — Planned. Adds an **Insert Template** action that places the
-   canonical field-definition example into the JSON editor without overwriting user input silently.
-   See [`TASK-batch-fields-insert-template.md`](issues/TASK-batch-fields-insert-template.md).
-
-6. **Version History in About** — Planned. Adds an offline, bundled release timeline to the About
+5. **Version History in About** — Planned. Adds an offline, bundled release timeline to the About
    experience and a structured source for concise user-facing release changes. See
    [`TASK-version-history-about.md`](issues/TASK-version-history-about.md).
 

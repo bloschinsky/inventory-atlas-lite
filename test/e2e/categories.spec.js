@@ -73,6 +73,61 @@ test('batch add fields reviews a pasted document before creating the fields', as
   await expect(entry).toContainText('0 items · 4 fields');
 });
 
+test('insert template fills the batch editor with the canonical example and protects existing JSON', async ({ page, request }) => {
+  const categoryName = unique('Template Cards');
+  await createCategory(request, categoryName);
+  await page.goto('/categories');
+  // A fresh headless page keeps the pointer at (0, 0), which expands the folded sidebar.
+  await page.mouse.move(600, 400);
+
+  const entry = page.getByRole('button').filter({ hasText: categoryName });
+  await entry.click();
+  await page.getByRole('button', { name: 'Batch Add Fields' }).click();
+
+  const dialog = page.getByRole('dialog');
+  const editor = dialog.getByLabel('Field definition JSON');
+  const insert = dialog.getByRole('button', { name: 'Insert Template' });
+  await expect(insert).toBeVisible();
+
+  // An empty editor is filled without a confirmation, and the inserted document is editable.
+  await insert.click();
+  await expect(editor).toBeFocused();
+  const template = await editor.inputValue();
+  expect(JSON.parse(template)).toEqual({
+    version: 1,
+    fields: [
+      { name: 'Brand', type: 'text', required: false },
+      { name: 'Model', type: 'text', required: false },
+      { name: 'Release Year', type: 'number', required: false }
+    ]
+  });
+
+  // The inserted document passes the existing preview parser unchanged.
+  await dialog.getByRole('button', { name: 'Preview' }).click();
+  const row = index => dialog.getByRole('row').nth(index + 1);
+  await expect(row(0).getByRole('textbox')).toHaveValue('Brand');
+  await expect(row(2)).toContainText('New');
+  await expect(dialog.getByRole('button', { name: /^Create \d+ Field/ })).toHaveText('Create 3 Fields');
+  await dialog.getByRole('button', { name: 'Edit JSON' }).click();
+
+  // Existing user content is only replaced after an explicit confirmation.
+  const own = JSON.stringify({ version: 1, fields: [{ name: 'Bus', type: 'text', required: false }] }, null, 2);
+  await editor.fill(own);
+  page.once('dialog', confirmation => confirmation.dismiss());
+  await insert.click();
+  await expect(editor).toHaveValue(own);
+
+  page.once('dialog', confirmation => confirmation.accept());
+  await insert.click();
+  await expect(editor).toHaveValue(template);
+
+  // AI mode describes the fields in natural language, so the JSON template makes no sense there.
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await page.getByRole('button', { name: 'AI Add Fields' }).click();
+  await expect(dialog.getByLabel('Field description')).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Insert Template' })).toBeHidden();
+});
+
 test('AI add fields reviews the generated draft in the batch editor before creating the fields', async ({ page, request }) => {
   const categoryName = unique('AI Expansion Cards');
   const category = await createCategory(request, categoryName, [{ name: 'Brand', type: 'text' }]);
