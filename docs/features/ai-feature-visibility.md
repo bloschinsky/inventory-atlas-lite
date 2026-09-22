@@ -44,6 +44,24 @@ While `ai.enabled` is `false`:
 While `ai.enabled` is `true`, all of these appear and behave as documented in
 [AI Add Item](ai-add-item.md) and [AI Add Fields](ai-add-fields.md).
 
+## A saved API key is required
+
+AI features cannot be on without a key, so the key is what the state follows:
+
+- `AiSettingsService.write()` stores `enabled: false` whenever the resulting configuration has no
+  key. Asking for AI without one is not an error; it simply cannot take effect, and the response
+  reports the state that was actually stored.
+- Removing the saved key turns AI off in the same save.
+- `AiSettingsService.read()` applies the same rule when reading, so a settings file that lost its
+  key — a hand-edited or older one — is treated as disabled everywhere, including
+  `/api/capabilities`.
+- A fresh installation has no settings file at all: AI starts disabled and unconfigured, and the
+  interface shows no AI actions before a key is configured.
+- In *Settings*, the **Enable AI features** switch is unavailable while no key is saved and none is
+  typed in the form, with the hint *Save an OpenAI API key below to enable AI features*. A key typed
+  into the form counts immediately, because the same save stores both. Ticking **Remove the saved
+  API key** clears the switch straight away.
+
 ## Settings integration
 
 - Saving the AI settings applies the returned `enabled` value to the shared state, so the AI actions
@@ -60,8 +78,12 @@ While `ai.enabled` is `true`, all of these appear and behave as documented in
 
 ## Verification
 
-- `test/e2e.test.js` asserts that `/api/capabilities` follows the saved setting in both states and
-  carries no API key.
+- `test/services.test.js` covers the settings rules without HTTP: the unconfigured default, enabling
+  without a key, enabling together with a key, keeping the key while AI is off, clearing the key, and
+  a settings file whose key is gone.
+- `test/e2e.test.js` asserts that `/api/capabilities` follows the saved setting in both states,
+  carries no API key, and stays `false` when AI is enabled without a key or the key is removed.
 - `test/e2e/ai-visibility.spec.js` covers the hidden and visible states of both entry points, the
   `/items/ai` redirect, the backend `409` responses while AI is disabled, the reload-free effect of
-  saving the setting in both directions, and a failed capability request leaving navigation intact.
+  saving the setting in both directions, the switch being unavailable until a key exists, AI going
+  off with a removed key, and a failed capability request leaving navigation intact.

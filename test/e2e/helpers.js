@@ -23,9 +23,17 @@ export async function createCategory(request, name, fields = []) {
 
 export const createItem = (request, data) => post(request, '/api/items', data);
 
-// AI visibility is a saved server setting shared by the whole suite, so a spec that depends on it
-// states the state it needs instead of inheriting whatever ran before it.
+// The test API key never leaves the isolated test server: every AI call in the suite is intercepted.
+export const testApiKey = 'sk-test-suite-key-not-a-real-secret';
+
+/*
+  AI visibility is a saved server setting shared by the whole suite, so a spec that depends on it
+  states the state it needs instead of inheriting whatever ran before it. The key is saved either
+  way, because AI cannot be enabled without one and its absence would change the disabled state.
+*/
 export async function setAiEnabled(request, enabled) {
-  const response = await request.put('/api/settings/ai', { data: { enabled, provider: 'openai', model: 'gpt-5.6-luna' } });
+  const data = { enabled, provider: 'openai', model: 'gpt-5.6-luna', apiKey: testApiKey };
+  const response = await request.put('/api/settings/ai', { data });
   expect(response.ok(), `PUT /api/settings/ai returned ${response.status()}`).toBeTruthy();
+  expect((await response.json()).enabled, 'the saved AI state did not match the requested one').toBe(enabled);
 }

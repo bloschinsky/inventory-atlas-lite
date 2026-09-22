@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
-import { createCategory, setAiEnabled, unique } from './helpers.js';
+import { createCategory, setAiEnabled, testApiKey, unique } from './helpers.js';
 
 const fixture = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures/sample-photo.png');
 
@@ -122,6 +122,45 @@ test('applies a saved Enable AI features change to the interface without a reloa
 
   await page.getByRole('link', { name: 'Items', exact: true }).click();
   await expect(aiAddItem(page).first()).toBeVisible();
+});
+
+test('cannot enable AI features before an API key is saved', async ({ page, request }) => {
+  // A fresh installation looks like this: AI off, no key, so the switch has nothing to enable.
+  const cleared = await request.put('/api/settings/ai', {
+    data: { enabled: true, provider: 'openai', model: 'gpt-5.6-luna', clearApiKey: true }
+  });
+  expect((await cleared.json()).enabled).toBe(false);
+  await page.route('**/api/ai/models', route => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ models: [{ id: 'gpt-5.6-luna', label: 'GPT-5.6 Luna' }] })
+  }));
+
+  await page.goto('/settings');
+  await page.mouse.move(600, 400);
+  const toggle = page.getByLabel('Enable AI features');
+  await expect(toggle).not.toBeChecked();
+  await expect(toggle).toBeDisabled();
+  await expect(page.getByText('Save an OpenAI API key below to enable AI features.')).toBeVisible();
+
+  // A key typed in this form counts: it is stored by the same save as the switch.
+  await page.getByLabel('API key', { exact: true }).fill(testApiKey);
+  await expect(toggle).toBeEnabled();
+  await toggle.check();
+  await page.getByRole('button', { name: 'Save settings' }).click();
+  await expect(page.getByRole('status')).toHaveText('AI settings saved.');
+  await expect(page.getByLabel('Enable AI features')).toBeChecked();
+
+  await page.getByRole('link', { name: 'Items', exact: true }).click();
+  await expect(aiAddItem(page).first()).toBeVisible();
+
+  // Removing the key turns AI off with it, without a reload.
+  await openSettings(page);
+  await page.getByLabel('Remove the saved API key').check();
+  await expect(page.getByLabel('Enable AI features')).not.toBeChecked();
+  await page.getByRole('button', { name: 'Save settings' }).click();
+  await expect(page.getByRole('status')).toHaveText('AI settings saved.');
+  await page.getByRole('link', { name: 'Items', exact: true }).click();
+  await expect(aiAddItem(page)).toHaveCount(0);
 });
 
 test('stays usable when the capability request fails', async ({ page, request }) => {

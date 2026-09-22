@@ -25,6 +25,19 @@ all, instead of letting a user open an AI action and receive an API error afterw
 - The server-side guards were not touched: `AiSettingsService.requireUsableSettings()` still rejects
   AI requests with `409` while AI features are disabled.
 
+Tied the enabled state to a saved API key, since AI cannot run without one:
+
+- `AiSettingsService.write()` stores `enabled: false` whenever the saved configuration ends up
+  without a key, and `read()` applies the same rule, so an older or hand-edited settings file that
+  has no key is disabled everywhere, including `/api/capabilities`.
+- Removing the saved key turns AI features off in the same save.
+- `requireUsableSettings()` now reports the missing key before the disabled state, which is the more
+  useful message once the two are linked.
+- In *Settings*, the **Enable AI features** switch is unavailable, with a hint, until a key is saved
+  or typed into the form, and it clears itself when **Remove the saved API key** is ticked.
+- Confirmed that a fresh installation starts disabled: with no settings file, `read()` returns the
+  defaults, and both `/api/settings/ai` and `/api/capabilities` report AI as off.
+
 ## Documentation
 
 - Added `docs/features/ai-feature-visibility.md` and its entry in `docs/features/README.md`.
@@ -38,11 +51,14 @@ all, instead of letting a user open an AI action and receive an API error afterw
 ## Verification
 
 - `npm run lint` — passed.
-- `npm test` — passed (69 tests, 1 pre-existing skip). Extended with the `/api/capabilities`
-  assertions for both AI states and the check that no API key is exposed there.
+- `npm test` — passed (71 tests, 1 pre-existing skip). Extended `test/e2e.test.js` with the
+  `/api/capabilities` assertions for both AI states, the check that no API key is exposed there, and
+  the enable-without-a-key and key-removal cases; added the `AiSettingsService` rules to
+  `test/services.test.js`.
 - `npm run build` — passed.
-- `npm run test:e2e` — passed, 52 Playwright tests in Chromium. Added
+- `npm run test:e2e` — passed, 53 Playwright tests in Chromium. Added
   `test/e2e/ai-visibility.spec.js` (hidden and visible entry points, the `/items/ai` redirect, the
   backend `409` responses, the reload-free effect of saving the setting both ways, and a failed
-  capability request leaving navigation intact). The specs that need AI available now set that state
-  through the new `setAiEnabled` helper in `test/e2e/helpers.js`.
+  capability request leaving navigation intact, and the switch staying unavailable until a key is
+  saved). The specs that need AI available now set that state through the new `setAiEnabled` helper
+  in `test/e2e/helpers.js`, which saves a test key with it.

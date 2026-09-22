@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { writeFileSync } from 'node:fs';
 import { mkdtemp } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -19,6 +20,7 @@ const { CategoryService } = await import('../server/src/services/categoryService
 const { CustomFieldService } = await import('../server/src/services/customFieldService.js');
 const { DashboardService } = await import('../server/src/services/dashboardService.js');
 const { ItemService } = await import('../server/src/services/itemService.js');
+const { AiSettingsService } = await import('../server/src/services/aiSettingsService.js');
 
 const build = () => {
   const db = new Database(':memory:');
@@ -252,4 +254,50 @@ test('the item list resolves every effective location in one query', () => {
   assert.deepEqual(listed.items.map(item => item.effective_location), ['Crate', 'Crate', 'Crate', 'Crate']);
   // One statement counts the matches and one reads the page, whatever the nesting depth is.
   assert.equal(statements, 2);
+});
+
+// The AI settings are a file, not a table, so they are exercised here with a temporary path.
+const aiSettings = () => new AiSettingsService({
+  settingsPath: path.join(process.env.DATA_DIR, `ai-settings-${Math.random().toString(36).slice(2)}.json`),
+  openAiClient: { listModels: async () => [] }
+});
+
+const savable = changes => ({ enabled: false, provider: 'openai', model: 'gpt-5.6-luna', ...changes });
+
+test('AI features stay off until a key is saved with them', () => {
+  const service = aiSettings();
+
+  // A fresh installation has no settings file, so nothing offers AI before it is configured.
+  assert.deepEqual(service.publicSettings(), {
+    enabled: false, provider: 'openai', model: 'gpt-5.6-luna', hasApiKey: false, apiKeyMasked: ''
+  });
+
+  // Asking for AI without a key is stored as off, so the saved state never promises what cannot run.
+  assert.equal(service.write(savable({ enabled: true })).enabled, false);
+  assert.equal(service.read().enabled, false);
+  assert.throws(() => service.requireUsableSettings('Add a key.'), /Add a key\./);
+
+  // The key and the switch may arrive in the same save.
+  const configured = service.write(savable({ enabled: true, apiKey: 'sk-services-test-key' }));
+  assert.equal(configured.enabled, true);
+  assert.equal(configured.hasApiKey, true);
+  assert.equal(service.requireUsableSettings('Add a key.').apiKey, 'sk-services-test-key');
+
+  // Turning AI off keeps the key, so re-enabling needs no new one.
+  assert.equal(service.write(savable({ enabled: false })).hasApiKey, true);
+  assert.throws(() => service.requireUsableSettings('Add a key.'), /AI features are disabled/);
+  assert.equal(service.write(savable({ enabled: true })).enabled, true);
+
+  // Removing the key turns AI off with it.
+  const cleared = service.write(savable({ enabled: true, clearApiKey: true }));
+  assert.equal(cleared.enabled, false);
+  assert.equal(cleared.hasApiKey, false);
+});
+
+test('an AI settings file that lost its key reads as disabled', () => {
+  const service = aiSettings();
+  writeFileSync(service.settingsPath, JSON.stringify({ enabled: true, provider: 'openai', model: 'gpt-5.6-luna', apiKey: '' }));
+
+  assert.equal(service.read().enabled, false);
+  assert.equal(service.publicSettings().enabled, false);
 });

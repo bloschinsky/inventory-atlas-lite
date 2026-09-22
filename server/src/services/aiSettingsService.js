@@ -20,14 +20,18 @@ export class AiSettingsService {
     this.openAiClient = openAiClient;
   }
 
+  // A fresh installation has no settings file at all, so AI starts disabled and unconfigured.
   read() {
     if (!fs.existsSync(this.settingsPath)) return { ...defaults };
     const saved = JSON.parse(fs.readFileSync(this.settingsPath, 'utf8'));
+    const apiKey = typeof saved.apiKey === 'string' ? saved.apiKey : '';
     return {
-      enabled: saved.enabled === true,
+      // AI can only be on with a saved key. Without one the feature is off everywhere, so a settings
+      // file that lost its key never leaves entry points visible for an operation that cannot run.
+      enabled: saved.enabled === true && Boolean(apiKey),
       provider: saved.provider === 'openai' ? saved.provider : defaults.provider,
       model: typeof saved.model === 'string' && saved.model.trim() ? saved.model.trim() : defaults.model,
-      apiKey: typeof saved.apiKey === 'string' ? saved.apiKey : ''
+      apiKey
     };
   }
 
@@ -58,7 +62,9 @@ export class AiSettingsService {
       }
       apiKey = input.apiKey.trim();
     }
-    const settings = { enabled: input.enabled, provider: input.provider, model: input.model.trim(), apiKey };
+    // Enabling without a key is not an error, it simply cannot take effect: the request is saved
+    // with AI turned off, and the answer shows the state that was actually stored.
+    const settings = { enabled: input.enabled && Boolean(apiKey), provider: input.provider, model: input.model.trim(), apiKey };
     const temporaryPath = `${this.settingsPath}.tmp`;
     fs.writeFileSync(temporaryPath, `${JSON.stringify(settings, null, 2)}\n`, { mode: 0o600 });
     fs.renameSync(temporaryPath, this.settingsPath);
@@ -69,8 +75,9 @@ export class AiSettingsService {
   // Shared by the AI use cases: they may only run with a configured, enabled provider.
   requireUsableSettings(missingKeyMessage) {
     const settings = this.read();
-    if (!settings.enabled) throw httpError('AI features are disabled. Enable them in Settings.', 409);
+    // The missing key is reported first: it is the reason AI is off in that case.
     if (!settings.apiKey) throw httpError(missingKeyMessage, 409);
+    if (!settings.enabled) throw httpError('AI features are disabled. Enable them in Settings.', 409);
     if (settings.provider !== 'openai') throw httpError('The configured AI provider is not supported.', 409);
     return settings;
   }

@@ -474,13 +474,18 @@ test('AI settings stay server-side and image analysis returns a validated invent
     appServer = await startServer(dataDir, { OPENAI_BASE_URL: `http://127.0.0.1:${providerPort}` });
     assert.equal(await failedStatus('/api/ai/items/analyze', { method: 'POST', body: imageData() }), 409);
 
+    // A fresh installation has no settings file, so AI starts disabled and unconfigured.
     const emptySettings = await request('/api/settings/ai');
     assert.deepEqual(emptySettings, { enabled: false, provider: 'openai', model: 'gpt-5.6-luna', hasApiKey: false, apiKeyMasked: '' });
     assert.equal(await failedStatus('/api/ai/models'), 409);
     // The UI reads its feature visibility from here, so it must follow the saved setting exactly.
     assert.deepEqual(await request('/api/capabilities'), { ai: { enabled: false } });
-    await request('/api/settings/ai', json('PUT', { enabled: true, provider: 'openai', model: 'gpt-4o-mini' }));
-    assert.deepEqual(await request('/api/capabilities'), { ai: { enabled: true } });
+
+    // Enabling without a saved key cannot take effect: it is stored, and reported back, as disabled.
+    const withoutKey = await request('/api/settings/ai', json('PUT', { enabled: true, provider: 'openai', model: 'gpt-4o-mini' }));
+    assert.equal(withoutKey.enabled, false);
+    assert.equal(withoutKey.hasApiKey, false);
+    assert.deepEqual(await request('/api/capabilities'), { ai: { enabled: false } });
     assert.equal(await failedStatus('/api/ai/items/analyze', { method: 'POST', body: imageData() }), 409);
 
     const configured = await request('/api/settings/ai', json('PUT', {
@@ -488,7 +493,9 @@ test('AI settings stay server-side and image analysis returns a validated invent
     }));
     assert.equal(configured.hasApiKey, true);
     assert.equal(configured.apiKeyMasked, '••••••••cret');
+    assert.equal(configured.enabled, true);
     assert.ok(!JSON.stringify(configured).includes('sk-test'));
+    assert.deepEqual(await request('/api/capabilities'), { ai: { enabled: true } });
     assert.ok(!JSON.stringify(await request('/api/capabilities')).includes('sk-test'));
 
     assert.deepEqual(await request('/api/ai/models'), {
@@ -532,6 +539,15 @@ test('AI settings stay server-side and image analysis returns a validated invent
     const unsupportedImage = new FormData();
     unsupportedImage.append('image', new Blob(['plain text'], { type: 'text/plain' }), 'fake.txt');
     assert.equal(await failedStatus('/api/ai/items/analyze', { method: 'POST', body: unsupportedImage }), 400);
+
+    // Removing the key turns AI off with it, so nothing keeps offering an operation that cannot run.
+    const cleared = await request('/api/settings/ai', json('PUT', {
+      enabled: true, provider: 'openai', model: 'gpt-4o-mini', clearApiKey: true
+    }));
+    assert.equal(cleared.enabled, false);
+    assert.equal(cleared.hasApiKey, false);
+    assert.deepEqual(await request('/api/capabilities'), { ai: { enabled: false } });
+    assert.equal(await failedStatus('/api/ai/items/analyze', { method: 'POST', body: imageData() }), 409);
   } finally {
     if (appServer) await stopServer(appServer);
     await new Promise(resolve => providerServer.close(resolve));

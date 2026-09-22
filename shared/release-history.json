@@ -5,7 +5,8 @@
     "changes": [
       "Improved the Enable AI features setting: it now hides the AI Add Item and AI Add Fields actions while AI is turned off.",
       "Improved direct navigation: the AI Add Item page returns to Items while AI features are disabled.",
-      "Improved Settings: saving a changed AI state applies to the interface immediately, without reloading the page."
+      "Improved Settings: saving a changed AI state applies to the interface immediately, without reloading the page.",
+      "Improved AI configuration: AI features can only be enabled once an OpenAI API key is saved, and removing the key turns them off."
     ]
   },
   {

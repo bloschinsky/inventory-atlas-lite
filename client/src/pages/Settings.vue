@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { api, jsonOptions } from '../api.js';
 import { setAiEnabled } from '../capabilities.js';
 import PageHeader from '../components/PageHeader.vue';
@@ -17,6 +17,13 @@ const error = ref('');
 const modelError = ref('');
 const modelsLoading = ref(false);
 const saved = ref(false);
+
+/*
+  AI only works with a key, so the switch follows the key rather than the other way round: it counts
+  the saved key and a key typed in this form, because both are stored by the same save.
+*/
+const keyAvailable = computed(() => Boolean(form.apiKey.trim()) || (hasApiKey.value && !form.clearApiKey));
+watch(keyAvailable, available => { if (!available) form.enabled = false; });
 
 function syncSelectedModel() {
   selectedModel.value = availableModels.value.some(model => model.id === form.model) ? form.model : 'custom';
@@ -107,14 +114,23 @@ onMounted(async () => {
           Loading settings…
         </div>
         <template v-else>
-          <label class="form-check form-switch mb-3">
-            <input
-              v-model="form.enabled"
-              class="form-check-input"
-              type="checkbox"
+          <div class="mb-3">
+            <label class="form-check form-switch mb-0">
+              <input
+                v-model="form.enabled"
+                class="form-check-input"
+                type="checkbox"
+                :disabled="!keyAvailable"
+              >
+              <span class="form-check-label">Enable AI features</span>
+            </label>
+            <div
+              v-if="!keyAvailable"
+              class="form-text"
             >
-            <span class="form-check-label">Enable AI features</span>
-          </label>
+              Save an OpenAI API key below to enable AI features.
+            </div>
+          </div>
           <div class="mb-3">
             <label
               class="form-label"

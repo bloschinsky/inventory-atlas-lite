@@ -54,8 +54,10 @@ inventory, so keep it on a trusted LAN or behind a VPN.
    the search finds it by name.
 7. Open **Data / Backup** and press **Download backup** to get your first copy of the database.
 
-To use assisted photo entry, open **Settings**, enable AI features, keep **OpenAI** as the provider,
-enter an API key, then press **Save settings**. The model selector loads the supported models that
+To use assisted photo entry, open **Settings**, keep **OpenAI** as the provider, enter an API key,
+tick **Enable AI features**, then press **Save settings**. The switch stays unavailable until a key
+is saved or typed into the form, because AI cannot work without one. The model selector loads the
+supported models that
 are available to that key; choose one and save the setting. Use **Custom model...** to enter a model
 ID that is not yet listed, and use **Refresh models** after access to the OpenAI account changes.
 The saved key is shown only as a masked value afterwards.
@@ -65,6 +67,10 @@ off, **AI Add Item** and **AI Add Fields** are not shown and `/items/ai` returns
 everything else, including **Batch Add Fields**, works unchanged. The setting takes effect as soon
 as you press **Save settings**, with no page reload, and only the saved value counts: ticking the
 switch without saving changes nothing elsewhere.
+
+A new installation therefore starts with AI off and no key, and shows no AI actions until you
+configure one. The key is also what keeps AI on: ticking **Remove the saved API key** switches AI
+features off in the same save, and they stay off until a new key is saved.
 
 ## 4. Core concepts
 
@@ -481,7 +487,8 @@ on a different machine than the server.
 | A photo is rejected | Only JPEG, PNG, WebP, and GIF are accepted, at most 10 files of 15 MB each per upload. |
 | Search finds nothing | The search matches the name, description, and serial number. Clear the category filter and check that you are on page 1. |
 | No suggestions in a text field | Suggestions come from values already saved for that same field. A newly created field starts empty. |
-| AI Add Item is missing | AI features are off. Open **Settings**, tick **Enable AI features**, enter an OpenAI API key and an image-capable model, then save. The AI actions appear immediately. |
+| AI Add Item is missing | AI features are off. Open **Settings**, enter an OpenAI API key and an image-capable model, tick **Enable AI features**, then save. The AI actions appear immediately. |
+| Enable AI features cannot be ticked | No API key is saved, and AI cannot run without one. Enter a key in the same form; the switch becomes available at once. |
 | AI Add Fields suggests nothing usable | The message reports an empty or malformed answer. Describe the category in more detail and press **Generate Fields** again; your description is kept. |
 | AI analysis fails | Read the message for an invalid key, rate limit, unavailable provider, timeout, unsupported image, or missing category. The selected photo and hint remain available for retry. |
 | Which version is this | Open **About** in the navigation. It shows the version, the commit the build came from, and its date. **Version History** in the same dialog lists what changed in each release. |
