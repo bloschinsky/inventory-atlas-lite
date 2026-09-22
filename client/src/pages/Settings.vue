@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue';
 import { api, jsonOptions } from '../api.js';
+import { setAiEnabled } from '../capabilities.js';
 import PageHeader from '../components/PageHeader.vue';
 
 defineOptions({ name: 'SettingsPage' });
@@ -22,6 +23,8 @@ function syncSelectedModel() {
 }
 
 function applySettings(settings) {
+  // The saved state is the source of truth for AI visibility, so an unsaved checkbox changes nothing.
+  setAiEnabled(settings.enabled);
   form.enabled = settings.enabled;
   form.provider = settings.provider;
   form.model = settings.model;

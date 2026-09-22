@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.22.0",
+    "date": "2026-09-22",
+    "changes": [
+      "Improved the Enable AI features setting: it now hides the AI Add Item and AI Add Fields actions while AI is turned off.",
+      "Improved direct navigation: the AI Add Item page returns to Items while AI features are disabled.",
+      "Improved Settings: saving a changed AI state applies to the interface immediately, without reloading the page."
+    ]
+  },
+  {
     "version": "0.21.0",
     "date": "2026-09-22",
     "changes": [

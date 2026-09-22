@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { api } from '../api.js';
+import { capabilities } from '../capabilities.js';
 import ItemResults from '../components/ItemResults.vue';
 import PageHeader from '../components/PageHeader.vue';
 import { IconSparkles } from '@tabler/icons-vue';
@@ -33,6 +34,7 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
   >
     <template #actions>
       <RouterLink
+        v-if="capabilities.ai.enabled"
         to="/items/ai"
         class="btn btn-outline-primary"
       >
@@ -172,6 +174,7 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
         class="empty-action d-flex flex-wrap justify-content-center gap-2"
       >
         <RouterLink
+          v-if="capabilities.ai.enabled"
           to="/items/ai"
           class="btn btn-outline-primary"
         >

@@ -60,6 +60,12 @@ are available to that key; choose one and save the setting. Use **Custom model..
 ID that is not yet listed, and use **Refresh models** after access to the OpenAI account changes.
 The saved key is shown only as a masked value afterwards.
 
+**Enable AI features** controls whether the AI actions exist in the interface at all. While it is
+off, **AI Add Item** and **AI Add Fields** are not shown and `/items/ai` returns you to **Items**;
+everything else, including **Batch Add Fields**, works unchanged. The setting takes effect as soon
+as you press **Save settings**, with no page reload, and only the saved value counts: ticking the
+switch without saving changes nothing elsewhere.
+
 ## 4. Core concepts
 
 | Concept | What it means |
@@ -161,7 +167,8 @@ Required custom fields do not exist yet, so `"required": true` is rejected inste
 
 ### Let AI suggest the fields for a category
 
-1. Configure and enable OpenAI under **Settings → AI**, the same setup **AI Add Item** uses.
+1. Configure and enable OpenAI under **Settings → AI**, the same setup **AI Add Item** uses. The
+   button appears only while AI features are enabled.
 2. Select a category and press **AI Add Fields** under the field form.
 3. Describe the category and the fields you need, for example *Suggest useful fields for a category
    containing vintage computer expansion cards such as graphics cards, sound cards, network cards
@@ -196,7 +203,8 @@ Changing the category while filling in the form loads that category's fields.
 
 1. Configure and enable OpenAI under **Settings → AI**. The default model is `gpt-5.6-luna`; you can
    replace it with another OpenAI model that accepts image input and strict structured output.
-2. Open **Items** and press **AI Add Item** next to **Add item**.
+2. Open **Items** and press **AI Add Item** next to **Add item**. The button appears only while AI
+   features are enabled.
 3. Select one JPEG, PNG, WebP, or GIF photo of at most 15 MB. Optionally describe what you know in
    **Additional description**; visible evidence in the photo takes priority. Enable **Remove
    background** if you want a locally processed final photo with the item centered on white. The
@@ -473,7 +481,7 @@ on a different machine than the server.
 | A photo is rejected | Only JPEG, PNG, WebP, and GIF are accepted, at most 10 files of 15 MB each per upload. |
 | Search finds nothing | The search matches the name, description, and serial number. Clear the category filter and check that you are on page 1. |
 | No suggestions in a text field | Suggestions come from values already saved for that same field. A newly created field starts empty. |
-| AI Add Item is disabled | Open **Settings**, enable AI features, enter an OpenAI API key and an image-capable model, then save. |
+| AI Add Item is missing | AI features are off. Open **Settings**, tick **Enable AI features**, enter an OpenAI API key and an image-capable model, then save. The AI actions appear immediately. |
 | AI Add Fields suggests nothing usable | The message reports an empty or malformed answer. Describe the category in more detail and press **Generate Fields** again; your description is kept. |
 | AI analysis fails | Read the message for an invalid key, rate limit, unavailable provider, timeout, unsupported image, or missing category. The selected photo and hint remain available for retry. |
 | Which version is this | Open **About** in the navigation. It shows the version, the commit the build came from, and its date. **Version History** in the same dialog lists what changed in each release. |

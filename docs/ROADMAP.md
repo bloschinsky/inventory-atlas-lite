@@ -22,10 +22,6 @@ Implemented behavior is documented separately in [`features/README.md`](features
    to accept a photo, a text description, or both without adding a separate AI item workflow. See
    [`TASK-ai-add-item-photo-or-prompt.md`](issues/TASK-ai-add-item-photo-or-prompt.md).
 
-4. **AI feature visibility** — Planned. Makes the saved **Enable AI Features** setting control all
-   AI entry points and direct AI-page navigation while retaining the existing backend guards. See
-   [`TASK-ai-feature-visibility.md`](issues/TASK-ai-feature-visibility.md).
-
 ## Distribution
 
 1. **Windows desktop distribution via Electron** — Planned and unblocked by the completed

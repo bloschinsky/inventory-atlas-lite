@@ -2,9 +2,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
 import sharp from 'sharp';
-import { createCategory, detail, unique } from './helpers.js';
+import { createCategory, detail, setAiEnabled, unique } from './helpers.js';
 
 const fixture = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures/sample-photo.png');
+
+// The AI entry points and the /items/ai route only exist while AI features are enabled.
+test.beforeEach(async ({ request }) => { await setAiEnabled(request, true); });
 
 test('uses AI suggestions in the normal editable Add Item form and saves only after confirmation', async ({ page, request }) => {
   const categoryName = unique('AI Cameras');

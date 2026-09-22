@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
-import { createCategory, unique } from './helpers.js';
+import { createCategory, setAiEnabled, unique } from './helpers.js';
+
+test.beforeEach(async ({ request }) => { await setAiEnabled(request, true); });
 
 test('creates a category and its custom fields', async ({ page }) => {
   const categoryName = unique('Cameras');

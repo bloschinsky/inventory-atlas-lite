@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue';
 import { api, jsonOptions } from '../api.js';
+import { capabilities } from '../capabilities.js';
 import PageHeader from '../components/PageHeader.vue';
 import BatchAddFieldsDialog from '../components/BatchAddFieldsDialog.vue';
 
@@ -145,6 +146,7 @@ onMounted(() => load().catch(e => error.value = e.message));
                 Batch Add Fields
               </button>
               <button
+                v-if="capabilities.ai.enabled"
                 type="button"
                 class="btn btn-outline-primary btn-sm"
                 @click="dialogMode = 'ai'"

@@ -101,6 +101,7 @@ The project stays small and readable. Do not add:
 - `client/src/components/ThemeToggle.vue` — light/dark control; `client/src/theme.js` holds the state.
 - `client/src/api.js` — shared `fetch` wrapper and helper for JSON requests.
 - `client/src/update.js` — shared state and polling of the update panel in the About dialog.
+- `client/src/capabilities.js` — shared visibility state of optional features, loaded once from `/api/capabilities`.
 - `client/src/pages/ItemsList.vue` — item list, search, filtering, sorting, and pagination.
 - `client/src/pages/ItemDetails.vue` — item details, photos, and deletion.
 - `client/src/pages/ItemForm.vue` — item creation/editing, custom field values, and photo uploads.

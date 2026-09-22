@@ -477,7 +477,10 @@ test('AI settings stay server-side and image analysis returns a validated invent
     const emptySettings = await request('/api/settings/ai');
     assert.deepEqual(emptySettings, { enabled: false, provider: 'openai', model: 'gpt-5.6-luna', hasApiKey: false, apiKeyMasked: '' });
     assert.equal(await failedStatus('/api/ai/models'), 409);
+    // The UI reads its feature visibility from here, so it must follow the saved setting exactly.
+    assert.deepEqual(await request('/api/capabilities'), { ai: { enabled: false } });
     await request('/api/settings/ai', json('PUT', { enabled: true, provider: 'openai', model: 'gpt-4o-mini' }));
+    assert.deepEqual(await request('/api/capabilities'), { ai: { enabled: true } });
     assert.equal(await failedStatus('/api/ai/items/analyze', { method: 'POST', body: imageData() }), 409);
 
     const configured = await request('/api/settings/ai', json('PUT', {
@@ -486,6 +489,7 @@ test('AI settings stay server-side and image analysis returns a validated invent
     assert.equal(configured.hasApiKey, true);
     assert.equal(configured.apiKeyMasked, '••••••••cret');
     assert.ok(!JSON.stringify(configured).includes('sk-test'));
+    assert.ok(!JSON.stringify(await request('/api/capabilities')).includes('sk-test'));
 
     assert.deepEqual(await request('/api/ai/models'), {
       models: [

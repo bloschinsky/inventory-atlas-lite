@@ -22,3 +22,10 @@ export async function createCategory(request, name, fields = []) {
 }
 
 export const createItem = (request, data) => post(request, '/api/items', data);
+
+// AI visibility is a saved server setting shared by the whole suite, so a spec that depends on it
+// states the state it needs instead of inheriting whatever ran before it.
+export async function setAiEnabled(request, enabled) {
+  const response = await request.put('/api/settings/ai', { data: { enabled, provider: 'openai', model: 'gpt-5.6-luna' } });
+  expect(response.ok(), `PUT /api/settings/ai returned ${response.status()}`).toBeTruthy();
+}

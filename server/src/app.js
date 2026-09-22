@@ -33,6 +33,7 @@ import { errorHandler, maintenanceGuard } from './http/errorHandler.js';
 import { createImageUpload, createRestoreUpload } from './http/uploads.js';
 import { createAiRoutes } from './routes/aiRoutes.js';
 import { createBackupRoutes } from './routes/backupRoutes.js';
+import { createCapabilityRoutes } from './routes/capabilityRoutes.js';
 import { createCategoryRoutes } from './routes/categoryRoutes.js';
 import { createDashboardRoutes } from './routes/dashboardRoutes.js';
 import { createFieldRoutes } from './routes/fieldRoutes.js';
@@ -104,6 +105,7 @@ export function createApp({ production = false } = {}) {
   app.use(maintenanceGuard(restoreService));
 
   app.use(createAiRoutes({ aiSettingsService, aiItemAnalysisService, imageUpload }));
+  app.use(createCapabilityRoutes({ aiSettingsService }));
   app.use(createImageRoutes({ imageService, imageUpload }));
   app.use(createCategoryRoutes({ categoryService }));
   app.use(createDashboardRoutes({ dashboardService }));

@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import '@tabler/core/dist/css/tabler.min.css';
 import './style.css';
 import App from './App.vue';
+import { capabilities, loadCapabilities } from './capabilities.js';
 import ItemsList from './pages/ItemsList.vue';
 import ItemDetails from './pages/ItemDetails.vue';
 import ItemForm from './pages/ItemForm.vue';
@@ -28,4 +29,12 @@ const router = createRouter({
   ]
 });
 
+// Hidden buttons alone are not enough: the AI page must also be unreachable by typing its URL.
+router.beforeEach(async to => {
+  if (to.path !== '/items/ai') return true;
+  await loadCapabilities();
+  return capabilities.ai.enabled ? true : '/items';
+});
+
+loadCapabilities();
 createApp(App).use(router).mount('#app');
