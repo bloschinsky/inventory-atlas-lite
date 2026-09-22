@@ -1,5 +1,15 @@
 [
   {
+    "version": "0.23.0",
+    "date": "2026-09-22",
+    "changes": [
+      "Added AI Add Item from a written description: a draft can now be created from a photo, a description, or both.",
+      "Improved AI Add Item: the photo is optional, the description is a first-class input, and the action is now called Create Draft.",
+      "Improved AI Add Item: background removal is offered only while a photo is selected and is never requested for a description-only draft.",
+      "Improved AI drafts: a disagreement between the description and the visible markings is reported as a warning for review."
+    ]
+  },
+  {
     "version": "0.22.0",
     "date": "2026-09-22",
     "changes": [

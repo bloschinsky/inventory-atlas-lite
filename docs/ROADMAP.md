@@ -18,10 +18,6 @@ Implemented behavior is documented separately in [`features/README.md`](features
    Includes a film-boxes-in-hand regression asset. See
    [`TASK-background-removal-quality-phase-2.md`](issues/TASK-background-removal-quality-phase-2.md).
 
-3. **AI Add Item from photo or description** — Planned. Extends the existing reviewed draft flow
-   to accept a photo, a text description, or both without adding a separate AI item workflow. See
-   [`TASK-ai-add-item-photo-or-prompt.md`](issues/TASK-ai-add-item-photo-or-prompt.md).
-
 ## Distribution
 
 1. **Windows desktop distribution via Electron** — Planned and unblocked by the completed

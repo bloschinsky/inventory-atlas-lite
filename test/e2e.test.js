@@ -439,13 +439,15 @@ test('AI settings stay server-side and image analysis returns a validated invent
     const audioCards = prompt.inventorySchema.categories.find(category => category.name === 'Audio Cards');
     const tradeName = audioCards.fields.find(field => field.name === 'Trade Name');
     const modelNumber = audioCards.fields.find(field => field.name === 'Model Number');
+    // The description and the visible marking disagree, which the model reports as a warning.
+    const conflicting = (prompt.description || '').includes('Audigy 2');
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify({
       output_text: JSON.stringify({
         observedMarkings: ['Sound Blaster Audigy LS', 'MODEL: SB0310'],
         categoryId: audioCards.id,
         confidence: 0.96,
-        needsDetailedImageAnalysis: false,
+        needsDetailedImageAnalysis: true,
         baseFields: {
           name: 'Creative Sound Blaster Audigy LS',
           description: 'Creative Sound Blaster Audigy LS PCI audio card.', condition: null,
@@ -457,7 +459,9 @@ test('AI settings stay server-side and image analysis returns a validated invent
           { fieldId: modelNumber.id, value: 'SB0310' },
           { fieldId: 999999, value: 'discard me' }
         ],
-        warnings: []
+        warnings: conflicting
+          ? ['The supplied description says Audigy 2, while the visible product marking appears to identify the item as Audigy LS.']
+          : []
       }),
       usage: { input_tokens: 100, output_tokens: 50 }
     }));
@@ -519,6 +523,7 @@ test('AI settings stay server-side and image analysis returns a validated invent
     assert.equal(draft.dynamicFields[modelNumber.id], 'SB0310');
     assert.equal(draft.dynamicFields['999999'], undefined);
     assert.equal(draft.observedMarkings, undefined);
+    assert.equal(draft.needsDetailedImageAnalysis, true);
     assert.deepEqual(draft.warnings, []);
 
     assert.equal(providerRequest.authorization, 'Bearer sk-test-not-a-real-secret');
@@ -532,6 +537,54 @@ test('AI settings stay server-side and image analysis returns a validated invent
     assert.match(providerRequest.body.instructions, /Visible printed text is direct evidence/);
     assert.match(providerRequest.body.instructions, /Do not replace a specific visible product name with a generic item type/);
     assert.ok(!JSON.stringify(providerRequest.body).includes('Existing private inventory item'));
+    assert.equal(providerRequest.body.input[0].content[1].type, 'input_image');
+
+    // A description alone is enough, and such a request must not contain an image at all.
+    const descriptionOnly = new FormData();
+    descriptionOnly.append('description', 'Creative Sound Blaster Audigy LS PCI audio card, model SB0310.');
+    const promptDraft = await request('/api/ai/items/analyze', { method: 'POST', body: descriptionOnly });
+    assert.equal(promptDraft.categoryId, audioCards.id);
+    assert.equal(promptDraft.baseFields.name, 'Creative Sound Blaster Audigy LS');
+    assert.equal(promptDraft.dynamicFields[tradeName.id], 'Creative Labs');
+    assert.equal(promptDraft.observedMarkings, undefined);
+    // Nothing can be inspected more closely without an image, whatever the model answered.
+    assert.equal(promptDraft.needsDetailedImageAnalysis, false);
+    assert.equal(providerRequest.body.input[0].content.length, 1);
+    assert.equal(providerRequest.body.input[0].content[0].type, 'input_text');
+    assert.equal(JSON.parse(providerRequest.body.input[0].content[0].text).description,
+      'Creative Sound Blaster Audigy LS PCI audio card, model SB0310.');
+    assert.ok(!JSON.stringify(providerRequest.body).includes('input_image'));
+    assert.ok(providerRequest.body.text.format.schema.required.includes('observedMarkings'));
+
+    // A photo alone is still enough, and the inventory schema travels with every mode.
+    const imageOnly = new FormData();
+    imageOnly.append('image', new Blob([Buffer.from('89504e470d0a1a0a', 'hex')], { type: 'image/png' }), 'sound-card.png');
+    const photoDraft = await request('/api/ai/items/analyze', { method: 'POST', body: imageOnly });
+    assert.equal(photoDraft.categoryId, audioCards.id);
+    assert.equal(providerRequest.body.input[0].content.length, 2);
+    assert.equal(providerRequest.body.input[0].content[1].detail, 'original');
+    assert.equal(JSON.parse(providerRequest.body.input[0].content[0].text).description, null);
+    const photoPrompt = JSON.parse(providerRequest.body.input[0].content[0].text);
+    assert.ok(photoPrompt.inventorySchema.categories.some(category => category.name === 'Audio Cards'));
+    assert.ok(!JSON.stringify(providerRequest.body).includes('Existing private inventory item'));
+
+    // Both sources together: a disagreement reaches the user through the reviewed warnings.
+    const bothSources = new FormData();
+    bothSources.append('image', new Blob([Buffer.from('89504e470d0a1a0a', 'hex')], { type: 'image/png' }), 'sound-card.png');
+    bothSources.append('description', 'Sound Blaster Audigy 2 card I bought years ago.');
+    const combinedDraft = await request('/api/ai/items/analyze', { method: 'POST', body: bothSources });
+    assert.equal(providerRequest.body.input[0].content.length, 2);
+    assert.deepEqual(combinedDraft.warnings,
+      ['The supplied description says Audigy 2, while the visible product marking appears to identify the item as Audigy LS.']);
+
+    // Neither a photo nor a description leaves nothing to work from.
+    assert.equal(await failedStatus('/api/ai/items/analyze', { method: 'POST', body: new FormData() }), 400);
+    const blankDescription = new FormData();
+    blankDescription.append('description', '   ');
+    assert.equal(await failedStatus('/api/ai/items/analyze', { method: 'POST', body: blankDescription }), 400);
+    const longDescription = new FormData();
+    longDescription.append('description', 'x'.repeat(2001));
+    assert.equal(await failedStatus('/api/ai/items/analyze', { method: 'POST', body: longDescription }), 400);
 
     const invalidImage = new FormData();
     invalidImage.append('image', new Blob(['not an image'], { type: 'image/png' }), 'fake.png');

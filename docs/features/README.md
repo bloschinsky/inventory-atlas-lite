@@ -16,7 +16,7 @@ document describes the current behaviour and its boundaries, not the original pl
 | [Custom-field autocomplete](custom-field-autocomplete.md) | Suggest previously saved values for text custom fields. |
 | [Purchase and serial fields](purchase-and-serial-fields.md) | Record an optional purchase date, structured multi-currency price, and serial number on every item. |
 | [AI feature visibility](ai-feature-visibility.md) | Hide every AI action and the AI page while **Enable AI features** is off, without weakening the server-side AI guards. |
-| [AI Add Item](ai-add-item.md) | Choose an available OpenAI model, analyze the original photo, optionally remove its background locally, and review the editable draft before saving. |
+| [AI Add Item](ai-add-item.md) | Choose an available OpenAI model, create a draft from a photo, a description, or both, optionally remove the photo background locally, and review the editable draft before saving. |
 | [Proxmox one-line installer](proxmox-one-line-installer.md) | Create a Debian LXC on Proxmox VE with the application, a systemd service, and an update command. |
 | [Self-update from About](self-update.md) | Check for a newer stable GitHub release from the About dialog and, on Proxmox/LXC, run the existing privileged updater from the interface. |
 | [About dialog and build metadata](about-dialog.md) | An accessible About modal showing the version, commit, and source date injected at build time. |

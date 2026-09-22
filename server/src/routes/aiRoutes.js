@@ -7,7 +7,8 @@ export const createAiRoutes = ({ aiSettingsService, aiItemAnalysisService, image
   router.put('/api/settings/ai', (req, res) => res.json(aiSettingsService.write(req.body)));
   router.get('/api/ai/models', async (_req, res) => res.json({ models: await aiSettingsService.listAvailableModels() }));
   router.post('/api/ai/items/analyze', imageUpload.single('image'), async (req, res) => {
-    res.json(await aiItemAnalysisService.analyze(req.file, req.body.hint));
+    // `hint` is the previous field name for the same text and is still accepted.
+    res.json(await aiItemAnalysisService.analyze(req.file, req.body.description ?? req.body.hint));
   });
 
   return router;

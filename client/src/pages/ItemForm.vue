@@ -90,7 +90,7 @@ onMounted(async () => {
         form.purchase_date = base.purchase_date || '';
         form.purchase_price = base.purchase_price || { amount: '', currency: 'UAH' };
         form.serial_number = base.serial_number || '';
-        photos.value = [pending.photo];
+        photos.value = pending.photo ? [pending.photo] : [];
         if (form.category_id) {
           await loadFields(form.category_id);
           for (const field of fields.value) {

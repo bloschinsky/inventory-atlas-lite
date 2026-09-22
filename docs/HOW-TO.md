@@ -14,8 +14,8 @@ and photos.
 
 All inventory records and original photo bytes live in one SQLite database on your server. Normal
 use needs no external service. The optional **AI Add Item** workflow sends the selected photo at
-original image detail, its optional hint, and your category/field schema to OpenAI only after you
-press **Analyze**; it therefore needs Internet access.
+original image detail, your written description, and your category/field schema to OpenAI only after
+you press **Create Draft**; it therefore needs Internet access.
 
 **There is no authentication.** Anyone who can open the address can read and change the whole
 inventory, so keep it on a trusted LAN or behind a VPN.
@@ -205,20 +205,24 @@ unusable, the message explains why and your description stays in the modal for a
 
 Changing the category while filling in the form loads that category's fields.
 
-### Create an item from a photo with AI
+### Create an item from a photo or a description with AI
 
 1. Configure and enable OpenAI under **Settings → AI**. The default model is `gpt-5.6-luna`; you can
    replace it with another OpenAI model that accepts image input and strict structured output.
 2. Open **Items** and press **AI Add Item** next to **Add item**. The button appears only while AI
    features are enabled.
-3. Select one JPEG, PNG, WebP, or GIF photo of at most 15 MB. Optionally describe what you know in
-   **Additional description**; visible evidence in the photo takes priority. Enable **Remove
-   background** if you want a locally processed final photo with the item centered on white. The
-   option is off by default.
-4. Press **Analyze** once. The button shows progress and cannot submit a duplicate request. If the
-   request fails, the selected photo and description stay on the page so you can retry.
+3. Supply a photo, a description, or both; at least one of them is required. **Item photo
+   (optional)** accepts one JPEG, PNG, WebP, or GIF of at most 15 MB. **Item description (optional)**
+   takes up to 2,000 characters: describe the item and add anything you already know, such as brand,
+   model, serial number, condition, purchase information, or location. **Remove background** is
+   offered only while a photo is selected and is off by default; it produces a locally processed
+   final photo with the item centered on white.
+4. Press **Create Draft** once. The button stays disabled until a photo or a description is present,
+   shows progress, and cannot submit a duplicate request. If the request fails, the selected photo,
+   the description, and the background-removal choice stay on the page so you can retry.
 5. The normal item form opens with the suggested existing category, supported base and custom-field
-   values, confidence, any warnings, and a preview of the photo ready to upload. When background
+   values, confidence, any warnings, and, when you supplied a photo, a preview of it ready to upload.
+   A description-only draft opens with no photo, and you can add one there before saving. When background
    removal succeeds, this is a JPEG with a white background; otherwise the original is retained and
    a warning explains the fallback. Choose another photo in the normal file control at any time.
    Empty values remain empty. Review and edit every value; AI suggestions are not guaranteed to be
@@ -226,8 +230,10 @@ Changing the category while filling in the form loads that category's fields.
 6. Press **Save item** to create the record through the normal workflow. Leaving or reloading the
    review page before saving discards the temporary draft, and no inventory record has been written.
 
-The analysis always uses one original-detail OpenAI request so visible brand, family, model, part,
-and serial markings remain readable. Background removal runs independently on the local CPU with
+The request is always one OpenAI request. A supplied photo is sent at original detail so visible
+brand, family, model, part, and serial markings remain readable, and a description-only request sends
+no image at all. Facts you state and markings the model reads are both treated as evidence; when the
+two disagree, the draft carries a warning naming the conflict instead of silently choosing one. Background removal runs independently on the local CPU with
 U2NetP and never sends an additional provider request or consumes tokens. It does not search the
 web, create categories or fields, or make a second AI request.
 
@@ -463,7 +469,7 @@ on a different machine than the server.
 - AI Add Fields sends your description, the category name, its field names, and the built-in
   attribute names to OpenAI. It only proposes fields; the fields are created by the same reviewed
   batch as a pasted document, and a failed request changes nothing.
-- AI Add Item uses OpenAI and sends the selected image at original detail, the optional hint, and
+- AI Add Item uses OpenAI and sends the selected image at original detail, your description, and
   category/field definitions outside the local deployment. The original image is stored only after
   you confirm the draft. The OpenAI key stays in `ai-settings.json` under `DATA_DIR` and is not part
   of SQLite backups, so move or reconfigure it separately.
@@ -490,6 +496,6 @@ on a different machine than the server.
 | AI Add Item is missing | AI features are off. Open **Settings**, enter an OpenAI API key and an image-capable model, tick **Enable AI features**, then save. The AI actions appear immediately. |
 | Enable AI features cannot be ticked | No API key is saved, and AI cannot run without one. Enter a key in the same form; the switch becomes available at once. |
 | AI Add Fields suggests nothing usable | The message reports an empty or malformed answer. Describe the category in more detail and press **Generate Fields** again; your description is kept. |
-| AI analysis fails | Read the message for an invalid key, rate limit, unavailable provider, timeout, unsupported image, or missing category. The selected photo and hint remain available for retry. |
+| AI analysis fails | Read the message for an invalid key, rate limit, unavailable provider, timeout, unsupported image, or missing category. The selected photo and description remain available for retry. |
 | Which version is this | Open **About** in the navigation. It shows the version, the commit the build came from, and its date. **Version History** in the same dialog lists what changed in each release. |
 | Where are the logs | On Proxmox, inside the container: `journalctl -u inventory-atlas-lite -f`. See [`proxmox.md`](proxmox.md) for the other service commands. |

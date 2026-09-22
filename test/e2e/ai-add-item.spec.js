@@ -55,10 +55,10 @@ test('uses AI suggestions in the normal editable Add Item form and saves only af
 
   await page.goto('/items');
   await page.getByRole('link', { name: 'AI Add Item' }).first().click();
-  await page.getByLabel('Item photo *').setInputFiles(fixture);
+  await page.getByLabel('Item photo (optional)').setInputFiles(fixture);
   await expect(page.getByLabel('Remove background')).not.toBeChecked();
-  await page.getByLabel('Additional description').fill('This may be an older rangefinder.');
-  await page.getByRole('button', { name: 'Analyze' }).click();
+  await page.getByLabel('Item description (optional)').fill('This may be an older rangefinder.');
+  await page.getByRole('button', { name: 'Create Draft' }).click();
 
   await expect(page).toHaveURL('/items/new');
   await expect(page.getByRole('heading', { name: 'Review AI item' })).toBeVisible();
@@ -114,9 +114,9 @@ test('uses the original for analysis and the local white-background result as th
   await page.goto('/items/ai');
   // Linux Chromium can begin over the folded-hover sidebar, which intentionally overlays the page.
   await page.mouse.move(600, 400);
-  await page.getByLabel('Item photo *').setInputFiles(fixture);
+  await page.getByLabel('Item photo (optional)').setInputFiles(fixture);
   await page.getByLabel('Remove background').check();
-  await page.getByRole('button', { name: 'Analyze' }).click();
+  await page.getByRole('button', { name: 'Create Draft' }).click();
   await expect(page).toHaveURL('/items/new');
   await expect(page.getByRole('img', { name: 'sample-photo-background-removed.jpg' })).toBeVisible();
   expect(analyzedOriginal).toBe(true);
@@ -149,26 +149,26 @@ test('keeps the AI draft and original photo when local background removal fails'
   await page.goto('/items/ai');
   // Linux Chromium can begin over the folded-hover sidebar, which intentionally overlays the page.
   await page.mouse.move(600, 400);
-  await page.getByLabel('Item photo *').setInputFiles(fixture);
+  await page.getByLabel('Item photo (optional)').setInputFiles(fixture);
   await page.getByLabel('Remove background').check();
-  await page.getByRole('button', { name: 'Analyze' }).click();
+  await page.getByRole('button', { name: 'Create Draft' }).click();
   await expect(page).toHaveURL('/items/new');
   await expect(page.getByRole('alert')).toContainText('Background removal failed. The original photo will be used instead.');
   await expect(page.getByRole('img', { name: 'sample-photo.png' })).toBeVisible();
 });
 
-test('keeps the selected image and hint after a recoverable analysis error', async ({ page }) => {
+test('keeps the selected image and description after a recoverable draft error', async ({ page }) => {
   await page.route('**/api/ai/items/analyze', route => route.fulfill({
     status: 503,
     contentType: 'application/json',
     body: JSON.stringify({ error: 'OpenAI rate limit reached. Try again later.' })
   }));
   await page.goto('/items/ai');
-  await page.getByLabel('Item photo *').setInputFiles(fixture);
-  await page.getByLabel('Additional description').fill('Keep this hint');
-  await page.getByRole('button', { name: 'Analyze' }).click();
+  await page.getByLabel('Item photo (optional)').setInputFiles(fixture);
+  await page.getByLabel('Item description (optional)').fill('Keep this hint');
+  await page.getByRole('button', { name: 'Create Draft' }).click();
   await expect(page.getByRole('alert')).toContainText('rate limit');
-  await expect(page.getByLabel('Additional description')).toHaveValue('Keep this hint');
+  await expect(page.getByLabel('Item description (optional)')).toHaveValue('Keep this hint');
   await expect(page.getByRole('img', { name: 'Selected item preview' })).toBeVisible();
 });
 
@@ -209,4 +209,88 @@ test('configures AI while returning only a masked API key state to the browser',
     apiKeyMasked: '••••••••cret'
   });
   expect(JSON.stringify(settings)).not.toContain('sk-test-browser-secret');
+});
+
+test('creates a reviewable draft from a description alone, without a photo or background removal', async ({ page, request }) => {
+  const category = await createCategory(request, unique('AI Prompt Cards'), [{ name: 'Brand', type: 'text' }]);
+  const fields = await (await request.get(`/api/categories/${category.id}/fields`)).json();
+  const brand = fields.find(field => field.name === 'Brand');
+  const suggestedName = unique('AI Prompt Card');
+  let sentBody = '';
+  let backgroundCalls = 0;
+
+  await page.route('**/api/ai/items/analyze', async route => {
+    sentBody = route.request().postDataBuffer().toString('latin1');
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        categoryId: category.id,
+        confidence: 0.64,
+        needsDetailedImageAnalysis: false,
+        baseFields: { name: suggestedName, condition: 'Used' },
+        dynamicFields: { [brand.id]: 'Creative Labs' },
+        warnings: []
+      })
+    });
+  });
+  await page.route('**/api/images/remove-background', route => {
+    backgroundCalls += 1;
+    return route.abort();
+  });
+
+  await page.goto('/items/ai');
+  // Linux Chromium can begin over the folded-hover sidebar, which intentionally overlays the page.
+  await page.mouse.move(600, 400);
+  // Without a photo there is nothing to process locally, so the option is not offered.
+  await expect(page.getByLabel('Remove background')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Create Draft' })).toBeDisabled();
+
+  await page.getByLabel('Item description (optional)').fill('Creative Sound Blaster Audigy LS PCI audio card.');
+  await expect(page.getByRole('button', { name: 'Create Draft' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Create Draft' }).click();
+
+  await expect(page).toHaveURL('/items/new');
+  await expect(page.getByRole('heading', { name: 'Review AI item' })).toBeVisible();
+  await expect(page.getByLabel('Name *')).toHaveValue(suggestedName);
+  await expect(page.getByLabel('Brand')).toHaveValue('Creative Labs');
+  await expect(page.getByText('photo ready to upload.')).toHaveCount(0);
+  expect(sentBody).toContain('Creative Sound Blaster Audigy LS PCI audio card.');
+  expect(sentBody).not.toContain('filename="sample-photo.png"');
+  expect(backgroundCalls).toBe(0);
+
+  const beforeSave = await request.get(`/api/items?search=${encodeURIComponent(suggestedName)}`);
+  expect((await beforeSave.json()).pagination.total).toBe(0);
+
+  await page.getByLabel('Condition').fill('Good');
+  await page.getByRole('button', { name: 'Save item' }).click();
+  await expect(page).toHaveURL(/\/items\/\d+$/);
+  await expect(page.getByRole('heading', { name: suggestedName })).toBeVisible();
+  await expect(detail(page, 'Condition')).toHaveText('Good');
+  await expect(page.getByText('No photos for this item yet.')).toBeVisible();
+});
+
+test('offers background removal only once a photo is selected and keeps the description after a failure', async ({ page }) => {
+  await page.route('**/api/ai/items/analyze', route => route.fulfill({
+    status: 503,
+    contentType: 'application/json',
+    body: JSON.stringify({ error: 'OpenAI rate limit reached. Try again later.' })
+  }));
+
+  await page.goto('/items/ai');
+  // Linux Chromium can begin over the folded-hover sidebar, which intentionally overlays the page.
+  await page.mouse.move(600, 400);
+  await expect(page.getByLabel('Item photo (optional)')).not.toHaveAttribute('required', /.*/);
+  await expect(page.getByLabel('Remove background')).toHaveCount(0);
+
+  await page.getByLabel('Item photo (optional)').setInputFiles(fixture);
+  await expect(page.getByLabel('Remove background')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Create Draft' })).toBeEnabled();
+
+  await page.getByLabel('Item description (optional)').fill('Keep this description');
+  await page.getByRole('button', { name: 'Create Draft' }).click();
+  await expect(page.getByRole('alert')).toContainText('rate limit');
+  await expect(page.getByRole('alert')).not.toContainText('image');
+  await expect(page.getByLabel('Item description (optional)')).toHaveValue('Keep this description');
+  await expect(page.getByLabel('Remove background')).toBeVisible();
 });
