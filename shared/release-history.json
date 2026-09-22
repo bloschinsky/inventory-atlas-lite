@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.27.0",
+    "date": "2026-09-22",
+    "changes": [
+      "Added QR label printing: tick items on the Items page, press Print Labels, and print their QR labels on A4 sheets or save them as PDF.",
+      "Choose a Large, Standard, or Compact layout and whether the name, description, category, and location appear next to the code.",
+      "The selection is kept across pages and filters, and the QR Code window can print a single item's label."
+    ]
+  },
+  {
     "version": "0.26.0",
     "date": "2026-09-22",
     "changes": [

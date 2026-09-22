@@ -1,7 +1,14 @@
 <script setup>
+import { computed } from 'vue';
 import ItemThumbnail from './ItemThumbnail.vue';
+import { labelSelection, toggleLabelSelection } from '../labelSelection.js';
 
-defineProps({ items: { type: Array, required: true } });
+const props = defineProps({ items: { type: Array, required: true } });
+
+// The header checkbox covers the visible page only; selections made on other pages are left alone.
+const pageSelected = computed(() => props.items.length > 0 && props.items.every(item => labelSelection.has(item.uuid)));
+const pagePartlySelected = computed(() => !pageSelected.value && props.items.some(item => labelSelection.has(item.uuid)));
+const togglePage = selected => props.items.forEach(item => toggleLabelSelection(item.uuid, selected));
 
 // The table and the card list show the same data through the same routes; only the markup differs.
 const detailsRoute = item => `/items/${item.id}`;
@@ -14,6 +21,19 @@ const editRoute = item => `/items/${item.id}/edit`;
       <table class="table table-vcenter table-hover card-table">
         <thead>
           <tr>
+            <th
+              scope="col"
+              class="w-1"
+            >
+              <input
+                type="checkbox"
+                class="form-check-input m-0 align-middle"
+                aria-label="Select all items on this page"
+                :checked="pageSelected"
+                :indeterminate="pagePartlySelected"
+                @change="togglePage($event.target.checked)"
+              >
+            </th>
             <th scope="col">
               Photo
             </th>
@@ -54,6 +74,15 @@ const editRoute = item => `/items/${item.id}/edit`;
             v-for="item in items"
             :key="item.id"
           >
+            <td>
+              <input
+                type="checkbox"
+                class="form-check-input m-0 align-middle"
+                :aria-label="`Select ${item.name}`"
+                :checked="labelSelection.has(item.uuid)"
+                @change="toggleLabelSelection(item.uuid, $event.target.checked)"
+              >
+            </td>
             <td>
               <ItemThumbnail
                 :photo-id="item.thumbnail_id"
@@ -129,6 +158,16 @@ const editRoute = item => `/items/${item.id}/edit`;
     >
       <div class="card-body p-3">
         <div class="d-flex gap-3">
+          <!-- The label around the box gives the checkbox a touch-sized target. -->
+          <label class="item-card-select">
+            <input
+              type="checkbox"
+              class="form-check-input m-0"
+              :aria-label="`Select ${item.name}`"
+              :checked="labelSelection.has(item.uuid)"
+              @change="toggleLabelSelection(item.uuid, $event.target.checked)"
+            >
+          </label>
           <ItemThumbnail
             :photo-id="item.thumbnail_id"
             :name="item.name"

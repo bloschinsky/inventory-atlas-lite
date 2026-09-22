@@ -13,6 +13,8 @@ domain, or after the database is restored somewhere else.
   itself never displays a large permanent code.
 - The button opens a small modal containing the QR code, the item name, and the encoded payload as a
   compact debug line.
+- **Print Label** in the modal opens the label print view with this one item; see
+  [`qr-label-printing.md`](qr-label-printing.md).
 - The modal is closed with **Close**, the **×** button, `Escape`, or a click outside it. Keyboard
   focus starts on the **×** button.
 - Containers have no separate model: a box, case, or drawer is an ordinary item and gets the same
@@ -47,7 +49,7 @@ ial:item:v1:<uuid>
   a CDN and no remote QR service is contacted; generation is pure computation in the browser.
 - `client/src/components/ItemQrCode.vue` takes a `uuid`, encodes the payload, builds the module
   matrix, and draws it as a single SVG path with the four-module quiet zone. It is deliberately free
-  of page context so later print labels can reuse it as is.
+  of page context, so the print labels reuse it as is.
 - The SVG is fixed black on white in both colour modes, because a scanner needs the contrast rather
   than the theme.
 - Generation failures are caught inside the component, which renders a Tabler alert instead of the
@@ -74,8 +76,9 @@ ial:item:v1:<uuid>
 ## Notes and limitations
 
 - Reading a code back is described in [`in-app-qr-scanner.md`](in-app-qr-scanner.md), which uses
-  `decodeItemQrPayload`. Label printing, batch selection, and PDF export are a separate task that
-  reuses `shared/itemQr.js` and `ItemQrCode.vue`.
+  `decodeItemQrPayload`. Batch selection and A4 label printing, including Save as PDF through the
+  browser, are described in [`qr-label-printing.md`](qr-label-printing.md), which reuses
+  `ItemQrCode.vue`.
 - Codes are generated on demand and never persisted, so a reprint after an item is deleted is not
   possible, and no cleanup is needed.
 - Error correction level `M` with automatic version selection is used, which is enough for the

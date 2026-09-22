@@ -13,6 +13,7 @@ import Dashboard from './pages/Dashboard.vue';
 import AIAddItem from './pages/AIAddItem.vue';
 import Settings from './pages/Settings.vue';
 import ScanQr from './pages/ScanQr.vue';
+import PrintLabels from './pages/PrintLabels.vue';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -25,6 +26,7 @@ const router = createRouter({
     { path: '/items/:id', component: ItemDetails },
     { path: '/items/:id/edit', component: ItemForm },
     { path: '/scan', component: ScanQr },
+    { path: '/labels/print', component: PrintLabels },
     { path: '/categories', component: Categories },
     { path: '/data', component: DataBackup },
     { path: '/settings', component: Settings }

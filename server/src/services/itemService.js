@@ -24,6 +24,10 @@ const listedItemResponse = row => {
   return withEffectiveLocation(itemResponse(rest), id ? { id, uuid, name, location } : null);
 };
 
+// Generous enough for a whole shelf of boxes, small enough that the browser can still lay out and
+// print every page of the job without locking up.
+export const MAX_LABELS_PER_PRINT = 500;
+
 export class ItemService {
   constructor({ itemRepository, customFieldRepository, itemPhotoRepository, categoryRepository }) {
     this.items = itemRepository;
@@ -67,6 +71,29 @@ export class ItemService {
       search: String(query.search || '').trim(),
       excludedIds: excludeId ? [excludeId, ...this.items.listDescendantIds(excludeId)] : []
     });
+  }
+
+  // Label data for a print job, in the order the items were selected. Items deleted since they were
+  // selected are reported back instead of failing the whole job.
+  labels(body) {
+    const uuids = body?.uuids;
+    if (!Array.isArray(uuids) || !uuids.length) throw httpError('Select at least one item to print.');
+    if (uuids.some(uuid => typeof uuid !== 'string')) throw httpError('Items must be identified by their UUIDs.');
+    const requested = [...new Set(uuids.map(uuid => uuid.trim().toLowerCase()))];
+    if (requested.length > MAX_LABELS_PER_PRINT) {
+      throw httpError(`A print job can contain at most ${MAX_LABELS_PER_PRINT} labels, but ${requested.length} items were selected.`);
+    }
+    const found = new Map(this.items.findLabels(requested).map(row => [row.uuid, {
+      uuid: row.uuid,
+      name: row.name,
+      description: row.description,
+      category_name: row.category_name,
+      effective_location: presentLocation(row.root_id ? row.root_location : row.location)
+    }]));
+    return {
+      items: requested.filter(uuid => found.has(uuid)).map(uuid => found.get(uuid)),
+      missing: requested.filter(uuid => !found.has(uuid))
+    };
   }
 
   get(id) {

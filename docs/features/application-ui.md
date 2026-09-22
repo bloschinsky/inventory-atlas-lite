@@ -68,6 +68,10 @@ presentation layer over the existing API, and no CDN or other runtime internet d
 - Below `lg` each item is a card with a thumbnail, the name as the primary line, the category, the
   container when the item is stored inside another one, the condition and location when present, and
   full-width **View** and **Edit** buttons of at least `44px`.
+- Every row and card starts with a **Select <item name>** checkbox for label printing, and the table
+  header has **Select all items on this page**. A bar between the filters and the results shows the
+  selected count, **Clear selection**, and **Print Labels**; see
+  [`qr-label-printing.md`](qr-label-printing.md).
 - Pagination uses Tabler's pagination component with Previous/Next, their disabled states, and the
   `Page x of y` indicator.
 - An empty inventory shows a Tabler empty state, *No items yet* with an **Add your first item**

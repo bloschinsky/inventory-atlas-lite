@@ -81,7 +81,7 @@ features off in the same save, and they stay off until a new key is saved.
 | **Custom field** | An extra field that belongs to one category. Types: Text, Number, Date, Boolean. Items of that category get the field in their form. |
 | **Location** | A free-text note about where the object physically is, such as `Garage` or `Shelf 2`. An item stored inside another item is displayed at the location of its outermost container instead. |
 | **Stored inside** | A real link to another item that contains this one, such as a lens inside `Box A`. |
-| **QR code** | A code generated from the item's UUID, shown on request from the item page. It identifies the record and contains no address of your server. **Scan QR** reads it back and opens the item. |
+| **QR code** | A code generated from the item's UUID, shown on request from the item page and printed on labels. It identifies the record and contains no address of your server. **Scan QR** reads it back and opens the item. |
 | **Photo** | An image stored inside the database together with the item. |
 | **Backup** | A downloadable copy of the whole SQLite database, photos included. |
 | **Restore** | Replacing the whole inventory with the contents of such a backup file. |
@@ -270,10 +270,40 @@ web, create categories or fields, or make a second AI request.
 3. The code contains only the item's UUID, in the form `ial:item:v1:<uuid>`. It holds no address of
    your server, so a code you print stays valid if the installation moves to another machine, port,
    or address, or if you restore the database elsewhere.
-4. Close the window with **Close**, the **×**, `Escape`, or a click outside it.
-5. Boxes and other containers are ordinary items, so they get their code the same way.
-6. The code is generated in your browser and is never stored or uploaded; no Internet access is
+4. **Print Label** opens the label print view with just this item; see
+   [Select items and print QR labels](#select-items-and-print-qr-labels).
+5. Close the window with **Close**, the **×**, `Escape`, or a click outside it.
+6. Boxes and other containers are ordinary items, so they get their code the same way.
+7. The code is generated in your browser and is never stored or uploaded; no Internet access is
    needed for it.
+
+### Select items and print QR labels
+
+1. Open **Items** and tick the checkbox in front of each item you want a label for. On a wide screen
+   the checkbox in the table header selects or clears every item on the current page; on a phone
+   each card has its own checkbox.
+2. The selection is kept while you page, search, filter, sort, or open an item and come back. The
+   bar above the results shows how many items are selected; **Clear selection** empties it. A page
+   reload also clears it.
+3. Press **Print Labels**. It is disabled while nothing is selected.
+4. The print view shows the number of selected items and a preview of every A4 page exactly as it
+   will print. Choose a **Layout**:
+   - **Large** — 8 labels per page (95 × 69 mm), the biggest codes;
+   - **Standard** — 21 labels per page (63 × 39 mm), the default;
+   - **Compact** — 30 labels per page (63 × 27 mm).
+5. Under **Show on labels** choose what is printed next to the code. The QR code is always printed.
+   **Item name** and **Description** are on by default; **Category** and **Location** are off. The
+   location is the displayed one, so an item inside a container shows the container's location.
+   Long names and descriptions are shortened to fit; the code itself never gets smaller.
+6. The page count under the options grows with the selection; a selection is never limited to one
+   page. Press **Print** to open the browser's print dialog, then pick a printer or **Save as PDF**.
+   For exact label sizes, print at 100 % scale (*Default* or *Actual size*) on A4 paper.
+7. Only the label sheets are printed, always black on white, even in dark mode. The dashed outline of
+   each label is a cutting guide.
+8. If a selected item has been deleted in the meantime, the print view says how many were skipped
+   and prints the others.
+9. Every label encodes only `ial:item:v1:<uuid>`, never the address of your server, so printed labels
+   keep working after the installation moves or the database is restored elsewhere.
 
 ### Scan a QR code to open an item
 
@@ -313,7 +343,8 @@ enables the live camera.
    **Stored inside**, and **View** / **Edit** buttons; the container name links to its own page. On a
    narrower window the location and the container move under the item name, and on a phone each item
    is a card with the same information and the same two buttons. The location shown is the inherited
-   one for items that sit inside a container.
+   one for items that sit inside a container. The checkbox in front of each item selects it for
+   label printing.
 6. The list shows 12 items per page; use **Previous** and **Next** below the results. The total count
    is shown under the **Items** heading.
 
@@ -514,7 +545,7 @@ on a different machine than the server.
 - Custom field types cannot be changed after creation, and categories cannot be merged. The batch
   editor only creates new fields; it never renames or retypes existing ones.
 - Restore replaces the whole inventory from a full SQLite backup. There is no merge, no selective
-  restore of single items or categories, no CSV or JSON import or export, and no label printing.
+  restore of single items or categories, and no CSV or JSON import or export.
 - Anyone who reaches the unauthenticated interface can restore a backup and therefore replace all
   current data. Keep the application on a trusted LAN or VPN.
 - AI Add Fields sends your description, the category name, its field names, and the built-in
@@ -529,6 +560,10 @@ on a different machine than the server.
 - The live camera in **Scan QR** needs the application to be opened over HTTPS or on `localhost`.
   Over plain HTTP only **Scan from image** is available. The scanner reads Inventory Atlas item
   codes only; it does not open other QR codes or read barcodes.
+- A label print job holds at most 500 items; a larger selection is refused with a message instead of
+  being cut short. Labels come in three fixed A4 layouts; there is no label designer, custom label
+  size, or barcode other than the QR code. The label selection is not saved and a page reload clears
+  it.
 - Updating from **About** is available on the Proxmox/LXC installation only. Docker, manual, and
   development installations can check for a newer release but must be updated where they are
   deployed. Only published stable releases are offered, always from the official repository, and the
@@ -552,5 +587,6 @@ on a different machine than the server.
 | AI Add Fields suggests nothing usable | The message reports an empty or malformed answer. Describe the category in more detail and press **Generate Fields** again; your description is kept. |
 | AI analysis fails | Read the message for an invalid key, rate limit, unavailable provider, timeout, unsupported image, or missing category. The selected photo and description remain available for retry. |
 | Scan QR says *Camera unavailable* | Over plain HTTP the browser does not offer the camera; use **Scan from image** or open the application over HTTPS. If camera access was denied, allow it for this site in the browser settings and reload the page. |
+| Printed labels are the wrong size or spill onto extra pages | In the browser's print dialog choose A4 paper and 100 % scale (*Default* or *Actual size*) instead of *Fit to page*. |
 | Which version is this | Open **About** in the navigation. It shows the version, the commit the build came from, and its date. **Version History** in the same dialog lists what changed in each release. |
 | Where are the logs | On Proxmox, inside the container: `journalctl -u inventory-atlas-lite -f`. See [`proxmox.md`](proxmox.md) for the other service commands. |

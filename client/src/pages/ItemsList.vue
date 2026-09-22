@@ -1,10 +1,14 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import { api } from '../api.js';
 import { capabilities } from '../capabilities.js';
+import { labelSelection, printLabelsRoute } from '../labelSelection.js';
 import ItemResults from '../components/ItemResults.vue';
 import PageHeader from '../components/PageHeader.vue';
-import { IconSparkles } from '@tabler/icons-vue';
+import { IconPrinter, IconSparkles } from '@tabler/icons-vue';
+
+const router = useRouter();
 
 const categories = ref([]);
 const result = ref({ items: [], pagination: { page: 1, pages: 1, total: 0 } });
@@ -24,6 +28,8 @@ async function load() {
 watch(() => [filters.categoryId, filters.sort, filters.direction, filters.page], load);
 watch(() => filters.search, () => { clearTimeout(timer); filters.page = 1; timer = setTimeout(load, 250); });
 function changed() { filters.page = 1; }
+const selectedLabel = computed(() => `${labelSelection.size} selected`);
+const printLabels = () => router.push(printLabelsRoute(labelSelection));
 onMounted(async () => { try { categories.value = await api('/api/categories'); } catch (e) { error.value = e.message; } await load(); });
 </script>
 
@@ -136,6 +142,34 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
         </select>
       </div>
     </div>
+  </div>
+
+  <!-- The selection spans pages and filters, so its count and actions stay outside the result list. -->
+  <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    <span
+      class="meta-text"
+      aria-live="polite"
+    >{{ selectedLabel }}</span>
+    <button
+      v-if="labelSelection.size"
+      type="button"
+      class="btn btn-sm btn-link px-1"
+      @click="labelSelection.clear()"
+    >
+      Clear selection
+    </button>
+    <button
+      type="button"
+      class="btn btn-sm ms-auto"
+      :disabled="!labelSelection.size"
+      @click="printLabels"
+    >
+      <IconPrinter
+        :size="18"
+        aria-hidden="true"
+      />
+      Print Labels
+    </button>
   </div>
 
   <div

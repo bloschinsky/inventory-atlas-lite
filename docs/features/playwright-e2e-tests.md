@@ -35,6 +35,8 @@ failing test makes the command exit non-zero.
   server-only API key storage), `theme.spec.js` (the system colour scheme, an explicit light/dark
   choice, and its persistence), and `responsive.spec.js`, which runs at a `390 x 844` phone viewport
   and covers the offcanvas navigation, the mobile item cards, and the item detail order.
+  `print-labels.spec.js` covers item selection and the A4 label print view, including PDF page
+  counts from Chromium's print output.
 - Tests locate elements by accessible role, label, and visible name, use unique record names, and
   wait for observable UI state instead of fixed sleeps. Generated reports, traces, screenshots, and
   videos are ignored by Git.

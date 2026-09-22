@@ -109,6 +109,20 @@ export class ItemRepository {
     return { rows, total };
   }
 
+  // Only what a printed label shows, for any number of items in one statement. The UUIDs travel as a
+  // single JSON parameter, so a large selection never runs into SQLite's bound-parameter limit.
+  findLabels(uuids) {
+    return this.db.prepare(`
+      ${ROOTS_CTE}
+      SELECT i.uuid, i.name, i.description, i.location, c.name AS category_name,
+        root.id AS root_id, root.location AS root_location
+      FROM items i JOIN categories c ON c.id = i.category_id
+      LEFT JOIN roots ON roots.id = i.id
+      LEFT JOIN items root ON root.id = roots.root_id
+      WHERE i.uuid IN (SELECT value FROM json_each(?))
+    `).all(JSON.stringify(uuids));
+  }
+
   listParentCandidates({ search, excludedIds }) {
     const where = [];
     const params = {};

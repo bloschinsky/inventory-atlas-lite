@@ -10,7 +10,7 @@ import ThemeToggle from './ThemeToggle.vue';
     :has(:focus-visible) rule, on keyboard focus as well. It is fixed and only the folded
     width reserves space, so expanding never shifts the page.
   -->
-  <aside class="navbar navbar-vertical navbar-expand-lg navbar-folded-hover d-none d-lg-flex">
+  <aside class="navbar navbar-vertical navbar-expand-lg navbar-folded-hover d-none d-lg-flex d-print-none">
     <div class="container-fluid">
       <RouterLink
         to="/"

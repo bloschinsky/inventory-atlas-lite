@@ -43,6 +43,10 @@ body.app-menu-open { overflow: hidden; }
 .item-card-link { color: var(--tblr-body-color); font-weight: 600; text-decoration: none; overflow-wrap: anywhere; }
 .item-card-link:hover { color: var(--tblr-primary); text-decoration: underline; }
 .item-card .btn { min-height: 44px; }
+.item-card .meta-text { overflow-wrap: anywhere; }
+/* The label-print checkbox of a card, padded out to a comfortable touch target. */
+.item-card-select { display: flex; flex: none; padding: .75rem; margin: -.75rem -.5rem -.75rem -.75rem; cursor: pointer; }
+.item-card-select .form-check-input { width: 1.25rem; height: 1.25rem; }
 
 /* Photo viewer */
 .photo-frame { display: grid; place-items: center; min-height: 260px; max-height: 60vh; background: var(--app-media-bg); border-radius: var(--tblr-border-radius) var(--tblr-border-radius) 0 0; overflow: hidden; }
@@ -131,3 +135,31 @@ button.dashboard-bar-button:hover, button.dashboard-bar-button:focus-visible, .d
 .app-update-hint { min-height: 1.25rem; }
 /* The live scanner preview: a square viewfinder that never outgrows a phone screen. */
 .app-scan-preview { display: block; width: 100%; max-height: 70vh; aspect-ratio: 1; object-fit: cover; border-radius: var(--tblr-border-radius); background: #000; }
+
+/*
+  QR label sheets. The preview is the printed page itself: A4 paper in millimetres, black on white in
+  both colour modes, with every size taken from the preset variables the print view sets. The QR code
+  has a fixed size and never shrinks; the text beside it wraps, clamps, and is clipped to the label.
+*/
+.label-sheets { display: grid; gap: 1.5rem; justify-content: center; overflow-x: auto; padding-bottom: .5rem; }
+.label-sheet { page: labels; display: grid; grid-template-columns: repeat(var(--label-columns), var(--label-width)); grid-template-rows: repeat(var(--label-rows), var(--label-height)); justify-content: center; align-content: center; width: 210mm; height: 297mm; overflow: hidden; background: #fff; color: #000; box-shadow: var(--tblr-shadow-card); }
+.print-label { display: flex; align-items: center; gap: 2.5mm; min-width: 0; padding: var(--label-padding); overflow: hidden; border: .2mm dashed #999; break-inside: avoid; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: var(--label-font); line-height: 1.15; color: #000; }
+.print-label-qr-only { justify-content: center; }
+.print-label .item-qr-code { flex: none; width: var(--label-qr); height: var(--label-qr); max-width: none; margin: 0; border-radius: 0; }
+.print-label-text { flex: 1 1 auto; min-width: 0; max-height: 100%; overflow: hidden; }
+.print-label-text p { margin: 0; overflow-wrap: anywhere; }
+.print-label-text p + p { margin-top: .6mm; }
+.print-label-clamp { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
+.print-label-name { font-size: 1.15em; font-weight: 700; -webkit-line-clamp: var(--label-name-lines); line-clamp: var(--label-name-lines); }
+.print-label-description { -webkit-line-clamp: var(--label-text-lines); line-clamp: var(--label-text-lines); }
+.print-label-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Only the sheets reach the paper: no margins of our own, one sheet per page, whatever the theme. */
+@page labels { size: A4 portrait; margin: 0; }
+@media print {
+  html:has(.label-sheets), html:has(.label-sheets) body, body:has(.label-sheets) .page, body:has(.label-sheets) .page-wrapper { background: #fff !important; color: #000 !important; }
+  body:has(.label-sheets) .page-wrapper, body:has(.label-sheets) .page-body, body:has(.label-sheets) .container-xl { margin: 0 !important; padding: 0 !important; max-width: none !important; }
+  .label-sheets { display: block; overflow: visible; padding: 0; }
+  .label-sheet { box-shadow: none; break-after: page; }
+  .label-sheet:last-child { break-after: auto; }
+}

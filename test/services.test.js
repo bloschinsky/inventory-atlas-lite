@@ -301,3 +301,30 @@ test('an AI settings file that lost its key reads as disabled', () => {
   assert.equal(service.read().enabled, false);
   assert.equal(service.publicSettings().enabled, false);
 });
+
+test('label data is returned in selection order with the effective location and reports missing items', () => {
+  const { categoryService, itemService } = build();
+  const boxes = categoryService.create({ name: 'Boxes' });
+  const cables = categoryService.create({ name: 'Cables' });
+  const crate = itemService.create({ name: 'Crate', category_id: boxes.id, description: 'Blue lid', location: 'Garage' });
+  const cable = itemService.create({ name: 'USB cable', category_id: cables.id, location: 'Desk', parent_item_id: crate.id });
+  const loose = itemService.create({ name: 'Loose cable', category_id: cables.id });
+  const deleted = itemService.create({ name: 'Gone', category_id: cables.id });
+  itemService.remove(deleted.id);
+
+  const result = itemService.labels({ uuids: [cable.uuid, ` ${crate.uuid.toUpperCase()} `, deleted.uuid, loose.uuid, cable.uuid] });
+  assert.deepEqual(result, {
+    items: [
+      { uuid: cable.uuid, name: 'USB cable', description: null, category_name: 'Cables', effective_location: 'Garage' },
+      { uuid: crate.uuid, name: 'Crate', description: 'Blue lid', category_name: 'Boxes', effective_location: 'Garage' },
+      { uuid: loose.uuid, name: 'Loose cable', description: null, category_name: 'Cables', effective_location: null }
+    ],
+    missing: [deleted.uuid]
+  });
+
+  failure(() => itemService.labels({}), 400, 'Select at least one item to print.');
+  failure(() => itemService.labels({ uuids: [] }), 400, 'Select at least one item to print.');
+  failure(() => itemService.labels({ uuids: [crate.id] }), 400, 'Items must be identified by their UUIDs.');
+  const tooMany = Array.from({ length: 501 }, (_, index) => `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`);
+  failure(() => itemService.labels({ uuids: tooMany }), 400, 'A print job can contain at most 500 labels, but 501 items were selected.');
+});

@@ -13,11 +13,6 @@ Implemented behavior is documented separately in [`features/README.md`](features
    Includes a film-boxes-in-hand regression asset. See
    [`TASK-background-removal-quality-phase-2.md`](issues/TASK-background-removal-quality-phase-2.md).
 
-2. **Select and print QR labels** — Planned and unblocked by the completed
-   [item QR identity](features/item-qr-identity.md). Adds item selection and a multi-page A4
-   label-printing view that reuses the canonical QR payload. See
-   [`TASK-select-and-print-qr-labels.md`](issues/TASK-select-and-print-qr-labels.md).
-
 ## Distribution
 
 1. **Windows desktop distribution via Electron** — Planned and unblocked by the completed

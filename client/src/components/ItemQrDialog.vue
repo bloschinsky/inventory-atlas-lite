@@ -1,12 +1,17 @@
 <script setup>
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import ItemQrCode from './ItemQrCode.vue';
 import { encodeItemQrPayload } from '../../../shared/itemQr.js';
+import { printLabelsRoute } from '../labelSelection.js';
 
 const props = defineProps({ item: { type: Object, required: true } });
 const emit = defineEmits(['close']);
 
+const router = useRouter();
 const closeButton = ref(null);
+// One item goes through the same print view as a batch, so there is a single label renderer.
+const printLabel = () => router.push(printLabelsRoute([props.item.uuid]));
 // Debug line under the code; an unusable UUID is already reported by the code itself.
 const payload = (() => {
   try {
@@ -63,7 +68,14 @@ onBeforeUnmount(() => {
             {{ payload }}
           </p>
         </div>
-        <div class="modal-footer">
+        <div class="modal-footer flex-nowrap">
+          <button
+            type="button"
+            class="btn w-100"
+            @click="printLabel"
+          >
+            Print Label
+          </button>
           <button
             type="button"
             class="btn w-100"
