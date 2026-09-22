@@ -3,8 +3,8 @@
 **Status:** Planned\
 **Priority:** High\
 **Type:** Feature enhancement / quality improvement\
-**Blocked by:** [`TASK-background-removal-quality-phase-1.md`](TASK-background-removal-quality-phase-1.md)\
-**Related to:** [`TASK-background-removal-quality-phase-1.md`](TASK-background-removal-quality-phase-1.md)
+**Blocked by:** None; Phase 1 is complete\
+**Related to:** [`docs/changes/2026-09-22-background-removal-quality-phase-1.md`](../changes/2026-09-22-background-removal-quality-phase-1.md)
 
 ---
 
@@ -59,13 +59,12 @@ The system needs an inventory-specific second layer:
 
 ## Dependency
 
-This task is **blocked by Phase 1**.
-
-Do not start Phase 2 until Phase 1 is complete, because:
+Phase 1 is complete; it shipped in 0.24.0 and its result is documented in
+[`docs/features/ai-add-item.md`](../features/ai-add-item.md). It mattered first because:
 
 - Phase 1 provides the improved baseline local segmentation stack;
-- Phase 2 should build on that stronger foundation rather than on the current weak pipeline;
-- otherwise implementation complexity increases while base quality remains poor.
+- Phase 2 builds on that stronger foundation instead of on the earlier weak pipeline;
+- starting the other way round would have increased complexity while base quality stayed poor.
 
 ---
 

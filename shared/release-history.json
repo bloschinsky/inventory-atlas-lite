@@ -1,5 +1,15 @@
 [
   {
+    "version": "0.24.0",
+    "date": "2026-09-22",
+    "changes": [
+      "Improved background removal: a stronger local model produces a noticeably cleaner cutout of the item.",
+      "Improved background removal: leftover background fragments and translucent halos around the item are largely gone.",
+      "Added a subtle shadow under the item in the processed photo.",
+      "Note: background removal now takes a few seconds per photo, and installation downloads a larger model."
+    ]
+  },
+  {
     "version": "0.23.0",
     "date": "2026-09-22",
     "changes": [

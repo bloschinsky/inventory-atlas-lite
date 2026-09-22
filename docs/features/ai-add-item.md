@@ -66,10 +66,14 @@ clears the temporary draft by design.
 ## Local background removal
 
 `POST /api/images/remove-background` validates the declared MIME type and file signature, safely
-decodes one in-memory image, and runs the lightweight U2NetP segmentation model through
-`onnxruntime-node` on the local CPU. Processing is limited to one image at a time. One lazily loaded
-model session is reused, large decoded images are bounded and resized to at most 2048 pixels per
-side, and no temporary files are created.
+decodes one in-memory image, and runs the IS-Net segmentation model through `onnxruntime-node` on the
+local CPU. IS-Net is the `isnet-general-use` checkpoint from Highly Accurate Dichotomous Image
+Segmentation; it replaced the lightweight U2NetP model in 0.24.0 because U2NetP kept clutter such as
+hands, bubble wrap, and table edges in the foreground and left translucent fringes around the item.
+Processing is limited to one image at a time. One lazily loaded model session is reused, large
+decoded images are bounded and resized to at most 2048 pixels per side, and no temporary files are
+created. The model reads a 1024x1024 input instead of the earlier 320x320, so a typical photo takes
+roughly five seconds and about 1 GB of resident memory on a homelab CPU.
 
 Sessions are always created with the `cpu` execution provider, so the Docker build and the Proxmox
 installer both install the dependencies with `ONNXRUNTIME_NODE_INSTALL=skip`, and the repository
@@ -78,15 +82,33 @@ installer both install the dependencies with `ONNXRUNTIME_NODE_INSTALL=skip`, an
 `linux/x64` and unpacks over a gigabyte of unused libraries, which the OOM killer stops in a default
 1 GiB container.
 
-The subject mask is resized to the source dimensions, its visible bounds are detected, and the
-undistorted subject is centered with padding on a white canvas that retains the source aspect ratio.
-The endpoint returns a quality-90 JPEG. If any processing step fails, the browser keeps the completed
-AI draft, displays a warning, and passes the original photo to the Add Item form.
+The raw mask is never composited directly. It is first reduced to a clean silhouette on the model
+grid:
 
-The 4.6 MB ONNX model is downloaded during `npm install` from the rembg release mirror and accepted
-only when its pinned SHA-256 matches. Docker includes that verified build artifact, so inference does
-not download anything at runtime. U2NetP and its upstream U²-Net project use Apache-2.0; the license
-and attribution are included under `LICENSES/`. `onnxruntime-node` is MIT and `sharp` is Apache-2.0.
+1. **Hysteresis thresholding.** Pixels at or above 0.6 form confident cores, which then grow over
+   neighbouring pixels at or above 0.2. Soft background haze never touches a core and is dropped
+   whole, instead of surviving as the semi-transparent grey that dirtied earlier results.
+2. **Region filtering.** Detached regions smaller than five per cent of the largest region are
+   removed, so wrap fragments and specks do not reach the canvas.
+3. **Hole filling.** Enclosed gaps of up to two per cent of the subject area are filled, which closes
+   the pinholes the model leaves over dark, low-contrast areas such as a black PCB.
+4. **Feathering.** The silhouette is scaled to the photo and blurred by a fraction of a pixel, then
+   mapped through a 0.45-0.8 smoothstep. The window is deliberately off-centre, so the edge is pulled
+   slightly inward, away from the pixels whose colour is still mixed with the old background.
+
+The subject's visible bounds are then detected, and the undistorted subject is centered with seven
+per cent padding on a white canvas that retains the source aspect ratio. A soft shadow is generated
+from the placed silhouette - blurred by two per cent of the subject height, offset downward by 2.5
+per cent, and composited beneath the subject at 22 per cent opacity in a dark neutral tint. It is
+drawn deliberately rather than inherited from mask noise, so it cannot reintroduce the artefacts it
+replaces. The endpoint returns a quality-90 JPEG. If any processing step fails, the browser keeps the
+completed AI draft, displays a warning, and passes the original photo to the Add Item form.
+
+The 170 MB ONNX model is downloaded during `npm install` from the rembg release mirror and accepted
+only when its pinned SHA-256 matches; the same step deletes a superseded model file left by an
+earlier release. Docker includes that verified build artifact, so inference does not download
+anything at runtime. IS-Net and its upstream DIS project use Apache-2.0; the license and attribution
+are included under `LICENSES/`. `onnxruntime-node` is MIT and `sharp` is Apache-2.0.
 
 ## Credentials and data sharing
 
@@ -112,8 +134,12 @@ Playwright covers Settings, both original and processed photo-to-review-to-save 
 description-only workflow through to a saved item with no photo, the disabled Create Draft button
 with no input, the background-removal controls appearing only with a photo, the absence of a database
 record before confirmation, editable suggestions, local-processing fallback, and retention of inputs
-after a recoverable provider error. A deterministic service test verifies
-white-canvas composition, framing, JPEG output, and invalid-image rejection.
+after a recoverable provider error. Service tests cover background removal at two levels: stubbed
+model output verifies white-canvas composition, framing, JPEG output, speck and haze removal, hole
+filling, shadow presence, an absent subject, and invalid-image rejection; and a full run of the real
+model over `test/fixtures/sound-blaster-audigy-ls-on-bubble-wrap.jpg` checks background cleanliness,
+the absence of tinted leftovers along the padded border, subject coverage, and the shadow. That last
+test is skipped when the model has not been downloaded.
 
 ## Limitations
 
@@ -121,6 +147,8 @@ white-canvas composition, framing, JPEG output, and invalid-image rejection.
 - The deployment needs Internet access to OpenAI only when analysis is requested.
 - The application still has no authentication; protect the whole installation with a trusted LAN or
   VPN, including Settings.
-- U2NetP is a compact salient-object model; complex scenes, transparent objects, fine gaps, and
-  low-contrast edges can produce an imperfect cutout. The original photo is retained on failure.
+- IS-Net is a general foreground model with no idea which object was meant. It keeps whatever is
+  salient, so a hand holding the item, or clutter of similar prominence, stays in the cutout.
+  Transparent objects and low-contrast edges can still produce an imperfect result, and the original
+  photo is retained on failure.
 - The draft is temporary browser memory and does not survive a reload of the review page.

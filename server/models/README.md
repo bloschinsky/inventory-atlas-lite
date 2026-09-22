@@ -1,13 +1,16 @@
-# U2NetP model
+# IS-Net model
 
-`npm install` downloads `u2netp.onnx` from the rembg release mirror and verifies its pinned SHA-256
-before it is used. The model is not committed to Git, but production builds include the verified
-file so background removal works without network access at runtime.
+`npm install` downloads `isnet-general-use.onnx` (170 MB) from the rembg release mirror and verifies
+its pinned SHA-256 before it is used. The same step deletes any superseded model left in this
+directory, such as the `u2netp.onnx` used up to 0.23.0. The model is not committed to Git, but
+production builds include the verified file so background removal works without network access at
+runtime.
 
-U2NetP is the lightweight form of U²-Net by Xuebin Qin and contributors. The upstream source and
+IS-Net is the segmentation network from Highly Accurate Dichotomous Image Segmentation by Xuebin Qin
+and contributors, and `isnet-general-use` is its general-purpose checkpoint. The upstream source and
 model are licensed under Apache-2.0:
 
-- <https://github.com/xuebinqin/U-2-Net>
-- <https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2netp.onnx>
+- <https://github.com/xuebinqin/DIS>
+- <https://github.com/danielgatis/rembg/releases/download/v0.0.0/isnet-general-use.onnx>
 
-The full license text is stored in `LICENSES/U-2-Net-Apache-2.0.txt`.
+The full license text is stored in `LICENSES/DIS-Apache-2.0.txt`.

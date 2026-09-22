@@ -200,7 +200,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-Copyright 2020 The U²-Net Authors
+Copyright 2022 Xuebin Qin and the DIS Authors
 
-The U2NetP model used by Inventory Atlas Lite is an ONNX conversion of the
-U²-Net lightweight checkpoint. Source: https://github.com/xuebinqin/U-2-Net
+The IS-Net model used by Inventory Atlas Lite is an ONNX conversion of the
+"isnet-general-use" checkpoint from Highly Accurate Dichotomous Image
+Segmentation. Source: https://github.com/xuebinqin/DIS

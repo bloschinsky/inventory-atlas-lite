@@ -223,8 +223,8 @@ Changing the category while filling in the form loads that category's fields.
 5. The normal item form opens with the suggested existing category, supported base and custom-field
    values, confidence, any warnings, and, when you supplied a photo, a preview of it ready to upload.
    A description-only draft opens with no photo, and you can add one there before saving. When background
-   removal succeeds, this is a JPEG with a white background; otherwise the original is retained and
-   a warning explains the fallback. Choose another photo in the normal file control at any time.
+   removal succeeds, this is a JPEG showing the item centered on a clean white background with a
+   subtle shadow; otherwise the original is retained and a warning explains the fallback. Choose another photo in the normal file control at any time.
    Empty values remain empty. Review and edit every value; AI suggestions are not guaranteed to be
    correct.
 6. Press **Save item** to create the record through the normal workflow. Leaving or reloading the
@@ -234,7 +234,9 @@ The request is always one OpenAI request. A supplied photo is sent at original d
 brand, family, model, part, and serial markings remain readable, and a description-only request sends
 no image at all. Facts you state and markings the model reads are both treated as evidence; when the
 two disagree, the draft carries a warning naming the conflict instead of silently choosing one. Background removal runs independently on the local CPU with
-U2NetP and never sends an additional provider request or consumes tokens. It does not search the
+IS-Net and never sends an additional provider request or consumes tokens. It takes a few seconds,
+keeps whatever the model considers the foreground - including a hand holding the item - and places it
+centered on white with a soft shadow. It does not search the
 web, create categories or fields, or make a second AI request.
 
 ### Edit or delete an item

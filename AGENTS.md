@@ -122,6 +122,9 @@ The project stays small and readable. Do not add:
 - `server/src/db.js` — database path, SQLite connection, PRAGMAs, and current table/index schema.
 - `test/e2e.test.js` — end-to-end acceptance test for the API, persistence, photos, and backups.
 - `test/services.test.js` — service-level regression tests that run without HTTP against a temporary database.
+- `test/background-removal.test.js` — local cutout tests: stubbed model output for the composition
+  rules, plus one full run of the real model over the regression photo when it is installed.
+- `test/fixtures/` — real source photos used as regression input by the Node.js tests.
 - `test/e2e/` — Playwright browser tests, their fixtures, shared helpers, and the run launcher.
 - `playwright.config.js` — Playwright projects, isolated test ports, and the API and Vite processes started for the suite.
 - `docs/README.md` — documentation layout and conventions.
