@@ -72,8 +72,11 @@ Segmentation; it replaced the lightweight U2NetP model in 0.24.0 because U2NetP 
 hands, bubble wrap, and table edges in the foreground and left translucent fringes around the item.
 Processing is limited to one image at a time. One lazily loaded model session is reused, large
 decoded images are bounded and resized to at most 2048 pixels per side, and no temporary files are
-created. The model reads a 1024x1024 input instead of the earlier 320x320, so a typical photo takes
-roughly five seconds and about 1 GB of resident memory on a homelab CPU.
+created. The model reads a 768x768 input instead of the earlier 320x320, so a typical photo takes
+roughly two to four seconds and about 650 MB of resident memory on a homelab CPU. IS-Net is trained
+at 1024x1024 and the pinned export accepts either size; 768 was measured to keep the mask within a
+tenth of a per cent of the 1024 result while roughly halving both time and memory, which keeps the
+feature inside the 1 GiB containers this application is deployed into.
 
 Sessions are always created with the `cpu` execution provider, so the Docker build and the Proxmox
 installer both install the dependencies with `ONNXRUNTIME_NODE_INSTALL=skip`, and the repository
@@ -104,11 +107,15 @@ drawn deliberately rather than inherited from mask noise, so it cannot reintrodu
 replaces. The endpoint returns a quality-90 JPEG. If any processing step fails, the browser keeps the
 completed AI draft, displays a warning, and passes the original photo to the Add Item form.
 
-The 170 MB ONNX model is downloaded during `npm install` from the rembg release mirror and accepted
-only when its pinned SHA-256 matches; the same step deletes a superseded model file left by an
-earlier release. Docker includes that verified build artifact, so inference does not download
-anything at runtime. IS-Net and its upstream DIS project use Apache-2.0; the license and attribution
-are included under `LICENSES/`. `onnxruntime-node` is MIT and `sharp` is Apache-2.0.
+The 168 MB ONNX model is downloaded during `npm install` and accepted only when its pinned SHA-256
+matches; the same step deletes a superseded model file left by an earlier release. It is an export
+with dynamic spatial axes, pinned to one repository revision, because the rembg release mirror used
+in 0.24.0 bakes 1024x1024 into every declared shape and cannot run at any other size. The two
+exports were compared on the regression photo at 1024 and their masks differ by at most 3e-6, so the
+checkpoint is the same; `server/models/README.md` records the reasoning and both sources. Docker
+includes that verified build artifact, so inference does not download anything at runtime. IS-Net and
+its upstream DIS project use Apache-2.0; the license and attribution are included under `LICENSES/`.
+`onnxruntime-node` is MIT and `sharp` is Apache-2.0.
 
 ## Credentials and data sharing
 

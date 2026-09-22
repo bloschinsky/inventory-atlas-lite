@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.24.1",
+    "date": "2026-09-22",
+    "changes": [
+      "Improved background removal: it is now about twice as fast and uses noticeably less memory, with the same cutout quality."
+    ]
+  },
+  {
     "version": "0.24.0",
     "date": "2026-09-22",
     "changes": [

@@ -234,7 +234,8 @@ The request is always one OpenAI request. A supplied photo is sent at original d
 brand, family, model, part, and serial markings remain readable, and a description-only request sends
 no image at all. Facts you state and markings the model reads are both treated as evidence; when the
 two disagree, the draft carries a warning naming the conflict instead of silently choosing one. Background removal runs independently on the local CPU with
-IS-Net and never sends an additional provider request or consumes tokens. It takes a few seconds,
+IS-Net and never sends an additional provider request or consumes tokens. It takes a few seconds per
+photo,
 keeps whatever the model considers the foreground - including a hand holding the item - and places it
 centered on white with a soft shadow. It does not search the
 web, create categories or fields, or make a second AI request.

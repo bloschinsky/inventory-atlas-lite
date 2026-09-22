@@ -5,8 +5,8 @@ import { readFile } from 'node:fs/promises';
 import sharp from 'sharp';
 import { removeBackground, removeBackgroundWithSession } from '../server/src/integrations/backgroundRemoval.js';
 
-const MODEL_SIZE = 1024;
-const modelPath = new URL('../server/models/isnet-general-use.onnx', import.meta.url);
+const MODEL_SIZE = 768;
+const modelPath = new URL('../server/models/isnet-general-use-dynamic.onnx', import.meta.url);
 const regressionPhoto = new URL('fixtures/sound-blaster-audigy-ls-on-bubble-wrap.jpg', import.meta.url);
 
 // The model output is the only thing stubbed, so everything after inference is exercised for real.
@@ -37,7 +37,7 @@ test('background removal isolates, centers, and places a subject on a white JPEG
     .png()
     .toBuffer();
   const mask = new Float32Array(MODEL_SIZE * MODEL_SIZE);
-  fillMask(mask, { left: 256, top: 256, right: 768, bottom: 768 }, 1);
+  fillMask(mask, { left: 192, top: 192, right: 576, bottom: 576 }, 1);
 
   const result = await removeBackgroundWithSession(source, sessionReturning(mask));
   assert.equal(result.subarray(0, 3).toString('hex'), 'ffd8ff');
@@ -55,11 +55,11 @@ test('background removal drops specks and haze, fills mask holes, and draws a so
     .png()
     .toBuffer();
   const mask = new Float32Array(MODEL_SIZE * MODEL_SIZE);
-  fillMask(mask, { left: 300, top: 250, right: 700, bottom: 650 }, 1);
+  fillMask(mask, { left: 225, top: 187, right: 525, bottom: 487 }, 1);
   // A hole the model left inside the subject, a detached speck, and a disconnected soft haze.
-  fillMask(mask, { left: 400, top: 400, right: 420, bottom: 420 }, 0);
-  fillMask(mask, { left: 900, top: 60, right: 930, bottom: 90 }, 1);
-  fillMask(mask, { left: 50, top: 700, right: 250, bottom: 900 }, 0.35);
+  fillMask(mask, { left: 300, top: 300, right: 315, bottom: 315 }, 0);
+  fillMask(mask, { left: 675, top: 45, right: 697, bottom: 67 }, 1);
+  fillMask(mask, { left: 37, top: 525, right: 187, bottom: 675 }, 0.35);
 
   const result = await removeBackgroundWithSession(source, sessionReturning(mask));
   const { data, info, pixel } = await decoded(result);
