@@ -46,6 +46,7 @@ fi
 # An installation updated from a release older than the status file still has that release's
 # lib.sh in place until the swap below replaces it.
 command -v ial_update_status >/dev/null 2>&1 || ial_update_status() { :; }
+command -v ial_update_step >/dev/null 2>&1 || ial_update_step() { :; }
 
 ial_require_root
 [ -d "$IAL_APP_DIR" ] || ial_die "No installation found in $IAL_APP_DIR."
@@ -92,6 +93,7 @@ ial_update_status preparing "Preparing the update"
 backup_database() {
   local target
   target="$IAL_BACKUP_DIR/inventory-$(date +%Y%m%d-%H%M%S).sqlite"
+  ial_update_step backing_up_database
   install -d -o "$IAL_USER" -g "$IAL_USER" -m 0750 "$IAL_BACKUP_DIR"
   if ! curl -fsS --max-time 300 -o "$target" "http://127.0.0.1:$PORT/api/backup"; then
     rm -f "$target"
@@ -113,6 +115,7 @@ backup_database() {
 WORK=$(mktemp -d)
 ial_update_status downloading "Downloading the new version"
 if [ "$REF_KIND" = tag ] && [ "$REF" = latest ]; then
+  ial_update_step resolving_release
   REF=$(ial_latest_tag)
   ial_log "Latest release resolved to $REF"
 fi
@@ -131,6 +134,7 @@ ial_log "Updating Inventory Atlas Lite $CURRENT_VERSION to $NEW_VERSION ($REF)"
 ial_update_status preparing "Preparing version $NEW_VERSION"
 ial_build_app "$SOURCE"
 
+ial_update_step staging_code
 STAGING=$(mktemp -d "$IAL_APP_ROOT/.staging.XXXXXX")
 cp -a "$SOURCE/." "$STAGING/"
 chown -R root:root "$STAGING"
@@ -141,22 +145,25 @@ backup_database
 
 ial_update_status installing "Installing version $NEW_VERSION"
 ial_log "Stopping $IAL_SERVICE for the code swap"
+ial_update_step stopping_service
 systemctl stop "$IAL_SERVICE"
+ial_update_step swapping_code
 ial_install_code "$STAGING"
 STAGING=''
 install -m 0644 "$IAL_APP_DIR/deploy/$IAL_SERVICE.service" "/etc/systemd/system/$IAL_SERVICE.service"
 install -m 0755 "$IAL_APP_DIR/scripts/lib.sh" "$IAL_APP_ROOT/lib.sh"
 install -m 0750 "$IAL_APP_DIR/scripts/update.sh" "$IAL_UPDATE_COMMAND"
+ial_update_step reloading_units
 ial_ensure_env_value DEPLOYMENT_TYPE "$IAL_DEPLOYMENT_TYPE"
 ial_install_update_units
 systemctl daemon-reload
-ial_update_status restarting "Restarting the application"
+ial_update_status restarting "Restarting the application" starting_service
 systemctl start "$IAL_SERVICE"
 
-ial_update_status verifying "Verifying version $NEW_VERSION"
+ial_update_status verifying "Verifying version $NEW_VERSION" checking_health
 if ! ial_wait_for_health "$HEALTH_URL" 120 "$NEW_VERSION"; then
   ial_warn "Version $NEW_VERSION failed its health check. Restoring $CURRENT_VERSION."
-  ial_update_status installing "Restoring version $CURRENT_VERSION"
+  ial_update_status installing "Restoring version $CURRENT_VERSION" rolling_back
   systemctl stop "$IAL_SERVICE" || true
   if ial_rollback_code; then
     # The failed release may already have migrated the schema, so the database goes back to the

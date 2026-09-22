@@ -42,8 +42,15 @@ const SHADOW_TINT = 40;
 
 const modelPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../models/isnet-general-use-dynamic.onnx');
 
+// The session holds the weights and the inference arena, several hundred megabytes in all. It is
+// reused while photos keep arriving and released once the feature has been idle this long, so one
+// cutout does not leave that memory taken from everything else in a small container - an update
+// build that runs npm ci beside it was stopped by the OOM killer, together with the container.
+const SESSION_IDLE_MS = 5 * 60 * 1000;
+
 let sessionPromise;
 let processingQueue = Promise.resolve();
+let idleTimer;
 
 function modelSession() {
   sessionPromise ||= ort.InferenceSession.create(modelPath, {
@@ -51,6 +58,17 @@ function modelSession() {
     graphOptimizationLevel: 'all'
   });
   return sessionPromise;
+}
+
+function releaseSessionWhenIdle() {
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => {
+    const idle = sessionPromise;
+    sessionPromise = undefined;
+    // Queued behind any cutout still running, so a session is never released in the middle of one.
+    processingQueue = processingQueue.then(() => idle?.then(session => session.release())).catch(() => {});
+  }, SESSION_IDLE_MS);
+  idleTimer.unref();
 }
 
 async function decodedImage(image) {
@@ -308,6 +326,6 @@ export async function removeBackgroundWithSession(image, session) {
 
 export function removeBackground(image) {
   const operation = processingQueue.then(async () => removeBackgroundWithSession(image, await modelSession()));
-  processingQueue = operation.catch(() => {});
+  processingQueue = operation.catch(() => {}).then(releaseSessionWhenIdle);
   return operation;
 }

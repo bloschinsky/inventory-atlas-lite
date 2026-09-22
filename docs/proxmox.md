@@ -43,7 +43,7 @@ bash proxmox-install.sh
 | OS | Debian 13 (falls back to Debian 12 when no template is available) |
 | Container type | Unprivileged LXC, no nesting, starts on boot |
 | Hostname | `inventory-atlas-lite` |
-| CPU / RAM / Swap | 1 core / 1024 MiB / 512 MiB |
+| CPU / RAM / Swap | 1 core / 2048 MiB / 512 MiB |
 | Root disk | 8 GiB |
 | Network | Bridge `vmbr0`, IPv4 via DHCP |
 | Port | `3000` |
@@ -182,6 +182,18 @@ environment file are never replaced.
 
 The last 5 pre-update backups are kept. Older ones are removed; nothing else in the data directory is
 ever deleted.
+
+The update installs dependencies and builds the client while the application keeps running, which
+needs well over a gigabyte of memory at its peak. Containers created before the default was raised to
+2048 MiB should be given the same on the Proxmox host, or the OOM killer can stop the build and the
+whole container with it:
+
+```bash
+pct set <CTID> -memory 2048
+```
+
+An updater killed that way cannot report a final state. About treats its last state as interrupted
+once it is older than the updater's one-hour timeout, and a new update can then be started.
 
 ## Backups
 

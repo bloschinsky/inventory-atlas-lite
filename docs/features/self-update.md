@@ -25,11 +25,23 @@ Pressing **Update to `<version>`** does not start anything. It replaces the pane
 confirmation step showing `current → new`, the note that a database backup will be created
 automatically and that the application may be temporarily unavailable, and **Cancel** / **Update**.
 
-After **Update**, the panel shows one readable progress line per updater state (*Preparing the
-update*, *Downloading the new version*, *Creating a database backup*, *Installing the update*,
-*Restarting the application*, *Verifying the new version*) with an indeterminate progress bar. The
-backend is stopped and started again during the update, so failing requests are an expected part of
-it: the panel then shows *Waiting for the application to come back* and keeps polling. Once the
+After **Update**, the panel shows the five phases of an update - **Download**, **Build**, **Back
+up**, **Install**, **Verify** - as a Tabler step indicator with the current phase highlighted. Under
+it is one readable line for the step the updater reports (listed in `shared/updateSteps.js`, for
+example *Checking the SHA-256 checksum*, *Installing dependencies with npm ci*, *Compiling the Vue
+client with Vite*, *Snapshotting the SQLite database*, *Swapping in the new code*, *Waiting for the
+health check to report the new version*), an indeterminate progress bar, and the time elapsed since
+the update was started. The two long steps, installing dependencies and building the client, rotate
+a short hint every four seconds that describes what really happens during them, such as
+*Tree-shaking the code nobody imports* or *Politely declining the CUDA and TensorRT binaries*. An
+updater that reports only its coarse state, such as the release being replaced during its own
+update, is shown with the state's line (*Preparing the update*, *Downloading the new version*, and
+so on) under the phase that state belongs to.
+
+The backend is stopped and started again during the update, so failing requests are an expected part
+of it: the panel then shows *Waiting for the application to come back* and keeps polling. When the
+backend has not answered for three minutes, the panel adds a warning with the silent time and
+suggests checking that the container is still running on the Proxmox host. Once the
 updater reports success and `/api/health` answers with the installed version, the panel shows
 *Update completed successfully.* with the new version and reloads the page.
 
@@ -66,10 +78,18 @@ this feature reports the truth instead of offering a button that cannot work.
 | --- | --- |
 | `GET /api/update/check` | Returns `currentVersion`, `latestVersion`, `updateAvailable`, `releaseUrl`, `publishedAt`, `deploymentType`, and `canSelfUpdate` |
 | `POST /api/update/apply` | `202` with the initial status, `400` when there is nothing newer, `409` when an update is already running, `501` when the deployment cannot self-update, `500` when the updater could not be started, `403` when the request is not same-origin |
-| `GET /api/update/status` | Returns `state`, `fromVersion`, `toVersion`, `startedAt`, `message`, and `reportedAt` |
+| `GET /api/update/status` | Returns `state`, `step`, `fromVersion`, `toVersion`, `startedAt`, `message`, and `reportedAt` |
 
 The states are `idle`, `preparing`, `downloading`, `backing_up`, `installing`, `restarting`,
-`verifying`, `success`, `failed`, and `rolled_back`.
+`verifying`, `success`, `failed`, and `rolled_back`. `step` is one of the identifiers in
+`shared/updateSteps.js`, or `null` when the updater reports none or writes one the server does not
+know.
+
+A running state that the updater has not rewritten for longer than its unit's one-hour
+`TimeoutStartSec` is reported as `failed` with the message *The update was interrupted before it
+finished.* An updater killed outright - by the OOM killer, or together with its container - never
+writes a final state, and without this its last running state would refuse every later update with
+`409`.
 
 `GET /api/update/check` reads the releases of the one repository configured in the backend, ignores
 drafts, prereleases, and tags that are not comparable versions, and compares the newest remaining
@@ -119,7 +139,10 @@ checksum, back up SQLite, stop the service, swap the code, reinstall the units, 
 `/api/health`, and roll back on failure - and gained two things:
 
 - it writes its progress to `/var/lib/inventory-atlas-lite/update-status.json` (world-readable,
-  written atomically), which is how the About dialog follows an update that outlives the request;
+  written atomically), which is how the About dialog follows an update that outlives the request.
+  Besides the coarse state it reports a detailed `step` through `ial_update_step`; the download and
+  build helpers in `lib.sh` are shared with `install.sh`, so a step is written only once the updater
+  has reported a state;
 - a rollback now restores the pre-update database as well as the previous code. Restoring only the
   code is not enough once the failed release has migrated the schema, so the backup taken before the
   update is put back, the stale WAL and shared-memory files are removed, and the restored version is
@@ -138,6 +161,8 @@ checksum, back up SQLite, stop the service, swap the code, reinstall the units, 
   cache and the error mapping.
 - `server/src/services/updateService.js` decides what may be offered and what may be started.
 - `server/src/routes/updateRoutes.js` is the thin route table with the same-origin guard.
+- `shared/updateSteps.js` lists the phases and the detailed steps with their labels and hints; the
+  server accepts only these step identifiers and the dialog renders them.
 - `client/src/update.js` holds the panel state and the polling that survives the restart.
 - `client/src/components/AboutUpdate.vue` renders the panel inside `AboutDialog.vue`.
 - `deploy/inventory-atlas-lite-update.service` and `deploy/inventory-atlas-lite-update.path` are the
@@ -157,7 +182,11 @@ checksum, back up SQLite, stop the service, swap the code, reinstall the units, 
   files being a separate oneshot unit triggered only by the marker.
 - `test/e2e/about.spec.js` covers the up-to-date state, the unsupported deployment with its release
   link, the confirmation step and its cancellation, the progress through a restart to the reload,
-  and the rollback message.
+  the phases with the current step, its hint and the elapsed time, and the rollback message.
+- `test/update.test.js` also covers the step allowlist of the status store and an interrupted
+  updater that stops blocking new updates after the timeout; `test/scripts.test.js` covers the step
+  in the status file, that shared helpers write nothing before the updater reports a state, and that
+  every step the scripts report is listed in `shared/updateSteps.js` and the other way round.
 
 ## Notes and limitations
 
@@ -171,5 +200,10 @@ checksum, back up SQLite, stop the service, swap the code, reinstall the units, 
   external updater or agent for them is separate work.
 - The update page-reload happens once `/api/health` reports the installed version. If it never does,
   the panel says so instead of reloading.
-- The progress the panel shows is the updater's own state, not a percentage; the updater reports
-  steps, not progress within a step.
+- The progress the panel shows is the updater's own step, not a percentage; the updater reports
+  steps, not progress within a step, and the hints of a long step rotate on a timer rather than
+  following npm or Vite output.
+- The update builds the new release while the running application keeps serving, so the container
+  needs room for both. The installer defaults to 2048 MiB; an older 1024 MiB container can run out of
+  memory during the build, which is why an interrupted updater is detected as described above.
+- An update interrupted that way is reported as failed only after the updater's one-hour timeout.

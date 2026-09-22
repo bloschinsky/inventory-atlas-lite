@@ -1,5 +1,15 @@
 [
   {
+    "version": "0.25.1",
+    "date": "2026-09-22",
+    "changes": [
+      "The update panel in About now shows the phases of an update, the exact step in progress, and the time elapsed.",
+      "Fixed an update that was stopped part-way, for example when the container ran out of memory, blocking every later update.",
+      "Background removal now frees its model memory after a few idle minutes.",
+      "New Proxmox installations get 2048 MiB of memory, enough to build an update while the application keeps running."
+    ]
+  },
+  {
     "version": "0.25.0",
     "date": "2026-09-22",
     "changes": [

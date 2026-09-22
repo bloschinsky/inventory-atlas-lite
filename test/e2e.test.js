@@ -398,7 +398,7 @@ test('a deployment without a privileged updater refuses to update itself', async
     // The update check itself needs GitHub, so only the parts that must work offline are asserted.
     server = await startServer(dataDir, { DEPLOYMENT_TYPE: 'development' });
     assert.deepEqual(await request('/api/update/status'),
-      { state: 'idle', fromVersion: null, toVersion: null, startedAt: null, message: null, reportedAt: null });
+      { state: 'idle', step: null, fromVersion: null, toVersion: null, startedAt: null, message: null, reportedAt: null });
 
     const refused = await fetch(`${base}/api/update/apply`, { method: 'POST' });
     assert.equal(refused.status, 501);

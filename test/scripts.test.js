@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { UPDATE_STEP_IDS } from '../shared/updateSteps.js';
 
 // The deployment scripts only ever run on Linux, but their validation and code-swap logic is
 // plain POSIX shell, so it is exercised here with whatever bash is available (Git Bash on Windows).
@@ -128,8 +129,13 @@ test('the updater reports progress and rolls the database back with the code', {
     IAL_STATUS_FROM=0.9.0
     IAL_STATUS_TO=0.10.0
     IAL_STATUS_STARTED=2026-09-19T15:00:00Z
+    # Shared build helpers report nothing until the updater itself has reported a state.
+    ial_update_step installing_dependencies
+    echo "before-state=$(ls "$IAL_DATA_DIR" | grep -c update-status)"
     ial_update_status installing 'Installing "version" 0.10.0'
     echo "status=$(cat "$IAL_STATUS_FILE")"
+    ial_update_step swapping_code
+    echo "step=$(cat "$IAL_STATUS_FILE")"
 
     echo migrated >"$IAL_DATA_DIR/inventory.sqlite"
     echo journal >"$IAL_DATA_DIR/inventory.sqlite-wal"
@@ -149,9 +155,12 @@ test('the updater reports progress and rolls the database back with the code', {
   // The About dialog parses this file, so it has to be valid JSON with the documented fields.
   const status = JSON.parse(/status=(.*)/.exec(result.stdout)[1]);
   assert.deepEqual(status, {
-    state: 'installing', fromVersion: '0.9.0', toVersion: '0.10.0',
+    state: 'installing', step: '', fromVersion: '0.9.0', toVersion: '0.10.0',
     startedAt: '2026-09-19T15:00:00Z', message: 'Installing "version" 0.10.0'
   });
+  assert.match(result.stdout, /before-state=0/);
+  // A step keeps the state and message it was reported under.
+  assert.deepEqual(JSON.parse(/step=(.*)/.exec(result.stdout)[1]), { ...status, step: 'swapping_code' });
 
   // A release that already migrated the schema is rolled back with its database, not only its code.
   assert.equal(result.stdout.includes('restore-failed'), false);
@@ -241,6 +250,17 @@ test('progress output never pollutes a captured value', { skip: !bashAvailable }
 
   const captured = sourced(`value=$(ial_log 'noise'; printf '%s' '/opt/example'); printf '[%s]' "$value"`);
   assert.equal(captured.stdout, '[/opt/example]');
+});
+
+test('every step the updater reports is one the About dialog knows', () => {
+  const scripts = ['scripts/lib.sh', 'scripts/update.sh'].map(file => readFileSync(file, 'utf8')).join('\n');
+  const reported = [
+    ...scripts.matchAll(/ial_update_step ([a-z_]+)$/gm),
+    ...scripts.matchAll(/ial_update_status [a-z_]+ "[^"]*" ([a-z_]+)$/gm)
+  ].map(match => match[1]);
+  assert.ok(reported.length >= UPDATE_STEP_IDS.size, `only ${reported.length} step reports were found`);
+  assert.deepEqual(reported.filter(step => !UPDATE_STEP_IDS.has(step)), []);
+  assert.deepEqual([...UPDATE_STEP_IDS].filter(step => !reported.includes(step)), [], 'a listed step is never reported');
 });
 
 test('the Node.js install location is always on PATH', { skip: !bashAvailable }, () => {

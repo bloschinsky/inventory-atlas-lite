@@ -70,7 +70,10 @@ decodes one in-memory image, and runs the IS-Net segmentation model through `onn
 local CPU. IS-Net is the `isnet-general-use` checkpoint from Highly Accurate Dichotomous Image
 Segmentation; it replaced the lightweight U2NetP model in 0.24.0 because U2NetP kept clutter such as
 hands, bubble wrap, and table edges in the foreground and left translucent fringes around the item.
-Processing is limited to one image at a time. One lazily loaded model session is reused, large
+Processing is limited to one image at a time. One lazily loaded model session is reused while
+photos keep arriving and released after five idle minutes, which gave back about 470 MB when
+measured, so one cutout no longer leaves that memory taken from the rest of the container, including
+an update build that runs beside the application. Large
 decoded images are bounded and resized to at most 2048 pixels per side, and no temporary files are
 created. The model reads a 768x768 input instead of the earlier 320x320, so a typical photo takes
 roughly two to four seconds and about 650 MB of resident memory on a homelab CPU. IS-Net is trained

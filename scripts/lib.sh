@@ -95,6 +95,7 @@ ial_latest_tag() {
 
 ial_verify_checksum() { # archive sumsfile
   local actual
+  ial_update_step verifying_checksum
   actual=$(sha256sum "$1" | cut -d' ' -f1)
   grep -qi "^$actual " "$2" || ial_die "Checksum verification failed for the downloaded release."
   ial_log "Release checksum verified."
@@ -111,6 +112,7 @@ ial_fetch_source() {
   base="https://github.com/$IAL_REPO_OWNER/$IAL_REPO_NAME"
   archive="$work/source.tar.gz"
   sums="$work/SHA256SUMS"
+  ial_update_step downloading_archive
   if [ "$kind" = branch ]; then
     ial_warn "Installing development ref '$ref' without checksum verification."
     ial_log "Downloading branch $ref"
@@ -132,6 +134,7 @@ ial_fetch_source() {
     fi
   fi
   [ -s "$archive" ] || ial_die "The downloaded archive is empty."
+  ial_update_step unpacking
   mkdir -p "$work/source"
   tar -xzf "$archive" -C "$work/source" --strip-components=1     || ial_die "Could not extract the downloaded archive."
   [ -f "$work/source/package.json" ] || ial_die "The downloaded archive does not look like Inventory Atlas Lite."
@@ -155,15 +158,25 @@ IAL_STATUS_STARTED=${IAL_STATUS_STARTED:-}
 
 ial_json_escape() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
 
-ial_update_status() { # state [message]
+ial_update_status() { # state [message] [step]
   local tmp
+  IAL_STATUS_STATE=$1
+  IAL_STATUS_MESSAGE=${2:-}
   [ -d "$IAL_DATA_DIR" ] || return 0
   tmp=$(mktemp "$IAL_DATA_DIR/.update-status.XXXXXX") || return 0
-  printf '{"state":"%s","fromVersion":"%s","toVersion":"%s","startedAt":"%s","message":"%s"}\n' \
-    "$(ial_json_escape "$1")" "$(ial_json_escape "$IAL_STATUS_FROM")" "$(ial_json_escape "$IAL_STATUS_TO")" \
-    "$(ial_json_escape "$IAL_STATUS_STARTED")" "$(ial_json_escape "${2:-}")" >"$tmp"
+  printf '{"state":"%s","step":"%s","fromVersion":"%s","toVersion":"%s","startedAt":"%s","message":"%s"}\n' \
+    "$(ial_json_escape "$1")" "$(ial_json_escape "${3:-}")" "$(ial_json_escape "$IAL_STATUS_FROM")" \
+    "$(ial_json_escape "$IAL_STATUS_TO")" "$(ial_json_escape "$IAL_STATUS_STARTED")" \
+    "$(ial_json_escape "$IAL_STATUS_MESSAGE")" >"$tmp"
   chmod 0644 "$tmp"
   mv -f "$tmp" "$IAL_STATUS_FILE"
+}
+
+# Reports a detailed step (listed in shared/updateSteps.js) inside the current state. The helpers
+# that call it are shared with install.sh, so it does nothing until the updater has reported a state.
+ial_update_step() { # step
+  [ -n "${IAL_STATUS_STATE:-}" ] || return 0
+  ial_update_status "$IAL_STATUS_STATE" "$IAL_STATUS_MESSAGE" "$1"
 }
 
 ial_app_version() { # source directory
@@ -174,14 +187,17 @@ ial_app_version() { # source directory
 
 ial_build_app() { # source directory
   ial_log "Installing dependencies from the committed lockfile"
+  ial_update_step installing_dependencies
   # onnxruntime-node downloads the CUDA and TensorRT execution providers on linux/x64 unless it is
   # told not to, and unpacking them is what the OOM killer stops in a default 1 GiB container. The
   # application only ever creates CPU sessions. The release also carries .npmrc for the same reason,
   # because an older installed updater runs this step from its own copy of this file.
   ( cd "$1" && ONNXRUNTIME_NODE_INSTALL=skip npm ci --no-audit --no-fund ) || ial_die "npm ci failed."
   ial_log "Building the production client"
+  ial_update_step building_client
   ( cd "$1" && npm run build ) || ial_die "The production build failed."
   ial_log "Removing development-only dependencies"
+  ial_update_step pruning_dependencies
   ( cd "$1" && npm prune --omit=dev --no-audit --no-fund ) || ial_warn "Could not prune development dependencies."
   rm -rf "$1/.git" "$1/test" "$1/test-results"
 }

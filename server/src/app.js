@@ -10,7 +10,7 @@ import { ItemPhotoRepository } from './repositories/itemPhotoRepository.js';
 import { ItemRepository } from './repositories/itemRepository.js';
 import { RestoreStagingStore } from './restore/stagingStore.js';
 import { maxUploadBytes, safetyBackupDir, stagingDir, tokenTtlMs } from './restore/restoreConfig.js';
-import { releaseCacheTtlMs, releaseRepository, updatePathUnitFile, updateRequestFile, updateStartTimeoutMs, updateStatusFile } from './update/updateConfig.js';
+import { releaseCacheTtlMs, releaseRepository, updatePathUnitFile, updateRequestFile, updateStaleAfterMs, updateStartTimeoutMs, updateStatusFile } from './update/updateConfig.js';
 import { resolveDeployment } from './update/deployment.js';
 import { UpdateStatusStore } from './update/updateStatusStore.js';
 import { SystemdUpdateTrigger } from './update/updateTrigger.js';
@@ -82,7 +82,8 @@ export function createApp({ production = false } = {}) {
     }),
     statusStore: new UpdateStatusStore({ file: updateStatusFile }),
     trigger: new SystemdUpdateTrigger({ requestFile: updateRequestFile, pathUnitFile: updatePathUnitFile }),
-    startTimeoutMs: updateStartTimeoutMs
+    startTimeoutMs: updateStartTimeoutMs,
+    staleAfterMs: updateStaleAfterMs
   });
 
   const openAiClient = new OpenAiClient();

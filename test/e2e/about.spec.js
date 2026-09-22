@@ -156,6 +156,30 @@ test('the update panel follows the updater through the restart and reloads the p
   await expect(dialog).toBeHidden({ timeout: 15000 });
 });
 
+test('the update panel names the phase and the step the updater is working on', async ({ page }) => {
+  const running = step => ({ state: 'preparing', step, fromVersion: '0.9.0', toVersion: '9.9.9' });
+  await answerUpdateApi(page, {
+    check: {
+      currentVersion: '0.9.0', latestVersion: '9.9.9', updateAvailable: true,
+      releaseUrl, publishedAt: '2026-09-19T12:00:00Z', deploymentType: 'proxmox-lxc', canSelfUpdate: true
+    },
+    status: [running('downloading_archive'), running('building_client')]
+  });
+  const dialog = await openAbout(page);
+
+  await dialog.getByRole('button', { name: 'Check for updates' }).click();
+  await dialog.getByRole('button', { name: 'Update to 9.9.9' }).click();
+  await dialog.getByRole('button', { name: 'Update', exact: true }).click();
+
+  const phases = dialog.getByRole('list', { name: 'Update phases' });
+  await expect(phases.getByRole('listitem')).toHaveText(['Download', 'Build', 'Back up', 'Install', 'Verify']);
+  await expect(dialog.getByText('Compiling the Vue client with Vite...')).toBeVisible({ timeout: 15000 });
+  await expect(phases.locator('[aria-current="step"]')).toHaveText('Build');
+  // A long step explains what it is doing while it runs.
+  await expect(dialog.getByText(/Tree-shaking|single-file components|chunks|Minifying|Fingerprinting/)).toBeVisible();
+  await expect(dialog.getByText(/\d+:\d{2} elapsed/)).toBeVisible();
+});
+
 test('a failed update reports the version that was restored', async ({ page }) => {
   await answerUpdateApi(page, {
     check: {

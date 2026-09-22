@@ -114,7 +114,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/bloschinsky/inventory-at
 
 The script prints the configuration for confirmation, installs the latest stable release after
 verifying its `SHA256SUMS`, and reports the URL of the running application. Defaults are 1 core,
-1024 MiB RAM, an 8 GiB disk, DHCP on `vmbr0`, and port `3000`.
+2048 MiB RAM, an 8 GiB disk, DHCP on `vmbr0`, and port `3000`.
 
 See [`docs/proxmox.md`](docs/proxmox.md) for the container settings you can override, the release and
 checksum details, where the code and the database are stored, and how to update, inspect, and back up

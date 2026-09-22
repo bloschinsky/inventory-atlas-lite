@@ -18,3 +18,5 @@ export const updatePathUnitFile = '/etc/systemd/system/inventory-atlas-lite-upda
 
 // An updater that has not reported anything in this long is treated as never having started.
 export const updateStartTimeoutMs = 90 * 1000;
+// TimeoutStartSec of inventory-atlas-lite-update.service: past it, systemd has stopped the updater.
+export const updateStaleAfterMs = 60 * 60 * 1000;

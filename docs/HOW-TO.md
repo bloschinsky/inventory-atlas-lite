@@ -394,9 +394,13 @@ releases known when your installation was built; newer ones appear after you upd
    - **Docker, a manual Node.js installation, or development**: the application cannot update itself.
      It says so and offers **View release**, which opens the release page on GitHub. Update the
      container or the installation the way you normally deploy it.
-4. During an update the panel reports each step: preparing, downloading, creating a database backup,
-   installing, restarting, and verifying. The application restarts while this runs, so short
-   connection failures are expected; the page waits for it to come back.
+4. During an update the panel shows five phases — **Download**, **Build**, **Back up**, **Install**,
+   and **Verify** — with the current one highlighted, the exact step underneath (for example
+   *Installing dependencies with npm ci* or *Snapshotting the SQLite database*), a short line about
+   what a long step is doing, and the time elapsed. Building takes most of the time. The application
+   restarts while this runs, so short connection failures are expected; the page waits for it to come
+   back. If the server stays silent for more than three minutes, the panel says so and suggests
+   checking that the container is still running on the Proxmox host.
 5. When the new version is running, the panel reports *Update completed successfully.* and reloads
    the page. You may close the dialog while the update runs — it keeps going, and reopening **About**
    shows the same progress.
@@ -404,6 +408,10 @@ releases known when your installation was built; newer ones appear after you upd
    pre-update database back and the panel reports *Update failed.* with the restored version. The
    inventory is preserved. The technical details are in the container log
    (`journalctl -u inventory-atlas-lite-update`).
+7. If the updater is killed before it finishes — for example because the container ran out of
+   memory — it cannot report a result. After an hour, the updater's own time limit, **About** reports
+   the update as failed and a new one can be started. A container with 2048 MiB of memory has room
+   for the build; see [`proxmox.md`](proxmox.md#updating).
 
 Only published stable releases are ever installed, and only from the official repository. Updating
 from the container shell with `inventory-atlas-lite-update` still works exactly as before.

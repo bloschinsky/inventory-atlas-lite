@@ -142,6 +142,13 @@ test('the status store only trusts states the updater can write', async () => {
   assert.equal(new UpdateStatusStore({ file: await statusFile() }).read().state, 'idle');
   assert.equal(new UpdateStatusStore({ file: await statusFile('not json') }).read().state, 'idle');
   assert.equal(new UpdateStatusStore({ file: await statusFile(JSON.stringify({ state: 'rm -rf /' })) }).read().state, 'idle');
+
+  // The detailed step is kept only when it is one the About dialog knows.
+  assert.equal(reported.step, null);
+  const building = { state: 'preparing', step: 'building_client' };
+  assert.equal(new UpdateStatusStore({ file: await statusFile(JSON.stringify(building)) }).read().step, 'building_client');
+  const unknown = { state: 'preparing', step: '<script>' };
+  assert.equal(new UpdateStatusStore({ file: await statusFile(JSON.stringify(unknown)) }).read().step, null);
 });
 
 test('the update check compares the running version with the latest stable release', async () => {
@@ -219,6 +226,34 @@ test('an updater that never starts is reported instead of waiting forever', asyn
   const failed = stuck.status();
   assert.equal(failed.state, 'failed');
   assert.equal(failed.message, 'The update service did not start.');
+});
+
+test('an updater killed before its final state no longer blocks the next update', async () => {
+  let clock = Date.parse('2026-09-22T19:00:00Z');
+  let started = 0;
+  const reported = { state: 'preparing', step: 'installing_dependencies', reportedAt: '2026-09-22T18:50:00Z' };
+  const orphaned = service({
+    trigger: { isInstalled: () => true, start: () => { started += 1; } },
+    statusStore: { read: () => ({ fromVersion: '0.9.0', toVersion: '0.10.0', startedAt: null, message: null, ...reported }) },
+    now: () => clock,
+    staleAfterMs: 60 * 60 * 1000
+  });
+
+  // Within the updater's timeout the state may still be real, so the update stays exclusive.
+  assert.equal(orphaned.status().state, 'preparing');
+  await rejects(() => orphaned.apply(), 409, 'An update is already running.');
+
+  clock += 60 * 60 * 1000;
+  const interrupted = orphaned.status();
+  assert.equal(interrupted.state, 'failed');
+  assert.equal(interrupted.step, null);
+  assert.equal(interrupted.message, 'The update was interrupted before it finished.');
+  await orphaned.apply();
+  assert.equal(started, 1);
+
+  // A final state is history, not a running update, however old it is.
+  reported.state = 'success';
+  assert.equal(orphaned.status().state, 'preparing', 'the new request is followed, not the old result');
 });
 
 test('an update is refused when the running version is already the latest', async () => {

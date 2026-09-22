@@ -17,7 +17,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/bloschinsky/inventory-at
 
 - The script shows the chosen configuration and asks for confirmation before creating anything;
   `-y`/`--yes` skips the prompt and `--help` prints the options without changing anything.
-- Defaults: Debian 13, unprivileged LXC, hostname `inventory-atlas-lite`, 1 core, 1024 MiB RAM,
+- Defaults: Debian 13, unprivileged LXC, hostname `inventory-atlas-lite`, 1 core, 2048 MiB RAM,
   512 MiB swap, 8 GiB disk, DHCP on `vmbr0`, port `3000`, start on boot. CT ID, hostname, storage,
   bridge, disk, CPU, RAM, network, OS version, port, and release are overridable through environment
   variables.

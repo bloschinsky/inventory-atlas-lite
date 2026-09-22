@@ -1,8 +1,33 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { UPDATE_PHASES } from '../../../shared/updateSteps.js';
 import {
-  cancelUpdate, checkForUpdates, confirmUpdate, message, phase, progress, release, startUpdate
+  cancelUpdate, checkForUpdates, confirmUpdate, message, phase, progress, release, stage, startUpdate,
+  startedAt, step, unreachableSince
 } from '../update.js';
+
+const HINT_INTERVAL_MS = 4000;
+// A restart takes seconds; a backend that stays silent this long deserves a word to the user.
+const SILENCE_WARNING_MS = 3 * 60 * 1000;
+
+// One clock for the elapsed time, the silence warning, and the rotating hints.
+const now = ref(Date.now());
+let ticker;
+onMounted(() => { ticker = setInterval(() => { now.value = Date.now(); }, 1000); });
+onBeforeUnmount(() => clearInterval(ticker));
+
+const duration = since => {
+  const seconds = Math.max(0, Math.floor((now.value - since) / 1000));
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+};
+const elapsed = computed(() => (startedAt.value ? duration(startedAt.value) : ''));
+const silentFor = computed(() => (unreachableSince.value && now.value - unreachableSince.value >= SILENCE_WARNING_MS
+  ? duration(unreachableSince.value)
+  : ''));
+const hint = computed(() => {
+  const hints = step.value?.hints;
+  return hints ? hints[Math.floor(now.value / HINT_INTERVAL_MS) % hints.length] : '';
+});
 
 // Deployments that cannot update themselves say why, so the answer is not mistaken for a failure.
 const unsupported = computed(() => (release.value?.deploymentType === 'docker'
@@ -104,15 +129,43 @@ const unsupported = computed(() => (release.value?.deploymentType === 'docker'
     </template>
 
     <template v-else-if="phase === 'updating'">
+      <ol
+        class="steps steps-counter app-update-phases mb-3"
+        aria-label="Update phases"
+      >
+        <li
+          v-for="name in UPDATE_PHASES"
+          :key="name"
+          class="step-item"
+          :class="{ active: name === stage }"
+          :aria-current="name === stage ? 'step' : undefined"
+        >
+          {{ name }}
+        </li>
+      </ol>
       <p
-        class="mb-2"
+        class="mb-1"
         role="status"
       >
         {{ progress }}...
       </p>
-      <div class="progress progress-sm mb-2">
+      <p class="small text-secondary mb-2 app-update-hint">
+        {{ hint }}
+      </p>
+      <div class="progress progress-sm mb-1">
         <div class="progress-bar progress-bar-indeterminate" />
       </div>
+      <p class="small text-secondary text-end mb-2">
+        {{ elapsed }} elapsed
+      </p>
+      <p
+        v-if="silentFor"
+        class="small text-warning"
+        role="alert"
+      >
+        The server has not answered for {{ silentFor }}. If this continues, check that the container
+        is still running on the Proxmox host.
+      </p>
       <p class="text-secondary mb-0">
         The application restarts during the update. This page waits for it.
       </p>

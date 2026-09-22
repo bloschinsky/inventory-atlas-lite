@@ -21,7 +21,7 @@ Environment variables (defaults in brackets):
   BRIDGE            Network bridge [vmbr0]
   DISK_GB           Root disk size in GiB [8]
   CORES             CPU cores [1]
-  RAM_MB            Memory in MiB [1024]
+  RAM_MB            Memory in MiB [2048]
   SWAP_MB           Swap in MiB [512]
   IPV4              "dhcp" or a static address such as 192.168.1.50/24 [dhcp]
   GATEWAY           Gateway for a static address [unset]
@@ -115,7 +115,7 @@ TEMPLATE_STORAGE=${TEMPLATE_STORAGE:-$(pick_storage vztmpl local)}
 BRIDGE=${BRIDGE:-vmbr0}
 DISK_GB=${DISK_GB:-8}
 CORES=${CORES:-1}
-RAM_MB=${RAM_MB:-1024}
+RAM_MB=${RAM_MB:-2048}
 SWAP_MB=${SWAP_MB:-512}
 IPV4=${IPV4:-dhcp}
 GATEWAY=${GATEWAY:-}

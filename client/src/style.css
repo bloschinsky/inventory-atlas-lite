@@ -126,3 +126,6 @@ button.dashboard-bar-button:hover, button.dashboard-bar-button:focus-visible, .d
 
 /* The generated QR code keeps its own white quiet zone, so it only needs a size and a rounded box. */
 .item-qr-code { display: block; width: 100%; max-width: 15rem; height: auto; margin-inline: auto; border-radius: var(--tblr-border-radius); }
+/* The phases of an update; the hint line keeps its height so the panel does not jump between steps. */
+.app-update-phases { padding-inline-start: 0; }
+.app-update-hint { min-height: 1.25rem; }

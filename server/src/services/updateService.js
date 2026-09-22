@@ -14,13 +14,17 @@ export class UpdateService {
   // Set when this process asked for an update and cleared as soon as the updater reports for itself.
   #requested = null;
 
-  constructor({ appVersion, deployment, releaseClient, statusStore, trigger, startTimeoutMs = 90 * 1000, now = () => Date.now() }) {
+  constructor({
+    appVersion, deployment, releaseClient, statusStore, trigger,
+    startTimeoutMs = 90 * 1000, staleAfterMs = 60 * 60 * 1000, now = () => Date.now()
+  }) {
     this.appVersion = appVersion;
     this.deployment = deployment;
     this.releaseClient = releaseClient;
     this.statusStore = statusStore;
     this.trigger = trigger;
     this.startTimeoutMs = startTimeoutMs;
+    this.staleAfterMs = staleAfterMs;
     this.now = now;
   }
 
@@ -47,7 +51,7 @@ export class UpdateService {
   }
 
   status() {
-    const reported = this.statusStore.read();
+    const reported = this.#withoutStaleState(this.statusStore.read());
     if (this.#reportedByUpdater(reported)) {
       this.#requested = null;
       return reported;
@@ -109,6 +113,17 @@ export class UpdateService {
     } finally {
       this.#starting = false;
     }
+  }
+
+  /*
+    An updater that is killed outright - by the OOM killer, or with the container it runs in - never
+    writes a final state, and its last running state would otherwise block every later update. Once
+    that state is older than the unit's own start timeout, nothing can still be running behind it.
+  */
+  #withoutStaleState(reported) {
+    const age = this.now() - Date.parse(reported.reportedAt ?? '');
+    if (!ACTIVE_UPDATE_STATES.has(reported.state) || !(age > this.staleAfterMs)) return reported;
+    return { ...reported, state: 'failed', step: null, message: 'The update was interrupted before it finished.' };
   }
 
   // The updater has taken over once the status file has been written since the request was made.
