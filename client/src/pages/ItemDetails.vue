@@ -3,10 +3,11 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { api } from '../api.js';
 import ItemPhotoViewer from '../components/ItemPhotoViewer.vue';
+import ItemQrDialog from '../components/ItemQrDialog.vue';
 import ItemThumbnail from '../components/ItemThumbnail.vue';
 
 const route = useRoute(); const router = useRouter();
-const item = ref(null); const error = ref('');
+const item = ref(null); const error = ref(''); const qrOpen = ref(false);
 const formatDate = value => value ? new Date(value.replace(' ', 'T') + 'Z').toLocaleString() : '—';
 const formatPurchaseDate = value => new Date(`${value}T00:00:00Z`).toLocaleDateString(undefined, { dateStyle: 'medium', timeZone: 'UTC' });
 const displayValue = field => field.type === 'boolean' ? (field.value === '1' ? 'Yes' : 'No') : (field.value || '—');
@@ -23,7 +24,7 @@ async function removePhoto(id) {
   try { await api(`/api/photos/${id}`, { method: 'DELETE' }); await load(); } catch (e) { error.value = e.message; }
 }
 // The same component serves every /items/:id, so parent and contents links must reload it.
-watch(() => route.params.id, load);
+watch(() => route.params.id, () => { qrOpen.value = false; load(); });
 onMounted(load);
 </script>
 
@@ -76,6 +77,13 @@ onMounted(load);
           >
             Edit
           </RouterLink>
+          <button
+            type="button"
+            class="btn"
+            @click="qrOpen = true"
+          >
+            QR Code
+          </button>
           <button
             type="button"
             class="btn btn-outline-danger"
@@ -276,5 +284,11 @@ onMounted(load);
         </section>
       </div>
     </div>
+
+    <ItemQrDialog
+      v-if="qrOpen"
+      :item="item"
+      @close="qrOpen = false"
+    />
   </template>
 </template>

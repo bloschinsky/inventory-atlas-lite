@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.25.0",
+    "date": "2026-09-22",
+    "changes": [
+      "Added a QR code for every item, opened with the new QR Code button on the item page.",
+      "The code contains only the item's UUID, so a printed label keeps working after the installation moves or the database is restored elsewhere.",
+      "The code is generated locally in the browser and is never stored or uploaded."
+    ]
+  },
+  {
     "version": "0.24.1",
     "date": "2026-09-22",
     "changes": [

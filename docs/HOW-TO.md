@@ -81,6 +81,7 @@ features off in the same save, and they stay off until a new key is saved.
 | **Custom field** | An extra field that belongs to one category. Types: Text, Number, Date, Boolean. Items of that category get the field in their form. |
 | **Location** | A free-text note about where the object physically is, such as `Garage` or `Shelf 2`. An item stored inside another item is displayed at the location of its outermost container instead. |
 | **Stored inside** | A real link to another item that contains this one, such as a lens inside `Box A`. |
+| **QR code** | A code generated from the item's UUID, shown on request from the item page. It identifies the record and contains no address of your server. |
 | **Photo** | An image stored inside the database together with the item. |
 | **Backup** | A downloadable copy of the whole SQLite database, photos included. |
 | **Restore** | Replacing the whole inventory with the contents of such a backup file. |
@@ -261,6 +262,18 @@ web, create categories or fields, or make a second AI request.
    used as the thumbnail in the items list.
 4. Delete a photo with **Delete photo** under it on the item page, or with the **×** button on its
    thumbnail in the edit form. Both act immediately and are separate from deleting the item.
+
+### Show the QR code of an item
+
+1. Open the item from **Items** and press **QR Code**, next to **Edit** and **Delete**.
+2. A small window shows the code, the item name, and the encoded text underneath.
+3. The code contains only the item's UUID, in the form `ial:item:v1:<uuid>`. It holds no address of
+   your server, so a code you print stays valid if the installation moves to another machine, port,
+   or address, or if you restore the database elsewhere.
+4. Close the window with **Close**, the **×**, `Escape`, or a click outside it.
+5. Boxes and other containers are ordinary items, so they get their code the same way.
+6. The code is generated in your browser and is never stored or uploaded; no Internet access is
+   needed for it.
 
 ### Search, filter, sort, and page through items
 

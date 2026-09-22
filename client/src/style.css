@@ -123,3 +123,6 @@ button.dashboard-bar-button:hover, button.dashboard-bar-button:focus-visible, .d
 .app-version-history .steps-vertical .step-item { padding-bottom: 1.25rem; }
 .app-version-history .steps-vertical .step-item:last-child { padding-bottom: 0; }
 .app-version-history .steps .step-item ul { color: var(--tblr-secondary); }
+
+/* The generated QR code keeps its own white quiet zone, so it only needs a size and a rounded box. */
+.item-qr-code { display: block; width: 100%; max-width: 15rem; height: auto; margin-inline: auto; border-radius: var(--tblr-border-radius); }
