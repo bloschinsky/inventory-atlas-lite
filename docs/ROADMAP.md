@@ -18,6 +18,22 @@ Implemented behavior is documented separately in [`features/README.md`](features
    Includes a film-boxes-in-hand regression asset. See
    [`TASK-background-removal-quality-phase-2.md`](issues/TASK-background-removal-quality-phase-2.md).
 
+3. **AI Add Item from photo or description** — Planned. Extends the existing reviewed draft flow
+   to accept a photo, a text description, or both without adding a separate AI item workflow. See
+   [`TASK-ai-add-item-photo-or-prompt.md`](issues/TASK-ai-add-item-photo-or-prompt.md).
+
+4. **AI feature visibility** — Planned. Makes the saved **Enable AI Features** setting control all
+   AI entry points and direct AI-page navigation while retaining the existing backend guards. See
+   [`TASK-ai-feature-visibility.md`](issues/TASK-ai-feature-visibility.md).
+
+5. **Batch Fields Insert Template** — Planned. Adds an **Insert Template** action that places the
+   canonical field-definition example into the JSON editor without overwriting user input silently.
+   See [`TASK-batch-fields-insert-template.md`](issues/TASK-batch-fields-insert-template.md).
+
+6. **Version History in About** — Planned. Adds an offline, bundled release timeline to the About
+   experience and a structured source for concise user-facing release changes. See
+   [`TASK-version-history-about.md`](issues/TASK-version-history-about.md).
+
 ## Distribution
 
 1. **Windows desktop distribution via Electron** — Planned and unblocked by the completed
