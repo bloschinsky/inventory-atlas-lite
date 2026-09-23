@@ -5,6 +5,7 @@ data/*.sqlite
 data/*.sqlite-*
 data/backups/
 data/pre-restore-backups/
+data/pre-reset-backups/
 data/restore-staging/
 data/ai-settings.json*
 .env

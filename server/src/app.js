@@ -8,8 +8,9 @@ import { CustomFieldRepository } from './repositories/customFieldRepository.js';
 import { DashboardRepository } from './repositories/dashboardRepository.js';
 import { ItemPhotoRepository } from './repositories/itemPhotoRepository.js';
 import { ItemRepository } from './repositories/itemRepository.js';
+import { DatabaseMaintenance } from './restore/databaseMaintenance.js';
 import { RestoreStagingStore } from './restore/stagingStore.js';
-import { maxUploadBytes, safetyBackupDir, stagingDir, tokenTtlMs } from './restore/restoreConfig.js';
+import { maxUploadBytes, resetBackupDir, resetTokenTtlMs, safetyBackupDir, stagingDir, tokenTtlMs } from './restore/restoreConfig.js';
 import { releaseCacheTtlMs, releaseRepository, updatePathUnitFile, updateRequestFile, updateStaleAfterMs, updateStartTimeoutMs, updateStatusFile } from './update/updateConfig.js';
 import { resolveDeployment } from './update/deployment.js';
 import { UpdateStatusStore } from './update/updateStatusStore.js';
@@ -27,6 +28,7 @@ import { DashboardService } from './services/dashboardService.js';
 import { ImageService } from './services/imageService.js';
 import { ItemService } from './services/itemService.js';
 import { PhotoService } from './services/photoService.js';
+import { ResetService } from './services/resetService.js';
 import { RestoreService } from './services/restoreService.js';
 import { UpdateService } from './services/updateService.js';
 import { errorHandler, maintenanceGuard } from './http/errorHandler.js';
@@ -40,6 +42,7 @@ import { createFieldRoutes } from './routes/fieldRoutes.js';
 import { createImageRoutes } from './routes/imageRoutes.js';
 import { createItemRoutes } from './routes/itemRoutes.js';
 import { createPhotoRoutes } from './routes/photoRoutes.js';
+import { createResetRoutes } from './routes/resetRoutes.js';
 import { createSystemRoutes } from './routes/systemRoutes.js';
 import { createUpdateRoutes } from './routes/updateRoutes.js';
 
@@ -58,18 +61,19 @@ export function createApp({ production = false } = {}) {
   const itemPhotoRepository = new ItemPhotoRepository(db);
   const dashboardRepository = new DashboardRepository(db);
 
+  // Restore and reset both replace the active database, so they share one maintenance state.
+  const maintenance = new DatabaseMaintenance({
+    db,
+    // The connection lifecycle of the active database, which a restore or reset replaces as a whole.
+    database: { path: databasePath, close: closeDatabase, open: openDatabase },
+    dataDir
+  });
   const staging = new RestoreStagingStore({ stagingDir, tokenTtlMs });
   // Leftover staged uploads from a previous run are never resumable, so they are cleared at startup.
   staging.reset();
   staging.startSweepTimer();
-  const restoreService = new RestoreService({
-    db,
-    // The connection lifecycle of the active database, which a restore replaces as a whole.
-    database: { path: databasePath, close: closeDatabase, open: openDatabase },
-    staging,
-    dataDir,
-    safetyBackupDir
-  });
+  const restoreService = new RestoreService({ db, maintenance, staging, dataDir, safetyBackupDir });
+  const resetService = new ResetService({ db, maintenance, dataDir, backupDir: resetBackupDir, tokenTtlMs: resetTokenTtlMs });
 
   const deployment = resolveDeployment();
   const updateService = new UpdateService({
@@ -96,14 +100,14 @@ export function createApp({ production = false } = {}) {
   const imageService = new ImageService({ removeBackground });
   const aiItemAnalysisService = new AiItemAnalysisService({ aiSettingsService, openAiClient, categoryRepository, customFieldRepository });
   const aiFieldService = new AiFieldService({ aiSettingsService, openAiClient, categoryService, customFieldRepository });
-  const backupService = new BackupService({ db, restoreService });
+  const backupService = new BackupService({ db, maintenance });
 
   const imageUpload = createImageUpload();
   const restoreUpload = createRestoreUpload({ staging, maxUploadBytes });
 
   const app = express();
   app.use(express.json({ limit: '1mb' }));
-  app.use(maintenanceGuard(restoreService));
+  app.use(maintenanceGuard(maintenance));
 
   app.use(createAiRoutes({ aiSettingsService, aiItemAnalysisService, imageUpload }));
   app.use(createCapabilityRoutes({ aiSettingsService }));
@@ -113,9 +117,10 @@ export function createApp({ production = false } = {}) {
   app.use(createFieldRoutes({ customFieldService, aiFieldService }));
   app.use(createItemRoutes({ itemService }));
   app.use(createPhotoRoutes({ photoService, imageUpload }));
-  app.use(createSystemRoutes({ restoreService, db, appVersion }));
+  app.use(createSystemRoutes({ maintenance, db, appVersion }));
   app.use(createUpdateRoutes({ updateService }));
-  app.use(createBackupRoutes({ backupService, restoreService, restoreUpload }));
+  app.use(createBackupRoutes({ backupService, maintenance, restoreService, restoreUpload }));
+  app.use(createResetRoutes({ resetService }));
 
   if (production) {
     app.use(express.static(path.join(root, 'dist')));
@@ -123,5 +128,5 @@ export function createApp({ production = false } = {}) {
   }
   app.use(errorHandler);
 
-  return { app, staging, restoreService, updateService, appVersion };
+  return { app, staging, restoreService, resetService, updateService, appVersion };
 }

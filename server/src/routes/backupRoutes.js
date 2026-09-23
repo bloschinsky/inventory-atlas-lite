@@ -2,11 +2,11 @@ import { Router } from 'express';
 import { BackupService } from '../services/backupService.js';
 import { maxUploadBytes } from '../restore/restoreConfig.js';
 
-export const createBackupRoutes = ({ backupService, restoreService, restoreUpload }) => {
+export const createBackupRoutes = ({ backupService, maintenance, restoreService, restoreUpload }) => {
   const router = Router();
 
-  // Readiness the restore page polls while the application finishes swapping the database.
-  router.get('/api/restore/status', (_req, res) => res.json(restoreService.status()));
+  // Readiness the Data / Backup page polls while the application finishes swapping the database.
+  router.get('/api/restore/status', (_req, res) => res.json(maintenance.status()));
 
   router.get('/api/backup', async (_req, res, next) => {
     let download;

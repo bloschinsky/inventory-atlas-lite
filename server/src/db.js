@@ -112,6 +112,18 @@ export const applySchema = connection => {
   }
 };
 
+// Writes a brand-new database file the way a fresh installation starts: an empty file brought to the
+// current schema by applySchema(), so a reset always matches whatever the current schema is.
+export const createFreshDatabase = file => {
+  const connection = new Database(file);
+  try {
+    connection.pragma('foreign_keys = ON');
+    applySchema(connection);
+  } finally {
+    connection.close();
+  }
+};
+
 const openConnection = () => {
   const connection = new Database(databasePath);
   connection.pragma('foreign_keys = ON');

@@ -43,9 +43,9 @@ const freeBytes = directory => {
   } catch { return null; }
 };
 
-export const assertDiskSpace = (directory, needed) => {
+export const assertDiskSpace = (directory, needed, message = 'Not enough free disk space to restore this backup safely.') => {
   const free = freeBytes(directory);
-  if (free !== null && free < needed) throw unavailable('Not enough free disk space to restore this backup safely.');
+  if (free !== null && free < needed) throw unavailable(message);
 };
 
 const hasSqliteHeader = file => {

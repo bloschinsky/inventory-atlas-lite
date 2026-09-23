@@ -452,6 +452,34 @@ explanation and the current data is left untouched. A validated file is kept on 
 minutes; after that, validate it again. Only one restore runs at a time, and a backup download
 cannot overlap the final swap.
 
+### Reset the inventory database
+
+Resetting **permanently removes the whole inventory** — every item, photo, category, custom field,
+and saved value — and leaves an empty database, as on a fresh installation. Application settings,
+such as the AI settings and the API key, and all existing backups are kept.
+
+1. Download a backup first if you might want the data again.
+2. Open **Data / Backup** and scroll to the red **Danger Zone** at the bottom of the page.
+3. Press **Reset Inventory Database**. The dialog asks the server for the current numbers and lists
+   how many items, categories, custom fields, custom field values, and photos will be removed.
+   Nothing has changed yet; **Cancel** closes the dialog.
+4. Tick **I understand that all inventory data will be permanently removed.**
+5. Type `RESET INVENTORY` exactly, in capitals. **Reset Database** stays disabled until both the
+   checkbox and the phrase are in place.
+6. Press **Reset Database** and wait. The page reports `Database reset completed.`, names the safety
+   backup file that holds the removed inventory, and opens the now empty items list.
+
+The confirmation is valid for five minutes and can be used once. If it has expired, or the reset
+failed, the dialog shows the reason; press **Try again** to load fresh numbers and confirm again.
+Before anything is removed, the server writes and verifies a **pre-reset safety backup**; if that is
+not possible, the reset stops and nothing changes. If the replacement itself fails, the previous
+inventory is put back automatically and the message says so. A reset cannot run while a restore or
+another reset is running, and during the few seconds of the swap other changes and backup downloads
+are refused.
+
+To get the removed inventory back, restore the pre-reset safety backup: copy it from the server and
+select it under **Restore from backup**.
+
 ### Check which version you are running
 
 1. Press **About** at the bottom of the navigation list — in the sidebar on a wide screen, in the
@@ -567,6 +595,13 @@ application is stopped. `RESTORE_MAX_UPLOAD_MB` limits the size of an uploaded b
 512 MB, and a larger file is refused. Never copy a live database file while the application is
 writing to it — download a backup instead.
 
+**Data / Backup → Danger Zone → Reset Inventory Database** writes a verified copy of the current
+database to `pre-reset-backups/` next to the live database before it replaces the database with a
+fresh, empty one — for example `/var/lib/inventory-atlas-lite/pre-reset-backups` on Proxmox or
+`/data/pre-reset-backups` in Docker. These copies are never removed automatically; delete the ones
+you no longer need. `ai-settings.json`, the pre-restore copies, and the updater's backups are not
+touched by a reset.
+
 For a personal homelab, download a backup after every larger cataloguing session, and keep the copies
 on a different machine than the server.
 
@@ -587,8 +622,12 @@ on a different machine than the server.
   restore of single items or categories, and no CSV import or any export.
 - **Batch Add from JSON** only creates new items, at most 100 per batch, in one existing category.
   It never creates categories or fields, updates existing items, or imports photos.
-- Anyone who reaches the unauthenticated interface can restore a backup and therefore replace all
-  current data. Keep the application on a trusted LAN or VPN.
+- Anyone who reaches the unauthenticated interface can restore a backup or reset the inventory and
+  therefore replace or remove all current data. The typed confirmation and the single-use token only
+  guard against accidents, not against a person with access. Keep the application on a trusted LAN
+  or VPN.
+- An inventory reset removes everything at once. There is no selective reset of single tables,
+  categories, or items, and it never deletes settings or backups.
 - AI Add Fields sends your description, the category name, its field names, and the built-in
   attribute names to OpenAI. It only proposes fields; the fields are created by the same reviewed
   batch as a pasted document, and a failed request changes nothing.

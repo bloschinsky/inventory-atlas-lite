@@ -112,6 +112,8 @@ checksum verification and prints a warning; do not use it for a production insta
 | `/opt/inventory-atlas-lite/previous` | The code replaced by the last update, kept for rollback |
 | `/var/lib/inventory-atlas-lite` | SQLite database and photos, never replaced |
 | `/var/lib/inventory-atlas-lite/backups` | Pre-update database backups (the last 5 are kept) |
+| `/var/lib/inventory-atlas-lite/pre-restore-backups` | Safety copies written before a restore from **Data / Backup** (the last 10 are kept) |
+| `/var/lib/inventory-atlas-lite/pre-reset-backups` | Safety copies written before an inventory reset, never removed automatically |
 | `/var/lib/inventory-atlas-lite/update-status.json` | Progress of the last update, written by the updater |
 | `/var/lib/inventory-atlas-lite/update-requested` | The marker the application creates to ask for an update |
 | `/etc/inventory-atlas-lite.env` | `NODE_ENV`, `PORT`, `DATA_DIR`, and `DEPLOYMENT_TYPE` |
@@ -200,7 +202,9 @@ once it is older than the updater's one-hour timeout, and a new update can then 
 Proxmox backups (`vzdump`) protect the whole container, including the LXC configuration. The
 application's **Data / Backup** page downloads a portable SQLite snapshot that can be restored into
 another Inventory Atlas Lite installation, which is what you want when moving the inventory
-elsewhere. The updater stores the same kind of snapshot before every update.
+elsewhere. The updater stores the same kind of snapshot before every update, and a restore or an
+inventory reset from **Data / Backup** writes one to `pre-restore-backups` or `pre-reset-backups`
+first. Pre-reset copies are never pruned; delete the ones you no longer need yourself.
 
 ## Security
 

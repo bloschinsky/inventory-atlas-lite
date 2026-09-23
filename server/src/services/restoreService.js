@@ -1,9 +1,7 @@
-import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
-  assertDiskSpace, badRequest, conflict, ensureDirectory, fileSize, removeSidecars,
-  syncDirectory, unavailable, validateStagedDatabase, verifyDatabaseFile
+  assertDiskSpace, badRequest, fileSize, validateStagedDatabase, verifyDatabaseFile
 } from '../restore/databaseFile.js';
 import { CONFIRMATION_PHRASE, safetyBackupsKept } from '../restore/restoreConfig.js';
 
@@ -13,48 +11,16 @@ import { CONFIRMATION_PHRASE, safetyBackupsKept } from '../restore/restoreConfig
   swapped in — after a verified safety backup of the current database has been written. Any failure
   after the swap starts rolls the safety backup back before the request is answered.
 
-  This service also owns the maintenance state the rest of the application asks about: while a
-  restore runs, writes are refused and a backup download may not overlap the swap.
+  The maintenance state, the safety backup, the swap, and the rollback are shared with the inventory
+  reset and live in DatabaseMaintenance; this service decides what is swapped in.
 */
 export class RestoreService {
-  constructor({ db, database, staging, dataDir, safetyBackupDir }) {
+  constructor({ db, maintenance, staging, dataDir, safetyBackupDir }) {
     this.db = db;
-    // The connection lifecycle of the active database, kept behind the two calls used here.
-    this.database = database;
+    this.maintenance = maintenance;
     this.staging = staging;
     this.dataDir = dataDir;
     this.safetyBackupDir = safetyBackupDir;
-    this.restoreRunning = false;
-    this.backupsInFlight = 0;
-    this.criticalFailure = null;
-  }
-
-  isMaintenance() {
-    return this.restoreRunning || this.criticalFailure !== null;
-  }
-
-  status() {
-    return {
-      ready: !this.isMaintenance(),
-      restoring: this.restoreRunning,
-      critical: this.criticalFailure !== null
-    };
-  }
-
-  beginBackupDownload() {
-    if (this.restoreRunning) throw unavailable('A backup is being restored. Try the download again in a moment.');
-    this.backupsInFlight += 1;
-  }
-
-  endBackupDownload() {
-    this.backupsInFlight = Math.max(0, this.backupsInFlight - 1);
-  }
-
-  async waitForBackupDownloads() {
-    for (let attempt = 0; this.backupsInFlight > 0 && attempt < 100; attempt++) {
-      await new Promise(resolve => setTimeout(resolve, 50));
-    }
-    if (this.backupsInFlight > 0) throw conflict('A backup download is still running. Try again in a moment.');
   }
 
   // First stage: the streamed upload is described back to the user and becomes a staged session.
@@ -69,13 +35,6 @@ export class RestoreService {
       this.staging.discardUpload(file.path);
       throw error;
     }
-  }
-
-  safetyBackupName() {
-    const stamp = `${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}Z`;
-    const base = `pre-restore-${stamp}`;
-    if (!fs.existsSync(path.join(this.safetyBackupDir, `${base}.sqlite`))) return `${base}.sqlite`;
-    return `${base}-${crypto.randomBytes(2).toString('hex')}.sqlite`;
   }
 
   // Retention: the newest safetyBackupsKept copies are kept. Cleanup never touches the copy written
@@ -93,15 +52,6 @@ export class RestoreService {
     }
   }
 
-  rollback(safetyPath) {
-    try { this.database.close(); } catch { /* the connection may already be gone */ }
-    removeSidecars(this.database.path);
-    fs.copyFileSync(safetyPath, this.database.path);
-    this.database.open();
-    verifyDatabaseFile(this.database.path, 'The recovered database failed verification.');
-    this.db.prepare('SELECT COUNT(*) AS count FROM items').get();
-  }
-
   counts() {
     return {
       categories: this.db.prepare('SELECT COUNT(*) AS count FROM categories').get().count,
@@ -114,57 +64,41 @@ export class RestoreService {
 
   // Second stage: the short-lived single-use token plus the explicit confirmation phrase.
   async apply(token, confirmation) {
-    if (this.criticalFailure) throw unavailable('The application is in a failed restore state and needs manual recovery.');
+    this.maintenance.assertRecoverable();
     if (confirmation !== CONFIRMATION_PHRASE) throw badRequest(`Type ${CONFIRMATION_PHRASE} to confirm that current data will be replaced.`);
     if (typeof token !== 'string' || !token) throw badRequest('A validated backup is required. Validate the file again.');
     this.staging.sweepExpired();
     if (!this.staging.has(token)) throw badRequest('The restore session is unknown or has expired. Validate the file again.');
-    if (this.restoreRunning) throw conflict('Another restore is already running.');
+    this.maintenance.acquire('restore');
 
-    this.restoreRunning = true;
     const stagedFile = this.staging.claim(token).file;
-    const databasePath = this.database.path;
+    const databasePath = this.maintenance.database.path;
     let safetyPath = null;
     let swapStarted = false;
     try {
-      await this.waitForBackupDownloads();
+      await this.maintenance.waitForBackupDownloads();
       if (!fs.existsSync(stagedFile)) throw badRequest('The staged backup is no longer available. Validate the file again.');
       // The staged file is checked once more so nothing can have changed since validation.
       const summary = validateStagedDatabase(stagedFile);
 
-      ensureDirectory(this.safetyBackupDir);
       assertDiskSpace(this.dataDir, fileSize(databasePath) + fileSize(stagedFile) + 16 * 1024 * 1024);
-      safetyPath = path.join(this.safetyBackupDir, this.safetyBackupName());
-      await this.db.backup(safetyPath);
-      verifyDatabaseFile(safetyPath, 'The safety backup of the current database failed verification.', true);
+      safetyPath = await this.maintenance.writeSafetyBackup(this.safetyBackupDir, 'pre-restore');
 
-      // The candidate sits next to the active database so the final replacement is an atomic rename.
-      const candidatePath = path.join(this.dataDir, `restore-candidate-${crypto.randomBytes(8).toString('hex')}.sqlite`);
+      const candidatePath = this.maintenance.candidatePath('restore-candidate');
       try {
         fs.copyFileSync(stagedFile, candidatePath);
         fs.chmodSync(candidatePath, 0o600);
         verifyDatabaseFile(candidatePath, 'The prepared database failed verification before replacement.', true);
-
-        // Test-only hook: widens the maintenance window so a concurrent write can be observed.
-        const delay = Number(process.env.RESTORE_TEST_DELAY_MS) || 0;
-        if (delay) await new Promise(resolve => setTimeout(resolve, delay));
+        await this.maintenance.testPause();
 
         swapStarted = true;
-        this.database.close();
-        // Stale journals of the replaced database must never be attached to the restored one.
-        removeSidecars(databasePath);
-        fs.renameSync(candidatePath, databasePath);
-        syncDirectory(this.dataDir);
+        this.maintenance.swapIn(candidatePath);
       } finally {
         fs.rmSync(candidatePath, { force: true });
       }
 
-      // Test-only hook: proves that a failure after the swap rolls the safety backup back.
-      if (process.env.RESTORE_TEST_FAILURE === 'after-swap') throw new Error('Simulated restore failure after the swap.');
-
-      this.database.open();
-      verifyDatabaseFile(databasePath, 'The restored database failed verification.');
-      if (this.db.pragma('foreign_key_check').length) throw new Error('The restored database contains broken relationships.');
+      this.maintenance.testFailure('after-swap');
+      this.maintenance.reopenAndVerify('The restored database failed verification.');
       const restored = this.counts();
 
       this.staging.discardUpload(stagedFile);
@@ -174,17 +108,10 @@ export class RestoreService {
       console.error('[restore] restore failed', error);
       this.staging.discardUpload(stagedFile);
       if (!swapStarted) throw error.status ? error : badRequest('The backup could not be restored. The current data was not changed.');
-      try {
-        this.rollback(safetyPath);
-      } catch (recoveryError) {
-        // Nothing is deleted here: every recoverable file stays on disk for manual recovery.
-        this.criticalFailure = { safetyPath, at: new Date().toISOString() };
-        console.error(`[restore] CRITICAL: rollback failed. Safety backup kept at ${safetyPath}, active database at ${databasePath}`, recoveryError);
-        throw Object.assign(new Error('The restore failed and the previous database could not be recovered automatically. The application is stopped for writes; recover the pre-restore backup manually.'), { status: 500 });
-      }
+      this.maintenance.recover(safetyPath, 'The restore failed and the previous database could not be recovered automatically. The application is stopped for writes; recover the pre-restore backup manually.');
       throw Object.assign(new Error('The restore failed and the previous database was recovered. No data was lost.'), { status: 500 });
     } finally {
-      this.restoreRunning = false;
+      this.maintenance.release();
     }
   }
 }

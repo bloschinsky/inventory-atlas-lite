@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import { api, jsonOptions } from '../api.js';
 import PageHeader from '../components/PageHeader.vue';
+import ResetDatabaseDialog from '../components/ResetDatabaseDialog.vue';
 
 defineOptions({ name: 'DataBackupPage' });
 
@@ -14,6 +15,8 @@ const validating = ref(false);
 const restoring = ref(false);
 const error = ref('');
 const success = ref(null);
+const resetOpen = ref(false);
+const resetResult = ref(null);
 
 const compatibility = computed(() => {
   const summary = validation.value?.summary;
@@ -93,6 +96,14 @@ async function restore() {
   } finally {
     restoring.value = false;
   }
+}
+
+async function finishReset(result) {
+  resetOpen.value = false;
+  resetResult.value = result;
+  await waitUntilReady();
+  // Like a restore, a full page load drops every cached view of the removed data.
+  setTimeout(() => window.location.assign('/items'), 2000);
 }
 </script>
 
@@ -304,8 +315,68 @@ async function restore() {
         <p class="mb-0">
           Keep regular copies outside this server. Pre-restore safety backups are written to
           <code>pre-restore-backups</code> next to the live database, and the ten most recent are kept.
+          Pre-reset safety backups are written to <code>pre-reset-backups</code> and are never removed
+          automatically.
         </p>
       </div>
     </section>
+
+    <!-- Kept apart from the backup actions above so a destructive click cannot happen by accident. -->
+    <section
+      class="card border-danger mt-5"
+      aria-labelledby="danger-zone-title"
+    >
+      <div class="card-status-top bg-danger" />
+      <div class="card-header">
+        <h2
+          id="danger-zone-title"
+          class="card-title text-danger"
+        >
+          Danger Zone
+        </h2>
+      </div>
+      <div class="card-body">
+        <div
+          v-if="resetResult"
+          class="alert alert-success"
+          role="status"
+        >
+          <h3 class="alert-title">
+            Database reset completed.
+          </h3>
+          <p class="mb-1">
+            Inventory Atlas Lite is ready for a fresh inventory.
+          </p>
+          <p class="mb-0">
+            A safety backup of the removed inventory was saved as <code>{{ resetResult.safetyBackup }}</code>
+            in the pre-reset backup directory. Opening the items list…
+          </p>
+        </div>
+        <h3 class="h4">
+          Reset Inventory Database
+        </h3>
+        <p class="mb-2">
+          Permanently remove all inventory items, photos, categories, and custom fields, and return
+          Inventory Atlas Lite to a fresh database state.
+        </p>
+        <p class="meta-text">
+          Application settings are preserved. A safety backup will be created automatically before reset.
+        </p>
+        <button
+          class="btn btn-outline-danger"
+          type="button"
+          :disabled="busy || Boolean(resetResult)"
+          @click="resetOpen = true"
+        >
+          Reset Inventory Database
+        </button>
+      </div>
+    </section>
+
+    <ResetDatabaseDialog
+      v-if="resetOpen"
+      @close="resetOpen = false"
+      @reset="finishReset"
+    />
   </div>
 </template>

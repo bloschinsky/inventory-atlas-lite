@@ -13,10 +13,12 @@ export const errorHandler = (error, _req, res, _next) => {
 };
 
 // While the active database is being replaced, nothing may write to the connection being swapped.
-export const maintenanceGuard = restoreService => (req, res, next) => {
+// Restore and reset requests pass through so their own service can answer with the exact reason.
+export const maintenanceGuard = maintenance => (req, res, next) => {
   const writes = req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH' || req.method === 'DELETE';
-  if (writes && !req.path.startsWith('/api/restore/') && restoreService.isMaintenance()) {
-    return res.status(503).json({ error: 'A backup is being restored. Try again in a moment.' });
+  const replacement = req.path.startsWith('/api/restore/') || req.path.startsWith('/api/database/reset/');
+  if (writes && !replacement && maintenance.isMaintenance()) {
+    return res.status(503).json({ error: 'The database is being restored or reset. Try again in a moment.' });
   }
   next();
 };

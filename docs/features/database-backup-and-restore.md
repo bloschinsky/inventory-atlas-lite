@@ -13,7 +13,8 @@ backup become the active database. It is not a merge, an import, or a selective 
 - **Download backup** streams a consistent snapshot created with SQLite's backup API, named
   `inventory-YYYY-MM-DD.sqlite`. It contains items, categories, custom fields, values, nesting, and
   the original photo bytes.
-- A download is refused with HTTP `503` while a restore is replacing the database.
+- A download is refused with HTTP `503` while a restore or an [inventory reset](inventory-database-reset.md)
+  is replacing the database.
 
 ### Restore
 
@@ -72,11 +73,13 @@ backup become the active database. It is not a merge, an import, or a selective 
 
 `RestoreService` in `server/src/services/restoreService.js` performs the swap in one serialized
 operation, with the staged uploads and their tokens held by `server/src/restore/stagingStore.js` and
-the SQLite file checks in `server/src/restore/databaseFile.js`:
+the SQLite file checks in `server/src/restore/databaseFile.js`. The maintenance state, the safety
+backup, the swap, and the rollback live in `server/src/restore/databaseMaintenance.js`, which the
+[inventory reset](inventory-database-reset.md) shares:
 
-1. only one restore runs at a time, and it waits for in-flight backup downloads;
-2. while it runs, every `POST`, `PUT`, `PATCH`, and `DELETE` outside `/api/restore/` answers HTTP
-   `503`, so nothing can write to the connection being replaced;
+1. only one restore or reset runs at a time, and it waits for in-flight backup downloads;
+2. while it runs, every `POST`, `PUT`, `PATCH`, and `DELETE` outside `/api/restore/` and
+   `/api/database/reset/` answers HTTP `503`, so nothing can write to the connection being replaced;
 3. the staged file is validated again;
 4. free disk space is checked, and a safety backup of the live database is written to
    `DATA_DIR/pre-restore-backups/pre-restore-<UTC timestamp>Z.sqlite` with SQLite's backup API, its
@@ -97,8 +100,8 @@ the client receives a critical error instead of an uncertain application.
 
 ### Readiness
 
-`GET /api/restore/status` returns `{ ready, restoring, critical }`, which the page polls before it
-reloads. `GET /api/health` carries the same three fields and keeps answering `200` during a restore,
+`GET /api/restore/status` returns `{ ready, restoring, resetting, critical }`, which the page polls
+before it reloads after a restore or a reset. `GET /api/health` carries the same four fields and keeps answering `200` during a restore,
 with `database: "maintenance"`, so container and deployment health checks do not fail over a
 few-second maintenance window.
 

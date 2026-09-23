@@ -24,10 +24,6 @@ Implemented behavior is documented separately in [`features/README.md`](features
    snapshot process. See
    [`TASK-cloud-backup-dropbox-google-drive.md`](issues/TASK-cloud-backup-dropbox-google-drive.md).
 
-2. **Safe inventory database reset** — Planned. Adds a guarded destructive reset with a verified
-   safety backup, impact review, typed confirmation, atomic replacement, and rollback. See
-   [`TASK-safe-reset-inventory-database.md`](issues/TASK-safe-reset-inventory-database.md).
-
 ## Distribution
 
 1. **Windows desktop distribution via Electron** — Planned and unblocked by the completed

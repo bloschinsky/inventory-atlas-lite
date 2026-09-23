@@ -5,12 +5,12 @@ import { randomUUID } from 'node:crypto';
 
 /*
   Writes a consistent copy of the live database to a temporary file for download. A download and
-  the final restore swap must never overlap, which is what the restore guard around it is for.
+  the swap of a restore or reset must never overlap, which is what the maintenance guard around it is for.
 */
 export class BackupService {
-  constructor({ db, restoreService }) {
+  constructor({ db, maintenance }) {
     this.db = db;
-    this.restore = restoreService;
+    this.maintenance = maintenance;
   }
 
   static discard(file) {
@@ -19,7 +19,7 @@ export class BackupService {
 
   async createDownload() {
     const file = path.join(os.tmpdir(), `inventory-backup-${randomUUID()}.sqlite`);
-    this.restore.beginBackupDownload();
+    this.maintenance.beginBackupDownload();
     try {
       await this.db.backup(file);
       return { file, filename: `inventory-${new Date().toISOString().slice(0, 10)}.sqlite` };
@@ -27,7 +27,7 @@ export class BackupService {
       BackupService.discard(file);
       throw error;
     } finally {
-      this.restore.endBackupDownload();
+      this.maintenance.endBackupDownload();
     }
   }
 }

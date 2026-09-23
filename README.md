@@ -150,6 +150,13 @@ data — one more reason to keep the application on a trusted network only. Set
 `RESTORE_MAX_UPLOAD_MB` to change the maximum size of an uploaded backup; the default is `512`.
 See [`docs/features/database-backup-and-restore.md`](docs/features/database-backup-and-restore.md).
 
+The **Danger Zone** at the bottom of the same page resets the inventory to a fresh, empty database.
+It requires a checkbox and the typed phrase `RESET INVENTORY`, writes a verified safety copy to
+`pre-reset-backups/` under `DATA_DIR` before anything changes, swaps in a new database created with
+the current schema, and rolls the safety copy back automatically if the replacement fails. Settings
+such as `ai-settings.json` and all earlier backups are kept, and pre-reset copies are never removed
+automatically. See [`docs/features/inventory-database-reset.md`](docs/features/inventory-database-reset.md).
+
 AI configuration is managed in **Settings**. Its API key is stored separately as
 `ai-settings.json` under `DATA_DIR`, is not returned to the browser after saving, and is not included
 in SQLite backups. Back up or reconfigure this secret separately when moving an installation.

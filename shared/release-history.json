@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.30.0",
+    "date": "2026-09-23",
+    "changes": [
+      "Added Reset Inventory Database to a new Danger Zone on the Data / Backup page: it removes every item, photo, category, and custom field and leaves a fresh, empty database.",
+      "The dialog shows how much will be removed and needs a checkbox plus the typed phrase RESET INVENTORY; the server checks both and a single-use confirmation that expires after five minutes.",
+      "A verified safety backup is written to pre-reset-backups first and kept, a failed reset puts the previous inventory back automatically, and settings such as the AI key are not touched."
+    ]
+  },
+  {
     "version": "0.29.1",
     "date": "2026-09-23",
     "changes": [

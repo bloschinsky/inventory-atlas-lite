@@ -110,7 +110,8 @@ The project stays small and readable. Do not add:
 - `client/src/pages/ScanQr.vue` — `/scan`: live camera and image QR scanning that opens the matching item.
 - `client/src/qrScan.js` — local QR decoding with the bundled `jsqr` and classification of the scanned text.
 - `client/src/pages/Categories.vue` — category and custom field management.
-- `client/src/pages/DataBackup.vue` — SQLite backup download.
+- `client/src/pages/DataBackup.vue` — SQLite backup download, restore, and the Danger Zone.
+- `client/src/components/ResetDatabaseDialog.vue` — impact review and confirmation of the inventory reset.
 - `client/src/style.css` — small set of application styles layered on Tabler, built only from
   Tabler custom properties so both color modes stay correct.
 - `shared/fieldDefinitions.js` — application-level custom field-definition format and validation, imported by both the client and the server.
@@ -123,10 +124,10 @@ The project stays small and readable. Do not add:
 - `server/src/services/` — application and business logic, independent of Express request and response objects.
 - `server/src/repositories/` — all SQL and row mapping for the inventory tables.
 - `server/src/integrations/` — adapters for external or heavy dependencies: OpenAI, the GitHub release API, and the local background-removal model.
-- `server/src/restore/` — restore configuration, staged-upload sessions, and the SQLite file checks used by the restore service.
+- `server/src/restore/` — restore and reset configuration, staged-upload sessions, the SQLite file checks, and `databaseMaintenance.js`: the shared maintenance lock, safety backup, atomic swap, and rollback used by the restore and reset services.
 - `server/src/update/` — deployment capability, version comparison, the updater's status file, and the privileged update trigger.
 - `server/src/http/` — transport middleware: uploads, the maintenance guard, and the central error handler.
-- `server/src/db.js` — database path, SQLite connection, PRAGMAs, and current table/index schema.
+- `server/src/db.js` — database path, SQLite connection, PRAGMAs, current table/index schema, and the fresh-database initializer used by the reset.
 - `test/e2e.test.js` — end-to-end acceptance test for the API, persistence, photos, and backups.
 - `test/services.test.js` — service-level regression tests that run without HTTP against a temporary database.
 - `test/background-removal.test.js` — local cutout tests: stubbed model output for the composition
