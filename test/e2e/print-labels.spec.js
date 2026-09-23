@@ -88,7 +88,11 @@ test('selects items across pages and filters, then prints them from one batch re
   await expect(page.getByRole('checkbox', { name: `Select ${thirteenth.name}` })).toBeChecked();
   await page.getByRole('link', { name: `Edit ${thirteenth.name}` }).click();
   await expect(page.getByLabel('Name *')).toHaveValue(thirteenth.name);
+  // The Items page loads its list only after the categories, so wait for it before recording the
+  // requests of the print view; on a slow runner it would otherwise be counted as a label request.
+  const listLoaded = page.waitForResponse(response => response.request().method() === 'GET' && new URL(response.url()).pathname === '/api/items');
   await page.getByRole('link', { name: 'Items', exact: true }).click();
+  await listLoaded;
 
   const apiRequests = [];
   page.on('request', sent => {
