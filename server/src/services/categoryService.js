@@ -1,5 +1,5 @@
 import { httpError } from '../httpError.js';
-import { requiredText } from './itemValidation.js';
+import { requiredText } from '../../../shared/itemValidation.js';
 
 export class CategoryService {
   constructor(categoryRepository) {

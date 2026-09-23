@@ -13,11 +13,7 @@ Implemented behavior is documented separately in [`features/README.md`](features
    Includes a film-boxes-in-hand regression asset. See
    [`TASK-background-removal-quality-phase-2.md`](issues/TASK-background-removal-quality-phase-2.md).
 
-2. **Batch Add Items from JSON** — Planned. Adds a category-scoped JSON editor, review step, and
-   atomic creation of multiple validated item drafts without importing photos or using AI. See
-   [`TASK-batch-add-items-from-json.md`](issues/TASK-batch-add-items-from-json.md).
-
-3. **Multi-LLM and OpenAI-compatible providers** — Planned. Preserves OpenAI support while adding
+2. **Multi-LLM and OpenAI-compatible providers** — Planned. Preserves OpenAI support while adding
    reusable provider support for OpenRouter, Ollama, LM Studio, and custom compatible endpoints. See
    [`TASK-multi-llm-openai-compatible-providers.md`](issues/TASK-multi-llm-openai-compatible-providers.md).
 

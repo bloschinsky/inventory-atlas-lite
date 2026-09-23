@@ -1,5 +1,5 @@
 import { httpError } from '../httpError.js';
-import { requiredText } from './itemValidation.js';
+import { requiredText } from '../../../shared/itemValidation.js';
 import { FIELD_TYPES, blockingRows, creatableFields, readFieldDefinitionDocument, reviewFieldDefinitions } from '../../../shared/fieldDefinitions.js';
 
 const allowedTypes = new Set(FIELD_TYPES.map(type => type.value));

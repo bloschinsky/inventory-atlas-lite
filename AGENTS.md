@@ -114,6 +114,8 @@ The project stays small and readable. Do not add:
 - `client/src/style.css` — small set of application styles layered on Tabler, built only from
   Tabler custom properties so both color modes stay correct.
 - `shared/fieldDefinitions.js` — application-level custom field-definition format and validation, imported by both the client and the server.
+- `shared/itemValidation.js` — canonical item input rules, applied by the server and reused by the batch item preview.
+- `shared/itemImport.js` — category-scoped item import document format, template, structural reading, and per-draft review.
 - `shared/itemQr.js` — canonical `ial:item:v1:<uuid>` QR payload with its encoder and strict decoder.
 - `server/src/index.js` — process entry point: port and production flag, the HTTP listener, and shutdown.
 - `server/src/app.js` — composition root: builds every repository, service, upload, and route table and assembles the Express app, including production static serving.

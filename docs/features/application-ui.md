@@ -55,8 +55,9 @@ presentation layer over the existing API, and no CDN or other runtime internet d
 
 ### Items list
 
-- A Tabler page header shows the title **Items**, the total item count as the page subtitle, and the
-  primary **Add item** action.
+- A Tabler page header shows the title **Items**, the total item count as the page subtitle,
+  **Batch Add from JSON** (see [`batch-add-items.md`](batch-add-items.md)), and the primary
+  **Add item** action.
 - One card groups the labelled **Search**, **Category**, **Sort by**, and **Direction** controls.
   Search keeps its 250 ms debounce, and changing a filter resets to the first page.
 - From `lg` upwards the results are a Tabler `card-table` with the Photo, Name, Category, Condition,

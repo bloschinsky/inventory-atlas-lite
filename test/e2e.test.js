@@ -374,6 +374,55 @@ test('text field suggestions reuse existing values of the same field only', asyn
   }
 });
 
+test('batch item import creates the whole batch atomically and keeps it over a restart', async () => {
+  const dataDir = await mkdtemp(path.join(os.tmpdir(), 'inventory-batch-items-test-'));
+  let server;
+  try {
+    server = await startServer(dataDir);
+    const category = await request('/api/categories', json('POST', { name: 'Computer Equipment' }));
+    await request(`/api/categories/${category.id}/fields/batch`, json('POST', {
+      version: 1,
+      fields: [{ name: 'Brand', type: 'text' }, { name: 'Ports', type: 'number' }, { name: 'Released', type: 'date' }, { name: 'Working', type: 'boolean' }]
+    }));
+    const batch = items => json('POST', { categoryId: category.id, document: { version: 1, category: 'Computer Equipment', items } });
+
+    const response = await fetch(`${base}/api/items/batch`, batch([
+      {
+        name: 'Router', condition: 'Good', location: 'Rack', purchaseDate: '2023-11-02',
+        purchasePrice: { amount: '1999.99', currency: 'UAH' }, serialNumber: 'RT-1',
+        customFields: { Brand: 'MikroTik', Ports: 5, Released: '2021-01-15', Working: true }
+      },
+      { name: 'Switch', customFields: { Working: false } }
+    ]));
+    assert.equal(response.status, 201);
+    const created = await response.json();
+    assert.deepEqual(created.map(item => item.name), ['Router', 'Switch']);
+    assert.ok(created.every(item => /^[0-9a-f-]{36}$/.test(item.uuid)));
+
+    // One invalid item refuses the whole batch with an actionable message and writes nothing.
+    const rejected = await fetch(`${base}/api/items/batch`, batch([{ name: 'Modem' }, { name: 'Hub', customFields: { Ports: 'four' } }]));
+    assert.equal(rejected.status, 400);
+    assert.equal((await rejected.json()).error, 'Item 2: Field "Ports" must be a number.');
+    const unknown = await fetch(`${base}/api/items/batch`, batch([{ name: 'Modem', customFields: { Colour: 'Black' } }]));
+    assert.match((await unknown.json()).error, /unknown custom field "Colour"/);
+    const invalidJson = await fetch(`${base}/api/items/batch`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"categoryId":' });
+    assert.equal(invalidJson.status, 400);
+    assert.equal((await request('/api/items')).pagination.total, 2);
+
+    await stopServer(server);
+    server = await startServer(dataDir);
+    const router = await request(`/api/items/${created[0].uuid}`);
+    assert.equal(router.serial_number, 'RT-1');
+    assert.equal(router.location, 'Rack');
+    assert.deepEqual(router.purchase_price, { amount: '1999.99', currency: 'UAH' });
+    assert.deepEqual(router.fields.map(field => [field.name, field.value]), [['Brand', 'MikroTik'], ['Ports', '5'], ['Released', '2021-01-15'], ['Working', '1']]);
+    assert.equal((await request('/api/items')).pagination.total, 2);
+  } finally {
+    if (server) await stopServer(server);
+    await rm(dataDir, { recursive: true, force: true });
+  }
+});
+
 test('batch field creation validates the whole document and commits it atomically', async () => {
   const dataDir = await mkdtemp(path.join(os.tmpdir(), 'inventory-batch-fields-test-'));
   let server;

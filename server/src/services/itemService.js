@@ -1,5 +1,9 @@
 import { httpError } from '../httpError.js';
-import { nullableText, requiredText, validatePurchaseDate, validatePurchasePrice, validateSerialNumber, validateTransferredTo } from './itemValidation.js';
+import { fieldLabel, itemImportRequestBody, readItemImportDocument } from '../../../shared/itemImport.js';
+import {
+  nullableText, requiredText, validateFieldValue, validatePurchaseDate, validatePurchasePrice, validateSerialNumber,
+  validateTransferredTo
+} from '../../../shared/itemValidation.js';
 
 // The stored purchase price columns are presented as one object, exactly as the API always has.
 const itemResponse = item => {
@@ -126,14 +130,11 @@ export class ItemService {
 
   validateValues(categoryId, values = {}) {
     if (!values || typeof values !== 'object' || Array.isArray(values)) throw httpError('Field values must be an object.');
-    const allowed = new Map(this.fields.listTypesByCategory(categoryId).map(field => [String(field.id), field.type]));
+    const allowed = new Map(this.fields.listTypesByCategory(categoryId).map(field => [String(field.id), field]));
     return Object.entries(values).map(([fieldId, raw]) => {
-      const type = allowed.get(String(fieldId));
-      if (!type) throw httpError(`Field ${fieldId} does not belong to the selected category.`);
-      if (raw === '' || raw === null || raw === undefined) return [Number(fieldId), null];
-      if (type === 'number' && !Number.isFinite(Number(raw))) throw httpError(`Field ${fieldId} must be a number.`);
-      if (type === 'boolean' && !['true', 'false', true, false, 1, 0, '1', '0'].includes(raw)) throw httpError(`Field ${fieldId} must be a boolean.`);
-      return [Number(fieldId), type === 'boolean' ? (['true', true, 1, '1'].includes(raw) ? '1' : '0') : String(raw)];
+      const field = allowed.get(String(fieldId));
+      if (!field) throw httpError(`Field ${fieldId} does not belong to the selected category.`);
+      return [Number(fieldId), validateFieldValue(field.type, raw, fieldLabel(field.name))];
     });
   }
 
@@ -167,14 +168,43 @@ export class ItemService {
     };
   }
 
+  // Callers wrap it in a transaction, so the item row and its field values are written together.
+  insertItem(body) {
+    const { values, attributes } = this.readAttributes(body);
+    const itemId = this.items.insert(attributes);
+    for (const [fieldId, value] of values) this.items.saveFieldValue(itemId, fieldId, value);
+    return itemId;
+  }
+
   create(body) {
-    const id = this.items.transaction(() => {
-      const { values, attributes } = this.readAttributes(body);
-      const itemId = this.items.insert(attributes);
-      for (const [fieldId, value] of values) this.items.saveFieldValue(itemId, fieldId, value);
-      return itemId;
-    });
+    const id = this.items.transaction(() => this.insertItem(body));
     return this.present(this.items.findDetailed(id));
+  }
+
+  /*
+    The import document is read again here: the client preview is convenience, not the authority.
+    Every item then goes through the regular create rules inside one transaction, so a single
+    refusal or failure leaves the database exactly as it was.
+  */
+  createBatch(body) {
+    const category = this.categories.findById(Number.parseInt(body?.categoryId));
+    if (!category) throw httpError('Valid category is required.');
+    const fields = this.fields.listByCategory(category.id);
+    let drafts;
+    try {
+      drafts = readItemImportDocument(body.document, { categoryName: category.name, fields });
+    } catch (error) {
+      throw Object.assign(error, { status: 400 });
+    }
+    const ids = this.items.transaction(() => drafts.map((draft, index) => {
+      try {
+        return this.insertItem(itemImportRequestBody(draft, category.id, fields));
+      } catch (error) {
+        if (error.status) error.message = `Item ${index + 1}: ${error.message}`;
+        throw error;
+      }
+    }));
+    return ids.map(id => this.present(this.items.findDetailed(id)));
   }
 
   update(id, body) {

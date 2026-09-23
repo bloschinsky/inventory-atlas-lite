@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.29.0",
+    "date": "2026-09-23",
+    "changes": [
+      "Added Batch Add from JSON on the Items page: create up to 100 items of one category from a pasted JSON document.",
+      "Insert Template writes a document with every item attribute and the chosen category's custom fields.",
+      "Preview lets you edit or remove every proposed item and shows problems next to the affected value; the batch is created all at once or not at all."
+    ]
+  },
+  {
     "version": "0.28.0",
     "date": "2026-09-23",
     "changes": [

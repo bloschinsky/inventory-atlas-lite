@@ -12,6 +12,7 @@ document describes the current behaviour and its boundaries, not the original pl
 | [Nested items](nested-items.md) | Store an item inside another item and browse its direct contents. |
 | [Effective location inheritance](effective-location-inheritance.md) | Display a contained item at the location of its outermost container while its own saved location stays editable. |
 | [Batch Add Fields](batch-add-fields.md) | Paste a field-definition document, review and edit the proposed fields, and create them in one atomic batch. |
+| [Batch Add Items from JSON](batch-add-items.md) | Paste or generate a category-scoped item document, review and edit every proposed item, and create them in one atomic batch. |
 | [AI Add Fields](ai-add-fields.md) | Describe a category in natural language and review the OpenAI-drafted fields in the batch editor before creating them. |
 | [Item QR identity](item-qr-identity.md) | Generate a deployment-independent QR code from an item's UUID locally and open it from a modal on the item page. |
 | [QR label printing](qr-label-printing.md) | Select items across pages and print their QR labels on A4 sheets in three fixed layouts, with optional name, description, category, and location. |

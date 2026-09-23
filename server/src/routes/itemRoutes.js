@@ -10,6 +10,8 @@ export const createItemRoutes = ({ itemService }) => {
   router.get('/api/items/:id', (req, res) => res.json(itemService.get(req.params.id)));
   // A POST because a print job can name hundreds of UUIDs, more than a query string should carry.
   router.post('/api/items/labels', (req, res) => res.json(itemService.labels(req.body)));
+  // One atomic create for a whole reviewed import document; the browser never sends N separate creates.
+  router.post('/api/items/batch', (req, res) => res.status(201).json(itemService.createBatch(req.body)));
   router.post('/api/items', (req, res) => res.status(201).json(itemService.create(req.body)));
   router.put('/api/items/:id', (req, res) => res.json(itemService.update(req.params.id, req.body)));
   router.delete('/api/items/:id', (req, res) => {

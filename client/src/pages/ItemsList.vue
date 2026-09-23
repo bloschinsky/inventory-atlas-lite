@@ -4,9 +4,10 @@ import { useRouter } from 'vue-router';
 import { api } from '../api.js';
 import { capabilities } from '../capabilities.js';
 import { labelSelection, printLabelsRoute } from '../labelSelection.js';
+import BatchAddItemsDialog from '../components/BatchAddItemsDialog.vue';
 import ItemResults from '../components/ItemResults.vue';
 import PageHeader from '../components/PageHeader.vue';
-import { IconPrinter, IconSparkles } from '@tabler/icons-vue';
+import { IconJson, IconPrinter, IconSparkles } from '@tabler/icons-vue';
 
 const router = useRouter();
 
@@ -14,6 +15,8 @@ const categories = ref([]);
 const result = ref({ items: [], pagination: { page: 1, pages: 1, total: 0 } });
 const loading = ref(true);
 const error = ref('');
+const notice = ref('');
+const batchOpen = ref(false);
 const filters = reactive({ search: '', categoryId: '', sort: 'name', direction: 'asc', page: 1 });
 let timer;
 
@@ -30,6 +33,15 @@ watch(() => filters.search, () => { clearTimeout(timer); filters.page = 1; timer
 function changed() { filters.page = 1; }
 const selectedLabel = computed(() => `${labelSelection.size} selected`);
 const printLabels = () => router.push(printLabelsRoute(labelSelection));
+// The new items are shown by switching the list to their category; the list reloads through its watcher.
+function batchCreated({ items, category }) {
+  batchOpen.value = false;
+  notice.value = `Created ${items.length} ${items.length === 1 ? 'item' : 'items'} in ${category.name}.`;
+  filters.search = '';
+  filters.page = 1;
+  if (filters.categoryId === category.id) load();
+  else filters.categoryId = category.id;
+}
 onMounted(async () => { try { categories.value = await api('/api/categories'); } catch (e) { error.value = e.message; } await load(); });
 </script>
 
@@ -50,6 +62,18 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
         />
         AI Add Item
       </RouterLink>
+      <button
+        type="button"
+        class="btn btn-outline-primary"
+        :disabled="!categories.length"
+        @click="notice = ''; batchOpen = true"
+      >
+        <IconJson
+          :size="18"
+          aria-hidden="true"
+        />
+        Batch Add from JSON
+      </button>
       <RouterLink
         to="/items/new"
         class="btn btn-primary"
@@ -179,6 +203,18 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
   >
     {{ error }}
   </div>
+  <div
+    v-if="notice"
+    class="alert alert-success alert-dismissible"
+    role="status"
+  >
+    {{ notice }}<button
+      type="button"
+      class="btn-close"
+      aria-label="Dismiss message"
+      @click="notice = ''"
+    />
+  </div>
 
   <div
     v-if="loading"
@@ -265,4 +301,11 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
       </li>
     </ul>
   </nav>
+  <BatchAddItemsDialog
+    v-if="batchOpen"
+    :categories="categories"
+    :initial-category-id="filters.categoryId"
+    @close="batchOpen = false"
+    @created="batchCreated"
+  />
 </template>

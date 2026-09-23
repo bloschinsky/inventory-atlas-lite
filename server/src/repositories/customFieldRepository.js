@@ -10,7 +10,7 @@ export class CustomFieldRepository {
   }
 
   listTypesByCategory(categoryId) {
-    return this.db.prepare('SELECT id, type FROM custom_fields WHERE category_id = ?').all(categoryId);
+    return this.db.prepare('SELECT id, name, type FROM custom_fields WHERE category_id = ?').all(categoryId);
   }
 
   listNamesByCategory(categoryId) {

@@ -92,9 +92,109 @@ test('a failed item creation writes nothing at all', () => {
   failure(
     () => itemService.create({ name: 'Drill', category_id: category.id, field_values: { [rating.id]: 'not a number' } }),
     400,
-    `Field ${rating.id} must be a number.`
+    'Field "Rating" must be a number.'
   );
   assert.equal(itemService.list().pagination.total, 0);
+});
+
+test('batch item import creates every item through the regular item rules', () => {
+  const { categoryService, customFieldService, itemService } = build();
+  const category = categoryService.create({ name: 'Computer Equipment' });
+  const other = categoryService.create({ name: 'Other' });
+  for (const [name, type] of [['Brand', 'text'], ['Ports', 'number'], ['Released', 'date'], ['Working', 'boolean']]) {
+    customFieldService.create(category.id, { name, type });
+  }
+  const document = items => ({ version: 1, category: 'Computer Equipment', items });
+
+  const created = itemService.createBatch({
+    categoryId: category.id,
+    document: document([
+      {
+        name: ' Hub ',
+        condition: 'Good',
+        location: 'Shelf A',
+        description: 'Seven-port hub',
+        transferredTo: '',
+        purchaseDate: '2024-05-01',
+        purchasePrice: { amount: 350.5, currency: 'uah' },
+        serialNumber: ' HB-7 ',
+        customFields: { brand: 'D-Link', Ports: 7, Released: '2019-03-10', Working: true }
+      },
+      { name: 'Cable', purchasePrice: { amount: null, currency: 'UAH' }, customFields: { Working: false } }
+    ])
+  });
+  assert.equal(created.length, 2);
+  const [hub, cable] = created;
+  assert.equal(hub.name, 'Hub');
+  assert.equal(hub.condition, 'Good');
+  assert.equal(hub.location, 'Shelf A');
+  assert.equal(hub.description, 'Seven-port hub');
+  assert.equal(hub.transferred_to, null);
+  assert.equal(hub.purchase_date, '2024-05-01');
+  assert.deepEqual(hub.purchase_price, { amount: '350.5', currency: 'UAH' });
+  assert.equal(hub.serial_number, 'HB-7');
+  assert.equal(hub.category_id, category.id);
+  assert.equal(hub.parent_item_id, null);
+  assert.match(hub.uuid, /^[0-9a-f-]{36}$/);
+  assert.notEqual(hub.uuid, cable.uuid);
+  assert.equal(cable.purchase_price, null);
+  assert.deepEqual(
+    itemService.get(hub.id).fields.map(field => [field.name, field.value]),
+    [['Brand', 'D-Link'], ['Ports', '7'], ['Released', '2019-03-10'], ['Working', '1']]
+  );
+  assert.deepEqual(
+    itemService.get(cable.id).fields.map(field => [field.name, field.value]),
+    [['Brand', null], ['Ports', null], ['Released', null], ['Working', '0']]
+  );
+
+  // Every refusal names the problem and leaves the two items above as the only ones.
+  const refused = (body, message) => failure(() => itemService.createBatch(body), 400, message);
+  const batch = (items, extra = {}) => ({ categoryId: category.id, document: { ...document(items), ...extra } });
+  refused(batch([{ name: 'X' }], { category: 'Other' }), 'The document is for category "Other", but "Computer Equipment" is selected.');
+  refused({ categoryId: other.id, document: document([{ name: 'X' }]) }, 'The document is for category "Computer Equipment", but "Other" is selected.');
+  refused(batch([{ name: 'X' }], { version: 2 }), 'Unsupported document version: 2. Expected 1.');
+  refused(batch([{ name: 'X' }], { source: 'excel' }), 'Unsupported document property "source". Supported properties: version, category, items.');
+  refused(batch([]), 'The document does not contain any items.');
+  refused({ categoryId: category.id, document: { version: 1, category: 'Computer Equipment' } }, 'The document must contain an "items" array.');
+  refused(batch(Array.from({ length: 101 }, (_value, index) => ({ name: `Item ${index}` }))), 'A batch accepts at most 100 items; the document contains 101.');
+  // Server-owned values cannot be supplied by an import.
+  refused(batch([{ name: 'X', uuid: '00000000-0000-4000-8000-000000000000' }]),
+    'Item 1 has an unsupported property "uuid". Supported properties: name, condition, location, description, transferredTo, purchaseDate, serialNumber, purchasePrice, customFields.');
+  refused(batch([{ name: 'X', customFields: { Colour: 'Red' } }]), 'Item 1 has an unknown custom field "Colour". Fields of this category: Brand, Ports, Released, Working.');
+  refused(batch([{ name: 'X' }, { name: 'Y', customFields: { Ports: 'many' } }]), 'Item 2: Field "Ports" must be a number.');
+  refused(batch([{ name: 'X', customFields: { Released: '2024-02-30' } }]), 'Item 1: Field "Released" must be a valid date.');
+  refused(batch([{ name: 'X', customFields: { Working: 'maybe' } }]), 'Item 1: Field "Working" must be a boolean.');
+  refused(batch([{ name: 'X', purchasePrice: { amount: '-1', currency: 'UAH' } }]), 'Item 1: Purchase price amount must be a non-negative decimal with up to four decimal places.');
+  refused(batch([{ name: 'X', purchasePrice: { amount: '1', currency: 'ABC' } }]), 'Item 1: Purchase price currency must be a valid ISO 4217 code.');
+  refused(batch([{ name: 'X', serialNumber: 'S'.repeat(256) }]), 'Item 1: Serial number must be 255 characters or fewer.');
+  refused(batch([{ name: 'X' }, { name: '  ' }]), 'Item 2: Item name is required.');
+  failure(() => itemService.createBatch({ categoryId: 999, document: document([{ name: 'X' }]) }), 400, 'Valid category is required.');
+  assert.equal(itemService.list().pagination.total, 2);
+});
+
+test('a batch import that fails while writing rolls back every item', () => {
+  const db = new Database(':memory:');
+  db.pragma('foreign_keys = ON');
+  applySchema(db);
+  const categoryRepository = new CategoryRepository(db);
+  const itemRepository = new ItemRepository(db);
+  const category = new CategoryService(categoryRepository).create({ name: 'Tools' });
+  // The third insert fails after two items have already been written inside the transaction.
+  let inserts = 0;
+  const insert = itemRepository.insert.bind(itemRepository);
+  itemRepository.insert = attributes => {
+    if (++inserts === 3) throw new Error('Disk full.');
+    return insert(attributes);
+  };
+  const itemService = new ItemService({
+    itemRepository, categoryRepository, customFieldRepository: new CustomFieldRepository(db), itemPhotoRepository: new ItemPhotoRepository(db)
+  });
+
+  assert.throws(() => itemService.createBatch({
+    categoryId: category.id,
+    document: { version: 1, category: 'Tools', items: [{ name: 'Drill' }, { name: 'Saw' }, { name: 'Hammer' }] }
+  }), /Disk full/);
+  assert.equal(db.prepare('SELECT COUNT(*) AS count FROM items').get().count, 0);
 });
 
 test('containment rules reject impossible parents and protect filled containers', () => {

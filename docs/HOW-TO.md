@@ -207,6 +207,29 @@ unusable, the message explains why and your description stays in the modal for a
 
 Changing the category while filling in the form loads that category's fields.
 
+### Add several items at once from JSON
+
+1. Open **Items** and press **Batch Add from JSON** next to **Add item**.
+2. Choose the **Category**. It starts at the category the list is filtered by, and every item of the
+   batch goes into it.
+3. Press **Insert Template**. It writes a document with two blank items that lists every item
+   attribute and every custom field of the chosen category, so it always matches the category's
+   current fields. Fill it in, add or delete entries in `items`, or paste a document produced
+   elsewhere. A batch holds at most 100 items.
+4. Press **Preview**. Nothing is saved yet. A document that cannot be read — invalid JSON, a
+   different `category`, an unsupported property, an unknown custom field, more than 100 items — is
+   reported as one message and stays in the editor for correction.
+5. Review the item cards. Every value can be edited in place, and problems such as a missing name, a
+   non-numeric number field, an invalid date, or an unknown currency are shown under the affected
+   control. Press **Remove** to drop an item from the batch. **Edit JSON** goes back to the pasted
+   text.
+6. Press **Create N Items**. The button stays disabled while any item still has a problem. The whole
+   batch is created at once: if anything fails, no item is created. The list then shows the category
+   and a message with the number of created items. **Cancel** or `Escape` discards the draft.
+
+The document cannot contain IDs, UUIDs, photos, or a containing item. Add photos and **Stored inside**
+afterwards through each item's **Edit** form.
+
 ### Create an item from a photo or a description with AI
 
 1. Configure and enable OpenAI under **Settings → AI**. The default model is `gpt-5.6-luna`; you can
@@ -561,7 +584,9 @@ on a different machine than the server.
 - Custom field types cannot be changed after creation, and categories cannot be merged. The batch
   editor only creates new fields; it never renames or retypes existing ones.
 - Restore replaces the whole inventory from a full SQLite backup. There is no merge, no selective
-  restore of single items or categories, and no CSV or JSON import or export.
+  restore of single items or categories, and no CSV import or any export.
+- **Batch Add from JSON** only creates new items, at most 100 per batch, in one existing category.
+  It never creates categories or fields, updates existing items, or imports photos.
 - Anyone who reaches the unauthenticated interface can restore a backup and therefore replace all
   current data. Keep the application on a trusted LAN or VPN.
 - AI Add Fields sends your description, the category name, its field names, and the built-in
