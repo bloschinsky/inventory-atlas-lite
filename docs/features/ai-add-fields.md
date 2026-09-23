@@ -3,7 +3,7 @@
 ## Summary
 
 A category's custom fields can be drafted from a natural-language description instead of being
-written by hand. **AI Add Fields** asks OpenAI for a field-definition document, then opens that
+written by hand. **AI Add Fields** asks the configured AI provider for a field-definition document, then opens that
 document in the same reviewed batch editor as
 [Batch Add Fields](batch-add-fields.md): the user edits, removes, and explicitly confirms the
 proposed fields before anything is created.
@@ -43,8 +43,9 @@ Description → POST /api/categories/:id/fields/ai → field-definition document
 
 - `AiFieldService` in `server/src/services/aiFieldService.js`
   reuses the stored AI settings — the same enable flag, provider, model, and API key as
-  [AI Add Item](ai-add-item.md). There is no second OpenAI configuration.
-- The request is schema-constrained: `text.format` is a strict `json_schema` that allows only
+  [AI Add Item](ai-add-item.md) — through `AiProviderService`. There is no second AI configuration,
+  and it works with every [AI provider](ai-providers.md) and any text model.
+- The request is schema-constrained: its strict `json_schema` allows only
   `version: 1`, `required: false`, and the field types the application actually supports
   (`text`, `number`, `date`, `boolean`), all derived from `shared/fieldDefinitions.js`.
 - The prompt carries the description, the category name, its existing custom field names, the
@@ -61,9 +62,9 @@ Description → POST /api/categories/:id/fields/ai → field-definition document
 - `client/src/components/BatchAddFieldsDialog.vue` gained a `mode` prop (`json` or `ai`). Only the
   first step and the footer buttons differ; the preview, the review, and the create request are the
   Phase 1 code path unchanged.
-- `OpenAiClient` in `server/src/integrations/openAiClient.js` is the one place that performs an OpenAI
-  `/responses` call, applies the 45-second timeout, and maps provider failures to status codes; both
-  AI features use it.
+- `AiProviderService.generateStructuredData()` is the one call both AI features make. The provider
+  adapters under `server/src/integrations/` perform the HTTP request, apply the timeout, and map
+  provider failures to status codes; see [AI providers](ai-providers.md).
 
 ## Boundaries
 

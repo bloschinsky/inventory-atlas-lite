@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { api, apiBlob } from '../api.js';
 import { setPendingAiDraft } from '../aiDraft.js';
+import { capabilities } from '../capabilities.js';
 import PageHeader from '../components/PageHeader.vue';
 
 const router = useRouter();
@@ -78,40 +79,50 @@ onBeforeUnmount(() => { if (previewUrl.value) URL.revokeObjectURL(previewUrl.val
       @submit.prevent="createDraft"
     >
       <div class="card-body">
-        <div class="mb-3">
-          <label
-            class="form-label"
-            for="ai-item-image"
-          >Item photo (optional)</label>
-          <input
-            id="ai-item-image"
-            class="form-control"
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
-            @change="selectImage"
-          >
-          <div class="form-text">
-            JPEG, PNG, WebP, or GIF; up to 15 MB. The original photo is always used for AI analysis.
-          </div>
-        </div>
-        <img
-          v-if="previewUrl"
-          :src="previewUrl"
-          alt="Selected item preview"
-          class="img-thumbnail mb-3 app-ai-preview"
+        <div
+          v-if="!capabilities.ai.imageInput"
+          class="alert alert-info"
+          role="status"
         >
-        <template v-if="image">
-          <label class="form-check mb-2">
+          The selected model does not support image input, so the draft is created from the
+          description alone. You can still add photos to the item while reviewing it.
+        </div>
+        <template v-else>
+          <div class="mb-3">
+            <label
+              class="form-label"
+              for="ai-item-image"
+            >Item photo (optional)</label>
             <input
-              v-model="removeBackground"
-              class="form-check-input"
-              type="checkbox"
+              id="ai-item-image"
+              class="form-control"
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              @change="selectImage"
             >
-            <span class="form-check-label">Remove background</span>
-          </label>
-          <div class="form-text mb-3">
-            Runs locally and affects only the final inventory photo. AI analysis still uses the original.
+            <div class="form-text">
+              JPEG, PNG, WebP, or GIF; up to 15 MB. The original photo is always used for AI analysis.
+            </div>
           </div>
+          <img
+            v-if="previewUrl"
+            :src="previewUrl"
+            alt="Selected item preview"
+            class="img-thumbnail mb-3 app-ai-preview"
+          >
+          <template v-if="image">
+            <label class="form-check mb-2">
+              <input
+                v-model="removeBackground"
+                class="form-check-input"
+                type="checkbox"
+              >
+              <span class="form-check-label">Remove background</span>
+            </label>
+            <div class="form-text mb-3">
+              Runs locally and affects only the final inventory photo. AI analysis still uses the original.
+            </div>
+          </template>
         </template>
         <div class="mb-3">
           <label

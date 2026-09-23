@@ -14,7 +14,7 @@ document describes the current behaviour and its boundaries, not the original pl
 | [Effective location inheritance](effective-location-inheritance.md) | Display a contained item at the location of its outermost container while its own saved location stays editable. |
 | [Batch Add Fields](batch-add-fields.md) | Paste a field-definition document, review and edit the proposed fields, and create them in one atomic batch. |
 | [Batch Add Items from JSON](batch-add-items.md) | Paste or generate a category-scoped item document, review and edit every proposed item, and create them in one atomic batch. |
-| [AI Add Fields](ai-add-fields.md) | Describe a category in natural language and review the OpenAI-drafted fields in the batch editor before creating them. |
+| [AI Add Fields](ai-add-fields.md) | Describe a category in natural language and review the AI-drafted fields in the batch editor before creating them. |
 | [Item QR identity](item-qr-identity.md) | Generate a deployment-independent QR code from an item's UUID locally and open it from a modal on the item page. |
 | [QR label printing](qr-label-printing.md) | Select items across pages and print their QR labels on A4 sheets in three fixed layouts, with optional name, description, category, and location. |
 | [In-app QR scanner](in-app-qr-scanner.md) | Read an item QR code with the camera or from an image, locally in the browser, and open the matching item. |
@@ -22,7 +22,8 @@ document describes the current behaviour and its boundaries, not the original pl
 | [Purchase and serial fields](purchase-and-serial-fields.md) | Record an optional purchase date, structured multi-currency price, and serial number on every item. |
 | [Transferred To field](transferred-to-field.md) | Note who or where an item was lent, given, or sold to, with autocomplete, search, and an informational badge. |
 | [AI feature visibility](ai-feature-visibility.md) | Hide every AI action and the AI page while **Enable AI features** is off, without weakening the server-side AI guards. |
-| [AI Add Item](ai-add-item.md) | Choose an available OpenAI model, create a draft from a photo, a description, or both, optionally remove the photo background locally, and review the editable draft before saving. |
+| [AI providers](ai-providers.md) | Use OpenAI, OpenRouter, Ollama, LM Studio, or a custom OpenAI-compatible endpoint for every AI feature, with model discovery, a connection test, image-capability checks, and normalized errors. |
+| [AI Add Item](ai-add-item.md) | Choose a model of the configured AI provider, create a draft from a photo, a description, or both, optionally remove the photo background locally, and review the editable draft before saving. |
 | [Proxmox one-line installer](proxmox-one-line-installer.md) | Create a Debian LXC on Proxmox VE with the application, a systemd service, and an update command. |
 | [Self-update from About](self-update.md) | Check for a newer stable GitHub release from the About dialog and, on Proxmox/LXC, run the existing privileged updater from the interface. |
 | [About dialog and build metadata](about-dialog.md) | An accessible About modal showing the version, commit, and source date injected at build time. |

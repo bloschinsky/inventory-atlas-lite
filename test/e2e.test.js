@@ -564,7 +564,8 @@ test('AI settings stay server-side and image analysis returns a validated invent
     }));
   });
   await new Promise(resolve => providerServer.listen(0, '127.0.0.1', resolve));
-  const providerPort = providerServer.address().port;
+  // The OpenAI preset keeps its adapter; only its base URL points at the local stub.
+  const baseUrl = `http://127.0.0.1:${providerServer.address().port}`;
   const imageData = () => {
     const data = new FormData();
     data.append('image', new Blob([Buffer.from('89504e470d0a1a0a', 'hex')], { type: 'image/png' }), 'sound-card.png');
@@ -572,37 +573,40 @@ test('AI settings stay server-side and image analysis returns a validated invent
     return data;
   };
   try {
-    appServer = await startServer(dataDir, { OPENAI_BASE_URL: `http://127.0.0.1:${providerPort}` });
+    appServer = await startServer(dataDir);
     assert.equal(await failedStatus('/api/ai/items/analyze', { method: 'POST', body: imageData() }), 409);
 
     // A fresh installation has no settings file, so AI starts disabled and unconfigured.
     const emptySettings = await request('/api/settings/ai');
-    assert.deepEqual(emptySettings, { enabled: false, provider: 'openai', model: 'gpt-5.6-luna', hasApiKey: false, apiKeyMasked: '' });
+    assert.deepEqual(emptySettings, {
+      enabled: false, provider: 'openai', displayName: '', baseUrl: 'https://api.openai.com/v1', model: 'gpt-5.6-luna',
+      imageInput: 'auto', hasApiKey: false, apiKeyMasked: ''
+    });
     assert.equal(await failedStatus('/api/ai/models'), 409);
     // The UI reads its feature visibility from here, so it must follow the saved setting exactly.
-    assert.deepEqual(await request('/api/capabilities'), { ai: { enabled: false } });
+    assert.deepEqual(await request('/api/capabilities'), { ai: { enabled: false, imageInput: true } });
 
     // Enabling without a saved key cannot take effect: it is stored, and reported back, as disabled.
-    const withoutKey = await request('/api/settings/ai', json('PUT', { enabled: true, provider: 'openai', model: 'gpt-4o-mini' }));
+    const withoutKey = await request('/api/settings/ai', json('PUT', { enabled: true, provider: 'openai', baseUrl, model: 'gpt-4o-mini' }));
     assert.equal(withoutKey.enabled, false);
     assert.equal(withoutKey.hasApiKey, false);
-    assert.deepEqual(await request('/api/capabilities'), { ai: { enabled: false } });
+    assert.deepEqual(await request('/api/capabilities'), { ai: { enabled: false, imageInput: true } });
     assert.equal(await failedStatus('/api/ai/items/analyze', { method: 'POST', body: imageData() }), 409);
 
     const configured = await request('/api/settings/ai', json('PUT', {
-      enabled: true, provider: 'openai', model: 'gpt-4o-mini', apiKey: 'sk-test-not-a-real-secret'
+      enabled: true, provider: 'openai', baseUrl, model: 'gpt-4o-mini', apiKey: 'sk-test-not-a-real-secret'
     }));
     assert.equal(configured.hasApiKey, true);
     assert.equal(configured.apiKeyMasked, '••••••••cret');
     assert.equal(configured.enabled, true);
     assert.ok(!JSON.stringify(configured).includes('sk-test'));
-    assert.deepEqual(await request('/api/capabilities'), { ai: { enabled: true } });
+    assert.deepEqual(await request('/api/capabilities'), { ai: { enabled: true, imageInput: true } });
     assert.ok(!JSON.stringify(await request('/api/capabilities')).includes('sk-test'));
 
     assert.deepEqual(await request('/api/ai/models'), {
       models: [
-        { id: 'gpt-5.6-luna', label: 'GPT-5.6 Luna' },
-        { id: 'gpt-5.6-sol', label: 'GPT-5.6 Sol' }
+        { id: 'gpt-5.6-luna', label: 'GPT-5.6 Luna', imageInput: true },
+        { id: 'gpt-5.6-sol', label: 'GPT-5.6 Sol', imageInput: true }
       ]
     });
     assert.equal(modelsRequest.authorization, 'Bearer sk-test-not-a-real-secret');
@@ -692,11 +696,11 @@ test('AI settings stay server-side and image analysis returns a validated invent
 
     // Removing the key turns AI off with it, so nothing keeps offering an operation that cannot run.
     const cleared = await request('/api/settings/ai', json('PUT', {
-      enabled: true, provider: 'openai', model: 'gpt-4o-mini', clearApiKey: true
+      enabled: true, provider: 'openai', baseUrl, model: 'gpt-4o-mini', clearApiKey: true
     }));
     assert.equal(cleared.enabled, false);
     assert.equal(cleared.hasApiKey, false);
-    assert.deepEqual(await request('/api/capabilities'), { ai: { enabled: false } });
+    assert.deepEqual(await request('/api/capabilities'), { ai: { enabled: false, imageInput: true } });
     assert.equal(await failedStatus('/api/ai/items/analyze', { method: 'POST', body: imageData() }), 409);
   } finally {
     if (appServer) await stopServer(appServer);
@@ -718,21 +722,21 @@ test('AI field generation returns a reviewable draft and never writes to the cat
     res.end(JSON.stringify({ output_text: JSON.stringify(providerReply), usage: { input_tokens: 40, output_tokens: 30 } }));
   });
   await new Promise(resolve => providerServer.listen(0, '127.0.0.1', resolve));
-  const providerPort = providerServer.address().port;
+  const baseUrl = `http://127.0.0.1:${providerServer.address().port}`;
   const generate = (categoryId, description = 'Vintage computer expansion cards.') =>
     fetch(`${base}/api/categories/${categoryId}/fields/ai`, json('POST', { description }));
 
   try {
-    appServer = await startServer(dataDir, { OPENAI_BASE_URL: `http://127.0.0.1:${providerPort}` });
+    appServer = await startServer(dataDir);
     const category = await request('/api/categories', json('POST', { name: 'Expansion Cards' }));
     await request(`/api/categories/${category.id}/fields`, json('POST', { name: 'Brand', type: 'text' }));
 
     // AI must be configured first, and an unknown category is rejected before any provider call.
     assert.equal((await generate(category.id)).status, 409);
-    await request('/api/settings/ai', json('PUT', { enabled: true, provider: 'openai', model: 'gpt-4o-mini' }));
+    await request('/api/settings/ai', json('PUT', { enabled: true, provider: 'openai', baseUrl, model: 'gpt-4o-mini' }));
     assert.equal((await generate(category.id)).status, 409);
     await request('/api/settings/ai', json('PUT', {
-      enabled: true, provider: 'openai', model: 'gpt-4o-mini', apiKey: 'sk-test-not-a-real-secret'
+      enabled: true, provider: 'openai', baseUrl, model: 'gpt-4o-mini', apiKey: 'sk-test-not-a-real-secret'
     }));
     assert.equal((await generate(999999)).status, 404);
     assert.equal((await generate(category.id, '   ')).status, 400);

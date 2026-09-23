@@ -11,7 +11,7 @@
 
 # Inventory Atlas Lite
 
-A deliberately small, self-hosted inventory app for physical items. It uses Vue 3, Express, and one SQLite database containing all inventory data and photos. No authentication is included, so access should be limited to a trusted LAN or VPN/Tailscale network. Normal use is local; the optional AI Add Item feature contacts OpenAI only when the user requests photo analysis.
+A deliberately small, self-hosted inventory app for physical items. It uses Vue 3, Express, and one SQLite database containing all inventory data and photos. No authentication is included, so access should be limited to a trusted LAN or VPN/Tailscale network. Normal use is local; the optional AI features contact the configured AI provider — OpenAI, OpenRouter, a local Ollama or LM Studio server, or another OpenAI-compatible endpoint — only when the user requests a draft.
 
 ## Requirements
 
@@ -157,7 +157,11 @@ the current schema, and rolls the safety copy back automatically if the replacem
 such as `ai-settings.json` and all earlier backups are kept, and pre-reset copies are never removed
 automatically. See [`docs/features/inventory-database-reset.md`](docs/features/inventory-database-reset.md).
 
-AI configuration is managed in **Settings**. Its API key is stored separately as
+AI configuration is managed in **Settings**: choose OpenAI, OpenRouter, Ollama, LM Studio, or a
+custom OpenAI-compatible endpoint and its base URL. The base URL is reached from the server, so
+`localhost` means the machine or container running Inventory Atlas; for Ollama or LM Studio on
+another computer use its LAN address, such as `http://192.168.1.50:11434/v1`. See
+[`docs/features/ai-providers.md`](docs/features/ai-providers.md). The API key is stored separately as
 `ai-settings.json` under `DATA_DIR`, is not returned to the browser after saving, and is not included
 in SQLite backups. Back up or reconfigure this secret separately when moving an installation.
 

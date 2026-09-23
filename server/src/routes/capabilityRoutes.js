@@ -8,7 +8,11 @@ import { Router } from 'express';
 export const createCapabilityRoutes = ({ aiSettingsService }) => {
   const router = Router();
 
-  router.get('/api/capabilities', (_req, res) => res.json({ ai: { enabled: aiSettingsService.read().enabled } }));
+  router.get('/api/capabilities', (_req, res) => {
+    const settings = aiSettingsService.read();
+    // Photo analysis is only offered when the configured model is not known to be text-only.
+    res.json({ ai: { enabled: settings.enabled, imageInput: settings.imageInput !== 'unsupported' } });
+  });
 
   return router;
 };

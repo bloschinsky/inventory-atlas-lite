@@ -10,7 +10,7 @@ import {
 const props = defineProps({
   category: { type: Object, required: true },
   existingFields: { type: Array, required: true },
-  // 'json' pastes a document, 'ai' asks OpenAI for one; both end in the same review below.
+  // 'json' pastes a document, 'ai' asks the configured AI provider for one; both end in the same review below.
   mode: { type: String, default: 'json' }
 });
 const emit = defineEmits(['close', 'created']);
@@ -136,7 +136,7 @@ onBeforeUnmount(() => {
           </div>
           <template v-if="!drafts && ai">
             <p class="text-secondary">
-              Describe the category and the kind of fields you need. OpenAI only proposes a draft:
+              Describe the category and the kind of fields you need. The AI only proposes a draft:
               you review, edit, and confirm every field before it is created. A batch accepts at
               most {{ MAX_BATCH_FIELDS }} fields.
             </p>

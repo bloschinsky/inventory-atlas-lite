@@ -42,9 +42,8 @@ Prefer a small set of practical fields a collector would actually fill in for ev
   confirms. Nothing is written here; the batch create path remains the single writer.
 */
 export class AiFieldService {
-  constructor({ aiSettingsService, openAiClient, categoryService, customFieldRepository }) {
-    this.settingsService = aiSettingsService;
-    this.openAiClient = openAiClient;
+  constructor({ aiProviderService, categoryService, customFieldRepository }) {
+    this.ai = aiProviderService;
     this.categoryService = categoryService;
     this.fields = customFieldRepository;
   }
@@ -55,21 +54,23 @@ export class AiFieldService {
     if (!description) throw httpError('Describe the fields you need.');
     if (description.length > 2000) throw httpError('The description must be 2,000 characters or fewer.');
 
-    const settings = this.settingsService.requireUsableSettings('Add an OpenAI API key in Settings before generating fields.');
     const existingFieldNames = this.fields.listNamesByCategory(category.id);
-    const started = Date.now();
-    let result;
-    try {
-      result = await this.openAiClient.createStructuredResponse({
-        apiKey: settings.apiKey,
-        body: this.requestBody({ settings, description, category, existingFieldNames }),
-        failureMessage: 'OpenAI could not suggest fields. Try again later.'
-      });
-    } catch (error) {
-      console.info('AI field generation', { provider: settings.provider, model: settings.model, durationMs: Date.now() - started, success: false });
-      throw error;
-    }
-    const document = result.parsed;
+    const { data: document } = await this.ai.generateStructuredData({
+      action: 'generating fields',
+      purpose: 'field generation',
+      instructions,
+      input: JSON.stringify({
+        description,
+        categoryName: category.name,
+        existingFields: existingFieldNames,
+        builtInFields: RESERVED_FIELD_NAMES,
+        supportedTypes: supportedFieldTypes,
+        maxFields: MAX_BATCH_FIELDS
+      }),
+      schemaName: 'field_definition_document',
+      schema: fieldDefinitionSchema,
+      task: 'suggest fields'
+    });
     if (document && typeof document === 'object' && Array.isArray(document.fields) && !document.fields.length) {
       throw httpError('The AI did not suggest any fields. Describe the category in more detail and try again.', 422);
     }
@@ -77,32 +78,8 @@ export class AiFieldService {
     try {
       drafts = readFieldDefinitionDocument(document);
     } catch (error) {
-      throw httpError(`OpenAI returned fields that do not match the supported format. ${error.message}`, 502);
+      throw httpError(`The AI returned fields that do not match the supported format. ${error.message}`, 502);
     }
-    console.info('AI field generation', { provider: settings.provider, model: settings.model, durationMs: Date.now() - started, success: true, fields: drafts.length, usage: result.usage });
     return { version: FIELD_DEFINITION_VERSION, fields: drafts };
-  }
-
-  requestBody({ settings, description, category, existingFieldNames }) {
-    return {
-      model: settings.model,
-      store: false,
-      instructions,
-      input: [{
-        role: 'user',
-        content: [{
-          type: 'input_text',
-          text: JSON.stringify({
-            description,
-            categoryName: category.name,
-            existingFields: existingFieldNames,
-            builtInFields: RESERVED_FIELD_NAMES,
-            supportedTypes: supportedFieldTypes,
-            maxFields: MAX_BATCH_FIELDS
-          })
-        }]
-      }],
-      text: { format: { type: 'json_schema', name: 'field_definition_document', strict: true, schema: fieldDefinitionSchema } }
-    };
   }
 }

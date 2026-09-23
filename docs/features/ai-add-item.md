@@ -7,14 +7,16 @@ before the normal Save item action writes anything to SQLite.
 
 ## User workflow
 
-1. Configure OpenAI under **Settings → AI**: enable AI, enter the provider API key, save it, and
-   choose one of the available curated models. Choose **Custom model...** to retain or test another
-   model ID, and use **Refresh models** when account access changes.
+1. Configure a provider under **Settings → AI** — OpenAI, OpenRouter, Ollama, LM Studio, or a custom
+   OpenAI-compatible endpoint, see [AI providers](ai-providers.md) — enable AI, and choose a model.
+   Photos need a model that accepts image input. Choose **Custom model...** to retain or test another
+   model ID, and use **Refresh models** when access changes.
 2. Open **Items** and select **AI Add Item** next to the manual **Add item** action.
 3. Supply at least one input: **Item photo (optional)** takes one JPEG, PNG, WebP, or GIF image of
    at most 15 MB, and **Item description (optional)** takes up to 2,000 characters describing the
    item and anything already known about it. **Remove background** is shown only while a photo is
-   selected and is off by default.
+   selected and is off by default. When **Image input** is set to *Not supported* in Settings, the
+   photo input is replaced by a note and the draft is made from the description alone.
 4. Select **Create Draft**. It stays disabled until a photo or a description is present. The selected
    image, the description, and the background-removal choice all remain in place if the request
    fails.
@@ -23,7 +25,7 @@ before the normal Save item action writes anything to SQLite.
    one can be added there. Edit any value and select **Save item** only when the draft is correct.
 
 With a photo, the browser sends the selected file without resizing or JPEG recompression, and the
-server asks OpenAI to process it at original image detail so small branding and model labels remain
+server asks the provider to process it (OpenAI at original image detail) so small branding and model labels remain
 readable.
 The same untouched selected file remains in browser memory. With background removal off it becomes
 the proposed inventory photo. With the option on, a separate local request produces the proposed
@@ -39,9 +41,12 @@ signature are validated only when a file was uploaded, and the description is li
 characters. The server then supplies the provider with only the allowed base field names, existing
 categories, and their current custom-field definitions. Existing items are never included.
 
-The OpenAI provider uses the Responses API in one stateless request with strict JSON Schema output.
-The same request body is used in all three modes; the `input_image` part is added only when a file
-was uploaded, so a description-only request contains text alone. The model first records important
+The request goes through the provider-neutral `AiProviderService` as one stateless structured-data
+request: OpenAI uses the Responses API with strict JSON Schema output, the other providers
+`/chat/completions` with the same schema (see [AI providers](ai-providers.md)). The same request is
+used in all three modes; the image part is added only when a file was uploaded, so a
+description-only request contains text alone. A photo is refused with *The selected model does not
+support image input.* before any provider call when the model is known to be text-only. The model first records important
 visible branding and labels in an internal `observedMarkings` array, then maps them to the most
 specific reliable commercial product name, model or part fields, and serial number. Visible printed
 text and facts stated in the description both count as direct evidence, while unknown values remain
@@ -53,11 +58,12 @@ category must exist, dynamic field IDs must belong to it, and values must match 
 or boolean field types. Unknown dynamic fields and invalid values are discarded. The internal
 markings are not sent to the item form, and no second AI request is made.
 
-`GET /api/ai/models` keeps OpenAI communication on the server. It lists models for the saved API
-key, then returns only the curated image-analysis choices: GPT-5.6 Luna, GPT-5.6 Terra, and GPT-5.6
-Sol when they are available. The Settings page loads the list once when opened, refreshes it after a
-new key is saved or when requested, and falls back to the saved custom ID with a warning if listing
-fails. Raw provider errors and the API key never reach the browser.
+`GET /api/ai/models` and `POST /api/ai/models` keep provider communication on the server. For
+OpenAI they list models for the key, then return only the curated image-analysis choices: GPT-5.6
+Luna, GPT-5.6 Terra, and GPT-5.6 Sol when they are available; other providers return their own list.
+The Settings page loads the list once when opened, refreshes it after a new key or endpoint is saved
+or when requested, and falls back to the saved custom ID with a warning if listing fails. Raw
+provider errors and the API key never reach the browser.
 
 The in-memory client draft contains the normalized values and proposed photo `File`. Navigating directly
 to Add Item does not use a draft, so the manual workflow is unchanged. Reloading the review page
@@ -128,13 +134,14 @@ downloaded database backups. Settings responses contain only whether a key exist
 characters. The key, request image, and image payload are not logged.
 
 When AI is enabled and the user selects Create Draft, the server sends the selected image when there
-is one, the description, the model instruction, and the inventory category/field schema to OpenAI. Normal inventory browsing,
-manual item creation, background removal, and backups do not contact OpenAI. Enabling background
-removal does not change the OpenAI request or token usage.
+is one, the description, the model instruction, and the inventory category/field schema to the
+configured provider. With Ollama or LM Studio on the local network nothing leaves it. Normal
+inventory browsing, manual item creation, background removal, and backups do not contact any
+provider. Enabling background removal does not change the provider request or token usage.
 
 ## Verification
 
-The API acceptance test uses a local mock provider to verify credential masking, request scope,
+The API acceptance test uses a local mock OpenAI provider to verify credential masking, request scope,
 original-detail strict structured output, visible-marking extraction, the Sound Blaster Audigy LS
 regression case, schema normalization, invalid images, and disabled or missing configuration. It also
 covers all three input modes: an image alone, a description alone whose request carries no
@@ -144,7 +151,8 @@ Playwright covers Settings, both original and processed photo-to-review-to-save 
 description-only workflow through to a saved item with no photo, the disabled Create Draft button
 with no input, the background-removal controls appearing only with a photo, the absence of a database
 record before confirmation, editable suggestions, local-processing fallback, and retention of inputs
-after a recoverable provider error. Service tests cover background removal at two levels: stubbed
+after a recoverable provider error. `test/ai-providers.test.js` runs the text and vision flows through
+compatible providers and rejects a photo for a text-only model. Service tests cover background removal at two levels: stubbed
 model output verifies white-canvas composition, framing, JPEG output, speck and haze removal, hole
 filling, shadow presence, an absent subject, and invalid-image rejection; and a full run of the real
 model over `test/fixtures/sound-blaster-audigy-ls-on-bubble-wrap.jpg` checks background cleanliness,
@@ -153,8 +161,9 @@ test is skipped when the model has not been downloaded.
 
 ## Limitations
 
-- OpenAI is the only provider implemented.
-- The deployment needs Internet access to OpenAI only when analysis is requested.
+- Photo analysis needs a vision-capable model; automatic detection only knows OpenAI's curated
+  models and OpenRouter's metadata, so set **Image input** for other providers.
+- A hosted provider needs Internet access only when analysis is requested.
 - The application still has no authentication; protect the whole installation with a trusted LAN or
   VPN, including Settings.
 - IS-Net is a general foreground model with no idea which object was meant. It keeps whatever is

@@ -1,7 +1,7 @@
 # Roadmap overview
 
 This overview lists the active feature work planned for Inventory Atlas Lite. It is current as of
-2026-09-23. Each linked task file is the authoritative specification for scope, acceptance criteria,
+2026-09-24. Each linked task file is the authoritative specification for scope, acceptance criteria,
 and verification.
 
 Implemented behavior is documented separately in [`features/README.md`](features/README.md).
@@ -12,10 +12,6 @@ Implemented behavior is documented separately in [`features/README.md`](features
    extraction so the cutout favors the intended inventory item over hands and surrounding clutter.
    Includes a film-boxes-in-hand regression asset. See
    [`TASK-background-removal-quality-phase-2.md`](issues/TASK-background-removal-quality-phase-2.md).
-
-2. **Multi-LLM and OpenAI-compatible providers** — Planned. Preserves OpenAI support while adding
-   reusable provider support for OpenRouter, Ollama, LM Studio, and custom compatible endpoints. See
-   [`TASK-multi-llm-openai-compatible-providers.md`](issues/TASK-multi-llm-openai-compatible-providers.md).
 
 ## Data management
 

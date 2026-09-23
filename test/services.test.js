@@ -405,8 +405,7 @@ test('the item list resolves every effective location in one query', () => {
 
 // The AI settings are a file, not a table, so they are exercised here with a temporary path.
 const aiSettings = () => new AiSettingsService({
-  settingsPath: path.join(process.env.DATA_DIR, `ai-settings-${Math.random().toString(36).slice(2)}.json`),
-  openAiClient: { listModels: async () => [] }
+  settingsPath: path.join(process.env.DATA_DIR, `ai-settings-${Math.random().toString(36).slice(2)}.json`)
 });
 
 const savable = changes => ({ enabled: false, provider: 'openai', model: 'gpt-5.6-luna', ...changes });
@@ -416,7 +415,8 @@ test('AI features stay off until a key is saved with them', () => {
 
   // A fresh installation has no settings file, so nothing offers AI before it is configured.
   assert.deepEqual(service.publicSettings(), {
-    enabled: false, provider: 'openai', model: 'gpt-5.6-luna', hasApiKey: false, apiKeyMasked: ''
+    enabled: false, provider: 'openai', displayName: '', baseUrl: 'https://api.openai.com/v1', model: 'gpt-5.6-luna',
+    imageInput: 'auto', hasApiKey: false, apiKeyMasked: ''
   });
 
   // Asking for AI without a key is stored as off, so the saved state never promises what cannot run.

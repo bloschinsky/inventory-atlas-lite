@@ -1,0 +1,80 @@
+/*
+  The AI provider presets offered in Settings, shared by the client and the server so both agree on
+  identifiers, default base URLs, and whether an API key is required. Every preset speaks the
+  OpenAI-style HTTP API; only OpenAI itself uses its native Responses endpoint.
+*/
+export const AI_PROVIDERS = [
+  {
+    id: 'openai',
+    label: 'OpenAI',
+    defaultBaseUrl: 'https://api.openai.com/v1',
+    apiKeyRequired: true,
+    help: 'Uses the OpenAI API with structured outputs. Only the recommended models available to your key are listed.'
+  },
+  {
+    id: 'openrouter',
+    label: 'OpenRouter',
+    defaultBaseUrl: 'https://openrouter.ai/api/v1',
+    apiKeyRequired: true,
+    help: 'Routes requests to many hosted models. The model list shows which models accept images.'
+  },
+  {
+    id: 'ollama',
+    label: 'Ollama',
+    defaultBaseUrl: 'http://localhost:11434/v1',
+    apiKeyRequired: false,
+    help: 'A local Ollama server. No API key is normally needed. For photos, choose a vision model such as llava or qwen2.5vl.'
+  },
+  {
+    id: 'lmstudio',
+    label: 'LM Studio',
+    defaultBaseUrl: 'http://localhost:1234/v1',
+    apiKeyRequired: false,
+    help: 'The LM Studio local server. An API key is only needed when authentication is enabled in LM Studio.'
+  },
+  {
+    id: 'custom',
+    label: 'Custom OpenAI-compatible',
+    defaultBaseUrl: '',
+    apiKeyRequired: false,
+    help: 'Any endpoint that implements the OpenAI-style /models and /chat/completions API.'
+  }
+];
+
+export const DEFAULT_AI_PROVIDER = 'openai';
+export const MAX_AI_MODEL_LENGTH = 200;
+export const MAX_AI_DISPLAY_NAME_LENGTH = 60;
+// Whether the configured model accepts images: detected from provider metadata, or set by the user.
+export const IMAGE_INPUT_OPTIONS = ['auto', 'supported', 'unsupported'];
+
+export const aiProvider = id => AI_PROVIDERS.find(provider => provider.id === id) || null;
+
+// Loopback, private, link-local, and .local/.lan names: where plain http:// is expected.
+export function isLocalNetworkHost(hostname) {
+  const host = hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || host.endsWith('.lan') ||
+      host.endsWith('.internal') || host.endsWith('.ts.net') || !host.includes('.') && !host.includes(':')) return true;
+  if (host.includes(':')) return host === '::1' || /^(fc|fd|fe80:)/.test(host);
+  const octets = host.split('.').map(Number);
+  if (octets.length !== 4 || octets.some(octet => !Number.isInteger(octet) || octet < 0 || octet > 255)) return false;
+  const [a, b] = octets;
+  return a === 127 || a === 10 || (a === 192 && b === 168) || (a === 172 && b >= 16 && b <= 31) ||
+    (a === 169 && b === 254) || (a === 100 && b >= 64 && b <= 127);
+}
+
+/*
+  Returns the canonical base URL, without a trailing slash, or throws an Error whose message is shown
+  to the user. Only the scheme, host, port, and path are accepted: credentials, a query, or a
+  fragment would be silently carried into every provider request.
+*/
+export function normalizeBaseUrl(value) {
+  const text = typeof value === 'string' ? value.trim() : '';
+  if (!text) throw new Error('Base URL is required.');
+  if (text.length > 500) throw new Error('Base URL must be 500 characters or fewer.');
+  let url;
+  try { url = new globalThis.URL(text); } catch { throw new Error('Base URL must be a full URL such as http://192.168.1.50:11434/v1.'); }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error('Base URL must start with http:// or https://.');
+  if (url.username || url.password) throw new Error('Base URL must not contain credentials. Use the API key field instead.');
+  if (url.search || url.hash || text.includes('?') || text.includes('#')) throw new Error('Base URL must not contain a query or fragment.');
+  return `${url.origin}${url.pathname.replace(/\/+$/, '')}`;
+}

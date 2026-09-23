@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.31.0",
+    "date": "2026-09-24",
+    "changes": [
+      "AI features can now use OpenRouter, a local Ollama or LM Studio server, or any other OpenAI-compatible endpoint as well as OpenAI; choose the provider and its base URL in Settings.",
+      "Settings gained Test connection, a model list loaded from the chosen provider with text-only models marked, and an Image input option; existing OpenAI settings keep working unchanged.",
+      "A photo is never sent to a model known to be text-only, provider errors are explained in plain words, and the API key stays tied to the provider and address it was entered for."
+    ]
+  },
+  {
     "version": "0.30.0",
     "date": "2026-09-23",
     "changes": [

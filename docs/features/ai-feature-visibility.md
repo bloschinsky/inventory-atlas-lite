@@ -14,17 +14,18 @@ Hiding an entry point is a user-experience decision only. The server-side guard
 ## Capability state
 
 ```text
-GET /api/capabilities → { "ai": { "enabled": false } }
+GET /api/capabilities → { "ai": { "enabled": false, "imageInput": true } }
                       → client/src/capabilities.js (loaded once at startup)
                       → pages and the router guard
 ```
 
 - `server/src/routes/capabilityRoutes.js` answers with the UI-safe view of the optional features of
-  this installation. It reports only the saved `enabled` flag; the provider, the model, and the API
-  key never appear in the response.
+  this installation. It reports only the saved `enabled` flag and `imageInput`, which is `false` only
+  when Settings declares the model text-only; the provider, the base URL, the model, and the API key
+  never appear in the response.
 - `client/src/capabilities.js` holds the shared reactive state, in the same style as `theme.js` and
-  `update.js`. It exposes `capabilities.ai.enabled`, a memoized `loadCapabilities()`, and
-  `setAiEnabled()`. Components read the state; no page asks the AI settings endpoint for visibility.
+  `update.js`. It exposes `capabilities.ai.enabled` and `capabilities.ai.imageInput`, a memoized
+  `loadCapabilities()`, and `setAiCapabilities()`. Components read the state; no page asks the AI settings endpoint for visibility.
 - The store **fails closed**: the state starts at `false` and a failed request leaves it there, so a
   capability is hidden until the backend confirms it. A failed request never blocks the application:
   the non-AI interface and all navigation continue to work.
@@ -44,21 +45,25 @@ While `ai.enabled` is `false`:
 While `ai.enabled` is `true`, all of these appear and behave as documented in
 [AI Add Item](ai-add-item.md) and [AI Add Fields](ai-add-fields.md).
 
-## A saved API key is required
+## A usable connection is required
 
-AI features cannot be on without a key, so the key is what the state follows:
+AI features cannot be on without a usable connection — a base URL and, for OpenAI and OpenRouter, a
+saved API key — so the connection is what the state follows. Ollama, LM Studio, and a custom endpoint
+can be enabled without a key (see [AI providers](ai-providers.md)):
 
 - `AiSettingsService.write()` stores `enabled: false` whenever the resulting configuration has no
-  key. Asking for AI without one is not an error; it simply cannot take effect, and the response
+  base URL or lacks a key its provider requires. Asking for AI without one is not an error; it simply cannot take effect, and the response
   reports the state that was actually stored.
-- Removing the saved key turns AI off in the same save.
+- Removing the saved key of a key-requiring provider turns AI off in the same save, and so does
+  switching to another provider or base URL without entering its key.
 - `AiSettingsService.read()` applies the same rule when reading, so a settings file that lost its
   key — a hand-edited or older one — is treated as disabled everywhere, including
   `/api/capabilities`.
 - A fresh installation has no settings file at all: AI starts disabled and unconfigured, and the
   interface shows no AI actions before a key is configured.
 - In *Settings*, the **Enable AI features** switch is unavailable while no key is saved and none is
-  typed in the form, with the hint *Save an OpenAI API key below to enable AI features*. A key typed
+  typed in the form for a key-requiring provider, with the hint *Save an OpenAI API key below to
+  enable AI features* (or the OpenRouter equivalent). A key typed
   into the form counts immediately, because the same save stores both. Ticking **Remove the saved
   API key** clears the switch straight away.
 

@@ -17,9 +17,11 @@ import { UpdateStatusStore } from './update/updateStatusStore.js';
 import { SystemdUpdateTrigger } from './update/updateTrigger.js';
 import { removeBackground } from './integrations/backgroundRemoval.js';
 import { GitHubReleaseClient } from './integrations/githubReleaseClient.js';
-import { OpenAiClient } from './integrations/openAiClient.js';
+import { OpenAiCompatibleProvider } from './integrations/openAiCompatibleProvider.js';
+import { OpenAiProvider } from './integrations/openAiProvider.js';
 import { AiFieldService } from './services/aiFieldService.js';
 import { AiItemAnalysisService } from './services/aiItemAnalysisService.js';
+import { AiProviderService } from './services/aiProviderService.js';
 import { AiSettingsService } from './services/aiSettingsService.js';
 import { BackupService } from './services/backupService.js';
 import { CategoryService } from './services/categoryService.js';
@@ -90,16 +92,20 @@ export function createApp({ production = false } = {}) {
     staleAfterMs: updateStaleAfterMs
   });
 
-  const openAiClient = new OpenAiClient();
-  const aiSettingsService = new AiSettingsService({ settingsPath: path.join(dataDir, 'ai-settings.json'), openAiClient });
+  const aiSettingsService = new AiSettingsService({ settingsPath: path.join(dataDir, 'ai-settings.json') });
+  // OpenAI keeps its native adapter; every other preset speaks the generic OpenAI-compatible API.
+  const aiProviderService = new AiProviderService({
+    aiSettingsService,
+    createProvider: connection => (connection.provider === 'openai' ? new OpenAiProvider(connection) : new OpenAiCompatibleProvider(connection))
+  });
   const categoryService = new CategoryService(categoryRepository);
   const customFieldService = new CustomFieldService(customFieldRepository, categoryService);
   const itemService = new ItemService({ itemRepository, customFieldRepository, itemPhotoRepository, categoryRepository });
   const photoService = new PhotoService({ itemRepository, itemPhotoRepository });
   const dashboardService = new DashboardService({ dashboardRepository, categoryRepository });
   const imageService = new ImageService({ removeBackground });
-  const aiItemAnalysisService = new AiItemAnalysisService({ aiSettingsService, openAiClient, categoryRepository, customFieldRepository });
-  const aiFieldService = new AiFieldService({ aiSettingsService, openAiClient, categoryService, customFieldRepository });
+  const aiItemAnalysisService = new AiItemAnalysisService({ aiProviderService, categoryRepository, customFieldRepository });
+  const aiFieldService = new AiFieldService({ aiProviderService, categoryService, customFieldRepository });
   const backupService = new BackupService({ db, maintenance });
 
   const imageUpload = createImageUpload();
@@ -109,7 +115,7 @@ export function createApp({ production = false } = {}) {
   app.use(express.json({ limit: '1mb' }));
   app.use(maintenanceGuard(maintenance));
 
-  app.use(createAiRoutes({ aiSettingsService, aiItemAnalysisService, imageUpload }));
+  app.use(createAiRoutes({ aiSettingsService, aiProviderService, aiItemAnalysisService, imageUpload }));
   app.use(createCapabilityRoutes({ aiSettingsService }));
   app.use(createImageRoutes({ imageService, imageUpload }));
   app.use(createCategoryRoutes({ categoryService }));

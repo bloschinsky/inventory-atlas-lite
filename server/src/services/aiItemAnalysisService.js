@@ -61,7 +61,7 @@ function cleanString(value, maximum = 5000) {
   dropped, and every value is normalized to what the item form can actually accept.
 */
 function normalizeDraft(raw, categories, fields, hasImage) {
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw httpError('OpenAI returned an invalid structured response.', 502);
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw httpError('The AI returned an invalid structured response.', 502);
   const topLevelNames = ['observedMarkings', 'categoryId', 'confidence', 'needsDetailedImageAnalysis', 'baseFields', 'dynamicFields', 'warnings'];
   if (Object.keys(raw).some(name => !topLevelNames.includes(name)) ||
       (raw.categoryId !== null && !Number.isInteger(raw.categoryId)) ||
@@ -69,18 +69,18 @@ function normalizeDraft(raw, categories, fields, hasImage) {
       !Array.isArray(raw.observedMarkings) || raw.observedMarkings.some(value => typeof value !== 'string') ||
       !raw.baseFields || typeof raw.baseFields !== 'object' || Array.isArray(raw.baseFields) ||
       !Array.isArray(raw.dynamicFields) || !Array.isArray(raw.warnings)) {
-    throw httpError('OpenAI returned an invalid structured response.', 502);
+    throw httpError('The AI returned an invalid structured response.', 502);
   }
   const unknownBase = Object.keys(raw.baseFields || {}).filter(name => !baseFieldNames.includes(name));
-  if (unknownBase.length) throw httpError('OpenAI returned unsupported item fields.', 502);
+  if (unknownBase.length) throw httpError('The AI returned unsupported item fields.', 502);
   if (baseFieldNames.some(name => !(name in raw.baseFields) || (raw.baseFields[name] !== null && typeof raw.baseFields[name] !== 'string'))) {
-    throw httpError('OpenAI returned invalid item field values.', 502);
+    throw httpError('The AI returned invalid item field values.', 502);
   }
   if (raw.dynamicFields.some(entry => !entry || typeof entry !== 'object' || Array.isArray(entry) ||
       Object.keys(entry).some(name => !['fieldId', 'value'].includes(name)) || !Number.isInteger(entry.fieldId) ||
       (!['string', 'boolean'].includes(typeof entry.value) && entry.value !== null)) ||
       raw.warnings.some(value => typeof value !== 'string')) {
-    throw httpError('OpenAI returned invalid dynamic field values.', 502);
+    throw httpError('The AI returned invalid dynamic field values.', 502);
   }
   const category = categories.find(candidate => candidate.id === raw.categoryId) || null;
   const allowedFields = new Map(fields.filter(field => category && field.category_id === category.id).map(field => [field.id, field]));
@@ -126,9 +126,8 @@ function normalizeDraft(raw, categories, fields, hasImage) {
 }
 
 export class AiItemAnalysisService {
-  constructor({ aiSettingsService, openAiClient, categoryRepository, customFieldRepository }) {
-    this.settingsService = aiSettingsService;
-    this.openAiClient = openAiClient;
+  constructor({ aiProviderService, categoryRepository, customFieldRepository }) {
+    this.ai = aiProviderService;
     this.categories = categoryRepository;
     this.fields = customFieldRepository;
   }
@@ -149,38 +148,21 @@ export class AiItemAnalysisService {
     }
     if (description.length > 2000) throw httpError('The description must be 2,000 characters or fewer.');
 
-    const settings = this.settingsService.requireUsableSettings('Add an OpenAI API key in Settings before creating an item draft.');
+    this.ai.assertReady('creating an item draft');
     const categories = this.categories.listNames();
     if (!categories.length) throw httpError('Create at least one category before using AI Add Item.', 409);
     const fields = this.fields.listAll();
 
-    const started = Date.now();
-    try {
-      const { parsed, usage } = await this.openAiClient.createStructuredResponse({
-        apiKey: settings.apiKey,
-        body: this.requestBody({ settings, image: upload?.buffer ?? null, mimeType, description, categories, fields }),
-        failureMessage: 'OpenAI could not create the item draft. Try again later.'
-      });
-      const normalized = normalizeDraft(parsed, categories, fields, Boolean(upload));
-      console.info('AI item analysis', { provider: settings.provider, model: settings.model, durationMs: Date.now() - started, success: true, usage });
-      return normalized;
-    } catch (error) {
-      console.info('AI item analysis', { provider: settings.provider, model: settings.model, durationMs: Date.now() - started, success: false });
-      throw error;
-    }
-  }
-
-  requestBody({ settings, image, mimeType, description, categories, fields }) {
-    const content = [
-      { type: 'input_text', text: JSON.stringify({ description: description || null, inventorySchema: inventorySchema(categories, fields) }) }
-    ];
-    if (image) content.push({ type: 'input_image', image_url: `data:${mimeType};base64,${image.toString('base64')}`, detail: 'original' });
-    return {
-      model: settings.model,
-      store: false,
+    const { data } = await this.ai.generateStructuredData({
+      action: 'creating an item draft',
+      purpose: 'item analysis',
       instructions,
-      input: [{ role: 'user', content }],
-      text: { format: { type: 'json_schema', name: 'inventory_item_draft', strict: true, schema: responseSchema(categories) } }
-    };
+      input: JSON.stringify({ description: description || null, inventorySchema: inventorySchema(categories, fields) }),
+      image: upload ? { buffer: upload.buffer, mimeType } : null,
+      schemaName: 'inventory_item_draft',
+      schema: responseSchema(categories),
+      task: 'create the item draft'
+    });
+    return normalizeDraft(data, categories, fields, Boolean(upload));
   }
 }

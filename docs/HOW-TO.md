@@ -13,9 +13,10 @@ optional condition, location, description, purchase details, serial number, wher
 transferred to, your own custom fields, and photos.
 
 All inventory records and original photo bytes live in one SQLite database on your server. Normal
-use needs no external service. The optional **AI Add Item** workflow sends the selected photo at
-original image detail, your written description, and your category/field schema to OpenAI only after
-you press **Create Draft**; it therefore needs Internet access.
+use needs no external service. The optional AI features send the selected photo, your written
+description, and your category/field schema to the AI provider you configure — OpenAI, OpenRouter, a
+local Ollama or LM Studio server, or another OpenAI-compatible endpoint — only when you ask for a
+draft. A hosted provider needs Internet access; a local model server on your network does not.
 
 **There is no authentication.** Anyone who can open the address can read and change the whole
 inventory, so keep it on a trusted LAN or behind a VPN.
@@ -54,13 +55,40 @@ inventory, so keep it on a trusted LAN or behind a VPN.
    the search finds it by name.
 7. Open **Data / Backup** and press **Download backup** to get your first copy of the database.
 
-To use assisted photo entry, open **Settings**, keep **OpenAI** as the provider, enter an API key,
-tick **Enable AI features**, then press **Save settings**. The switch stays unavailable until a key
-is saved or typed into the form, because AI cannot work without one. The model selector loads the
-supported models that
-are available to that key; choose one and save the setting. Use **Custom model...** to enter a model
-ID that is not yet listed, and use **Refresh models** after access to the OpenAI account changes.
-The saved key is shown only as a masked value afterwards.
+To use the AI features, open **Settings** and set up the **AI** card:
+
+1. Choose a **Provider**. Each one fills in its default **Base URL**:
+
+   | Provider | Default base URL | API key |
+   | --- | --- | --- |
+   | OpenAI | `https://api.openai.com/v1` | required |
+   | OpenRouter | `https://openrouter.ai/api/v1` | required |
+   | Ollama | `http://localhost:11434/v1` | not needed |
+   | LM Studio | `http://localhost:1234/v1` | only if you enabled authentication in LM Studio |
+   | Custom OpenAI-compatible | none — enter it | optional; also give it a **Display name** |
+
+2. Check the **Base URL**. It is contacted by the Inventory Atlas server, not by your browser, so
+   `localhost` means the machine or container running Inventory Atlas. If Inventory Atlas runs in a
+   Proxmox container or in Docker and Ollama or LM Studio runs on your desktop PC, enter the PC's LAN
+   address instead, for example `http://192.168.1.50:11434/v1` for Ollama or
+   `http://192.168.1.50:1234/v1` for LM Studio. Ollama must then be started with
+   `OLLAMA_HOST=0.0.0.0`, and LM Studio needs *Serve on Local Network*. Only use plain `http://` on
+   your own network; the form warns when a remote address is not HTTPS.
+3. Enter the **API key** if the provider needs one, and press **Test connection**. It reports how
+   many models the provider offers, or explains what went wrong — an unreachable address, a rejected
+   key, or a server that does not list its models.
+4. Choose a **Model**. **Refresh models** reloads the list from the provider; OpenAI shows only the
+   recommended models your key can use, and models known to be text-only are marked *(text only)*.
+   Use **Custom model...** to type a model ID that is not listed, for example `llava:13b` in Ollama.
+5. Set **Image input**. *Detect automatically* works for OpenAI and OpenRouter; for Ollama, LM
+   Studio, or a custom server choose *Supported by this model* for a vision model and *Not supported
+   (text only)* for a text model, which hides the photo option on **AI Add Item**.
+6. Tick **Enable AI features** and press **Save settings**.
+
+**Enable AI features** stays unavailable while OpenAI or OpenRouter has no key saved or typed into
+the form, because AI cannot work without one. The saved key is shown only as a masked value
+afterwards, and it belongs to the provider and base URL it was entered for: switching to another
+provider or address removes it on save unless you enter a key again.
 
 **Enable AI features** controls whether the AI actions exist in the interface at all. While it is
 off, **AI Add Item** and **AI Add Fields** are not shown and `/items/ai` returns you to **Items**;
@@ -69,8 +97,9 @@ as you press **Save settings**, with no page reload, and only the saved value co
 switch without saving changes nothing elsewhere.
 
 A new installation therefore starts with AI off and no key, and shows no AI actions until you
-configure one. The key is also what keeps AI on: ticking **Remove the saved API key** switches AI
-features off in the same save, and they stay off until a new key is saved.
+configure a provider. For OpenAI and OpenRouter the key is also what keeps AI on: ticking **Remove
+the saved API key** switches AI features off in the same save, and they stay off until a new key is
+saved.
 
 ## 4. Core concepts
 
@@ -175,8 +204,8 @@ Required custom fields do not exist yet, so `"required": true` is rejected inste
 
 ### Let AI suggest the fields for a category
 
-1. Configure and enable OpenAI under **Settings → AI**, the same setup **AI Add Item** uses. The
-   button appears only while AI features are enabled.
+1. Configure and enable an AI provider under **Settings → AI**, the same setup **AI Add Item** uses.
+   Any text model works. The button appears only while AI features are enabled.
 2. Select a category and press **AI Add Fields** under the field form.
 3. Describe the category and the fields you need, for example *Suggest useful fields for a category
    containing vintage computer expansion cards such as graphics cards, sound cards, network cards
@@ -232,8 +261,10 @@ afterwards through each item's **Edit** form.
 
 ### Create an item from a photo or a description with AI
 
-1. Configure and enable OpenAI under **Settings → AI**. The default model is `gpt-5.6-luna`; you can
-   replace it with another OpenAI model that accepts image input and strict structured output.
+1. Configure and enable an AI provider under **Settings → AI**. The default OpenAI model is
+   `gpt-5.6-luna`. To analyse photos the model must accept image input; with a text-only model the
+   photo option is hidden (when **Image input** says so) or the request is refused with *The
+   selected model does not support image input.*, and you can still work from a description.
 2. Open **Items** and press **AI Add Item** next to **Add item**. The button appears only while AI
    features are enabled.
 3. Supply a photo, a description, or both; at least one of them is required. **Item photo
@@ -255,7 +286,7 @@ afterwards through each item's **Edit** form.
 6. Press **Save item** to create the record through the normal workflow. Leaving or reloading the
    review page before saving discards the temporary draft, and no inventory record has been written.
 
-The request is always one OpenAI request. A supplied photo is sent at original detail so visible
+The request is always one AI provider request. A supplied photo is sent unresized (OpenAI reads it at original detail) so visible
 brand, family, model, part, and serial markings remain readable, and a description-only request sends
 no image at all. Facts you state and markings the model reads are both treated as evidence; when the
 two disagree, the draft carries a warning naming the conflict instead of silently choosing one. Background removal runs independently on the local CPU with
@@ -629,12 +660,16 @@ on a different machine than the server.
 - An inventory reset removes everything at once. There is no selective reset of single tables,
   categories, or items, and it never deletes settings or backups.
 - AI Add Fields sends your description, the category name, its field names, and the built-in
-  attribute names to OpenAI. It only proposes fields; the fields are created by the same reviewed
+  attribute names to the configured AI provider. It only proposes fields; the fields are created by the same reviewed
   batch as a pasted document, and a failed request changes nothing.
-- AI Add Item uses OpenAI and sends the selected image at original detail, your description, and
-  category/field definitions outside the local deployment. The original image is stored only after
-  you confirm the draft. The OpenAI key stays in `ai-settings.json` under `DATA_DIR` and is not part
-  of SQLite backups, so move or reconfigure it separately.
+- AI Add Item sends the selected image, your description, and category/field definitions to the
+  configured AI provider, which is outside the local deployment unless you use a local model server.
+  The original image is stored only after you confirm the draft. The provider settings and key stay
+  in `ai-settings.json` under `DATA_DIR` and are not part of SQLite backups, so move or reconfigure
+  them separately.
+- Only providers with an OpenAI-compatible API are supported, one at a time. Whether a model accepts
+  photos is detected only for OpenAI and OpenRouter; for other servers set **Image input** yourself.
+  Small local models may return unusable answers, which are reported and never saved.
 - Autocomplete is offered for text custom fields and **Transferred To** only, not for the name,
   condition, location, or description.
 - The live camera in **Scan QR** needs the application to be opened over HTTPS or on `localhost`.
@@ -662,8 +697,11 @@ on a different machine than the server.
 | A photo is rejected | Only JPEG, PNG, WebP, and GIF are accepted, at most 10 files of 15 MB each per upload. |
 | Search finds nothing | The search matches the name, description, serial number, and Transferred To. Clear the category filter and check that you are on page 1. |
 | No suggestions in a text field | Suggestions come from values already saved for that same field. A newly created field starts empty. |
-| AI Add Item is missing | AI features are off. Open **Settings**, enter an OpenAI API key and an image-capable model, tick **Enable AI features**, then save. The AI actions appear immediately. |
-| Enable AI features cannot be ticked | No API key is saved, and AI cannot run without one. Enter a key in the same form; the switch becomes available at once. |
+| AI Add Item is missing | AI features are off. Open **Settings**, choose a provider, enter its API key if it needs one, choose a model, tick **Enable AI features**, then save. The AI actions appear immediately. |
+| Enable AI features cannot be ticked | OpenAI and OpenRouter need an API key and none is saved for this provider and base URL. Enter a key in the same form; the switch becomes available at once. |
+| *Could not reach Ollama/LM Studio at …* | The address is resolved on the Inventory Atlas server. In a Proxmox container or Docker, `localhost` is the container itself: use the LAN address of the computer running the model server, and make that server listen on the network. |
+| *The selected model does not support image input.* | The model cannot read photos. Choose a vision model, or describe the item instead. |
+| No model list, but the connection works | Some servers do not list their models. Choose **Custom model...** and type the model ID. |
 | AI Add Fields suggests nothing usable | The message reports an empty or malformed answer. Describe the category in more detail and press **Generate Fields** again; your description is kept. |
 | AI analysis fails | Read the message for an invalid key, rate limit, unavailable provider, timeout, unsupported image, or missing category. The selected photo and description remain available for retry. |
 | Scan QR says *Camera unavailable* | Over plain HTTP the browser does not offer the camera; use **Scan from image** or open the application over HTTPS. If camera access was denied, allow it for this site in the browser settings and reload the page. |

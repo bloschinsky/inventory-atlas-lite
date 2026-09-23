@@ -204,7 +204,10 @@ test('configures AI while returning only a masked API key state to the browser',
   expect(settings).toEqual({
     enabled: true,
     provider: 'openai',
+    displayName: '',
+    baseUrl: 'https://api.openai.com/v1',
     model: 'gpt-4o-mini',
+    imageInput: 'auto',
     hasApiKey: true,
     apiKeyMasked: '••••••••cret'
   });
