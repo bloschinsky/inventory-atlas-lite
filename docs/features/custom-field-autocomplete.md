@@ -33,8 +33,10 @@ input: suggestions speed up typing, they do not restrict what can be saved.
   non-text field. All SQL is parameterized and user wildcards are escaped with `ESCAPE '\'`.
 - The existing `idx_field_values_field` index on `item_field_values(field_id, value)` covers the
   query; no additional index was added.
-- `client/src/components/FieldAutocomplete.vue` is a small Bootstrap-styled combobox used only for
-  text custom fields in `client/src/pages/ItemForm.vue`. It loads on focus, debounces input by
+- `client/src/components/FieldAutocomplete.vue` is a small Bootstrap-styled combobox used for text
+  custom fields in `client/src/pages/ItemForm.vue`. Its `source` prop is the suggestions endpoint, so
+  the same control also serves the [Transferred To field](transferred-to-field.md), and other input
+  attributes such as `maxlength` are passed to the input. It loads on focus, debounces input by
   200 ms, discards stale responses through a request counter, hides a suggestion identical to the
   current input, and closes on selection or when focus leaves the component.
 
@@ -51,4 +53,5 @@ input: suggestions speed up typing, they do not restrict what can be saved.
 - Suggestions are derived from saved values only. There is no dictionary table, no administration
   page, and no way to delete or rename a suggestion other than changing the saved item values.
 - Matching is prefix-based; there is no fuzzy search or typo correction.
-- Autocomplete is not enabled for the item name, description, condition, or location.
+- Autocomplete is not enabled for the item name, description, condition, or location. Transferred
+  To has its own suggestions over the saved values of that base field.

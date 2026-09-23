@@ -44,7 +44,7 @@ test('validates a backup, requires the typed confirmation, and reloads with the 
 
   // The page reloads itself into the items list, which then shows the restored inventory.
   await page.waitForURL('**/items', { timeout: 15000 });
-  const search = page.getByPlaceholder('Search name, description or serial number…');
+  const search = page.getByPlaceholder('Search name, description, serial number or transferred to…');
   await search.fill(kept);
   await expect(page.getByRole('link', { name: kept, exact: true })).toBeVisible();
 

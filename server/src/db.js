@@ -31,7 +31,7 @@ export const CURRENT_SCHEMA = {
   ...CORE_SCHEMA,
   categories: [...CORE_SCHEMA.categories, 'created_at', 'updated_at'],
   items: [...CORE_SCHEMA.items, 'purchase_date', 'purchase_price_amount', 'purchase_price_currency',
-    'serial_number', 'parent_item_id', 'created_at', 'updated_at'],
+    'serial_number', 'transferred_to', 'parent_item_id', 'created_at', 'updated_at'],
   custom_fields: [...CORE_SCHEMA.custom_fields, 'created_at', 'updated_at'],
   item_photos: [...CORE_SCHEMA.item_photos, 'created_at']
 };
@@ -58,6 +58,7 @@ export const applySchema = connection => {
       purchase_price_amount TEXT,
       purchase_price_currency TEXT,
       serial_number TEXT,
+      transferred_to TEXT,
       parent_item_id INTEGER REFERENCES items(id) ON DELETE RESTRICT,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -99,7 +100,8 @@ export const applySchema = connection => {
     ['purchase_date', 'TEXT'],
     ['purchase_price_amount', 'TEXT'],
     ['purchase_price_currency', 'TEXT'],
-    ['serial_number', 'TEXT']
+    ['serial_number', 'TEXT'],
+    ['transferred_to', 'TEXT']
   ];
   for (const [name, definition] of missingItemColumns) {
     if (!itemColumns.has(name)) connection.exec(`ALTER TABLE items ADD COLUMN ${name} ${definition}`);

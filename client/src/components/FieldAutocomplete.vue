@@ -2,12 +2,15 @@
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { api } from '../api.js';
 
+// `source` is the suggestions endpoint; it answers `?search=&limit=` with `[{ value, usage_count }]`.
 const props = defineProps({
   modelValue: { type: String, default: '' },
-  fieldId: { type: [Number, String], required: true },
-  inputId: { type: String, default: undefined }
+  source: { type: String, required: true },
+  inputId: { type: String, required: true }
 });
 const emit = defineEmits(['update:modelValue']);
+// Attributes such as `maxlength` and `placeholder` belong on the input, not on the wrapper.
+defineOptions({ inheritAttrs: false });
 
 const root = ref(null);
 const suggestions = ref([]);
@@ -18,14 +21,14 @@ let latestRequest = 0;
 
 // A value the user already typed in full is not worth suggesting back to them.
 const visible = computed(() => suggestions.value.filter(s => s.value.toLowerCase() !== props.modelValue.trim().toLowerCase()));
-const listId = computed(() => `field-${props.fieldId}-suggestions`);
+const listId = computed(() => `${props.inputId}-suggestions`);
 const activeId = computed(() => (highlighted.value >= 0 ? `${listId.value}-${highlighted.value}` : undefined));
 
 async function load(search) {
   const request = ++latestRequest;
   const query = new URLSearchParams({ search, limit: '10' });
   try {
-    const result = await api(`/api/fields/${props.fieldId}/suggestions?${query}`);
+    const result = await api(`${props.source}?${query}`);
     // Stale responses must never overwrite the result of a newer search.
     if (request !== latestRequest) return;
     suggestions.value = result;
@@ -83,6 +86,7 @@ function onFocusOut(event) {
     @focusout="onFocusOut"
   >
     <input
+      v-bind="$attrs"
       :id="inputId"
       class="form-control"
       type="text"

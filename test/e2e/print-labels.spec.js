@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { createCategory, createItem, unique } from './helpers.js';
 
 const phone = { width: 390, height: 844 };
-const search = page => page.getByPlaceholder('Search name, description or serial number…');
+const search = page => page.getByPlaceholder('Search name, description, serial number or transferred to…');
 const labels = page => page.getByRole('group', { name: /^Label: / });
 const sheets = page => page.getByRole('region', { name: /^Label page / });
 const qrName = item => `QR code for ial:item:v1:${item.uuid}`;

@@ -9,8 +9,8 @@ feature see [`features/README.md`](features/README.md).
 
 Inventory Atlas Lite is a small self-hosted catalogue of physical things you own: tools, cameras,
 lenses, cables, spare parts, boxes in the garage. For every item you record a name, a category, an
-optional condition, location, description, purchase details, serial number, your own custom fields,
-and photos.
+optional condition, location, description, purchase details, serial number, where the item was
+transferred to, your own custom fields, and photos.
 
 All inventory records and original photo bytes live in one SQLite database on your server. Normal
 use needs no external service. The optional **AI Add Item** workflow sends the selected photo at
@@ -76,11 +76,12 @@ features off in the same save, and they stay off until a new key is saved.
 
 | Concept | What it means |
 | --- | --- |
-| **Item** | One physical thing. It always has a name and a category, plus an automatically assigned UUID and created/updated timestamps. Purchase details and a serial number are optional base fields available in every category. |
+| **Item** | One physical thing. It always has a name and a category, plus an automatically assigned UUID and created/updated timestamps. Purchase details, a serial number, and **Transferred To** are optional base fields available in every category. |
 | **Category** | A group of items, such as `Cameras`. Category names are unique and case-insensitive. |
 | **Custom field** | An extra field that belongs to one category. Types: Text, Number, Date, Boolean. Items of that category get the field in their form. |
 | **Location** | A free-text note about where the object physically is, such as `Garage` or `Shelf 2`. An item stored inside another item is displayed at the location of its outermost container instead. |
 | **Stored inside** | A real link to another item that contains this one, such as a lens inside `Box A`. |
+| **Transferred To** | A free-text note about who or where an item went when it was lent, given away, sold, or otherwise transferred, such as `Vasyl` or `Sold via OLX`. It is informational only and never changes the location. |
 | **QR code** | A code generated from the item's UUID, shown on request from the item page and printed on labels. It identifies the record and contains no address of your server. **Scan QR** reads it back and opens the item. |
 | **Photo** | An image stored inside the database together with the item. |
 | **Backup** | A downloadable copy of the whole SQLite database, photos included. |
@@ -196,8 +197,8 @@ unusable, the message explains why and your description stays in the modal for a
 1. Open **Items** and press **Add item**. If no category exists yet, the form tells you to create one
    first and links to **Manage categories**.
 2. Fill in **Name** and choose a **Category**. Both are required.
-3. Optionally fill in **Condition**, **Location**, **Purchase Date**, **Purchase Price**, **Serial
-   Number**, **Stored inside**, and **Description**. Purchase Price has separate amount and currency
+3. Optionally fill in **Condition**, **Location**, **Transferred To**, **Purchase Date**, **Purchase
+   Price**, **Serial Number**, **Stored inside**, and **Description**. Purchase Price has separate amount and currency
    controls; clear the amount to leave the whole price unspecified.
 4. Values for the category's custom fields appear under **Category fields**. Text fields suggest
    values you have already used (see below), boolean fields are a Yes/No list, number and date fields
@@ -335,18 +336,33 @@ enables the live camera.
 ### Search, filter, sort, and page through items
 
 1. Open **Items**.
-2. Type into **Search**. The search runs as you type and matches the item name, description, and
-   serial number — not custom field values, condition, or location.
+2. Type into **Search**. The search runs as you type and matches the item name, description, serial
+   number, and **Transferred To** — not custom field values, condition, or location.
 3. Narrow the list with **Category** (**All categories** by default).
 4. **Sort by** Name, Category, Created, or Updated, with **Direction** Ascending or Descending.
 5. On a wide screen the results are a table with photo, name, category, condition, location,
    **Stored inside**, and **View** / **Edit** buttons; the container name links to its own page. On a
    narrower window the location and the container move under the item name, and on a phone each item
    is a card with the same information and the same two buttons. The location shown is the inherited
-   one for items that sit inside a container. The checkbox in front of each item selects it for
+   one for items that sit inside a container. An item with **Transferred To** shows a
+   **Transferred to: …** badge under its name. The checkbox in front of each item selects it for
    label printing.
 6. The list shows 12 items per page; use **Previous** and **Next** below the results. The total count
    is shown under the **Items** heading.
+
+### Record where an item was transferred
+
+1. Open the item's form (**Add item** or **Edit**).
+2. Type the person or destination into **Transferred To**, for example `Vasyl`, `Father`, or
+   `Sold via OLX`. Clicking into the field lists values already used on other items, most used first;
+   choose one the same way as a custom-field suggestion, or type a new value. At most 255 characters.
+3. Press **Save item**. The item page shows a **Transferred to: …** badge under the item name, and the
+   **Items** list shows the same badge with the item.
+4. To remove the note, clear **Transferred To** and save. The badge disappears.
+
+The field is only a note: it does not change **Location**, **Stored inside**, or anything else, and it
+keeps no history of earlier transfers. Search for the value on **Items** to list everything
+transferred to the same person.
 
 ### Put an item inside another item
 
@@ -538,7 +554,7 @@ on a different machine than the server.
 - Not intended for direct exposure to the Internet. Use a trusted LAN or a VPN; do not forward a
   router port and do not put it behind a public reverse proxy.
 - Photos: JPEG, PNG, WebP, GIF, up to 10 files of 15 MB each per upload.
-- Search covers the item name, description, and serial number.
+- Search covers the item name, description, serial number, and Transferred To.
 - A category used by any item cannot be deleted, and an item containing other items cannot be
   deleted.
 - Deleting a custom field also deletes the values saved for it on every item of that category.
@@ -555,8 +571,8 @@ on a different machine than the server.
   category/field definitions outside the local deployment. The original image is stored only after
   you confirm the draft. The OpenAI key stays in `ai-settings.json` under `DATA_DIR` and is not part
   of SQLite backups, so move or reconfigure it separately.
-- Autocomplete is offered for text custom fields only, not for the name, condition, location, or
-  description.
+- Autocomplete is offered for text custom fields and **Transferred To** only, not for the name,
+  condition, location, or description.
 - The live camera in **Scan QR** needs the application to be opened over HTTPS or on `localhost`.
   Over plain HTTP only **Scan from image** is available. The scanner reads Inventory Atlas item
   codes only; it does not open other QR codes or read barcodes.
@@ -580,7 +596,7 @@ on a different machine than the server.
 | A category cannot be deleted | Items still use it. The message says how many; move them to another category or delete them. |
 | An item cannot be deleted | It still contains other items. Open it, move or delete everything under **Contents**, then delete it. |
 | A photo is rejected | Only JPEG, PNG, WebP, and GIF are accepted, at most 10 files of 15 MB each per upload. |
-| Search finds nothing | The search matches the name, description, and serial number. Clear the category filter and check that you are on page 1. |
+| Search finds nothing | The search matches the name, description, serial number, and Transferred To. Clear the category filter and check that you are on page 1. |
 | No suggestions in a text field | Suggestions come from values already saved for that same field. A newly created field starts empty. |
 | AI Add Item is missing | AI features are off. Open **Settings**, enter an OpenAI API key and an image-capable model, tick **Enable AI features**, then save. The AI actions appear immediately. |
 | Enable AI features cannot be ticked | No API key is saved, and AI cannot run without one. Enter a key in the same form; the switch becomes available at once. |

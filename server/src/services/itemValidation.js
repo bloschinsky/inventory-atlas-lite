@@ -40,11 +40,16 @@ export const validatePurchasePrice = value => {
   return { amount, currency };
 };
 
-export const validateSerialNumber = value => {
+// Optional single-line text with the 255-character limit of the short base fields.
+const shortText = (value, label) => {
   if (value === null || value === undefined || value === '') return null;
-  if (typeof value !== 'string') throw httpError('Serial number must be text.');
-  const serial = value.trim();
-  if (!serial) return null;
-  if (serial.length > 255) throw httpError('Serial number must be 255 characters or fewer.');
-  return serial;
+  if (typeof value !== 'string') throw httpError(`${label} must be text.`);
+  const text = value.trim();
+  if (!text) return null;
+  if (text.length > 255) throw httpError(`${label} must be 255 characters or fewer.`);
+  return text;
 };
+
+export const validateSerialNumber = value => shortText(value, 'Serial number');
+
+export const validateTransferredTo = value => shortText(value, 'Transferred To');

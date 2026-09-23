@@ -71,7 +71,7 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
           v-model="filters.search"
           type="search"
           class="form-control"
-          placeholder="Search name, description or serial number…"
+          placeholder="Search name, description, serial number or transferred to…"
         >
       </div>
       <div class="col-12 col-sm-6 col-lg-3">

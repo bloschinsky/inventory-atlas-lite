@@ -1,5 +1,5 @@
 import { httpError } from '../httpError.js';
-import { nullableText, requiredText, validatePurchaseDate, validatePurchasePrice, validateSerialNumber } from './itemValidation.js';
+import { nullableText, requiredText, validatePurchaseDate, validatePurchasePrice, validateSerialNumber, validateTransferredTo } from './itemValidation.js';
 
 // The stored purchase price columns are presented as one object, exactly as the API always has.
 const itemResponse = item => {
@@ -73,6 +73,14 @@ export class ItemService {
     });
   }
 
+  // Previously saved Transferred To values for the free-text autocomplete in the item form.
+  transferredToSuggestions(query = {}) {
+    return this.items.listTransferredToSuggestions(
+      String(query.search || '').trim(),
+      Math.min(20, Math.max(1, Number.parseInt(query.limit) || 10))
+    );
+  }
+
   // Label data for a print job, in the order the items were selected. Items deleted since they were
   // selected are reported back instead of failing the whole job.
   labels(body) {
@@ -140,6 +148,7 @@ export class ItemService {
     const purchaseDate = validatePurchaseDate(body.purchase_date);
     const purchasePrice = validatePurchasePrice(body.purchase_price);
     const serialNumber = validateSerialNumber(body.serial_number);
+    const transferredTo = validateTransferredTo(body.transferred_to);
     return {
       values,
       attributes: {
@@ -152,6 +161,7 @@ export class ItemService {
         purchasePriceAmount: purchasePrice.amount,
         purchasePriceCurrency: purchasePrice.currency,
         serialNumber,
+        transferredTo,
         parentId
       }
     };

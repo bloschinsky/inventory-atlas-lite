@@ -129,6 +129,53 @@ test('search, sorting, and pagination of the item list stay as the client expect
   assert.equal(itemService.list({ pageSize: '500' }).pagination.pageSize, 100);
 });
 
+test('Transferred To is optional free text that never touches the location', () => {
+  const { categoryService, itemService } = build();
+  const category = categoryService.create({ name: 'Tools' });
+  const base = { category_id: category.id, location: 'Garage' };
+
+  const kept = itemService.create({ name: 'Drill', ...base });
+  assert.equal(kept.transferred_to, null);
+  const lent = itemService.create({ name: 'Saw', ...base, transferred_to: '  Vasyl  ' });
+  assert.equal(lent.transferred_to, 'Vasyl');
+  assert.equal(lent.location, 'Garage');
+
+  // Null to a value, one value to another, and back to null, while the location stays as saved.
+  const save = (item, transferredTo) => itemService.update(item.id, { name: item.name, ...base, transferred_to: transferredTo });
+  assert.equal(save(kept, 'Father').transferred_to, 'Father');
+  assert.equal(save(kept, 'Sold via OLX').transferred_to, 'Sold via OLX');
+  const cleared = save(kept, '   ');
+  assert.equal(cleared.transferred_to, null);
+  assert.equal(cleared.location, 'Garage');
+  assert.equal(save(kept, '').transferred_to, null);
+
+  failure(() => itemService.create({ name: 'Too long', ...base, transferred_to: 'x'.repeat(256) }), 400,
+    'Transferred To must be 255 characters or fewer.');
+  failure(() => itemService.create({ name: 'Not text', ...base, transferred_to: 42 }), 400, 'Transferred To must be text.');
+
+  // The normal item search finds everything handed to the same person.
+  itemService.create({ name: 'Ladder', ...base, transferred_to: 'vasyl ' });
+  assert.deepEqual(itemService.list({ search: 'Vasyl' }).items.map(item => item.name), ['Ladder', 'Saw']);
+  assert.equal(itemService.list({ search: 'Vasyl' }).items[0].transferred_to, 'vasyl');
+});
+
+test('Transferred To suggestions are distinct saved values, most used first', () => {
+  const { categoryService, itemService } = build();
+  const category = categoryService.create({ name: 'Books' });
+  for (const [index, value] of ['Vasyl', ' vasyl', 'VASYL ', 'Father', 'Workshop', '', null].entries()) {
+    itemService.create({ name: `Book ${index}`, category_id: category.id, transferred_to: value });
+  }
+
+  // Case and surrounding whitespace do not create duplicates, and empty values are never offered.
+  const all = itemService.transferredToSuggestions();
+  assert.deepEqual(all.map(suggestion => suggestion.usage_count), [3, 1, 1]);
+  assert.equal(all[0].value.toLowerCase(), 'vasyl');
+  assert.deepEqual(all.slice(1).map(suggestion => suggestion.value), ['Father', 'Workshop']);
+  assert.deepEqual(itemService.transferredToSuggestions({ search: ' wo ' }).map(suggestion => suggestion.value), ['Workshop']);
+  assert.deepEqual(itemService.transferredToSuggestions({ search: '%' }), []);
+  assert.equal(itemService.transferredToSuggestions({ limit: '1' }).length, 1);
+});
+
 test('categories and their fields guard their own deletions', () => {
   const { categoryService, customFieldService, itemService } = build();
   const category = categoryService.create({ name: 'Instruments' });

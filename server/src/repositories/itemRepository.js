@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { containsLike } from './sql.js';
+import { containsLike, startsWithLike } from './sql.js';
 
 // Every item is walked down from its top-level container, so one pass labels the whole table with
 // the root that provides its effective location. Items inside a cycle are simply never reached.
@@ -9,6 +9,9 @@ const ROOTS_CTE = `
     UNION ALL SELECT i.id, r.root_id FROM items i JOIN roots r ON i.parent_item_id = r.id
   )
 `;
+
+// The free-text item search matches any of these columns.
+const SEARCH_COLUMNS = ['i.name', 'i.description', 'i.serial_number', 'i.transferred_to'];
 
 const SORT_COLUMNS = {
   name: 'i.name COLLATE NOCASE',
@@ -83,7 +86,7 @@ export class ItemRepository {
     const where = [];
     const params = {};
     if (search) {
-      where.push('(i.name LIKE @search ESCAPE \'\\\' OR i.description LIKE @search ESCAPE \'\\\' OR i.serial_number LIKE @search ESCAPE \'\\\')');
+      where.push(`(${SEARCH_COLUMNS.map(column => `${column} LIKE @search ESCAPE '\\'`).join(' OR ')})`);
       params.search = containsLike(search);
     }
     if (categoryId) {
@@ -95,7 +98,7 @@ export class ItemRepository {
     const rows = this.db.prepare(`
       ${ROOTS_CTE}
       SELECT i.id, i.uuid, i.name, i.condition, i.location, i.purchase_date,
-        i.purchase_price_amount, i.purchase_price_currency, i.serial_number, i.created_at, i.updated_at,
+        i.purchase_price_amount, i.purchase_price_currency, i.serial_number, i.transferred_to, i.created_at, i.updated_at,
         c.id AS category_id, c.name AS category_name,
         parent.id AS parent_id, parent.name AS parent_name,
         root.id AS root_id, root.uuid AS root_uuid, root.name AS root_name, root.location AS root_location,
@@ -142,21 +145,32 @@ export class ItemRepository {
   insert(attributes) {
     return this.db.prepare(`
       INSERT INTO items (uuid, name, category_id, description, condition, location, purchase_date,
-        purchase_price_amount, purchase_price_currency, serial_number, parent_item_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        purchase_price_amount, purchase_price_currency, serial_number, transferred_to, parent_item_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(randomUUID(), attributes.name, attributes.categoryId, attributes.description, attributes.condition,
       attributes.location, attributes.purchaseDate, attributes.purchasePriceAmount, attributes.purchasePriceCurrency,
-      attributes.serialNumber, attributes.parentId).lastInsertRowid;
+      attributes.serialNumber, attributes.transferredTo, attributes.parentId).lastInsertRowid;
   }
 
   update(id, attributes) {
     this.db.prepare(`
       UPDATE items SET name = ?, category_id = ?, description = ?, condition = ?, location = ?,
         purchase_date = ?, purchase_price_amount = ?, purchase_price_currency = ?, serial_number = ?,
-        parent_item_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+        transferred_to = ?, parent_item_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
     `).run(attributes.name, attributes.categoryId, attributes.description, attributes.condition, attributes.location,
       attributes.purchaseDate, attributes.purchasePriceAmount, attributes.purchasePriceCurrency,
-      attributes.serialNumber, attributes.parentId, id);
+      attributes.serialNumber, attributes.transferredTo, attributes.parentId, id);
+  }
+
+  // Distinct saved destinations, most used first. Case and surrounding whitespace do not split them.
+  listTransferredToSuggestions(search, limit) {
+    return this.db.prepare(`
+      SELECT MIN(TRIM(transferred_to)) AS value, COUNT(*) AS usage_count FROM items
+      WHERE transferred_to IS NOT NULL AND TRIM(transferred_to) != ''
+        AND TRIM(transferred_to) LIKE @search ESCAPE '\\'
+      GROUP BY TRIM(transferred_to) COLLATE NOCASE
+      ORDER BY usage_count DESC, value COLLATE NOCASE LIMIT @limit
+    `).all({ search: startsWithLike(search), limit });
   }
 
   saveFieldValue(itemId, fieldId, value) {

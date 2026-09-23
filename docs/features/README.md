@@ -16,8 +16,9 @@ document describes the current behaviour and its boundaries, not the original pl
 | [Item QR identity](item-qr-identity.md) | Generate a deployment-independent QR code from an item's UUID locally and open it from a modal on the item page. |
 | [QR label printing](qr-label-printing.md) | Select items across pages and print their QR labels on A4 sheets in three fixed layouts, with optional name, description, category, and location. |
 | [In-app QR scanner](in-app-qr-scanner.md) | Read an item QR code with the camera or from an image, locally in the browser, and open the matching item. |
-| [Custom-field autocomplete](custom-field-autocomplete.md) | Suggest previously saved values for text custom fields. |
+| [Custom-field autocomplete](custom-field-autocomplete.md) | Suggest previously saved values for text custom fields; the same control serves Transferred To. |
 | [Purchase and serial fields](purchase-and-serial-fields.md) | Record an optional purchase date, structured multi-currency price, and serial number on every item. |
+| [Transferred To field](transferred-to-field.md) | Note who or where an item was lent, given, or sold to, with autocomplete, search, and an informational badge. |
 | [AI feature visibility](ai-feature-visibility.md) | Hide every AI action and the AI page while **Enable AI features** is off, without weakening the server-side AI guards. |
 | [AI Add Item](ai-add-item.md) | Choose an available OpenAI model, create a draft from a photo, a description, or both, optionally remove the photo background locally, and review the editable draft before saving. |
 | [Proxmox one-line installer](proxmox-one-line-installer.md) | Create a Debian LXC on Proxmox VE with the application, a systemd service, and an update command. |

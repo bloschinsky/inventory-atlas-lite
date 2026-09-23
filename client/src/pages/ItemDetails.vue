@@ -69,6 +69,12 @@ onMounted(load);
           <h1 class="page-title text-break">
             {{ item.name }}
           </h1>
+          <span
+            v-if="item.transferred_to"
+            class="badge bg-azure-lt text-wrap text-break text-start mt-2"
+          >
+            Transferred to: {{ item.transferred_to }}
+          </span>
         </div>
         <div class="col-auto ms-auto d-flex flex-wrap gap-2">
           <RouterLink

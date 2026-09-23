@@ -17,11 +17,7 @@ Implemented behavior is documented separately in [`features/README.md`](features
    atomic creation of multiple validated item drafts without importing photos or using AI. See
    [`TASK-batch-add-items-from-json.md`](issues/TASK-batch-add-items-from-json.md).
 
-3. **Transferred To common field** — Planned. Adds an optional, searchable common item field with
-   autocomplete and informational badges for loaned, gifted, sold, or otherwise transferred items.
-   See [`TASK-transferred-to-common-field.md`](issues/TASK-transferred-to-common-field.md).
-
-4. **Multi-LLM and OpenAI-compatible providers** — Planned. Preserves OpenAI support while adding
+3. **Multi-LLM and OpenAI-compatible providers** — Planned. Preserves OpenAI support while adding
    reusable provider support for OpenRouter, Ollama, LM Studio, and custom compatible endpoints. See
    [`TASK-multi-llm-openai-compatible-providers.md`](issues/TASK-multi-llm-openai-compatible-providers.md).
 

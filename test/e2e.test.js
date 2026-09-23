@@ -140,12 +140,13 @@ test('existing databases migrate and purchase and serial fields round-trip safel
     assert.equal(migrated.purchase_date, null);
     assert.equal(migrated.purchase_price, null);
     assert.equal(migrated.serial_number, null);
+    assert.equal(migrated.transferred_to, null);
     assert.equal(migrated.fields[0].value, 'Olympus');
     assert.equal(migrated.photos[0].filename, 'legacy.png');
 
     const migratedDatabase = new Database(databasePath, { readonly: true });
     const columns = new Map(migratedDatabase.pragma('table_info(items)').map(column => [column.name, column]));
-    for (const name of ['purchase_date', 'purchase_price_amount', 'purchase_price_currency', 'serial_number']) {
+    for (const name of ['purchase_date', 'purchase_price_amount', 'purchase_price_currency', 'serial_number', 'transferred_to']) {
       assert.equal(columns.get(name).notnull, 0);
     }
     migratedDatabase.close();
@@ -197,6 +198,53 @@ test('existing databases migrate and purchase and serial fields round-trip safel
       { purchase_price_amount: '39.50', purchase_price_currency: 'EUR' }
     );
     backup.close();
+  } finally {
+    if (server) await stopServer(server);
+    await rm(dataDir, { recursive: true, force: true });
+  }
+});
+
+test('Transferred To is saved, cleared, searched, suggested, backed up, and kept over a restart', async () => {
+  const dataDir = await mkdtemp(path.join(os.tmpdir(), 'inventory-transferred-to-test-'));
+  let server;
+  try {
+    server = await startServer(dataDir);
+    const category = await request('/api/categories', json('POST', { name: 'Tools' }));
+    const drill = await request('/api/items', json('POST', { name: 'Drill', category_id: category.id, location: 'Garage' }));
+    assert.equal(drill.transferred_to, null);
+    const saw = await request('/api/items', json('POST', { name: 'Saw', category_id: category.id, transferred_to: ' Vasyl ' }));
+    assert.equal(saw.transferred_to, 'Vasyl');
+
+    const lent = await request(`/api/items/${drill.id}`, saveItem(drill, { location: 'Garage', transferred_to: 'Father' }));
+    assert.equal(lent.transferred_to, 'Father');
+    assert.equal(lent.location, 'Garage');
+    assert.equal((await request(`/api/items/${drill.id}`, saveItem(drill, { location: 'Garage', transferred_to: 'Vasyl' }))).transferred_to, 'Vasyl');
+
+    const found = await request('/api/items?search=vasyl');
+    assert.deepEqual(found.items.map(item => item.name), ['Drill', 'Saw']);
+    assert.equal(found.items[0].transferred_to, 'Vasyl');
+    assert.deepEqual(await request('/api/items/transferred-to-suggestions?search=va'), [{ value: 'Vasyl', usage_count: 2 }]);
+    assert.equal(await failedStatus('/api/items', json('POST', { name: 'Too long', category_id: category.id, transferred_to: 'x'.repeat(256) })), 400);
+
+    // Clearing stores NULL rather than an empty string.
+    const cleared = await request(`/api/items/${saw.id}`, saveItem(saw, { transferred_to: '  ' }));
+    assert.equal(cleared.transferred_to, null);
+
+    const backupResponse = await fetch(`${base}/api/backup`);
+    assert.ok(backupResponse.ok);
+    const backupPath = path.join(dataDir, 'transferred-to-backup.sqlite');
+    await writeFile(backupPath, Buffer.from(await backupResponse.arrayBuffer()));
+    const backup = new Database(backupPath, { readonly: true });
+    assert.deepEqual(
+      backup.prepare('SELECT name, location, transferred_to FROM items ORDER BY name').all(),
+      [{ name: 'Drill', location: 'Garage', transferred_to: 'Vasyl' }, { name: 'Saw', location: null, transferred_to: null }]
+    );
+    backup.close();
+
+    await stopServer(server);
+    server = await startServer(dataDir);
+    assert.equal((await request(`/api/items/${drill.id}`)).transferred_to, 'Vasyl');
+    assert.equal((await request(`/api/items/${saw.id}`)).transferred_to, null);
   } finally {
     if (server) await stopServer(server);
     await rm(dataDir, { recursive: true, force: true });

@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.28.0",
+    "date": "2026-09-23",
+    "changes": [
+      "Added a Transferred To field to every item for noting who or where it went when it was lent, given away, or sold.",
+      "The field suggests values already used on other items, and the item page and the Items list show a Transferred to badge while it is filled in.",
+      "Search on the Items page now also finds items by their Transferred To value."
+    ]
+  },
+  {
     "version": "0.27.0",
     "date": "2026-09-22",
     "changes": [

@@ -96,6 +96,14 @@ const editRoute = item => `/items/${item.id}/edit`;
               >
                 {{ item.name }}
               </RouterLink>
+              <div
+                v-if="item.transferred_to"
+                class="mt-1"
+              >
+                <span class="badge bg-azure-lt text-wrap text-break text-start">
+                  Transferred to: {{ item.transferred_to }}
+                </span>
+              </div>
               <span
                 v-if="item.effective_location || item.parent_id"
                 class="d-xl-none d-block meta-text"
@@ -205,6 +213,14 @@ const editRoute = item => `/items/${item.id}/edit`;
               <template v-if="item.effective_location">
                 {{ item.effective_location }}
               </template>
+            </p>
+            <p
+              v-if="item.transferred_to"
+              class="mb-0 mt-1"
+            >
+              <span class="badge bg-azure-lt text-wrap text-break text-start">
+                Transferred to: {{ item.transferred_to }}
+              </span>
             </p>
           </div>
         </div>

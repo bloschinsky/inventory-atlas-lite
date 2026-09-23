@@ -30,7 +30,7 @@ failing test makes the command exit non-zero.
   `data/inventory.sqlite`.
 - Specs cover the main workflows: `navigation.spec.js` (reaching every page and the folded desktop
   sidebar expanding on hover and on keyboard focus), `categories.spec.js`, `items.spec.js`
-  (create, search, edit, delete), `photos.spec.js`, `nesting.spec.js`, `suggestions.spec.js`,
+  (create, search, edit, delete, and the Transferred To badge and suggestions), `photos.spec.js`, `nesting.spec.js`, `suggestions.spec.js`,
   `backup.spec.js`, `ai-add-item.spec.js` (AI-assisted creation, recoverable provider errors, and
   server-only API key storage), `theme.spec.js` (the system colour scheme, an explicit light/dark
   choice, and its persistence), and `responsive.spec.js`, which runs at a `390 x 844` phone viewport

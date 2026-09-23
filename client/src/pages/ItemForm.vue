@@ -17,7 +17,8 @@ const photoPreviews = ref([]);
 const currencies = Intl.supportedValuesOf('currency');
 const form = reactive({
   name: '', category_id: '', description: '', condition: '', location: '', purchase_date: '',
-  purchase_price: { amount: '', currency: 'UAH' }, serial_number: '', parent_item_id: null, field_values: {}
+  purchase_price: { amount: '', currency: 'UAH' }, serial_number: '', transferred_to: '', parent_item_id: null,
+  field_values: {}
 });
 const itemId = ref(null); const parent = ref(null); const parentSearch = ref(''); const parentResults = ref([]);
 
@@ -70,7 +71,8 @@ onMounted(async () => {
         name: item.name, category_id: item.category_id, description: item.description || '',
         condition: item.condition || '', location: item.location || '', purchase_date: item.purchase_date || '',
         purchase_price: item.purchase_price || { amount: '', currency: 'UAH' },
-        serial_number: item.serial_number || '', parent_item_id: item.parent_item_id
+        serial_number: item.serial_number || '', transferred_to: item.transferred_to || '',
+        parent_item_id: item.parent_item_id
       });
       itemId.value = item.id; parent.value = item.parent;
       for (const field of item.fields) form.field_values[field.id] = field.value ?? (field.type === 'boolean' ? '0' : '');
@@ -221,6 +223,23 @@ onMounted(async () => {
             </div>
           </div>
         </div>
+        <div class="mb-3">
+          <label
+            class="form-label"
+            for="item-transferred-to"
+          >Transferred To</label>
+          <FieldAutocomplete
+            v-model="form.transferred_to"
+            input-id="item-transferred-to"
+            source="/api/items/transferred-to-suggestions"
+            maxlength="255"
+            placeholder="Person or destination"
+          />
+          <div class="form-text">
+            Where the item went if it was lent, given away, sold, or otherwise transferred. Leave empty when
+            nothing is recorded.
+          </div>
+        </div>
         <div class="row">
           <div class="col-md-6 mb-3">
             <label
@@ -364,7 +383,7 @@ onMounted(async () => {
               v-else-if="field.type === 'text'"
               v-model="form.field_values[field.id]"
               :input-id="`field-${field.id}`"
-              :field-id="field.id"
+              :source="`/api/fields/${field.id}/suggestions`"
             />
             <input
               v-else

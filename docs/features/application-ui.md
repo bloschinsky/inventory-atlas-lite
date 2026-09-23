@@ -85,7 +85,8 @@ in [`dashboard.md`](dashboard.md).
 ### Item details
 
 - The page starts with a Tabler breadcrumb (**All items** / category), the item name as the only
-  `h1`, and the **Edit** and **Delete** actions, with deletion keeping its confirmation.
+  `h1`, and the **Edit** and **Delete** actions, with deletion keeping its confirmation. A populated
+  Transferred To value adds an informational `bg-azure-lt` badge under the name.
 - From `lg` upwards the content is two columns: the photo viewer on the left (`5/12`) and the
   information cards on the right (`7/12`). On phones the order is strictly: name, actions, photo,
   details, custom fields, storage, record information.

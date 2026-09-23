@@ -71,7 +71,8 @@ async function seedInventory() {
   const brand = await request(`/api/categories/${category.id}/fields`, json('POST', { name: 'Brand', type: 'text' }));
   const box = await request('/api/items', json('POST', { name: 'Box A', category_id: category.id, location: 'Garage' }));
   const lens = await request('/api/items', json('POST', {
-    name: 'Helios 44-2', category_id: category.id, parent_item_id: box.id, field_values: { [brand.id]: 'KMZ' }
+    name: 'Helios 44-2', category_id: category.id, parent_item_id: box.id, field_values: { [brand.id]: 'KMZ' },
+    transferred_to: 'Vasyl'
   }));
   const photos = new FormData();
   photos.append('photos', new Blob([Buffer.from('89504e470d0a1a0a', 'hex')], { type: 'image/png' }), 'lens.png');
@@ -118,6 +119,7 @@ test('a downloaded backup is validated, summarized, and fully restored over newe
     assert.equal(restoredLens.parent.name, 'Box A');
     assert.equal(restoredLens.photos.length, 1);
     assert.equal(restoredLens.fields.find(field => field.name === 'Brand').value, 'KMZ');
+    assert.equal(restoredLens.transferred_to, 'Vasyl');
 
     // The safety backup is a self-contained, valid database of the replaced state.
     assert.deepEqual(safetyBackups(dataDir), [result.safety_backup]);
