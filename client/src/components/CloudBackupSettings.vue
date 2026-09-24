@@ -3,6 +3,7 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { IconBrandDropbox, IconBrandGoogleDrive } from '@tabler/icons-vue';
 import { api, jsonOptions } from '../api.js';
+import CloudAppCredentials from './CloudAppCredentials.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -87,6 +88,16 @@ const testConnection = provider => act(`test:${provider.id}`, async () =>
 const disconnect = provider => act(`disconnect:${provider.id}`, async () => {
   await api(`/api/cloud-backup/providers/${provider.id}`, { method: 'DELETE' });
   return `${provider.label} disconnected. Its stored access was removed from this server.`;
+});
+
+const saveApp = (provider, credentials) => act(`app:${provider.id}`, async () => {
+  await api(`/api/cloud-backup/providers/${provider.id}/app`, jsonOptions('PUT', credentials));
+  return `${provider.label} app credentials saved.`;
+});
+
+const removeApp = provider => act(`app:${provider.id}`, async () => {
+  await api(`/api/cloud-backup/providers/${provider.id}/app`, { method: 'DELETE' });
+  return `${provider.label} app credentials removed.`;
 });
 
 const saveSchedule = () => act('schedule', async () => {
@@ -178,12 +189,12 @@ onMounted(async () => {
               <div class="card-body">
                 <template v-if="!provider.configured">
                   <p class="mb-2">
-                    This server has no {{ provider.label }} app credentials. Set
+                    Enter the credentials of your {{ provider.label }} app below, or set
                     <code
                       v-for="(setting, index) in provider.requiredSettings"
                       :key="setting"
                     >{{ setting }}{{ index < provider.requiredSettings.length - 1 ? ' ' : '' }}</code>
-                    and restart the application.
+                    on the server.
                   </p>
                   <p class="meta-text mb-0">
                     Register this redirect URI with the app: <code class="text-break">{{ redirectUri(provider) }}</code>
@@ -256,6 +267,20 @@ onMounted(async () => {
                     </button>
                   </div>
                 </template>
+                <details
+                  class="mt-3"
+                  :open="!provider.configured"
+                >
+                  <summary class="mb-2">
+                    App credentials
+                  </summary>
+                  <CloudAppCredentials
+                    :provider="provider"
+                    :busy="Boolean(busy)"
+                    @save="credentials => saveApp(provider, credentials)"
+                    @remove="removeApp(provider)"
+                  />
+                </details>
               </div>
             </article>
           </div>

@@ -10,10 +10,18 @@ in a file of their own and are never part of an inventory backup or an API respo
 ## User-visible behaviour
 
 - The **Cloud Backup** card lists one provider card each for **Dropbox** and **Google Drive** with a
-  status badge: *Not configured* (the server has no app credentials; the card names the environment
-  variables to set and the redirect URI to register), *Not connected* (with **Connect Dropbox** /
-  **Connect Google Drive**), or *Connected* (account, connection date, destination folder, **Backup
-  now**, **Test connection**, and **Disconnect**).
+  status badge: *Not configured* (no app credentials yet; the card shows the redirect URI to register
+  and opens the **App credentials** form), *Not connected* (with **Connect Dropbox** / **Connect Google
+  Drive**), or *Connected* (account, connection date, destination folder, **Backup now**, **Test
+  connection**, and **Disconnect**).
+- **App credentials**, a collapsible section on each card, takes the Dropbox app key and app secret or
+  the Google Drive client ID and client secret, the same way the AI API key is entered: the secret is
+  a password field, is never sent back to the browser, and is shown only as `Saved client secret:
+  ••••••••1234. Leave this blank to keep it.` **Save app credentials** stores them and **Remove**
+  deletes them. While a provider is connected its app key or client ID is locked and **Remove** is
+  disabled, because the stored refresh token only works with that app; the secret alone can still be
+  replaced. When the server environment sets the credentials, the section only names the variables
+  and the app key or client ID, and nothing can be edited there.
 - **Connect** sends the browser to the provider's consent page. On return, Settings reports
   `Dropbox connected.` or the reason the connection failed — for example *Google Drive access was not
   granted, so nothing was connected.* The reason is taken from the server, never from the URL.
@@ -44,6 +52,7 @@ cloudBackup/cloudBackupScheduler.js    in-process timer that runs due schedules
 cloudBackup/schedule.js                settings validation, next-run computation, backup file names
 cloudBackup/jsonFileStore.js           atomic 0600 JSON files under DATA_DIR
 cloudBackup/cloudBackupConfig.js       environment configuration and provider endpoints
+services/cloudAppSettingsService.js    OAuth app credentials: environment or Settings, masking
 integrations/cloudStorageHttp.js       shared transport, timeouts, chunk reader, error normalization
 integrations/dropboxStorageProvider.js
 integrations/googleDriveStorageProvider.js
@@ -101,8 +110,9 @@ error }` next to the successful upload; a cleanup failure never turns the backup
   `Origin` header (falling back to the request host) plus `/api/cloud-backup/oauth/callback`, and the
   card shows the address to register. A desktop build can supply its own callback through the same
   setting without touching the adapters.
-- `DATA_DIR/cloud-backup-credentials.json` (mode `0600`, written atomically) holds per provider only
-  the account name, connection time, and refresh token. Access tokens live in memory, are refreshed a
+- `DATA_DIR/cloud-backup-credentials.json` (mode `0600`, written atomically) holds per provider the
+  account name, connection time, and refresh token, and under `apps` the app credentials entered in
+  Settings (`{ clientId, clientSecret }`). Access tokens live in memory, are refreshed a
   minute before expiry, and a token the provider rejects early is refreshed once and the call
   retried, so scheduled runs need no interactive login. A rotated refresh token replaces the stored one.
 - `DATA_DIR/cloud-backup.json` holds the settings, the next run, the last success, and the last 20
@@ -130,6 +140,8 @@ error }` next to the successful upload; a cleanup failure never turns the backup
 | --- | --- |
 | `GET /api/cloud-backup` | Time zone, callback path, providers (configured, connected, account, destination, redirect URI override), settings, status, history |
 | `PUT /api/cloud-backup/settings` | `{ schedule: { enabled, provider, frequency, weekday, time }, retention: { mode, keep } }`; answers with the overview |
+| `PUT /api/cloud-backup/providers/:provider/app` | `{ clientId, clientSecret }`; a blank secret keeps the saved one for the same app; answers with the overview |
+| `DELETE /api/cloud-backup/providers/:provider/app` | Removes the app credentials entered in Settings; refused while connected or when they come from the environment |
 | `POST /api/cloud-backup/providers/:provider/connect` | Starts OAuth; returns `{ authorizationUrl }` |
 | `GET /api/cloud-backup/oauth/callback` | Completes OAuth and redirects to Settings |
 | `POST /api/cloud-backup/providers/:provider/test` | `{ message, account }` |
@@ -149,10 +161,14 @@ or forged callback, and a missing refresh token have their own messages.
 
 ## Operator notes
 
+The app credentials can be entered in Settings or set in the environment. When
+`DROPBOX_APP_KEY` or `GOOGLE_CLIENT_ID` is set, the environment wins and Settings shows the provider's
+credentials read-only; values saved in Settings are then ignored.
+
 | Variable | Meaning |
 | --- | --- |
-| `DROPBOX_APP_KEY`, `DROPBOX_APP_SECRET` | Dropbox app credentials. The card offers Dropbox once the key is set. |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google OAuth client (type *Web application*). Both are required. |
+| `DROPBOX_APP_KEY`, `DROPBOX_APP_SECRET` | Optional Dropbox app credentials. The secret is optional; Dropbox works once the key is set. |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Optional Google OAuth client (type *Web application*). Both are required together. |
 | `CLOUD_BACKUP_REDIRECT_URI` | Optional fixed callback URL, for example behind a reverse proxy. |
 | `TZ` | Optional time zone for schedules, for example `Europe/Kyiv`. |
 | `CLOUD_BACKUP_TEST_ENDPOINT` | Test-only: sends every provider call to a local stub. Never set it in production. |
@@ -172,7 +188,9 @@ a cloud backup. Keep it on a trusted LAN or VPN.
 ## Verification
 
 - `test/cloud-backup.test.js` runs against `test/e2e/cloudProviderStub.js`, a local stub of both APIs:
-  schedule computation and validation, file-name rules, PKCE and scopes, refresh tokens kept only in
+  schedule computation and validation, file-name rules, app credentials from the environment or
+  Settings (masking, the secret kept for the same app and dropped for another, the lock while
+  connected, removal), PKCE and scopes, refresh tokens kept only in
   the `0600` credentials file, forged, replayed, and denied callbacks, Dropbox upload sessions and
   Google resumable uploads in several chunks that restore to a valid SQLite database, the shared
   snapshot path and its cleanup, an upload failure that leaves the live database untouched, retention
@@ -183,7 +201,8 @@ a cloud backup. Keep it on a trusted LAN or VPN.
   and the HTTP API including the state cookie, the `Origin`-based redirect URI, an unconfigured
   provider, and the absence of tokens in every response.
 - `test/e2e/cloud-backup.spec.js` covers the browser workflow against the same stub: disconnected
-  providers, the full Connect round trip, Test connection, Backup now, the status list, schedule and
+  providers, Dropbox credentials shown read-only from the environment, Google Drive credentials
+  entered, masked, locked while connected, and removed in Settings, the full Connect round trip, Test connection, Backup now, the status list, schedule and
   retention configuration surviving a reload, Disconnect switching the schedule off, and a cancelled
   Google Drive consent.
 

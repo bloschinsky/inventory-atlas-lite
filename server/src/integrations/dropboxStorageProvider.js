@@ -11,15 +11,25 @@ const FOLDER = '/Backups';
   session, which also covers snapshots larger than the 150 MB single-request limit.
 */
 export class DropboxStorageProvider {
-  constructor({ clientId, clientSecret, endpoints, chunkBytes = DEFAULT_CHUNK_BYTES }) {
+  // `app()` returns the current { clientId, clientSecret }, which can change while the server runs.
+  constructor({ app, endpoints, chunkBytes = DEFAULT_CHUNK_BYTES }) {
     this.id = 'dropbox';
     this.label = 'Dropbox';
     this.destination = 'Dropbox › Apps › (your app folder) › Backups';
-    this.clientId = clientId;
-    this.clientSecret = clientSecret;
+    // The secret is optional: the authorization code flow is protected by PKCE either way.
+    this.appFields = { idLabel: 'app key', secretLabel: 'app secret', secretRequired: false };
+    this.app = app;
     this.endpoints = endpoints;
     this.chunkBytes = chunkBytes;
     this.http = new CloudStorageHttp({ label: this.label });
+  }
+
+  get clientId() {
+    return this.app().clientId;
+  }
+
+  get clientSecret() {
+    return this.app().clientSecret;
   }
 
   get configured() {

@@ -13,9 +13,10 @@ test.beforeEach(async ({ request }) => {
   await request.post(`${cloudStubURL}/_stub/reset`);
 });
 
-// Leaves every provider disconnected for the next test, whatever this one did.
+// Leaves every provider disconnected, and Google Drive unconfigured, for the next test.
 test.afterEach(async ({ request }) => {
   for (const provider of ['dropbox', 'google-drive']) await request.delete(`/api/cloud-backup/providers/${provider}`);
+  await request.delete('/api/cloud-backup/providers/google-drive/app');
 });
 
 test('connects Dropbox, backs up now, schedules automatic backups, and disconnects', async ({ page, request }) => {
@@ -23,7 +24,7 @@ test('connects Dropbox, backs up now, schedules automatic backups, and disconnec
   await page.mouse.move(600, 400);
   const dropbox = page.getByRole('article', { name: 'Dropbox', exact: true });
   await expect(dropbox.getByText('Not connected', { exact: true })).toBeVisible();
-  await expect(page.getByRole('article', { name: 'Google Drive' }).getByText('Not connected', { exact: true })).toBeVisible();
+  await expect(page.getByRole('article', { name: 'Google Drive' }).getByText('Not configured', { exact: true })).toBeVisible();
   await expect(page.getByLabel('Enable automatic backups')).toBeDisabled();
   await expect(detail(page, 'Last successful backup')).toHaveText('Never');
 
@@ -34,6 +35,11 @@ test('connects Dropbox, backs up now, schedules automatic backups, and disconnec
   await expect(dropbox.getByText('Connected', { exact: true })).toBeVisible();
   await expect(dropbox).toContainText('Stub Dropbox User (dropbox-user@example.test)');
   await expect(dropbox).toContainText('Dropbox › Apps › (your app folder) › Backups');
+
+  // Dropbox is configured through the server environment, so its credentials are read-only here.
+  await dropbox.getByText('App credentials', { exact: true }).click();
+  await expect(dropbox.getByText('The app credentials come from the server environment')).toBeVisible();
+  await expect(dropbox.getByLabel('Dropbox app key')).toHaveCount(0);
 
   await dropbox.getByRole('button', { name: 'Test Dropbox connection' }).click();
   await expect(page.getByRole('status')).toHaveText('Connected to Dropbox as Stub Dropbox User (dropbox-user@example.test).');
@@ -82,7 +88,45 @@ test('connects Dropbox, backs up now, schedules automatic backups, and disconnec
   await expect(detail(page, 'Next scheduled run')).toHaveText('Not scheduled');
 });
 
+test('enters Google Drive app credentials in Settings without ever getting the secret back', async ({ page, request }) => {
+  const secret = 'e2e-google-ui-secret-7890';
+  await page.goto('/settings');
+  await page.mouse.move(600, 400);
+  const drive = page.getByRole('article', { name: 'Google Drive' });
+  await expect(drive.getByText('Not configured', { exact: true })).toBeVisible();
+
+  await drive.getByLabel('Google Drive client ID').fill('e2e-google-client.apps.googleusercontent.com');
+  await drive.getByLabel('Google Drive client secret').fill(secret);
+  await drive.getByRole('button', { name: 'Save Google Drive app credentials' }).click();
+  await expect(page.getByRole('status')).toHaveText('Google Drive app credentials saved.');
+  await expect(drive.getByText('Not connected', { exact: true })).toBeVisible();
+
+  await drive.getByText('App credentials', { exact: true }).click();
+  await expect(drive.getByLabel('Google Drive client ID')).toHaveValue('e2e-google-client.apps.googleusercontent.com');
+  await expect(drive.getByLabel('Google Drive client secret')).toHaveValue('');
+  await expect(drive.getByText('Saved client secret: ••••••••7890. Leave this blank to keep it.')).toBeVisible();
+  expect(await (await request.get('/api/cloud-backup')).text()).not.toContain(secret);
+
+  // The saved credentials connect, and are locked while the connection exists.
+  await drive.getByRole('button', { name: 'Connect Google Drive' }).click();
+  await expect(page.getByRole('status')).toHaveText('Google Drive connected.');
+  await expect(drive).toContainText('Stub Google User (drive-user@example.test)');
+  await drive.getByText('App credentials', { exact: true }).click();
+  await expect(drive.getByLabel('Google Drive client ID')).toBeDisabled();
+  await expect(drive.getByRole('button', { name: 'Remove Google Drive app credentials' })).toBeDisabled();
+
+  await drive.getByRole('button', { name: 'Disconnect Google Drive' }).click();
+  await expect(page.getByRole('status')).toHaveText('Google Drive disconnected. Its stored access was removed from this server.');
+  // The section opened above stays open.
+  await drive.getByRole('button', { name: 'Remove Google Drive app credentials' }).click();
+  await expect(page.getByRole('status')).toHaveText('Google Drive app credentials removed.');
+  await expect(drive.getByText('Not configured', { exact: true })).toBeVisible();
+  await expect(drive.getByLabel('Google Drive client ID')).toHaveValue('');
+});
+
 test('reports a cancelled Google Drive connection and keeps it disconnected', async ({ page, request }) => {
+  const saved = await request.put('/api/cloud-backup/providers/google-drive/app', { data: { clientId: 'e2e-google-client', clientSecret: 'e2e-google-secret' } });
+  expect(saved.ok()).toBeTruthy();
   await request.post(`${cloudStubURL}/_stub/deny`);
   await page.goto('/settings');
   await page.mouse.move(600, 400);

@@ -32,12 +32,24 @@ const { DatabaseMaintenance } = await import('../server/src/restore/databaseMain
 const { BackupService } = await import('../server/src/services/backupService.js');
 const { CloudBackupService, defaultCloudBackupState } = await import('../server/src/services/cloudBackupService.js');
 const { CloudConnectionService } = await import('../server/src/services/cloudConnectionService.js');
+const { CloudAppSettingsService } = await import('../server/src/services/cloudAppSettingsService.js');
 const { CloudStorageHttp } = await import('../server/src/integrations/cloudStorageHttp.js');
 const { DropboxStorageProvider } = await import('../server/src/integrations/dropboxStorageProvider.js');
 const { GoogleDriveStorageProvider } = await import('../server/src/integrations/googleDriveStorageProvider.js');
 
 const CHUNK = 256 * 1024;
 const ORIGIN = 'http://inventory.test';
+const environment = { dropbox: dropboxConfig, 'google-drive': googleDriveConfig };
+
+// The two adapters and their app credentials, as the composition root builds them.
+function cloudServices(credentialsStore, appEnvironment = environment) {
+  const appSettings = new CloudAppSettingsService({ store: credentialsStore, environment: appEnvironment });
+  const providers = [
+    new DropboxStorageProvider({ endpoints: dropboxConfig.endpoints, app: () => appSettings.resolve('dropbox'), chunkBytes: CHUNK }),
+    new GoogleDriveStorageProvider({ endpoints: googleDriveConfig.endpoints, app: () => appSettings.resolve('google-drive'), chunkBytes: CHUNK })
+  ];
+  return new CloudConnectionService({ providers, credentialsStore, appSettings, callbackPath });
+}
 
 // A real SQLite inventory with a photo large enough to need several upload chunks.
 function createInventory(dir) {
@@ -61,11 +73,7 @@ async function build() {
   backupService.createSnapshot = async () => { const file = await createSnapshot(); snapshots.push(file); return file; };
   const credentialsFile = path.join(dir, 'cloud-backup-credentials.json');
   const stateFile = path.join(dir, 'cloud-backup.json');
-  const connections = new CloudConnectionService({
-    providers: [new DropboxStorageProvider({ ...dropboxConfig, chunkBytes: CHUNK }), new GoogleDriveStorageProvider({ ...googleDriveConfig, chunkBytes: CHUNK })],
-    credentialsStore: new JsonFileStore({ file: credentialsFile, defaults: () => ({}) }),
-    callbackPath
-  });
+  const connections = cloudServices(new JsonFileStore({ file: credentialsFile, defaults: () => ({}) }));
   const clock = { now: new Date('2026-09-24T10:00:00Z') };
   const stateStore = new JsonFileStore({ file: stateFile, defaults: defaultCloudBackupState });
   const service = new CloudBackupService({ backupService, connections, stateStore, timezone: () => 'UTC', now: () => clock.now });
@@ -389,21 +397,66 @@ test('provider failures are normalized into application errors', async () => {
   assert.throws(() => http.failToken({ status: 400, body: { error: 'invalid_grant' } }, 'refresh'), error => error.code === 'auth_revoked');
   assert.throws(() => http.failToken({ status: 401, body: { error: 'invalid_client' } }, 'refresh'), error => error.code === 'not_configured');
 
-  const drive = new GoogleDriveStorageProvider(googleDriveConfig);
+  const drive = new GoogleDriveStorageProvider({ endpoints: googleDriveConfig.endpoints, app: () => googleDriveConfig });
   assert.throws(() => drive.fail({ status: 403, body: { error: { errors: [{ reason: 'storageQuotaExceeded' }] } } }, 'upload the backup'), error => error.code === 'quota');
   assert.throws(() => drive.fail({ status: 403, body: { error: { errors: [{ reason: 'userRateLimitExceeded' }] } } }, 'upload the backup'), error => error.code === 'rate_limited');
   assert.throws(() => drive.fail({ status: 404, body: { error: { message: 'File not found' } } }, 'upload the backup'), error => error.code === 'invalid_destination');
   assert.throws(() => drive.fail({ status: 400, body: {} }, 'upload the backup'), error => error.code === 'upload_failed');
-  const dropbox = new DropboxStorageProvider(dropboxConfig);
+  const dropbox = new DropboxStorageProvider({ endpoints: dropboxConfig.endpoints, app: () => dropboxConfig });
   assert.throws(() => dropbox.fail({ status: 409, body: { error_summary: 'path/no_write_permission/' } }, 'upload the backup'), error => error.code === 'invalid_destination');
 
   const { connections } = await build();
   await rejects(connections.withAccess('dropbox', () => {}), 409, /Dropbox is not connected/);
   await rejects(connections.test('onedrive'), 404, /Unknown cloud storage provider/);
-  const unconfigured = new CloudConnectionService({
-    providers: [new GoogleDriveStorageProvider({ ...googleDriveConfig, clientSecret: '' })], credentialsStore: new JsonFileStore({ file: path.join(process.env.DATA_DIR, 'none.json'), defaults: () => ({}) }), callbackPath
+  const unconfigured = cloudServices(new JsonFileStore({ file: path.join(process.env.DATA_DIR, 'none.json'), defaults: () => ({}) }), {});
+  assert.throws(() => unconfigured.begin('google-drive', ORIGIN), /Google Drive is not configured. Enter its app credentials in Settings → Cloud Backup, or set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET/);
+});
+
+test('app credentials entered in Settings are stored outside SQLite, masked, and tied to their app', async () => {
+  const dir = await mkdtemp(path.join(process.env.DATA_DIR, 'apps-'));
+  const file = path.join(dir, 'cloud-backup-credentials.json');
+  // Dropbox comes from the environment; Google Drive is entered in Settings.
+  const connections = cloudServices(new JsonFileStore({ file, defaults: () => ({}) }), { dropbox: dropboxConfig });
+  const app = id => connections.publicProviders().find(provider => provider.id === id).app;
+  assert.deepEqual(app('google-drive'), {
+    source: null, clientId: '', hasClientSecret: false, clientSecretMasked: '', idLabel: 'client ID', secretLabel: 'client secret', secretRequired: true
   });
-  assert.throws(() => unconfigured.begin('google-drive', ORIGIN), /not configured on this server. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET/);
+  assert.equal(app('dropbox').source, 'environment');
+  assert.equal(app('dropbox').clientSecretMasked, '••••••••cret');
+  assert.throws(() => connections.saveApp('dropbox', { clientId: 'other' }), /set in the server environment/);
+  assert.throws(() => connections.clearApp('dropbox'), /set in the server environment/);
+
+  assert.throws(() => connections.saveApp('google-drive', { clientId: 'ui-client.apps.googleusercontent.com' }), /Enter the Google Drive client secret/);
+  assert.throws(() => connections.saveApp('google-drive', { clientId: 'has spaces', clientSecret: 'x' }), /valid Google Drive client ID/);
+  connections.saveApp('google-drive', { clientId: ' ui-client.apps.googleusercontent.com ', clientSecret: 'ui-google-secret-4321' });
+  assert.deepEqual(app('google-drive'), {
+    source: 'settings', clientId: 'ui-client.apps.googleusercontent.com', hasClientSecret: true, clientSecretMasked: '••••••••4321',
+    idLabel: 'client ID', secretLabel: 'client secret', secretRequired: true
+  });
+  assert.ok(!JSON.stringify(connections.publicProviders()).includes('ui-google-secret-4321'));
+  assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).apps['google-drive'].clientSecret, 'ui-google-secret-4321');
+  if (process.platform !== 'win32') assert.equal(fs.statSync(file).mode & 0o777, 0o600);
+
+  // A blank secret keeps the saved one for the same app; another client ID drops it.
+  connections.saveApp('google-drive', { clientId: 'ui-client.apps.googleusercontent.com', clientSecret: '' });
+  assert.equal(app('google-drive').clientSecretMasked, '••••••••4321');
+  assert.throws(() => connections.saveApp('google-drive', { clientId: 'another.apps.googleusercontent.com' }), /Enter the Google Drive client secret/);
+
+  // The saved credentials are what the connection uses, and they are locked while connected.
+  const { authorizationUrl } = connections.begin('google-drive', ORIGIN);
+  assert.equal(new URL(authorizationUrl).searchParams.get('client_id'), 'ui-client.apps.googleusercontent.com');
+  await connect(connections, 'google-drive');
+  assert.ok(stub.requests.some(request => request.path === '/google/token'));
+  assert.throws(() => connections.saveApp('google-drive', { clientId: 'another.apps.googleusercontent.com', clientSecret: 'x' }), /Disconnect Google Drive before changing its client ID/);
+  assert.throws(() => connections.clearApp('google-drive'), /Disconnect Google Drive before removing its app credentials/);
+  connections.saveApp('google-drive', { clientId: 'ui-client.apps.googleusercontent.com', clientSecret: 'rotated-secret-9999' });
+  assert.equal(app('google-drive').clientSecretMasked, '••••••••9999');
+
+  await connections.disconnect('google-drive');
+  connections.clearApp('google-drive');
+  assert.equal(app('google-drive').source, null);
+  assert.throws(() => connections.begin('google-drive', ORIGIN), /Google Drive is not configured/);
+  assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).apps['google-drive'], undefined);
 });
 
 test('Google Drive adapter lists and deletes only inside its own backup folder', async () => {
@@ -458,6 +511,21 @@ test('the cloud backup API connects, backs up, keeps secrets on the server, and 
     const refused = await fetch(`${base}/api/cloud-backup/providers/google-drive/connect`, { method: 'POST' });
     assert.equal(refused.status, 409);
     assert.match((await refused.json()).error, /GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET/);
+
+    // Google Drive gets its app credentials through the API instead; the secret never comes back.
+    const putApp = body => fetch(`${base}/api/cloud-backup/providers/google-drive/app`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    assert.equal((await putApp({ clientId: 'api-client' })).status, 400);
+    const saved = await putApp({ clientId: 'api-client', clientSecret: 'api-google-secret-2468' });
+    const savedText = await saved.text();
+    assert.equal(saved.status, 200);
+    assert.ok(!savedText.includes('api-google-secret-2468'));
+    assert.equal(JSON.parse(savedText).providers[1].app.clientSecretMasked, '••••••••2468');
+    assert.equal(JSON.parse(savedText).providers[1].configured, true);
+    assert.ok(!(await (await fetch(`${base}/api/cloud-backup`)).text()).includes('api-google-secret-2468'));
+    assert.equal((await fetch(`${base}/api/cloud-backup/providers/google-drive/connect`, { method: 'POST' })).status, 200);
+    const cleared = await fetch(`${base}/api/cloud-backup/providers/google-drive/app`, { method: 'DELETE' });
+    assert.equal((await cleared.json()).providers[1].configured, false);
+    assert.equal((await fetch(`${base}/api/cloud-backup/providers/dropbox/app`, { method: 'DELETE' })).status, 409);
 
     // The callback follows the address the browser reports, such as the development proxy's.
     const proxied = await fetch(`${base}/api/cloud-backup/providers/dropbox/connect`, { method: 'POST', headers: { Origin: 'http://proxy.test:5173' } });

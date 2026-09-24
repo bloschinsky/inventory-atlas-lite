@@ -31,6 +31,17 @@ export const createCloudBackupRoutes = ({ cloudBackupService, cloudConnectionSer
     res.json(cloudBackupService.overview());
   });
 
+  // The app credentials a provider connects with; the secret is never part of the answer.
+  router.put('/api/cloud-backup/providers/:provider/app', (req, res) => {
+    cloudConnectionService.saveApp(req.params.provider, req.body);
+    res.json(cloudBackupService.overview());
+  });
+
+  router.delete('/api/cloud-backup/providers/:provider/app', (req, res) => {
+    cloudConnectionService.clearApp(req.params.provider);
+    res.json(cloudBackupService.overview());
+  });
+
   // Answers with the provider's authorization URL; the browser navigates there itself.
   router.post('/api/cloud-backup/providers/:provider/connect', (req, res) => {
     const { state, authorizationUrl } = cloudConnectionService.begin(req.params.provider, origin(req));

@@ -14,9 +14,10 @@ const base64url = bytes => bytes.toString('base64url');
   tokens are only kept in memory. Nothing secret ever leaves this class towards the client.
 */
 export class CloudConnectionService {
-  constructor({ providers, credentialsStore, redirectUriOverride = '', callbackPath }) {
+  constructor({ providers, credentialsStore, appSettings, redirectUriOverride = '', callbackPath }) {
     this.providers = new Map(providers.map(provider => [provider.id, provider]));
     this.credentialsStore = credentialsStore;
+    this.appSettings = appSettings;
     this.redirectUriOverride = redirectUriOverride;
     this.callbackPath = callbackPath;
     this.pending = new Map();
@@ -34,7 +35,7 @@ export class CloudConnectionService {
   configuredProvider(id) {
     const provider = this.provider(id);
     if (!provider.configured) {
-      throw httpError(`${provider.label} is not configured on this server. Set ${provider.requiredSettings.join(' and ')} and restart the application.`, 409);
+      throw httpError(`${provider.label} is not configured. Enter its app credentials in Settings → Cloud Backup, or set ${provider.requiredSettings.join(' and ')} on the server.`, 409);
     }
     return provider;
   }
@@ -63,12 +64,36 @@ export class CloudConnectionService {
       label: provider.label,
       configured: provider.configured,
       requiredSettings: provider.requiredSettings,
+      app: { ...this.appSettings.publicView(provider.id), ...provider.appFields },
       connected: Boolean(credentials[provider.id]?.refreshToken),
       account: credentials[provider.id]?.account ?? null,
       connectedAt: credentials[provider.id]?.connectedAt ?? null,
       destination: provider.destination,
       redirectUri: this.redirectUriOverride || null
     }));
+  }
+
+  /*
+    A refresh token only works with the app that issued it, so the app key or client ID of a
+    connected provider cannot change, and its credentials cannot be removed, until it is
+    disconnected. Replacing only the secret of the same app is allowed.
+  */
+  saveApp(id, input) {
+    const provider = this.provider(id);
+    const clientId = typeof input?.clientId === 'string' ? input.clientId.trim() : '';
+    if (this.connection(id)?.refreshToken && clientId !== this.appSettings.resolve(id).clientId) {
+      throw httpError(`Disconnect ${provider.label} before changing its ${provider.appFields.idLabel}.`, 409);
+    }
+    this.appSettings.save(provider, input);
+  }
+
+  clearApp(id) {
+    const provider = this.provider(id);
+    if (this.appSettings.fromEnvironment(id)) {
+      throw httpError(`The ${provider.label} app credentials are set in the server environment. Remove them there.`, 409);
+    }
+    if (this.connection(id)?.refreshToken) throw httpError(`Disconnect ${provider.label} before removing its app credentials.`, 409);
+    this.appSettings.clear(id);
   }
 
   // Starts a connection: a fresh random state and PKCE verifier, kept here for ten minutes and used once.

@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.32.1",
+    "date": "2026-09-24",
+    "changes": [
+      "The Dropbox app key and secret and the Google Drive client ID and secret for Cloud Backup can now be entered in Settings instead of only as server environment variables.",
+      "The saved secret is never shown again: Settings displays only its last four characters, a blank field keeps it, and Remove deletes it once the provider is disconnected."
+    ]
+  },
+  {
     "version": "0.32.0",
     "date": "2026-09-24",
     "changes": [

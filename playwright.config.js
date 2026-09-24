@@ -12,7 +12,7 @@ export default defineConfig({
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: [
     {
-      // Cloud backup talks to this stub instead of Dropbox and Google, with test-only app credentials.
+      // Cloud backup talks to this stub instead of Dropbox and Google.
       command: 'node test/e2e/cloudProviderStub.js',
       url: `${cloudStubURL}/_stub/files`,
       env: { CLOUD_STUB_PORT: String(cloudStubPort) },
@@ -28,9 +28,8 @@ export default defineConfig({
         DATA_DIR: dataDir,
         CLOUD_BACKUP_TEST_ENDPOINT: cloudStubURL,
         DROPBOX_APP_KEY: 'e2e-dropbox-key',
-        DROPBOX_APP_SECRET: 'e2e-dropbox-secret',
-        GOOGLE_CLIENT_ID: 'e2e-google-client',
-        GOOGLE_CLIENT_SECRET: 'e2e-google-secret'
+        // Google Drive is deliberately left out: the suite enters its app credentials in Settings.
+        DROPBOX_APP_SECRET: 'e2e-dropbox-secret'
       },
       // Never adopt an already running server: its data directory would be unknown.
       reuseExistingServer: false,

@@ -12,15 +12,24 @@ const FOLDER_PATH = ['Inventory Atlas Lite', 'Backups'];
   them in Drive while the narrow drive.file scope keeps every other file out of reach.
 */
 export class GoogleDriveStorageProvider {
-  constructor({ clientId, clientSecret, endpoints, chunkBytes = DEFAULT_CHUNK_BYTES }) {
+  // `app()` returns the current { clientId, clientSecret }, which can change while the server runs.
+  constructor({ app, endpoints, chunkBytes = DEFAULT_CHUNK_BYTES }) {
     this.id = 'google-drive';
     this.label = 'Google Drive';
     this.destination = `My Drive › ${FOLDER_PATH.join(' › ')}`;
-    this.clientId = clientId;
-    this.clientSecret = clientSecret;
+    this.appFields = { idLabel: 'client ID', secretLabel: 'client secret', secretRequired: true };
+    this.app = app;
     this.endpoints = endpoints;
     this.chunkBytes = chunkBytes;
     this.http = new CloudStorageHttp({ label: this.label });
+  }
+
+  get clientId() {
+    return this.app().clientId;
+  }
+
+  get clientSecret() {
+    return this.app().clientSecret;
   }
 
   get configured() {

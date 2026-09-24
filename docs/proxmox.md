@@ -114,7 +114,7 @@ checksum verification and prints a warning; do not use it for a production insta
 | `/var/lib/inventory-atlas-lite/backups` | Pre-update database backups (the last 5 are kept) |
 | `/var/lib/inventory-atlas-lite/pre-restore-backups` | Safety copies written before a restore from **Data / Backup** (the last 10 are kept) |
 | `/var/lib/inventory-atlas-lite/pre-reset-backups` | Safety copies written before an inventory reset, never removed automatically |
-| `/var/lib/inventory-atlas-lite/cloud-backup-credentials.json` | Dropbox and Google Drive refresh tokens for **Settings → Cloud Backup**, readable only by the service user |
+| `/var/lib/inventory-atlas-lite/cloud-backup-credentials.json` | Dropbox and Google Drive refresh tokens and app credentials for **Settings → Cloud Backup**, readable only by the service user |
 | `/var/lib/inventory-atlas-lite/cloud-backup.json` | Cloud backup schedule, retention, and recent results |
 | `/var/lib/inventory-atlas-lite/update-status.json` | Progress of the last update, written by the updater |
 | `/var/lib/inventory-atlas-lite/update-requested` | The marker the application creates to ask for an update |
@@ -126,9 +126,10 @@ The service runs as the dedicated non-login user `inventory-atlas`, never as roo
 by root and is only readable by the service user, so the application cannot modify its own code or
 the environment file.
 
-To enable **Settings → Cloud Backup**, add the provider app credentials to
-`/etc/inventory-atlas-lite.env` inside the container and restart the service with
-`systemctl restart inventory-atlas-lite`:
+The provider app credentials for **Settings → Cloud Backup** are normally entered in Settings. To
+manage them as an operator instead, add them to `/etc/inventory-atlas-lite.env` inside the container
+and restart the service with `systemctl restart inventory-atlas-lite`; they then take precedence and
+are shown read-only in Settings:
 
 ```bash
 DROPBOX_APP_KEY=...

@@ -31,6 +31,7 @@ import { AiSettingsService } from './services/aiSettingsService.js';
 import { BackupService } from './services/backupService.js';
 import { CategoryService } from './services/categoryService.js';
 import { CloudBackupService, defaultCloudBackupState } from './services/cloudBackupService.js';
+import { CloudAppSettingsService } from './services/cloudAppSettingsService.js';
 import { CloudConnectionService } from './services/cloudConnectionService.js';
 import { CustomFieldService } from './services/customFieldService.js';
 import { DashboardService } from './services/dashboardService.js';
@@ -117,9 +118,19 @@ export function createApp({ production = false } = {}) {
   const backupService = new BackupService({ db, maintenance });
 
   // Cloud backup: provider adapters behind one connection service, credentials and state in their own files.
+  const cloudCredentialsStore = new JsonFileStore({ file: credentialsFile, defaults: () => ({}) });
+  // App credentials from the environment win; otherwise the ones entered in Settings are used.
+  const cloudAppSettings = new CloudAppSettingsService({
+    store: cloudCredentialsStore,
+    environment: { dropbox: dropboxConfig, 'google-drive': googleDriveConfig }
+  });
   const cloudConnectionService = new CloudConnectionService({
-    providers: [new DropboxStorageProvider(dropboxConfig), new GoogleDriveStorageProvider(googleDriveConfig)],
-    credentialsStore: new JsonFileStore({ file: credentialsFile, defaults: () => ({}) }),
+    providers: [
+      new DropboxStorageProvider({ endpoints: dropboxConfig.endpoints, app: () => cloudAppSettings.resolve('dropbox') }),
+      new GoogleDriveStorageProvider({ endpoints: googleDriveConfig.endpoints, app: () => cloudAppSettings.resolve('google-drive') })
+    ],
+    credentialsStore: cloudCredentialsStore,
+    appSettings: cloudAppSettings,
     redirectUriOverride,
     callbackPath
   });

@@ -463,12 +463,12 @@ schedule the server runs by itself. The operator has to set up the provider app 
 
 - **Dropbox**: create an app in the Dropbox App Console with **Scoped access** and **App folder**
   access, enable the `account_info.read`, `files.metadata.read`, and `files.content.write`
-  permissions, add the redirect URI shown on the Dropbox card, and start the server with
-  `DROPBOX_APP_KEY` and `DROPBOX_APP_SECRET`.
+  permissions, and add the redirect URI shown on the Dropbox card. Its **Settings** tab shows the
+  **App key** and **App secret**.
 - **Google Drive**: in Google Cloud, enable the Google Drive API, configure the OAuth consent screen
   with the `…/auth/drive.file` scope (add yourself as a test user while the app is in testing), create
-  an OAuth client of type **Web application** with the redirect URI shown on the Google Drive card, and
-  start the server with `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
+  an OAuth client of type **Web application** with the redirect URI shown on the Google Drive card. It
+  gives you a **Client ID** and a **Client secret**.
 
 The redirect URI must match the address in your browser exactly. Dropbox and Google accept plain
 HTTP only for `localhost`, and Google does not accept a private IP address. On a LAN installation,
@@ -477,8 +477,13 @@ or through an HTTPS host name such as a Tailscale `https://<host>.<tailnet>.ts.n
 connection then keeps working from any address. Set `CLOUD_BACKUP_REDIRECT_URI` if the application
 sits behind a reverse proxy.
 
-1. Open **Settings** and scroll to **Cloud Backup**. A card marked **Not configured** names the
-   settings the server is missing.
+1. Open **Settings** and scroll to **Cloud Backup**. On a card marked **Not configured**, enter the
+   app key and app secret (Dropbox) or the client ID and client secret (Google Drive) under
+   **App credentials** and press **Save app credentials**. The secret stays on the server: afterwards
+   the form only shows its last four characters, and leaving the field blank keeps it. **Remove**
+   deletes the saved credentials; disconnect the provider first. An operator can instead set
+   `DROPBOX_APP_KEY`/`DROPBOX_APP_SECRET` or `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` on the server;
+   those then take precedence and are shown read-only.
 2. Press **Connect Dropbox** or **Connect Google Drive**, sign in, and allow access. You return to
    Settings with `Dropbox connected.` (or the reason it failed), and the card shows the account and the
    folder: `Apps/<your app>/Backups` in Dropbox, `My Drive/Inventory Atlas Lite/Backups` in Google Drive.
@@ -678,8 +683,8 @@ you no longer need. `ai-settings.json`, the pre-restore copies, and the updater'
 touched by a reset.
 
 **Settings → Cloud Backup** uploads the same snapshot to Dropbox or Google Drive, by hand or on a
-daily or weekly schedule, and can keep only the newest N cloud copies. The provider access is stored
-in `cloud-backup-credentials.json` under `DATA_DIR` (readable only by the service user) and the
+daily or weekly schedule, and can keep only the newest N cloud copies. The provider access and the
+app credentials entered in Settings are stored in `cloud-backup-credentials.json` under `DATA_DIR` (readable only by the service user) and the
 schedule and history in `cloud-backup.json`; neither is part of a SQLite backup, so back them up or
 reconnect the provider when moving an installation.
 
@@ -758,7 +763,8 @@ backup, and keep the copies on a different machine than the server.
 | No model list, but the connection works | Some servers do not list their models. Choose **Custom model...** and type the model ID. |
 | AI Add Fields suggests nothing usable | The message reports an empty or malformed answer. Describe the category in more detail and press **Generate Fields** again; your description is kept. |
 | AI analysis fails | Read the message for an invalid key, rate limit, unavailable provider, timeout, unsupported image, or missing category. The selected photo and description remain available for retry. |
-| Cloud Backup says *Not configured* | The server was started without the provider's app credentials. Set `DROPBOX_APP_KEY`/`DROPBOX_APP_SECRET` or `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` and restart. |
+| Cloud Backup says *Not configured* | No app credentials are saved for that provider. Enter them under **App credentials** on its card, or set `DROPBOX_APP_KEY`/`DROPBOX_APP_SECRET` or `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` on the server and restart. |
+| The app key or client ID cannot be edited | The provider is connected, and its access only works with that app. Press **Disconnect** first. If the section says the credentials come from the server environment, change them there. |
 | The provider reports a redirect URI mismatch | Register the redirect URI shown on the card exactly, and open the application at that same address. Use `localhost` or an HTTPS host name; Google rejects private IP addresses. |
 | *… access has expired or was revoked* | The provider no longer accepts the stored access. Press **Disconnect**, then connect the provider again. |
 | Scan QR says *Camera unavailable* | Over plain HTTP the browser does not offer the camera; use **Scan from image** or open the application over HTTPS. If camera access was denied, allow it for this site in the browser settings and reload the page. |

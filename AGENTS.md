@@ -113,6 +113,7 @@ The project stays small and readable. Do not add:
 - `client/src/pages/DataBackup.vue` — SQLite backup download, restore, and the Danger Zone.
 - `client/src/components/ResetDatabaseDialog.vue` — impact review and confirmation of the inventory reset.
 - `client/src/components/CloudBackupSettings.vue` — the Settings card for Dropbox/Google Drive connections, Backup now, the schedule, retention, and status.
+- `client/src/components/CloudAppCredentials.vue` — the masked app key/client ID and secret form of one cloud storage provider.
 - `client/src/style.css` — small set of application styles layered on Tabler, built only from
   Tabler custom properties so both color modes stay correct.
 - `shared/fieldDefinitions.js` — application-level custom field-definition format and validation, imported by both the client and the server.
@@ -125,7 +126,7 @@ The project stays small and readable. Do not add:
 - `server/src/routes/` — thin Express route tables; they parse the request, call one service, and shape the response.
 - `server/src/services/` — application and business logic, independent of Express request and response objects.
 - `server/src/repositories/` — all SQL and row mapping for the inventory tables.
-- `server/src/integrations/` — adapters for external or heavy dependencies: the AI providers (`openAiProvider.js`, `openAiCompatibleProvider.js`, and their shared `aiProviderHttp.js` transport), the GitHub release API, the local background-removal model, and the cloud storage providers (`dropboxStorageProvider.js`, `googleDriveStorageProvider.js`, and their shared `cloudStorageHttp.js` transport). AI features call `services/aiProviderService.js`, never an adapter directly; cloud backup reaches the storage adapters only through `services/cloudConnectionService.js`.
+- `server/src/integrations/` — adapters for external or heavy dependencies: the AI providers (`openAiProvider.js`, `openAiCompatibleProvider.js`, and their shared `aiProviderHttp.js` transport), the GitHub release API, the local background-removal model, and the cloud storage providers (`dropboxStorageProvider.js`, `googleDriveStorageProvider.js`, and their shared `cloudStorageHttp.js` transport). AI features call `services/aiProviderService.js`, never an adapter directly; cloud backup reaches the storage adapters only through `services/cloudConnectionService.js`, and their OAuth app credentials come from `services/cloudAppSettingsService.js`.
 - `server/src/restore/` — restore and reset configuration, staged-upload sessions, the SQLite file checks, and `databaseMaintenance.js`: the shared maintenance lock, safety backup, atomic swap, and rollback used by the restore and reset services.
 - `server/src/cloudBackup/` — cloud backup configuration, the owner-only JSON file store for its credentials and state, schedule rules, and the in-process scheduler timer.
 - `server/src/update/` — deployment capability, version comparison, the updater's status file, and the privileged update trigger.
