@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.32.0",
+    "date": "2026-09-24",
+    "changes": [
+      "Added Cloud Backup to Settings: connect Dropbox or Google Drive and upload the same consistent database snapshot as Download backup with Backup now.",
+      "Automatic daily or weekly cloud backups run on the server at a time in its own time zone, can keep only the newest backups, and show their last result and next run.",
+      "Dropbox uses its own app folder and Google Drive only the Inventory Atlas Lite folder it creates; the stored access stays on the server and is never part of a backup."
+    ]
+  },
+  {
     "version": "0.31.0",
     "date": "2026-09-24",
     "changes": [

@@ -15,8 +15,13 @@ import { releaseCacheTtlMs, releaseRepository, updatePathUnitFile, updateRequest
 import { resolveDeployment } from './update/deployment.js';
 import { UpdateStatusStore } from './update/updateStatusStore.js';
 import { SystemdUpdateTrigger } from './update/updateTrigger.js';
+import { callbackPath, credentialsFile, dropboxConfig, googleDriveConfig, redirectUriOverride, serverTimezone, stateFile } from './cloudBackup/cloudBackupConfig.js';
+import { CloudBackupScheduler } from './cloudBackup/cloudBackupScheduler.js';
+import { JsonFileStore } from './cloudBackup/jsonFileStore.js';
 import { removeBackground } from './integrations/backgroundRemoval.js';
+import { DropboxStorageProvider } from './integrations/dropboxStorageProvider.js';
 import { GitHubReleaseClient } from './integrations/githubReleaseClient.js';
+import { GoogleDriveStorageProvider } from './integrations/googleDriveStorageProvider.js';
 import { OpenAiCompatibleProvider } from './integrations/openAiCompatibleProvider.js';
 import { OpenAiProvider } from './integrations/openAiProvider.js';
 import { AiFieldService } from './services/aiFieldService.js';
@@ -25,6 +30,8 @@ import { AiProviderService } from './services/aiProviderService.js';
 import { AiSettingsService } from './services/aiSettingsService.js';
 import { BackupService } from './services/backupService.js';
 import { CategoryService } from './services/categoryService.js';
+import { CloudBackupService, defaultCloudBackupState } from './services/cloudBackupService.js';
+import { CloudConnectionService } from './services/cloudConnectionService.js';
 import { CustomFieldService } from './services/customFieldService.js';
 import { DashboardService } from './services/dashboardService.js';
 import { ImageService } from './services/imageService.js';
@@ -39,6 +46,7 @@ import { createAiRoutes } from './routes/aiRoutes.js';
 import { createBackupRoutes } from './routes/backupRoutes.js';
 import { createCapabilityRoutes } from './routes/capabilityRoutes.js';
 import { createCategoryRoutes } from './routes/categoryRoutes.js';
+import { createCloudBackupRoutes } from './routes/cloudBackupRoutes.js';
 import { createDashboardRoutes } from './routes/dashboardRoutes.js';
 import { createFieldRoutes } from './routes/fieldRoutes.js';
 import { createImageRoutes } from './routes/imageRoutes.js';
@@ -108,6 +116,22 @@ export function createApp({ production = false } = {}) {
   const aiFieldService = new AiFieldService({ aiProviderService, categoryService, customFieldRepository });
   const backupService = new BackupService({ db, maintenance });
 
+  // Cloud backup: provider adapters behind one connection service, credentials and state in their own files.
+  const cloudConnectionService = new CloudConnectionService({
+    providers: [new DropboxStorageProvider(dropboxConfig), new GoogleDriveStorageProvider(googleDriveConfig)],
+    credentialsStore: new JsonFileStore({ file: credentialsFile, defaults: () => ({}) }),
+    redirectUriOverride,
+    callbackPath
+  });
+  const cloudBackupService = new CloudBackupService({
+    backupService,
+    connections: cloudConnectionService,
+    stateStore: new JsonFileStore({ file: stateFile, defaults: defaultCloudBackupState }),
+    timezone: serverTimezone
+  });
+  const cloudBackupScheduler = new CloudBackupScheduler({ cloudBackupService });
+  cloudBackupScheduler.start();
+
   const imageUpload = createImageUpload();
   const restoreUpload = createRestoreUpload({ staging, maxUploadBytes });
 
@@ -127,6 +151,7 @@ export function createApp({ production = false } = {}) {
   app.use(createUpdateRoutes({ updateService }));
   app.use(createBackupRoutes({ backupService, maintenance, restoreService, restoreUpload }));
   app.use(createResetRoutes({ resetService }));
+  app.use(createCloudBackupRoutes({ cloudBackupService, cloudConnectionService }));
 
   if (production) {
     app.use(express.static(path.join(root, 'dist')));
@@ -134,5 +159,5 @@ export function createApp({ production = false } = {}) {
   }
   app.use(errorHandler);
 
-  return { app, staging, restoreService, resetService, updateService, appVersion };
+  return { app, staging, restoreService, resetService, updateService, cloudBackupScheduler, appVersion };
 }

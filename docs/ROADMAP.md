@@ -13,13 +13,6 @@ Implemented behavior is documented separately in [`features/README.md`](features
    Includes a film-boxes-in-hand regression asset. See
    [`TASK-background-removal-quality-phase-2.md`](issues/TASK-background-removal-quality-phase-2.md).
 
-## Data management
-
-1. **Cloud backup to Dropbox and Google Drive** — Planned. Adds optional OAuth-connected cloud
-   destinations, immediate backups, and scheduled uploads using the existing consistent SQLite
-   snapshot process. See
-   [`TASK-cloud-backup-dropbox-google-drive.md`](issues/TASK-cloud-backup-dropbox-google-drive.md).
-
 ## Distribution
 
 1. **Windows desktop distribution via Electron** — Planned and unblocked by the completed

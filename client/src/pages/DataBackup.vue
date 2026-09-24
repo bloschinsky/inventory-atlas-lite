@@ -125,6 +125,12 @@ async function finishReset(result) {
           class="btn btn-primary"
           href="/api/backup"
         >Download backup</a>
+        <p class="meta-text mt-3 mb-0">
+          To upload the same snapshot to Dropbox or Google Drive, now or on a schedule, use
+          <RouterLink to="/settings">
+            Cloud Backup in Settings
+          </RouterLink>.
+        </p>
       </div>
     </section>
 

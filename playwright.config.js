@@ -1,5 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
-import { apiPort, baseURL, clientPort, dataDir } from './test/e2e/environment.js';
+import { apiPort, baseURL, clientPort, cloudStubPort, cloudStubURL, dataDir } from './test/e2e/environment.js';
 
 export default defineConfig({
   testDir: './test/e2e',
@@ -12,9 +12,26 @@ export default defineConfig({
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: [
     {
+      // Cloud backup talks to this stub instead of Dropbox and Google, with test-only app credentials.
+      command: 'node test/e2e/cloudProviderStub.js',
+      url: `${cloudStubURL}/_stub/files`,
+      env: { CLOUD_STUB_PORT: String(cloudStubPort) },
+      reuseExistingServer: false,
+      stdout: 'pipe',
+      stderr: 'pipe'
+    },
+    {
       command: 'node server/src/index.js',
       port: apiPort,
-      env: { PORT: String(apiPort), DATA_DIR: dataDir },
+      env: {
+        PORT: String(apiPort),
+        DATA_DIR: dataDir,
+        CLOUD_BACKUP_TEST_ENDPOINT: cloudStubURL,
+        DROPBOX_APP_KEY: 'e2e-dropbox-key',
+        DROPBOX_APP_SECRET: 'e2e-dropbox-secret',
+        GOOGLE_CLIENT_ID: 'e2e-google-client',
+        GOOGLE_CLIENT_SECRET: 'e2e-google-secret'
+      },
       // Never adopt an already running server: its data directory would be unknown.
       reuseExistingServer: false,
       stdout: 'pipe',

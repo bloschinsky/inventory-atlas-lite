@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { api, jsonOptions } from '../api.js';
 import { setAiCapabilities } from '../capabilities.js';
+import CloudBackupSettings from '../components/CloudBackupSettings.vue';
 import PageHeader from '../components/PageHeader.vue';
 import { AI_PROVIDERS, aiProvider, isLocalNetworkHost } from '../../../shared/aiProviders.js';
 
@@ -400,5 +401,6 @@ onMounted(async () => {
         </button>
       </div>
     </form>
+    <CloudBackupSettings />
   </div>
 </template>

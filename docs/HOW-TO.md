@@ -456,6 +456,50 @@ already contains; the server rejects such a move with an error message.
 1. Open **Data / Backup**.
 2. Press **Download backup**. The browser saves a file named `inventory-YYYY-MM-DD.sqlite`.
 
+### Back up to Dropbox or Google Drive
+
+**Settings → Cloud Backup** uploads the same snapshot to Dropbox or Google Drive, on demand or on a
+schedule the server runs by itself. The operator has to set up the provider app once:
+
+- **Dropbox**: create an app in the Dropbox App Console with **Scoped access** and **App folder**
+  access, enable the `account_info.read`, `files.metadata.read`, and `files.content.write`
+  permissions, add the redirect URI shown on the Dropbox card, and start the server with
+  `DROPBOX_APP_KEY` and `DROPBOX_APP_SECRET`.
+- **Google Drive**: in Google Cloud, enable the Google Drive API, configure the OAuth consent screen
+  with the `…/auth/drive.file` scope (add yourself as a test user while the app is in testing), create
+  an OAuth client of type **Web application** with the redirect URI shown on the Google Drive card, and
+  start the server with `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
+
+The redirect URI must match the address in your browser exactly. Dropbox and Google accept plain
+HTTP only for `localhost`, and Google does not accept a private IP address. On a LAN installation,
+connect once through `http://localhost:3000` (for example over `ssh -L 3000:localhost:3000 <server>`)
+or through an HTTPS host name such as a Tailscale `https://<host>.<tailnet>.ts.net` address; the
+connection then keeps working from any address. Set `CLOUD_BACKUP_REDIRECT_URI` if the application
+sits behind a reverse proxy.
+
+1. Open **Settings** and scroll to **Cloud Backup**. A card marked **Not configured** names the
+   settings the server is missing.
+2. Press **Connect Dropbox** or **Connect Google Drive**, sign in, and allow access. You return to
+   Settings with `Dropbox connected.` (or the reason it failed), and the card shows the account and the
+   folder: `Apps/<your app>/Backups` in Dropbox, `My Drive/Inventory Atlas Lite/Backups` in Google Drive.
+3. Press **Backup now** to upload a snapshot immediately. The message names the uploaded file,
+   `inventory-atlas-lite-YYYY-MM-DDTHH-mm-ssZ.sqlite` (UTC). **Test connection** checks the account
+   and the folder without uploading anything.
+4. For automatic backups, tick **Enable automatic backups**, choose where to **Back up to**, the
+   **Frequency** (and **Day of week** for weekly), and the **Time of day**, then press
+   **Save schedule**. The time is in the server time zone shown under the fields. The server runs the
+   backup itself, so no browser needs to stay open; a backup missed while the server was off runs once
+   shortly after it starts again.
+5. Under **Retention**, choose **Keep only the newest backups** and a number to remove older cloud
+   backups after each successful upload. Only files named like the backups above in the application's
+   own folder are ever removed.
+6. **Status** shows the last successful backup, the last attempt and its error, the retention result,
+   and the next scheduled run.
+7. **Disconnect** removes the stored access from the server and revokes it at the provider. A schedule
+   that used that provider is switched off. Files already uploaded stay in your cloud storage.
+
+To restore a cloud backup, download it from Dropbox or Google Drive and use **Restore from backup**.
+
 ### Restore a backup
 
 Restoring **replaces the whole inventory**. Everything added or changed after the selected backup
@@ -633,8 +677,14 @@ fresh, empty one — for example `/var/lib/inventory-atlas-lite/pre-reset-backup
 you no longer need. `ai-settings.json`, the pre-restore copies, and the updater's backups are not
 touched by a reset.
 
-For a personal homelab, download a backup after every larger cataloguing session, and keep the copies
-on a different machine than the server.
+**Settings → Cloud Backup** uploads the same snapshot to Dropbox or Google Drive, by hand or on a
+daily or weekly schedule, and can keep only the newest N cloud copies. The provider access is stored
+in `cloud-backup-credentials.json` under `DATA_DIR` (readable only by the service user) and the
+schedule and history in `cloud-backup.json`; neither is part of a SQLite backup, so back them up or
+reconnect the provider when moving an installation.
+
+For a personal homelab, download a backup after every larger cataloguing session, or schedule a cloud
+backup, and keep the copies on a different machine than the server.
 
 ## 8. Limitations and security
 
@@ -685,6 +735,10 @@ on a different machine than the server.
   application never gains any other privilege on the machine.
 - Anyone who reaches the unauthenticated interface can start such an update. Keep the application on
   a trusted LAN or VPN.
+- Cloud backup supports Dropbox and Google Drive, one schedule for one provider at a time. Anyone who
+  reaches the interface can connect or disconnect a provider and start a cloud backup. Backups are
+  restored by downloading the file from the provider and using **Restore from backup**; there is no
+  direct restore from the cloud.
 
 ## 9. Quick troubleshooting
 
@@ -704,6 +758,9 @@ on a different machine than the server.
 | No model list, but the connection works | Some servers do not list their models. Choose **Custom model...** and type the model ID. |
 | AI Add Fields suggests nothing usable | The message reports an empty or malformed answer. Describe the category in more detail and press **Generate Fields** again; your description is kept. |
 | AI analysis fails | Read the message for an invalid key, rate limit, unavailable provider, timeout, unsupported image, or missing category. The selected photo and description remain available for retry. |
+| Cloud Backup says *Not configured* | The server was started without the provider's app credentials. Set `DROPBOX_APP_KEY`/`DROPBOX_APP_SECRET` or `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` and restart. |
+| The provider reports a redirect URI mismatch | Register the redirect URI shown on the card exactly, and open the application at that same address. Use `localhost` or an HTTPS host name; Google rejects private IP addresses. |
+| *… access has expired or was revoked* | The provider no longer accepts the stored access. Press **Disconnect**, then connect the provider again. |
 | Scan QR says *Camera unavailable* | Over plain HTTP the browser does not offer the camera; use **Scan from image** or open the application over HTTPS. If camera access was denied, allow it for this site in the browser settings and reload the page. |
 | Printed labels are the wrong size or spill onto extra pages | In the browser's print dialog choose A4 paper and 100 % scale (*Default* or *Actual size*) instead of *Fit to page*. |
 | Which version is this | Open **About** in the navigation. It shows the version, the commit the build came from, and its date. **Version History** in the same dialog lists what changed in each release. |

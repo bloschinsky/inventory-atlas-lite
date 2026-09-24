@@ -8,6 +8,7 @@ data/pre-restore-backups/
 data/pre-reset-backups/
 data/restore-staging/
 data/ai-settings.json*
+data/cloud-backup*.json*
 .env
 .env.local
 *.log

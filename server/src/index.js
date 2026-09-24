@@ -4,12 +4,13 @@ import { createApp } from './app.js';
 const port = Number(process.env.PORT || 3000);
 const isProduction = process.env.NODE_ENV === 'production' || process.argv.includes('--production');
 
-const { app, staging } = createApp({ production: isProduction });
+const { app, staging, cloudBackupScheduler } = createApp({ production: isProduction });
 
 const server = app.listen(port, '0.0.0.0', () => console.log(`Inventory server listening on http://0.0.0.0:${port}`));
 
 const shutdown = () => {
   staging.clearAll();
+  cloudBackupScheduler.stop();
   server.close(() => process.exit(0));
 };
 process.on('SIGINT', shutdown);

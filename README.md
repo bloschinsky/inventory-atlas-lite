@@ -165,4 +165,13 @@ another computer use its LAN address, such as `http://192.168.1.50:11434/v1`. Se
 `ai-settings.json` under `DATA_DIR`, is not returned to the browser after saving, and is not included
 in SQLite backups. Back up or reconfigure this secret separately when moving an installation.
 
+**Settings → Cloud Backup** uploads the same snapshot to Dropbox (App folder access) or Google Drive
+(`drive.file` scope) on demand or on a daily or weekly schedule run by the server. Enable a provider by
+starting the server with `DROPBOX_APP_KEY` and `DROPBOX_APP_SECRET`, or `GOOGLE_CLIENT_ID` and
+`GOOGLE_CLIENT_SECRET`, and register the redirect URI shown in Settings
+(`<address you open>/api/cloud-backup/oauth/callback`); `CLOUD_BACKUP_REDIRECT_URI` fixes it behind a
+reverse proxy and `TZ` sets the schedule time zone. Refresh tokens are stored in
+`cloud-backup-credentials.json` under `DATA_DIR` with owner-only permissions and are never included in
+SQLite backups. See [`docs/features/cloud-backup.md`](docs/features/cloud-backup.md).
+
 Do not expose this application directly to the public Internet: the MVP intentionally has no authentication.
