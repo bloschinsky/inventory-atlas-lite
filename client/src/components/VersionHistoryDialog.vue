@@ -4,6 +4,7 @@ import { closeVersionHistory, versionHistoryOpen } from '../about.js';
 import { appInfo } from '../build-info.js';
 import { releases } from '../releaseHistory.js';
 import { releaseVersion } from '../../../shared/releaseHistory.js';
+import { formatDate } from '../i18n/index.js';
 
 const panel = ref(null);
 const closeButton = ref(null);
@@ -58,13 +59,13 @@ onBeforeUnmount(release);
               id="version-history-title"
               class="modal-title"
             >
-              Version History
+              {{ $t('versionHistory.title') }}
             </h2>
             <button
               ref="closeButton"
               type="button"
               class="btn-close"
-              aria-label="Close Version History"
+              :aria-label="$t('versionHistory.close')"
               @click="closeVersionHistory()"
             />
           </div>
@@ -86,11 +87,11 @@ onBeforeUnmount(release);
                   <span
                     v-if="entry.version === currentVersion"
                     class="badge bg-primary-lt"
-                  >Installed</span>
+                  >{{ $t('versionHistory.installed') }}</span>
                   <span
                     v-if="entry.date"
                     class="text-secondary ms-auto"
-                  >{{ entry.date }}</span>
+                  >{{ formatDate(entry.date) }}</span>
                 </div>
                 <ul class="mt-1 mb-0 ps-3">
                   <li
@@ -106,7 +107,7 @@ onBeforeUnmount(release);
               v-else
               class="mb-0 text-secondary"
             >
-              No release history is available in this build.
+              {{ $t('versionHistory.empty') }}
             </p>
           </div>
           <div class="modal-footer">
@@ -115,7 +116,7 @@ onBeforeUnmount(release);
               class="btn w-100"
               @click="closeVersionHistory()"
             >
-              Close
+              {{ $t('common.close') }}
             </button>
           </div>
         </div>

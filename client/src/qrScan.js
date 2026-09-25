@@ -28,7 +28,8 @@ export async function decodeQrFromFile(file) {
   try {
     bitmap = await createImageBitmap(file);
   } catch {
-    throw new Error('This file could not be read as an image.');
+    // Scanner messages are translation keys; the page shows them in the active language.
+    throw new Error('scan.errors.unreadableImage');
   }
   try {
     return decodeQrFrom(bitmap, bitmap.width, bitmap.height, undefined, true);
@@ -37,16 +38,14 @@ export async function decodeQrFromFile(file) {
   }
 }
 
-// Turns scanned text into { uuid } or { error } with the message the scanner shows.
+// Turns scanned text into { uuid } or { error } with the translation key of the message the scanner shows.
 export function readScannedText(text) {
   try {
     return { uuid: decodeItemQrPayload(text) };
   } catch {
     const ours = String(text).trim().startsWith(`${ITEM_QR_PREFIX}:`);
     return {
-      error: ours
-        ? 'This Inventory Atlas QR code is invalid or uses an unsupported format.'
-        : 'This is not an Inventory Atlas QR code.'
+      error: ours ? 'scan.errors.unsupportedCode' : 'scan.errors.foreignCode'
     };
   }
 }

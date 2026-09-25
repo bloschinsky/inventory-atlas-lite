@@ -49,13 +49,13 @@ onBeforeUnmount(() => {
             id="item-qr-title"
             class="modal-title"
           >
-            QR Code
+            {{ $t('qr.title') }}
           </h2>
           <button
             ref="closeButton"
             type="button"
             class="btn-close"
-            aria-label="Close QR code"
+            :aria-label="$t('qr.close')"
             @click="emit('close')"
           />
         </div>
@@ -74,14 +74,14 @@ onBeforeUnmount(() => {
             class="btn w-100"
             @click="printLabel"
           >
-            Print Label
+            {{ $t('qr.printLabel') }}
           </button>
           <button
             type="button"
             class="btn w-100"
             @click="emit('close')"
           >
-            Close
+            {{ $t('common.close') }}
           </button>
         </div>
       </div>

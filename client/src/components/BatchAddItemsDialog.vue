@@ -1,5 +1,6 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { api, jsonOptions } from '../api.js';
 import {
   MAX_BATCH_ITEMS, hasDraftErrors, itemImportDocument, itemImportTemplate, parseItemImportDocument,
@@ -12,6 +13,7 @@ const props = defineProps({
   initialCategoryId: { type: [Number, String], default: '' }
 });
 const emit = defineEmits(['close', 'created']);
+const { t } = useI18n();
 
 const currencies = Intl.supportedValuesOf('currency');
 
@@ -41,9 +43,9 @@ watch(categoryId, loadFields, { immediate: true });
 const reviews = computed(() => drafts.value ? drafts.value.map(draft => reviewItemDraft(draft, fields.value)) : []);
 const invalidCount = computed(() => reviews.value.filter(hasDraftErrors).length);
 const summary = computed(() => {
-  const count = `${drafts.value.length} ${drafts.value.length === 1 ? 'item' : 'items'} in this batch`;
-  if (!invalidCount.value) return `${count}.`;
-  return `${count}, ${invalidCount.value} ${invalidCount.value === 1 ? 'needs' : 'need'} attention.`;
+  const count = t('batchItems.count', drafts.value.length);
+  if (!invalidCount.value) return t('batchItems.summary', { count });
+  return t('batchItems.summaryInvalid', { count, invalid: t('batchItems.invalid', invalidCount.value) });
 });
 
 function preview() {
@@ -57,7 +59,7 @@ function preview() {
 }
 function insertTemplate() {
   const current = source.value.trim();
-  if (current && !confirm('Replace the current JSON with a template for this category?')) return;
+  if (current && !confirm(t('batchItems.confirmReplace'))) return;
   source.value = JSON.stringify(itemImportTemplate(category.value, fields.value), null, 2);
   nextTick(() => editor.value?.focus());
 }
@@ -115,16 +117,16 @@ onBeforeUnmount(() => {
             id="batch-items-title"
             class="modal-title"
           >
-            Batch Add Items from JSON
+            {{ $t('batchItems.title') }}
             <span
               v-if="category"
               class="text-secondary"
-            >for {{ category.name }}</span>
+            >{{ $t('batchFields.forCategory', { name: category.name }) }}</span>
           </h2>
           <button
             type="button"
             class="btn-close"
-            aria-label="Close batch add items"
+            :aria-label="$t('batchItems.close')"
             @click="emit('close')"
           />
         </div>
@@ -141,7 +143,7 @@ onBeforeUnmount(() => {
               <label
                 class="form-label"
                 for="batch-items-category"
-              >Category</label>
+              >{{ $t('items.fields.category') }}</label>
               <select
                 id="batch-items-category"
                 v-model="categoryId"
@@ -151,7 +153,7 @@ onBeforeUnmount(() => {
                   value=""
                   disabled
                 >
-                  Select category
+                  {{ $t('common.selectCategory') }}
                 </option>
                 <option
                   v-for="c in categories"
@@ -163,16 +165,14 @@ onBeforeUnmount(() => {
               </select>
             </div>
             <p class="text-secondary">
-              Paste an item import document for the selected category, then review and edit every
-              item before it is created. A batch accepts at most {{ MAX_BATCH_ITEMS }} items. Photos
-              are added to each item afterwards.
+              {{ $t('batchItems.intro', { max: MAX_BATCH_ITEMS }) }}
             </p>
             <textarea
               ref="editor"
               v-model="source"
               class="form-control font-monospace"
               rows="14"
-              aria-label="Item import JSON"
+              :aria-label="$t('batchItems.json')"
               spellcheck="false"
               :disabled="!category"
             />
@@ -183,7 +183,7 @@ onBeforeUnmount(() => {
                 :disabled="!category"
                 @click="insertTemplate"
               >
-                Insert Template
+                {{ $t('common.insertTemplate') }}
               </button>
             </div>
           </template>
@@ -200,20 +200,20 @@ onBeforeUnmount(() => {
               :key="index"
               class="card mb-3"
               :class="{ 'border-danger': hasDraftErrors(reviews[index]) }"
-              :aria-label="`Proposed item ${index + 1}`"
+              :aria-label="$t('batchItems.proposed', { n: index + 1 })"
             >
               <div class="card-header">
                 <h3 class="card-title">
-                  Item {{ index + 1 }}
+                  {{ $t('batchItems.item', { n: index + 1 }) }}
                 </h3>
                 <div class="card-actions">
                   <button
                     type="button"
                     class="btn btn-outline-danger btn-sm"
-                    :aria-label="`Remove proposed item ${index + 1} from the batch`"
+                    :aria-label="$t('batchItems.removeOf', { n: index + 1 })"
                     @click="removeDraft(index)"
                   >
-                    Remove
+                    {{ $t('common.remove') }}
                   </button>
                 </div>
               </div>
@@ -222,7 +222,7 @@ onBeforeUnmount(() => {
                   <label
                     class="form-label"
                     :for="inputId(index, 'name')"
-                  >Name *</label>
+                  >{{ $t('items.fields.name') }} *</label>
                   <input
                     :id="inputId(index, 'name')"
                     v-model="draft.name"
@@ -237,7 +237,7 @@ onBeforeUnmount(() => {
                   <label
                     class="form-label"
                     :for="inputId(index, 'condition')"
-                  >Condition</label>
+                  >{{ $t('items.fields.condition') }}</label>
                   <input
                     :id="inputId(index, 'condition')"
                     v-model="draft.condition"
@@ -248,7 +248,7 @@ onBeforeUnmount(() => {
                   <label
                     class="form-label"
                     :for="inputId(index, 'location')"
-                  >Location</label>
+                  >{{ $t('items.fields.location') }}</label>
                   <input
                     :id="inputId(index, 'location')"
                     v-model="draft.location"
@@ -259,7 +259,7 @@ onBeforeUnmount(() => {
                   <label
                     class="form-label"
                     :for="inputId(index, 'transferred-to')"
-                  >Transferred To</label>
+                  >{{ $t('items.fields.transferredTo') }}</label>
                   <input
                     :id="inputId(index, 'transferred-to')"
                     v-model="draft.transferredTo"
@@ -274,7 +274,7 @@ onBeforeUnmount(() => {
                   <label
                     class="form-label"
                     :for="inputId(index, 'purchase-date')"
-                  >Purchase Date</label>
+                  >{{ $t('items.fields.purchaseDate') }}</label>
                   <input
                     :id="inputId(index, 'purchase-date')"
                     v-model="draft.purchaseDate"
@@ -290,7 +290,7 @@ onBeforeUnmount(() => {
                   <label
                     class="form-label"
                     :for="inputId(index, 'serial-number')"
-                  >Serial Number</label>
+                  >{{ $t('items.fields.serialNumber') }}</label>
                   <input
                     :id="inputId(index, 'serial-number')"
                     v-model="draft.serialNumber"
@@ -305,7 +305,7 @@ onBeforeUnmount(() => {
                   <label
                     class="form-label"
                     :for="inputId(index, 'purchase-price')"
-                  >Purchase Price</label>
+                  >{{ $t('items.fields.purchasePrice') }}</label>
                   <div
                     class="input-group"
                     :class="{ 'has-validation': reviews[index].purchasePrice }"
@@ -322,7 +322,7 @@ onBeforeUnmount(() => {
                       v-model="draft.purchasePrice.currency"
                       class="form-select"
                       :class="{ 'is-invalid': reviews[index].purchasePrice }"
-                      :aria-label="`Purchase Price currency of proposed item ${index + 1}`"
+                      :aria-label="$t('batchItems.currencyOf', { n: index + 1 })"
                     >
                       <option value="" />
                       <option
@@ -348,7 +348,7 @@ onBeforeUnmount(() => {
                   <label
                     class="form-label"
                     :for="inputId(index, 'description')"
-                  >Description</label>
+                  >{{ $t('items.fields.description') }}</label>
                   <textarea
                     :id="inputId(index, 'description')"
                     v-model="draft.description"
@@ -380,10 +380,10 @@ onBeforeUnmount(() => {
                       {{ draft.customFields[field.name] }}
                     </option>
                     <option value="1">
-                      Yes
+                      {{ $t('common.yes') }}
                     </option>
                     <option value="0">
-                      No
+                      {{ $t('common.no') }}
                     </option>
                   </select>
                   <input
@@ -405,7 +405,7 @@ onBeforeUnmount(() => {
               v-if="!drafts.length"
               class="text-secondary"
             >
-              No items left in this batch.
+              {{ $t('batchItems.empty') }}
             </p>
           </template>
         </div>
@@ -415,7 +415,7 @@ onBeforeUnmount(() => {
             class="btn btn-link link-secondary"
             @click="emit('close')"
           >
-            Cancel
+            {{ $t('common.cancel') }}
           </button>
           <button
             v-if="!drafts"
@@ -424,7 +424,7 @@ onBeforeUnmount(() => {
             :disabled="!category || !source.trim()"
             @click="preview"
           >
-            Preview
+            {{ $t('common.preview') }}
           </button>
           <template v-else>
             <button
@@ -432,7 +432,7 @@ onBeforeUnmount(() => {
               class="btn"
               @click="backToInput"
             >
-              Edit JSON
+              {{ $t('common.editJson') }}
             </button>
             <button
               type="button"
@@ -440,7 +440,7 @@ onBeforeUnmount(() => {
               :disabled="saving || !drafts.length || invalidCount > 0"
               @click="create"
             >
-              Create {{ drafts.length }} {{ drafts.length === 1 ? 'Item' : 'Items' }}
+              {{ $t('batchItems.create', drafts.length) }}
             </button>
           </template>
         </div>

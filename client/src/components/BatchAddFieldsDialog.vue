@@ -1,9 +1,10 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { api, jsonOptions } from '../api.js';
 import {
-  FIELD_TYPES, MAX_BATCH_FIELDS, STATUS_LABELS, blockingRows, creatableFields,
-  fieldDefinitionDocument, fieldTypeLabel, parseFieldDefinitionDocument, readFieldDefinitionDocument,
+  FIELD_TYPES, MAX_BATCH_FIELDS, blockingRows, creatableFields,
+  fieldDefinitionDocument, parseFieldDefinitionDocument, readFieldDefinitionDocument,
   reviewFieldDefinitions
 } from '../../../shared/fieldDefinitions.js';
 
@@ -14,6 +15,7 @@ const props = defineProps({
   mode: { type: String, default: 'json' }
 });
 const emit = defineEmits(['close', 'created']);
+const { t } = useI18n();
 
 const example = JSON.stringify(fieldDefinitionDocument([
   { name: 'Brand', type: 'text', required: false },
@@ -22,7 +24,7 @@ const example = JSON.stringify(fieldDefinitionDocument([
 ]), null, 2);
 
 const ai = computed(() => props.mode === 'ai');
-const title = computed(() => ai.value ? 'AI Add Fields' : 'Batch Add Fields');
+const title = computed(() => t(ai.value ? 'batchFields.aiTitle' : 'batchFields.title'));
 
 const source = ref('');
 const description = ref('');
@@ -63,7 +65,7 @@ async function generate() {
 // The placeholder example is also the inserted template, so both can never drift apart.
 function insertTemplate() {
   const current = source.value.trim();
-  if (current && current !== example.trim() && !confirm('Replace the current JSON with the example document?')) return;
+  if (current && current !== example.trim() && !confirm(t('batchFields.confirmReplace'))) return;
   source.value = example;
   nextTick(() => editor.value?.focus());
 }
@@ -117,12 +119,12 @@ onBeforeUnmount(() => {
             id="batch-fields-title"
             class="modal-title"
           >
-            {{ title }} <span class="text-secondary">for {{ category.name }}</span>
+            {{ title }} <span class="text-secondary">{{ $t('batchFields.forCategory', { name: category.name }) }}</span>
           </h2>
           <button
             type="button"
             class="btn-close"
-            :aria-label="`Close ${title.toLowerCase()}`"
+            :aria-label="$t(ai ? 'batchFields.closeAi' : 'batchFields.close')"
             @click="emit('close')"
           />
         </div>
@@ -136,37 +138,34 @@ onBeforeUnmount(() => {
           </div>
           <template v-if="!drafts && ai">
             <p class="text-secondary">
-              Describe the category and the kind of fields you need. The AI only proposes a draft:
-              you review, edit, and confirm every field before it is created. A batch accepts at
-              most {{ MAX_BATCH_FIELDS }} fields.
+              {{ $t('batchFields.aiIntro', { max: MAX_BATCH_FIELDS }) }}
             </p>
             <textarea
               ref="editor"
               v-model="description"
               class="form-control"
               rows="6"
-              aria-label="Field description"
+              :aria-label="$t('batchFields.description')"
               :disabled="generating"
-              placeholder="Suggest useful fields for a category containing vintage computer expansion cards such as graphics cards, sound cards, network cards and controllers."
+              :placeholder="$t('batchFields.descriptionPlaceholder')"
             />
             <p
               v-if="generating"
               class="text-secondary mt-2 mb-0"
             >
-              Generating fields…
+              {{ $t('batchFields.generatingFields') }}
             </p>
           </template>
           <template v-else-if="!drafts">
             <p class="text-secondary">
-              Paste a field-definition document, then review every field before it is created.
-              A batch accepts at most {{ MAX_BATCH_FIELDS }} fields.
+              {{ $t('batchFields.intro', { max: MAX_BATCH_FIELDS }) }}
             </p>
             <textarea
               ref="editor"
               v-model="source"
               class="form-control font-monospace"
               rows="12"
-              aria-label="Field definition JSON"
+              :aria-label="$t('batchFields.json')"
               spellcheck="false"
               :placeholder="example"
             />
@@ -176,7 +175,7 @@ onBeforeUnmount(() => {
                 class="btn btn-link link-secondary p-0"
                 @click="insertTemplate"
               >
-                Insert Template
+                {{ $t('common.insertTemplate') }}
               </button>
             </div>
           </template>
@@ -187,9 +186,9 @@ onBeforeUnmount(() => {
             <table class="table table-vcenter">
               <thead>
                 <tr>
-                  <th>Field</th>
-                  <th>Type</th>
-                  <th>Status</th>
+                  <th>{{ $t('batchFields.field') }}</th>
+                  <th>{{ $t('batchFields.type') }}</th>
+                  <th>{{ $t('batchFields.status') }}</th>
                   <th class="w-1" />
                 </tr>
               </thead>
@@ -203,27 +202,27 @@ onBeforeUnmount(() => {
                     <input
                       v-model="draft.name"
                       class="form-control"
-                      :aria-label="`Name of proposed field ${index + 1}`"
+                      :aria-label="$t('batchFields.nameOf', { n: index + 1 })"
                     >
                   </td>
                   <td>
                     <select
                       v-model="draft.type"
                       class="form-select"
-                      :aria-label="`Type of proposed field ${index + 1}`"
+                      :aria-label="$t('batchFields.typeOf', { n: index + 1 })"
                     >
                       <option
                         v-if="!FIELD_TYPES.some(type => type.value === draft.type)"
                         :value="draft.type"
                       >
-                        {{ fieldTypeLabel(draft.type) || 'Unsupported' }}
+                        {{ draft.type || $t('batchFields.unsupported') }}
                       </option>
                       <option
                         v-for="type in FIELD_TYPES"
                         :key="type.value"
                         :value="type.value"
                       >
-                        {{ type.label }}
+                        {{ $t(`fieldTypes.${type.value}`) }}
                       </option>
                     </select>
                   </td>
@@ -231,7 +230,7 @@ onBeforeUnmount(() => {
                     <span
                       class="badge"
                       :class="rows[index].status === 'new' ? 'bg-green-lt' : 'bg-red-lt'"
-                    >{{ STATUS_LABELS[rows[index].status] }}</span>
+                    >{{ $t(`batchFields.statuses.${rows[index].status}`) }}</span>
                     <small
                       v-if="rows[index].message"
                       class="d-block text-danger"
@@ -241,10 +240,10 @@ onBeforeUnmount(() => {
                     <button
                       type="button"
                       class="btn btn-outline-danger btn-sm"
-                      :aria-label="`Remove proposed field ${index + 1} from the batch`"
+                      :aria-label="$t('batchFields.removeOf', { n: index + 1 })"
                       @click="removeDraft(index)"
                     >
-                      Remove
+                      {{ $t('common.remove') }}
                     </button>
                   </td>
                 </tr>
@@ -253,7 +252,7 @@ onBeforeUnmount(() => {
                     colspan="4"
                     class="text-secondary"
                   >
-                    No fields left in this batch.
+                    {{ $t('batchFields.empty') }}
                   </td>
                 </tr>
               </tbody>
@@ -266,7 +265,7 @@ onBeforeUnmount(() => {
             class="btn btn-link link-secondary"
             @click="emit('close')"
           >
-            Cancel
+            {{ $t('common.cancel') }}
           </button>
           <button
             v-if="!drafts && ai"
@@ -275,7 +274,7 @@ onBeforeUnmount(() => {
             :disabled="generating || !description.trim()"
             @click="generate"
           >
-            {{ generating ? 'Generating…' : 'Generate Fields' }}
+            {{ generating ? $t('batchFields.generating') : $t('batchFields.generate') }}
           </button>
           <button
             v-else-if="!drafts"
@@ -284,7 +283,7 @@ onBeforeUnmount(() => {
             :disabled="!source.trim()"
             @click="preview"
           >
-            Preview
+            {{ $t('common.preview') }}
           </button>
           <template v-else>
             <button
@@ -292,7 +291,7 @@ onBeforeUnmount(() => {
               class="btn"
               @click="backToInput"
             >
-              {{ ai ? 'Edit Description' : 'Edit JSON' }}
+              {{ ai ? $t('batchFields.editDescription') : $t('common.editJson') }}
             </button>
             <button
               type="button"
@@ -300,7 +299,7 @@ onBeforeUnmount(() => {
               :disabled="saving || !creatable.length || blocked.length > 0"
               @click="create"
             >
-              Create {{ creatable.length }} {{ creatable.length === 1 ? 'Field' : 'Fields' }}
+              {{ $t('batchFields.create', creatable.length) }}
             </button>
           </template>
         </div>

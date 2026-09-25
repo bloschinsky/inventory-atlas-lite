@@ -40,7 +40,7 @@ test('creates an item, finds it in the list, and edits its values', async ({ pag
   await expect(detail(page, 'Condition')).toHaveText('Good');
   await expect(detail(page, 'Location')).toHaveText('Shelf A');
   await expect(detail(page, 'Purchase Date')).toContainText('2024');
-  await expect(detail(page, 'Purchase Price')).toHaveText('49.99 USD');
+  await expect(detail(page, 'Purchase Price')).toHaveText('$49.99');
   await expect(detail(page, 'Serial Number')).toHaveText('000123ABC-09');
   await expect(detail(page, 'Description')).toHaveText('Bought second hand.');
   await expect(detail(page, 'Brand')).toHaveText('Nikon');
@@ -61,7 +61,7 @@ test('creates an item, finds it in the list, and edits its values', async ({ pag
 
   await expect(page.getByRole('heading', { name: renamed })).toBeVisible();
   await expect(detail(page, 'Condition')).toHaveText('Excellent');
-  await expect(detail(page, 'Purchase Price')).toHaveText('39.50 EUR');
+  await expect(detail(page, 'Purchase Price')).toHaveText('€39.50');
   await expect(detail(page, 'Serial Number')).toHaveText('12A/9382-B');
   await expect(detail(page, 'Year')).toHaveText('1987');
   await expect(detail(page, 'Insured')).toHaveText('No');

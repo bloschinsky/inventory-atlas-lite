@@ -1,13 +1,16 @@
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { api } from '../api.js';
+import { formatNumber } from '../i18n/index.js';
 import PageHeader from '../components/PageHeader.vue';
 
 defineOptions({ name: 'InventoryDashboard' });
 
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
 const data = ref(null);
 const loading = ref(true);
 const refreshing = ref(false);
@@ -17,7 +20,7 @@ let requestNumber = 0;
 let controller;
 
 const categoryQuery = computed(() => typeof route.query.categoryId === 'string' ? route.query.categoryId : '');
-const scopeLabel = computed(() => data.value?.scope.categoryName || 'All categories');
+const scopeLabel = computed(() => data.value?.scope.categoryName || t('common.allCategories'));
 const categoryMaximum = computed(() => Math.max(0, ...(data.value?.categoryDistribution.map(entry => entry.count) || [])));
 const conditionMaximum = computed(() => Math.max(0, ...(data.value?.conditionDistribution.map(entry => entry.count) || [])));
 
@@ -54,6 +57,17 @@ function selectCategory(entry) {
   if (entry.categoryId) applyCategory(entry.categoryId);
 }
 
+/*
+  The server names its summary buckets in English; they are recognized by their keys and shown in the
+  active language. Category names and conditions are user data and stay as they were entered.
+*/
+const categoryLabel = entry => (entry.categoryId === null ? t('dashboard.other') : entry.label);
+function conditionLabel(entry) {
+  if (entry.key === '__other__') return t('dashboard.other');
+  if (entry.key === 'not-specified' && entry.label === 'Not specified') return t('dashboard.notSpecified');
+  return entry.label;
+}
+
 function barWidth(count, maximum) {
   return maximum ? `${Math.max(4, (count / maximum) * 100)}%` : '0%';
 }
@@ -67,15 +81,15 @@ onBeforeUnmount(() => controller?.abort());
 
 <template>
   <PageHeader
-    title="Dashboard"
-    subtitle="A concise view of inventory size, documentation, and physical organization."
+    :title="$t('dashboard.title')"
+    :subtitle="$t('dashboard.subtitle')"
   >
     <template #actions>
       <RouterLink
         to="/items/new"
         class="btn btn-primary"
       >
-        Add item
+        {{ $t('items.add') }}
       </RouterLink>
     </template>
   </PageHeader>
@@ -86,7 +100,7 @@ onBeforeUnmount(() => controller?.abort());
         <label
           class="form-label"
           for="dashboard-category"
-        >Category</label>
+        >{{ $t('items.fields.category') }}</label>
         <select
           id="dashboard-category"
           v-model="selectedCategory"
@@ -95,7 +109,7 @@ onBeforeUnmount(() => controller?.abort());
           @change="categoryChanged"
         >
           <option value="">
-            All categories
+            {{ $t('common.allCategories') }}
           </option>
           <option
             v-for="category in data?.categories || []"
@@ -112,7 +126,7 @@ onBeforeUnmount(() => controller?.abort());
         :disabled="!categoryQuery || loading || refreshing"
         @click="applyCategory('')"
       >
-        Reset
+        {{ $t('common.reset') }}
       </button>
       <span
         v-if="refreshing"
@@ -123,7 +137,7 @@ onBeforeUnmount(() => controller?.abort());
           class="spinner-border spinner-border-sm"
           aria-hidden="true"
         />
-        Refreshing…
+        {{ $t('dashboard.refreshing') }}
       </span>
     </div>
   </div>
@@ -139,7 +153,7 @@ onBeforeUnmount(() => controller?.abort());
       class="btn btn-danger mt-2"
       @click="load"
     >
-      Retry
+      {{ $t('common.retry') }}
     </button>
   </div>
 
@@ -155,7 +169,7 @@ onBeforeUnmount(() => controller?.abort());
         class="spinner-border spinner-border-sm"
         aria-hidden="true"
       />
-      Loading dashboard…
+      {{ $t('dashboard.loading') }}
     </div>
   </div>
 
@@ -166,17 +180,17 @@ onBeforeUnmount(() => controller?.abort());
     >
       <div class="empty">
         <p class="empty-title">
-          {{ data.scope.categoryId ? `No items in ${data.scope.categoryName}` : 'No items yet' }}
+          {{ data.scope.categoryId ? $t('dashboard.emptyCategory', { category: data.scope.categoryName }) : $t('items.emptyTitle') }}
         </p>
         <p class="empty-subtitle text-secondary">
-          {{ data.scope.categoryId ? 'This category is valid but does not contain any items.' : 'Add your first item to start building the inventory dashboard.' }}
+          {{ data.scope.categoryId ? $t('dashboard.emptyCategoryText') : $t('dashboard.emptyText') }}
         </p>
         <div class="empty-action">
           <RouterLink
             to="/items/new"
             class="btn btn-primary"
           >
-            Add item
+            {{ $t('items.add') }}
           </RouterLink>
         </div>
       </div>
@@ -197,10 +211,10 @@ onBeforeUnmount(() => controller?.abort());
               id="total-items-title"
               class="subheader"
             >
-              Total items
+              {{ $t('dashboard.totalItems') }}
             </div>
             <div class="h1 mb-1">
-              {{ data.totalItems }}
+              {{ formatNumber(data.totalItems) }}
             </div>
             <div class="text-secondary">
               {{ scopeLabel }}
@@ -218,7 +232,7 @@ onBeforeUnmount(() => controller?.abort());
               id="photo-coverage-title"
               class="subheader"
             >
-              Photo coverage
+              {{ $t('dashboard.photoCoverage') }}
             </div>
             <div class="h1 mb-2">
               {{ data.photoCoverage.percentage }}%
@@ -233,8 +247,8 @@ onBeforeUnmount(() => controller?.abort());
               />
             </div>
             <div class="d-flex justify-content-between gap-2 small">
-              <span>{{ data.photoCoverage.withPhotos }} with photos</span>
-              <span class="text-secondary">{{ data.photoCoverage.withoutPhotos }} without</span>
+              <span>{{ $t('dashboard.withPhotos', { n: formatNumber(data.photoCoverage.withPhotos) }) }}</span>
+              <span class="text-secondary">{{ $t('dashboard.withoutPhotos', { n: formatNumber(data.photoCoverage.withoutPhotos) }) }}</span>
             </div>
           </div>
         </section>
@@ -249,16 +263,16 @@ onBeforeUnmount(() => controller?.abort());
               id="placement-title"
               class="subheader mb-2"
             >
-              Placement status
+              {{ $t('dashboard.placement') }}
             </div>
             <div class="dashboard-stat-row">
-              <span>Inside a container</span><strong>{{ data.placement.insideContainer }}</strong>
+              <span>{{ $t('dashboard.insideContainer') }}</span><strong>{{ formatNumber(data.placement.insideContainer) }}</strong>
             </div>
             <div class="dashboard-stat-row">
-              <span>Direct location</span><strong>{{ data.placement.directLocation }}</strong>
+              <span>{{ $t('dashboard.directLocation') }}</span><strong>{{ formatNumber(data.placement.directLocation) }}</strong>
             </div>
             <div class="dashboard-stat-row">
-              <span>Unplaced</span><strong>{{ data.placement.unplaced }}</strong>
+              <span>{{ $t('dashboard.unplaced') }}</span><strong>{{ formatNumber(data.placement.unplaced) }}</strong>
             </div>
           </div>
         </section>
@@ -273,13 +287,13 @@ onBeforeUnmount(() => controller?.abort());
               id="recent-items-title"
               class="subheader"
             >
-              Added in the last 30 days
+              {{ $t('dashboard.addedRecently') }}
             </div>
             <div class="h1 mb-1">
-              {{ data.addedLast30Days }}
+              {{ formatNumber(data.addedLast30Days) }}
             </div>
             <div class="text-secondary">
-              Rolling 30-day window
+              {{ $t('dashboard.rollingWindow') }}
             </div>
           </div>
         </section>
@@ -300,10 +314,10 @@ onBeforeUnmount(() => controller?.abort());
               id="category-distribution-title"
               class="card-title"
             >
-              Items by category
+              {{ $t('dashboard.byCategory') }}
             </h2>
             <div class="text-secondary small">
-              All-inventory distribution{{ data.scope.categoryId ? `; ${data.scope.categoryName} is highlighted` : '' }}
+              {{ data.scope.categoryId ? $t('dashboard.distributionHighlighted', { category: data.scope.categoryName }) : $t('dashboard.distribution') }}
             </div>
           </div>
           <div class="card-body">
@@ -311,7 +325,7 @@ onBeforeUnmount(() => controller?.abort());
               v-if="!data.categoryDistribution.length"
               class="text-secondary"
             >
-              No inventory data yet.
+              {{ $t('dashboard.noData') }}
             </div>
             <div
               v-for="entry in data.categoryDistribution"
@@ -323,11 +337,11 @@ onBeforeUnmount(() => controller?.abort());
                 type="button"
                 class="dashboard-bar-button"
                 :class="{ 'dashboard-bar-selected': entry.selected }"
-                :aria-label="`Filter dashboard by ${entry.label}: ${entry.count} items`"
+                :aria-label="$t('dashboard.filterBy', { category: entry.label, n: entry.count }, entry.count)"
                 :aria-pressed="entry.selected"
                 @click="selectCategory(entry)"
               >
-                <span class="dashboard-bar-label"><span>{{ entry.label }}</span><strong>{{ entry.count }}</strong></span>
+                <span class="dashboard-bar-label"><span>{{ entry.label }}</span><strong>{{ formatNumber(entry.count) }}</strong></span>
                 <span
                   class="dashboard-bar-track"
                   aria-hidden="true"
@@ -337,7 +351,7 @@ onBeforeUnmount(() => controller?.abort());
                 v-else
                 class="dashboard-bar-button dashboard-bar-static"
               >
-                <span class="dashboard-bar-label"><span>{{ entry.label }}</span><strong>{{ entry.count }}</strong></span>
+                <span class="dashboard-bar-label"><span>{{ categoryLabel(entry) }}</span><strong>{{ formatNumber(entry.count) }}</strong></span>
                 <span
                   class="dashboard-bar-track"
                   aria-hidden="true"
@@ -357,7 +371,7 @@ onBeforeUnmount(() => controller?.abort());
               id="condition-distribution-title"
               class="card-title"
             >
-              Condition breakdown
+              {{ $t('dashboard.byCondition') }}
             </h2>
           </div>
           <div class="card-body">
@@ -365,7 +379,7 @@ onBeforeUnmount(() => controller?.abort());
               v-if="!data.conditionDistribution.length"
               class="text-secondary"
             >
-              No condition data in this scope.
+              {{ $t('dashboard.noConditionData') }}
             </div>
             <div
               v-for="entry in data.conditionDistribution"
@@ -373,7 +387,7 @@ onBeforeUnmount(() => controller?.abort());
               class="dashboard-distribution-row"
             >
               <div class="dashboard-bar-button dashboard-bar-static">
-                <span class="dashboard-bar-label"><span>{{ entry.label }}</span><strong>{{ entry.count }}</strong></span>
+                <span class="dashboard-bar-label"><span>{{ conditionLabel(entry) }}</span><strong>{{ formatNumber(entry.count) }}</strong></span>
                 <span
                   class="dashboard-bar-track"
                   aria-hidden="true"

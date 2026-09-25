@@ -10,6 +10,7 @@ This is an MVP without authentication, intended for use on a trusted local netwo
 
 - Use English throughout the project.
 - Write all documentation, code comments, commit messages, identifiers, user-facing copy, test descriptions, and configuration notes in English.
+  The only exception is the Ukrainian interface translation in `client/src/i18n/locales/uk.json`.
 - When editing existing text, keep terminology consistent with the surrounding English content.
 
 ## Stack and architecture
@@ -100,6 +101,9 @@ The project stays small and readable. Do not add:
 - `client/src/components/AppBrand.vue` — product mark and name.
 - `client/src/components/ThemeToggle.vue` — light/dark control; `client/src/theme.js` holds the state.
 - `client/src/api.js` — shared `fetch` wrapper and helper for JSON requests.
+- `client/src/i18n/index.js` — the `vue-i18n` instance, the browser-local language preference, and display formatting in the active locale.
+- `client/src/i18n/core.js` — supported locales, vue-i18n options (English default and fallback, Ukrainian plural rule), and the `Intl` date, number, money, and file-size formatters.
+- `client/src/i18n/locales/` — `en.json` and `uk.json`, the interface messages grouped by feature.
 - `client/src/update.js` — shared state and polling of the update panel in the About dialog.
 - `client/src/capabilities.js` — shared visibility state of optional features, loaded once from `/api/capabilities`.
 - `client/src/pages/ItemsList.vue` — item list, search, filtering, sorting, and pagination.
@@ -136,6 +140,7 @@ The project stays small and readable. Do not add:
 - `test/services.test.js` — service-level regression tests that run without HTTP against a temporary database.
 - `test/background-removal.test.js` — local cutout tests: stubbed model output for the composition
   rules, plus one full run of the real model over the regression photo when it is installed.
+- `test/i18n.test.js` — locale parity, message compilation, fallback, Ukrainian plurals, and locale-aware formatting.
 - `test/cloud-backup.test.js` — cloud backup services, adapters, scheduler, and API against the local Dropbox/Google Drive stub in `test/e2e/cloudProviderStub.js`.
 - `test/fixtures/` — real source photos used as regression input by the Node.js tests.
 - `test/e2e/` — Playwright browser tests, their fixtures, shared helpers, and the run launcher.
@@ -151,6 +156,28 @@ The project stays small and readable. Do not add:
 - `eslint.config.js` — recommended ESLint rules for JavaScript and Vue files, plus browser and Node.js globals.
 - `vite.config.js` — Vue plugin and development proxy configuration.
 - `README.md` — setup, production, and backup instructions.
+
+## Frontend localization
+
+The interface is localized with `vue-i18n` (Composition API) in English and Ukrainian. These rules
+are mandatory for all frontend work:
+
+- Never hardcode user-facing text in Vue templates or client JavaScript: labels, headings, buttons,
+  placeholders, `title`/`aria-label`/`alt` text, empty states, confirmations, prompts, and notices all
+  come from translation keys (`const { t } = useI18n()` in scripts, `$t()` in templates, and
+  `<i18n-t>` when markup such as `<code>` or a link sits inside a sentence).
+- Every new key gets both an `en` and a `uk` value in the same change. Group keys by feature
+  (`items.fields.purchasePrice`, `cloud.backupNow`) and reuse `common.*` for generic actions such as
+  `common.save`, `common.cancel`, `common.delete`, `common.edit`, and `common.close`.
+- Use vue-i18n pluralization for counts (`t('items.count', n)`): English messages have two forms,
+  Ukrainian messages three (`one | few | many`). Never build plurals with English-only ternaries.
+- Show dates, numbers, money, and file sizes through the formatters in `client/src/i18n/index.js`;
+  never change stored values or API formats for display.
+- Never translate user data: item, category, and field names, descriptions, locations, entered
+  values, serial numbers, and imported data are shown exactly as stored. Server error messages are
+  still shown as the API returns them.
+- `test/i18n.test.js` fails when the two locales do not define the same keys or a message does not
+  compile; keep it passing.
 
 ## Data model and important constraints
 

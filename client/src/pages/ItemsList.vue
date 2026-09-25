@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { api } from '../api.js';
 import { capabilities } from '../capabilities.js';
 import { labelSelection, printLabelsRoute } from '../labelSelection.js';
@@ -10,6 +11,7 @@ import PageHeader from '../components/PageHeader.vue';
 import { IconJson, IconPrinter, IconSparkles } from '@tabler/icons-vue';
 
 const router = useRouter();
+const { t } = useI18n();
 
 const categories = ref([]);
 const result = ref({ items: [], pagination: { page: 1, pages: 1, total: 0 } });
@@ -21,7 +23,7 @@ const filters = reactive({ search: '', categoryId: '', sort: 'name', direction: 
 let timer;
 
 const filtered = computed(() => Boolean(filters.search.trim() || filters.categoryId));
-const countLabel = computed(() => `${result.value.pagination.total} ${result.value.pagination.total === 1 ? 'item' : 'items'}`);
+const countLabel = computed(() => t('items.count', result.value.pagination.total));
 
 async function load() {
   loading.value = true; error.value = '';
@@ -31,12 +33,12 @@ async function load() {
 watch(() => [filters.categoryId, filters.sort, filters.direction, filters.page], load);
 watch(() => filters.search, () => { clearTimeout(timer); filters.page = 1; timer = setTimeout(load, 250); });
 function changed() { filters.page = 1; }
-const selectedLabel = computed(() => `${labelSelection.size} selected`);
+const selectedLabel = computed(() => t('items.selected', labelSelection.size));
 const printLabels = () => router.push(printLabelsRoute(labelSelection));
 // The new items are shown by switching the list to their category; the list reloads through its watcher.
 function batchCreated({ items, category }) {
   batchOpen.value = false;
-  notice.value = `Created ${items.length} ${items.length === 1 ? 'item' : 'items'} in ${category.name}.`;
+  notice.value = t('items.batchCreated', { n: items.length, category: category.name }, items.length);
   filters.search = '';
   filters.page = 1;
   if (filters.categoryId === category.id) load();
@@ -47,7 +49,7 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
 
 <template>
   <PageHeader
-    title="Items"
+    :title="$t('items.title')"
     :subtitle="countLabel"
   >
     <template #actions>
@@ -60,7 +62,7 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
           :size="18"
           aria-hidden="true"
         />
-        AI Add Item
+        {{ $t('aiAddItem.title') }}
       </RouterLink>
       <button
         type="button"
@@ -72,13 +74,13 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
           :size="18"
           aria-hidden="true"
         />
-        Batch Add from JSON
+        {{ $t('items.batchAdd') }}
       </button>
       <RouterLink
         to="/items/new"
         class="btn btn-primary"
       >
-        Add item
+        {{ $t('items.add') }}
       </RouterLink>
     </template>
   </PageHeader>
@@ -89,20 +91,20 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
         <label
           class="form-label"
           for="items-search"
-        >Search</label>
+        >{{ $t('common.search') }}</label>
         <input
           id="items-search"
           v-model="filters.search"
           type="search"
           class="form-control"
-          placeholder="Search name, description, serial number or transferred to…"
+          :placeholder="$t('items.searchPlaceholder')"
         >
       </div>
       <div class="col-12 col-sm-6 col-lg-3">
         <label
           class="form-label"
           for="items-category"
-        >Category</label>
+        >{{ $t('items.fields.category') }}</label>
         <select
           id="items-category"
           v-model="filters.categoryId"
@@ -110,7 +112,7 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
           @change="changed"
         >
           <option value="">
-            All categories
+            {{ $t('common.allCategories') }}
           </option>
           <option
             v-for="c in categories"
@@ -125,7 +127,7 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
         <label
           class="form-label"
           for="items-sort"
-        >Sort by</label>
+        >{{ $t('items.sortBy') }}</label>
         <select
           id="items-sort"
           v-model="filters.sort"
@@ -133,16 +135,16 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
           @change="changed"
         >
           <option value="name">
-            Name
+            {{ $t('items.fields.name') }}
           </option>
           <option value="category">
-            Category
+            {{ $t('items.fields.category') }}
           </option>
           <option value="created">
-            Created
+            {{ $t('items.fields.created') }}
           </option>
           <option value="updated">
-            Updated
+            {{ $t('items.fields.updated') }}
           </option>
         </select>
       </div>
@@ -150,7 +152,7 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
         <label
           class="form-label"
           for="items-direction"
-        >Direction</label>
+        >{{ $t('items.direction') }}</label>
         <select
           id="items-direction"
           v-model="filters.direction"
@@ -158,10 +160,10 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
           @change="changed"
         >
           <option value="asc">
-            Ascending
+            {{ $t('items.ascending') }}
           </option>
           <option value="desc">
-            Descending
+            {{ $t('items.descending') }}
           </option>
         </select>
       </div>
@@ -180,7 +182,7 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
       class="btn btn-sm btn-link px-1"
       @click="labelSelection.clear()"
     >
-      Clear selection
+      {{ $t('items.clearSelection') }}
     </button>
     <button
       type="button"
@@ -192,7 +194,7 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
         :size="18"
         aria-hidden="true"
       />
-      Print Labels
+      {{ $t('labels.title') }}
     </button>
   </div>
 
@@ -211,7 +213,7 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
     {{ notice }}<button
       type="button"
       class="btn-close"
-      aria-label="Dismiss message"
+      :aria-label="$t('common.dismissMessage')"
       @click="notice = ''"
     />
   </div>
@@ -225,7 +227,7 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
         class="spinner-border spinner-border-sm"
         aria-hidden="true"
       />
-      Loading items…
+      {{ $t('items.loading') }}
     </div>
   </div>
   <div
@@ -234,10 +236,10 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
   >
     <div class="empty">
       <p class="empty-title">
-        {{ filtered ? 'No matching items' : 'No items yet' }}
+        {{ filtered ? $t('items.noMatches') : $t('items.emptyTitle') }}
       </p>
       <p class="empty-subtitle text-secondary">
-        {{ filtered ? 'Try a different search term or clear the category filter.' : 'No items found. Add your first item to get started.' }}
+        {{ filtered ? $t('items.noMatchesText') : $t('items.emptyText') }}
       </p>
       <div
         v-if="!filtered"
@@ -248,13 +250,13 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
           to="/items/ai"
           class="btn btn-outline-primary"
         >
-          AI Add Item
+          {{ $t('aiAddItem.title') }}
         </RouterLink>
         <RouterLink
           to="/items/new"
           class="btn btn-primary"
         >
-          Add your first item
+          {{ $t('items.addFirst') }}
         </RouterLink>
       </div>
     </div>
@@ -267,7 +269,7 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
   <nav
     v-if="result.pagination.pages > 1"
     class="mt-3 d-flex flex-wrap gap-2 align-items-center"
-    aria-label="Items pagination"
+    :aria-label="$t('items.pagination')"
   >
     <ul class="pagination m-0">
       <li
@@ -280,11 +282,11 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
           :disabled="filters.page <= 1"
           @click="filters.page--"
         >
-          Previous
+          {{ $t('common.previous') }}
         </button>
       </li>
       <li class="page-item disabled">
-        <span class="page-link">Page {{ result.pagination.page }} of {{ result.pagination.pages }}</span>
+        <span class="page-link">{{ $t('items.page', { page: result.pagination.page, pages: result.pagination.pages }) }}</span>
       </li>
       <li
         class="page-item"
@@ -296,7 +298,7 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
           :disabled="filters.page >= result.pagination.pages"
           @click="filters.page++"
         >
-          Next
+          {{ $t('common.next') }}
         </button>
       </li>
     </ul>

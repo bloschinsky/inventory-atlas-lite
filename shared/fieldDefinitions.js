@@ -8,14 +8,9 @@ export const FIELD_DEFINITION_VERSION = 1;
 export const MAX_BATCH_FIELDS = 50;
 export const MAX_FIELD_NAME_LENGTH = 60;
 
-export const FIELD_TYPES = [
-  { value: 'text', label: 'Text' },
-  { value: 'number', label: 'Number' },
-  { value: 'date', label: 'Date' },
-  { value: 'boolean', label: 'Boolean' }
-];
+// The interface shows each type through its translation key fieldTypes.<value>.
+export const FIELD_TYPES = [{ value: 'text' }, { value: 'number' }, { value: 'date' }, { value: 'boolean' }];
 const supportedTypes = new Set(FIELD_TYPES.map(type => type.value));
-export const fieldTypeLabel = value => FIELD_TYPES.find(type => type.value === value)?.label || value;
 
 const documentProperties = ['version', 'fields'];
 const fieldProperties = ['name', 'type', 'required'];
@@ -26,14 +21,6 @@ export const RESERVED_FIELD_NAMES = [
   'Purchase Date', 'Purchase Price', 'Serial Number', 'Photos'
 ];
 const reservedNames = new Set(RESERVED_FIELD_NAMES.map(name => name.toLowerCase()));
-
-export const STATUS_LABELS = {
-  new: 'New',
-  exists: 'Already exists',
-  duplicate: 'Duplicate in batch',
-  'invalid-type': 'Invalid type',
-  invalid: 'Invalid configuration'
-};
 
 const isPlainObject = value => !!value && typeof value === 'object' && !Array.isArray(value);
 const key = name => name.trim().toLowerCase();

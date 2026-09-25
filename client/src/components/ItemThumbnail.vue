@@ -21,6 +21,6 @@ defineProps({
       v-else
       class="item-thumb-empty"
       aria-hidden="true"
-    >No photo</span>
+    >{{ $t('photos.none') }}</span>
   </div>
 </template>

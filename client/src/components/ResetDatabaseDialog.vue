@@ -1,8 +1,10 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { api, jsonOptions } from '../api.js';
 
 const emit = defineEmits(['close', 'reset']);
+const { t } = useI18n();
 
 const CONFIRMATION = 'RESET INVENTORY';
 
@@ -18,16 +20,15 @@ const closeButton = ref(null);
 const canReset = computed(() => Boolean(prepared.value) && acknowledged.value && confirmation.value === CONFIRMATION && !resetting.value);
 const busy = computed(() => loading.value || resetting.value);
 
-const plural = (count, singular, pluralForm = `${singular}s`) => `${count} ${count === 1 ? singular : pluralForm}`;
 const impact = computed(() => {
   const counts = prepared.value?.counts;
   if (!counts) return [];
   return [
-    plural(counts.items, 'item'),
-    plural(counts.categories, 'category', 'categories'),
-    plural(counts.fields, 'custom field'),
-    plural(counts.fieldValues, 'custom field value'),
-    plural(counts.photos, 'photo')
+    t('counts.items', counts.items),
+    t('counts.categories', counts.categories),
+    t('counts.fields', counts.fields),
+    t('counts.fieldValues', counts.fieldValues),
+    t('counts.photos', counts.photos)
   ];
 });
 
@@ -97,13 +98,13 @@ onBeforeUnmount(() => {
             id="reset-database-title"
             class="modal-title"
           >
-            Reset Inventory Database
+            {{ $t('reset.title') }}
           </h2>
           <button
             ref="closeButton"
             type="button"
             class="btn-close"
-            aria-label="Close reset dialog"
+            :aria-label="$t('reset.close')"
             :disabled="resetting"
             @click="close"
           />
@@ -125,16 +126,16 @@ onBeforeUnmount(() => {
               class="spinner-border spinner-border-sm me-1"
               aria-hidden="true"
             />
-            Counting the current inventory…
+            {{ $t('reset.counting') }}
           </p>
 
           <template v-if="prepared">
             <p class="mb-2">
-              This permanently removes the whole current inventory:
+              {{ $t('reset.impact') }}
             </p>
             <ul
               class="mb-3"
-              aria-label="Data that will be removed"
+              :aria-label="$t('reset.impactLabel')"
             >
               <li
                 v-for="line in impact"
@@ -143,11 +144,16 @@ onBeforeUnmount(() => {
                 <strong>{{ line }}</strong>
               </li>
             </ul>
-            <p class="meta-text">
-              Application settings, including the AI settings and API key, are preserved. A safety backup of
-              the current database is written to <code>pre-reset-backups</code> on the server before anything
-              is removed, and the reset stops if that backup cannot be created and verified.
-            </p>
+            <i18n-t
+              keypath="reset.safetyText"
+              tag="p"
+              class="meta-text"
+              scope="global"
+            >
+              <template #dir>
+                <code>pre-reset-backups</code>
+              </template>
+            </i18n-t>
 
             <label class="form-check mb-3">
               <input
@@ -156,14 +162,17 @@ onBeforeUnmount(() => {
                 type="checkbox"
                 :disabled="resetting"
               >
-              <span class="form-check-label">I understand that all inventory data will be permanently removed.</span>
+              <span class="form-check-label">{{ $t('reset.acknowledge') }}</span>
             </label>
 
             <div class="mb-1">
               <label
                 class="form-label"
                 for="reset-confirmation"
-              >Type <code>{{ CONFIRMATION }}</code> to confirm</label>
+              ><i18n-t
+                keypath="common.typeToConfirm"
+                scope="global"
+              ><template #phrase><code>{{ CONFIRMATION }}</code></template></i18n-t></label>
               <input
                 id="reset-confirmation"
                 v-model="confirmation"
@@ -175,7 +184,7 @@ onBeforeUnmount(() => {
               >
             </div>
             <p class="form-text mb-0">
-              This confirmation is valid for {{ Math.round(prepared.expiresInSeconds / 60) }} minutes.
+              {{ $t('reset.expires', Math.round(prepared.expiresInSeconds / 60)) }}
             </p>
           </template>
         </div>
@@ -186,7 +195,7 @@ onBeforeUnmount(() => {
             :disabled="resetting"
             @click="close"
           >
-            Cancel
+            {{ $t('common.cancel') }}
           </button>
           <button
             v-if="!prepared && !loading"
@@ -194,7 +203,7 @@ onBeforeUnmount(() => {
             class="btn btn-outline-danger"
             @click="prepare"
           >
-            Try again
+            {{ $t('common.tryAgain') }}
           </button>
           <button
             v-else
@@ -208,7 +217,7 @@ onBeforeUnmount(() => {
               class="spinner-border spinner-border-sm me-1"
               aria-hidden="true"
             />
-            {{ resetting ? 'Resetting…' : 'Reset Database' }}
+            {{ resetting ? $t('reset.resetting') : $t('reset.reset') }}
           </button>
         </div>
       </div>

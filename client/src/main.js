@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import '@tabler/core/dist/css/tabler.min.css';
 import './style.css';
 import App from './App.vue';
+import { i18n } from './i18n/index.js';
 import { capabilities, loadCapabilities } from './capabilities.js';
 import ItemsList from './pages/ItemsList.vue';
 import ItemDetails from './pages/ItemDetails.vue';
@@ -41,4 +42,4 @@ router.beforeEach(async to => {
 });
 
 loadCapabilities();
-createApp(App).use(router).mount('#app');
+createApp(App).use(i18n).use(router).mount('#app');

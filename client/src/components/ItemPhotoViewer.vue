@@ -42,14 +42,14 @@ const cancelDrag = () => { dragStart = null; };
       :id="headingId"
       class="visually-hidden"
     >
-      Photos
+      {{ $t('photos.title') }}
     </h2>
     <div
       v-if="!current"
       class="photo-frame"
     >
       <p class="text-secondary text-center m-0 p-4">
-        No photos for this item yet.
+        {{ $t('photos.empty') }}
       </p>
     </div>
     <template v-else>
@@ -97,7 +97,7 @@ const cancelDrag = () => { dragStart = null; };
         <button
           type="button"
           class="carousel-control-prev"
-          aria-label="Previous photo"
+          :aria-label="$t('photos.previous')"
           @click="move(-1)"
         >
           <span
@@ -108,7 +108,7 @@ const cancelDrag = () => { dragStart = null; };
         <button
           type="button"
           class="carousel-control-next"
-          aria-label="Next photo"
+          :aria-label="$t('photos.next')"
           @click="move(1)"
         >
           <span
@@ -124,7 +124,7 @@ const cancelDrag = () => { dragStart = null; };
             :data-bs-target="`#${carouselId}`"
             :class="{ active: position === index }"
             :aria-current="position === index ? 'true' : undefined"
-            :aria-label="`Show photo ${position + 1} of ${photos.length}`"
+            :aria-label="$t('photos.show', { position: position + 1, total: photos.length })"
             @click="show(position)"
           />
         </div>
@@ -138,10 +138,10 @@ const cancelDrag = () => { dragStart = null; };
         <button
           type="button"
           class="btn btn-sm btn-ghost-danger ms-auto"
-          aria-label="Delete photo"
+          :aria-label="$t('photos.delete')"
           @click="$emit('delete', current.id)"
         >
-          Delete photo
+          {{ $t('photos.delete') }}
         </button>
       </div>
     </template>

@@ -1,13 +1,14 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { api, jsonOptions } from '../api.js';
 import FieldAutocomplete from '../components/FieldAutocomplete.vue';
 import ItemThumbnail from '../components/ItemThumbnail.vue';
 import PageHeader from '../components/PageHeader.vue';
 import { takePendingAiDraft } from '../aiDraft.js';
 
-const route = useRoute(); const router = useRouter();
+const route = useRoute(); const router = useRouter(); const { t } = useI18n();
 const editing = computed(() => Boolean(route.params.id));
 const categories = ref([]); const fields = ref([]); const existingPhotos = ref([]); const photos = ref([]);
 const error = ref(''); const saving = ref(false); const initialized = ref(false);
@@ -61,7 +62,7 @@ async function save() {
     router.push(`/items/${item.id}`);
   } catch (e) { error.value = e.message; } finally { saving.value = false; }
 }
-async function removePhoto(id) { if (confirm('Delete this photo?')) { await api(`/api/photos/${id}`, { method: 'DELETE' }); existingPhotos.value = existingPhotos.value.filter(p => p.id !== id); } }
+async function removePhoto(id) { if (confirm(t('photos.confirmDelete'))) { await api(`/api/photos/${id}`, { method: 'DELETE' }); existingPhotos.value = existingPhotos.value.filter(p => p.id !== id); } }
 onMounted(async () => {
   try {
     categories.value = await api('/api/categories');
@@ -110,14 +111,14 @@ onMounted(async () => {
 
 <template>
   <div class="form-card">
-    <PageHeader :title="editing ? 'Edit item' : (aiDraft ? 'Review AI item' : 'Add item')" />
+    <PageHeader :title="editing ? $t('itemForm.editTitle') : (aiDraft ? $t('itemForm.reviewTitle') : $t('items.add'))" />
     <div
       v-if="aiDraft"
       class="alert alert-info"
       role="status"
     >
-      Review and edit every suggested value before saving.
-      <span v-if="aiDraft.confidence !== null">AI confidence: {{ Math.round(aiDraft.confidence * 100) }}%.</span>
+      {{ $t('itemForm.reviewNotice') }}
+      <span v-if="aiDraft.confidence !== null">{{ $t('itemForm.confidence', { percent: Math.round(aiDraft.confidence * 100) }) }}</span>
       <ul
         v-if="aiDraft.warnings?.length"
         class="mb-0 mt-2"
@@ -142,8 +143,8 @@ onMounted(async () => {
       class="alert alert-warning"
       role="alert"
     >
-      Create a category before adding an item. <RouterLink to="/categories">
-        Manage categories
+      {{ $t('itemForm.noCategories') }} <RouterLink to="/categories">
+        {{ $t('itemForm.manageCategories') }}
       </RouterLink>
     </div>
     <div
@@ -162,7 +163,7 @@ onMounted(async () => {
           <label
             class="form-label"
             for="item-name"
-          >Name *</label><input
+          >{{ $t('items.fields.name') }} *</label><input
             id="item-name"
             v-model="form.name"
             class="form-control"
@@ -173,7 +174,7 @@ onMounted(async () => {
           <label
             class="form-label"
             for="item-category"
-          >Category *</label><select
+          >{{ $t('items.fields.category') }} *</label><select
             id="item-category"
             v-model="form.category_id"
             class="form-select"
@@ -183,7 +184,7 @@ onMounted(async () => {
               value=""
               disabled
             >
-              Select category
+              {{ $t('common.selectCategory') }}
             </option><option
               v-for="c in categories"
               :key="c.id"
@@ -198,28 +199,27 @@ onMounted(async () => {
             <label
               class="form-label"
               for="item-condition"
-            >Condition</label><input
+            >{{ $t('items.fields.condition') }}</label><input
               id="item-condition"
               v-model="form.condition"
               class="form-control"
-              placeholder="Good, needs repair…"
+              :placeholder="$t('itemForm.conditionPlaceholder')"
             >
           </div><div class="col-md-6 mb-3">
             <label
               class="form-label"
               for="item-location"
-            >Location</label><input
+            >{{ $t('items.fields.location') }}</label><input
               id="item-location"
               v-model="form.location"
               class="form-control"
-              placeholder="Garage, box A…"
+              :placeholder="$t('itemForm.locationPlaceholder')"
             >
             <div
               v-if="form.parent_item_id"
               class="form-text"
             >
-              Displayed location is inherited from the parent container. This field keeps this
-              item's own saved location.
+              {{ $t('items.inheritedLocation') }} {{ $t('itemForm.ownLocation') }}
             </div>
           </div>
         </div>
@@ -227,17 +227,16 @@ onMounted(async () => {
           <label
             class="form-label"
             for="item-transferred-to"
-          >Transferred To</label>
+          >{{ $t('items.fields.transferredTo') }}</label>
           <FieldAutocomplete
             v-model="form.transferred_to"
             input-id="item-transferred-to"
             source="/api/items/transferred-to-suggestions"
             maxlength="255"
-            placeholder="Person or destination"
+            :placeholder="$t('itemForm.transferredToPlaceholder')"
           />
           <div class="form-text">
-            Where the item went if it was lent, given away, sold, or otherwise transferred. Leave empty when
-            nothing is recorded.
+            {{ $t('itemForm.transferredToHelp') }}
           </div>
         </div>
         <div class="row">
@@ -245,7 +244,7 @@ onMounted(async () => {
             <label
               class="form-label"
               for="item-purchase-date"
-            >Purchase Date</label><input
+            >{{ $t('items.fields.purchaseDate') }}</label><input
               id="item-purchase-date"
               v-model="form.purchase_date"
               class="form-control"
@@ -255,7 +254,7 @@ onMounted(async () => {
             <label
               class="form-label"
               for="item-serial-number"
-            >Serial Number</label><input
+            >{{ $t('items.fields.serialNumber') }}</label><input
               id="item-serial-number"
               v-model="form.serial_number"
               class="form-control"
@@ -267,7 +266,7 @@ onMounted(async () => {
           <label
             class="form-label"
             for="item-purchase-price"
-          >Purchase Price</label>
+          >{{ $t('items.fields.purchasePrice') }}</label>
           <div class="input-group">
             <input
               id="item-purchase-price"
@@ -280,7 +279,7 @@ onMounted(async () => {
             ><select
               v-model="form.purchase_price.currency"
               class="form-select"
-              aria-label="Purchase Price currency"
+              :aria-label="$t('itemForm.currency')"
             >
               <option
                 v-for="currency in currencies"
@@ -292,11 +291,11 @@ onMounted(async () => {
             </select>
           </div>
           <div class="form-text">
-            Clear the amount to leave the purchase price unspecified.
+            {{ $t('itemForm.priceHelp') }}
           </div>
         </div>
         <div class="mb-3">
-          <label class="form-label">Stored inside</label>
+          <label class="form-label">{{ $t('items.fields.storedInside') }}</label>
           <div
             v-if="parent"
             class="d-flex align-items-center gap-2 mb-2"
@@ -306,21 +305,21 @@ onMounted(async () => {
               class="btn btn-link btn-sm p-0"
               @click="selectParent(null)"
             >
-              Clear
+              {{ $t('common.clear') }}
             </button>
           </div>
           <div class="input-group">
             <input
               v-model="parentSearch"
               class="form-control"
-              placeholder="Search an item to store this one in…"
+              :placeholder="$t('itemForm.parentPlaceholder')"
               @keydown.enter.prevent="searchParents"
             ><button
               type="button"
               class="btn btn-outline-secondary"
               @click="searchParents"
             >
-              Search
+              {{ $t('common.search') }}
             </button>
           </div>
           <ul
@@ -338,15 +337,14 @@ onMounted(async () => {
             </li>
           </ul>
           <div class="form-text">
-            Leave empty to keep this item top-level. While an item is stored inside another one, its
-            displayed location is inherited from the parent container.
+            {{ $t('itemForm.parentHelp') }}
           </div>
         </div>
         <div class="mb-3">
           <label
             class="form-label"
             for="item-description"
-          >Description</label><textarea
+          >{{ $t('items.fields.description') }}</label><textarea
             id="item-description"
             v-model="form.description"
             class="form-control"
@@ -356,7 +354,7 @@ onMounted(async () => {
         <template v-if="fields.length">
           <hr>
           <h2 class="card-title mb-3">
-            Category fields
+            {{ $t('itemForm.categoryFields') }}
           </h2>
           <div
             v-for="field in fields"
@@ -374,9 +372,9 @@ onMounted(async () => {
               class="form-select"
             >
               <option value="0">
-                No
+                {{ $t('common.no') }}
               </option><option value="1">
-                Yes
+                {{ $t('common.yes') }}
               </option>
             </select>
             <FieldAutocomplete
@@ -396,7 +394,7 @@ onMounted(async () => {
         </template>
         <hr>
         <h2 class="card-title mb-3">
-          Photos
+          {{ $t('photos.title') }}
         </h2>
         <div
           v-if="existingPhotos.length"
@@ -415,7 +413,7 @@ onMounted(async () => {
             <button
               type="button"
               class="btn btn-danger btn-icon btn-sm position-absolute top-0 end-0 p-0 app-thumb-remove"
-              :aria-label="`Delete photo ${photo.filename}`"
+              :aria-label="$t('itemForm.deletePhoto', { name: photo.filename })"
               @click="removePhoto(photo.id)"
             >
               ×
@@ -425,7 +423,7 @@ onMounted(async () => {
         <input
           class="form-control"
           type="file"
-          aria-label="Add photos"
+          :aria-label="$t('itemForm.addPhotos')"
           accept="image/*"
           multiple
           @change="photos = Array.from($event.target.files)"
@@ -443,8 +441,8 @@ onMounted(async () => {
           >
         </div>
         <div class="form-text">
-          <span v-if="photos.length">{{ photos.length }} photo{{ photos.length === 1 ? '' : 's' }} ready to upload. Choose files to replace the selection. </span>
-          Up to 10 images, 15 MB each.
+          <span v-if="photos.length">{{ $t('itemForm.photosReady', photos.length) }} </span>
+          {{ $t('itemForm.photoLimits') }}
         </div>
       </div>
       <div class="card-footer d-flex flex-wrap gap-2 justify-content-end">
@@ -453,12 +451,12 @@ onMounted(async () => {
           class="btn btn-outline-secondary"
           @click="router.back()"
         >
-          Cancel
+          {{ $t('common.cancel') }}
         </button><button
           class="btn btn-primary"
           :disabled="saving || !categories.length"
         >
-          {{ saving ? 'Saving…' : 'Save item' }}
+          {{ saving ? $t('common.saving') : $t('itemForm.save') }}
         </button>
       </div>
     </form>

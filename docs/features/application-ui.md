@@ -4,7 +4,8 @@
 
 Every route shares one application shell built on the [Tabler](https://tabler.io) design system:
 a folded icon sidebar that expands on hover and on keyboard focus on desktops, an offcanvas
-navigation drawer below the `lg` breakpoint, and a light/dark colour-mode switch. Inside the shell,
+navigation drawer below the `lg` breakpoint, and a light/dark colour-mode switch. All of its text is
+translated as described in [`interface-localization.md`](interface-localization.md). Inside the shell,
 the items list, the item details page, the item form, the category manager, and the data page use
 Tabler page headers, cards, tables, forms, badges, pagination, and empty states.
 

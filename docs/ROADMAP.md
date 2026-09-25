@@ -25,11 +25,8 @@ Implemented behavior is documented separately in [`features/README.md`](features
    prefilled Add Item draft from an existing item without copying its identity, photos, or container.
    See [`TASK-DUPLICATE-ITEM.md`](issues/TASK-DUPLICATE-ITEM.md).
 
-5. **Frontend localization** — Planned. Adds English and Ukrainian interface locales, a persistent
-   language setting, and locale-aware formatting through Vue i18n. See
-   [`TASK-I18N-FRONTEND-LOCALIZATION.md`](issues/TASK-I18N-FRONTEND-LOCALIZATION.md).
-
-6. **Backend error localization** — Planned; blocked by Frontend localization. Replaces
+5. **Backend error localization** — Planned and unblocked by the completed
+   [interface localization](features/interface-localization.md). Replaces
    backend-supplied English messages with stable error codes and parameters translated by the UI.
    See [`TASK-I18N-BACKEND-ERROR-LOCALIZATION.md`](issues/TASK-I18N-BACKEND-ERROR-LOCALIZATION.md).
 

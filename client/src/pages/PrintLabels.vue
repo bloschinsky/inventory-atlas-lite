@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { api, jsonOptions } from '../api.js';
 import ItemQrCode from '../components/ItemQrCode.vue';
 import PageHeader from '../components/PageHeader.vue';
@@ -10,17 +11,15 @@ import { IconPrinter } from '@tabler/icons-vue';
   for printer margins, and gives the QR code a fixed size: text yields space, the code never does.
 */
 const PRESETS = {
-  large: { name: 'Large', columns: 2, rows: 4, width: 95, height: 69, padding: 4, qr: 45, font: 10, nameLines: 3, textLines: 4 },
-  standard: { name: 'Standard', columns: 3, rows: 7, width: 63, height: 39, padding: 2.5, qr: 30, font: 8, nameLines: 2, textLines: 3 },
-  compact: { name: 'Compact', columns: 3, rows: 10, width: 63, height: 27, padding: 2.5, qr: 22, font: 6.5, nameLines: 2, textLines: 2 }
+  large: { columns: 2, rows: 4, width: 95, height: 69, padding: 4, qr: 45, font: 10, nameLines: 3, textLines: 4 },
+  standard: { columns: 3, rows: 7, width: 63, height: 39, padding: 2.5, qr: 30, font: 8, nameLines: 2, textLines: 3 },
+  compact: { columns: 3, rows: 10, width: 63, height: 27, padding: 2.5, qr: 22, font: 6.5, nameLines: 2, textLines: 2 }
 };
 
-const METADATA = [
-  { key: 'name', label: 'Item name' },
-  { key: 'description', label: 'Description' },
-  { key: 'category', label: 'Category' },
-  { key: 'location', label: 'Location' }
-];
+// Their labels are the translation keys labels.show.<key>.
+const METADATA = ['name', 'description', 'category', 'location'].map(key => ({ key }));
+
+const { t } = useI18n();
 
 // The UUIDs arrive through history state (see labelSelection.js), which also survives a reload.
 const uuids = Array.isArray(window.history.state?.uuids) ? window.history.state.uuids : [];
@@ -53,8 +52,10 @@ const sheets = computed(() => {
   for (let start = 0; start < labels.value.length; start += perSheet) result.push(labels.value.slice(start, start + perSheet));
   return result;
 });
-const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;
-const summary = computed(() => `${plural(labels.value.length, 'label')} on ${plural(sheets.value.length, 'A4 page')}`);
+const summary = computed(() => t('labels.summary', {
+  labels: t('labels.labelCount', labels.value.length),
+  pages: t('labels.pageCount', sheets.value.length)
+}));
 
 const print = () => window.print();
 
@@ -74,15 +75,15 @@ onMounted(async () => {
 
 <template>
   <PageHeader
-    title="Print Labels"
-    :subtitle="`${plural(uuids.length, 'item')} selected`"
+    :title="$t('labels.title')"
+    :subtitle="$t('labels.itemsSelected', uuids.length)"
   >
     <template #actions>
       <RouterLink
         to="/items"
         class="btn"
       >
-        Back to Items
+        {{ $t('labels.back') }}
       </RouterLink>
       <button
         type="button"
@@ -94,7 +95,7 @@ onMounted(async () => {
           :size="18"
           aria-hidden="true"
         />
-        Print
+        {{ $t('labels.print') }}
       </button>
     </template>
   </PageHeader>
@@ -105,17 +106,17 @@ onMounted(async () => {
   >
     <div class="empty">
       <p class="empty-title">
-        No items selected
+        {{ $t('labels.noSelection') }}
       </p>
       <p class="empty-subtitle text-secondary">
-        Select items with their checkboxes on the Items page, then press Print Labels.
+        {{ $t('labels.noSelectionText') }}
       </p>
       <div class="empty-action">
         <RouterLink
           to="/items"
           class="btn btn-primary"
         >
-          Go to Items
+          {{ $t('labels.goToItems') }}
         </RouterLink>
       </div>
     </div>
@@ -134,8 +135,7 @@ onMounted(async () => {
       class="alert alert-warning d-print-none"
       role="alert"
     >
-      {{ plural(missing.length, 'selected item') }} no longer {{ missing.length === 1 ? 'exists' : 'exist' }} and
-      {{ missing.length === 1 ? 'was' : 'were' }} skipped.
+      {{ $t('labels.missing', missing.length) }}
     </div>
 
     <div
@@ -147,7 +147,7 @@ onMounted(async () => {
           class="spinner-border spinner-border-sm"
           aria-hidden="true"
         />
-        Loading labels…
+        {{ $t('labels.loading') }}
       </div>
     </div>
 
@@ -158,7 +158,7 @@ onMounted(async () => {
             <label
               class="form-label"
               for="labels-layout"
-            >Layout</label>
+            >{{ $t('labels.layout') }}</label>
             <select
               id="labels-layout"
               v-model="presetKey"
@@ -169,13 +169,13 @@ onMounted(async () => {
                 :key="key"
                 :value="key"
               >
-                {{ option.name }} ({{ option.columns * option.rows }} per page)
+                {{ $t(`labels.presets.${key}`, { n: option.columns * option.rows }) }}
               </option>
             </select>
           </div>
           <fieldset class="col-12 col-sm-8 col-lg-6">
             <legend class="form-label">
-              Show on labels
+              {{ $t('labels.showOnLabels') }}
             </legend>
             <label class="form-check form-check-inline">
               <input
@@ -184,7 +184,7 @@ onMounted(async () => {
                 checked
                 disabled
               >
-              <span class="form-check-label">QR Code</span>
+              <span class="form-check-label">{{ $t('qr.title') }}</span>
             </label>
             <label
               v-for="field in METADATA"
@@ -196,7 +196,7 @@ onMounted(async () => {
                 type="checkbox"
                 class="form-check-input"
               >
-              <span class="form-check-label">{{ field.label }}</span>
+              <span class="form-check-label">{{ $t(`labels.show.${field.key}`) }}</span>
             </label>
           </fieldset>
           <div
@@ -217,7 +217,7 @@ onMounted(async () => {
           v-for="(sheet, index) in sheets"
           :key="`${presetKey}-${index}`"
           class="label-sheet"
-          :aria-label="`Label page ${index + 1} of ${sheets.length}`"
+          :aria-label="$t('labels.sheet', { page: index + 1, pages: sheets.length })"
         >
           <div
             v-for="item in sheet"
@@ -225,7 +225,7 @@ onMounted(async () => {
             class="print-label"
             :class="{ 'print-label-qr-only': !showsText }"
             role="group"
-            :aria-label="`Label: ${item.name}`"
+            :aria-label="$t('labels.label', { name: item.name })"
           >
             <ItemQrCode :uuid="item.uuid" />
             <div
@@ -268,10 +268,10 @@ onMounted(async () => {
     >
       <div class="empty">
         <p class="empty-title">
-          Nothing to print
+          {{ $t('labels.nothing') }}
         </p>
         <p class="empty-subtitle text-secondary">
-          None of the selected items exist any more.
+          {{ $t('labels.nothingText') }}
         </p>
       </div>
     </div>

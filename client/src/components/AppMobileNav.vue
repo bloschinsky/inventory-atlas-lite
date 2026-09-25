@@ -54,7 +54,7 @@ onBeforeUnmount(() => {
         ref="menuButton"
         type="button"
         class="btn btn-icon app-menu-button"
-        aria-label="Open navigation menu"
+        :aria-label="$t('nav.openMenu')"
         :aria-expanded="menuOpen"
         @click="openMenu"
       >
@@ -86,7 +86,7 @@ onBeforeUnmount(() => {
       tabindex="-1"
       role="dialog"
       aria-modal="true"
-      aria-label="Main navigation"
+      :aria-label="$t('nav.mainNavigation')"
     >
       <div class="offcanvas-header">
         <span class="navbar-brand app-brand m-0 p-0">
@@ -96,12 +96,12 @@ onBeforeUnmount(() => {
           ref="closeButton"
           type="button"
           class="btn-close"
-          aria-label="Close navigation menu"
+          :aria-label="$t('nav.closeMenu')"
           @click="closeMenu()"
         />
       </div>
       <div class="offcanvas-body">
-        <nav aria-label="Main">
+        <nav :aria-label="$t('nav.main')">
           <!-- About opens a dialog instead of a route, so the drawer cannot wait for a navigation. -->
           <AppNavigation @navigate="closeMenu(false)" />
         </nav>

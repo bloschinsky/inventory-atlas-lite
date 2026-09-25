@@ -25,7 +25,7 @@ function showAbout() {
       <RouterLink
         :to="link.to"
         class="nav-link"
-        :title="link.label"
+        :title="$t(link.label)"
         :aria-current="isLinkActive(link, route.path) ? 'page' : undefined"
         @click="$emit('navigate')"
       >
@@ -37,14 +37,14 @@ function showAbout() {
             aria-hidden="true"
           />
         </span>
-        <span class="nav-link-title">{{ link.label }}</span>
+        <span class="nav-link-title">{{ $t(link.label) }}</span>
       </RouterLink>
     </li>
     <li class="nav-item">
       <button
         type="button"
         class="nav-link nav-link-button"
-        title="About"
+        :title="$t('nav.about')"
         @click="showAbout"
       >
         <span class="nav-link-icon">
@@ -54,7 +54,7 @@ function showAbout() {
             aria-hidden="true"
           />
         </span>
-        <span class="nav-link-title">About</span>
+        <span class="nav-link-title">{{ $t('nav.about') }}</span>
       </button>
     </li>
   </ul>

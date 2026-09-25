@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.33.0",
+    "date": "2026-09-25",
+    "changes": [
+      "The interface is now available in English and Ukrainian: choose the language in Settings → Interface, and it changes at once without a reload.",
+      "The language is remembered in this browser only; English stays the default, and anything not yet translated falls back to English.",
+      "Dates, numbers, prices, and file sizes are shown in the format of the chosen language, while item names, categories, fields, and every other value you entered are never translated."
+    ]
+  },
+  {
     "version": "0.32.1",
     "date": "2026-09-24",
     "changes": [

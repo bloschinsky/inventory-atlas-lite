@@ -1,9 +1,11 @@
 <script setup>
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import qrcode from 'qrcode-generator';
 import { encodeItemQrPayload } from '../../../shared/itemQr.js';
 
 const props = defineProps({ uuid: { type: String, required: true } });
+const { t } = useI18n();
 
 // Quiet zone required around a QR code, expressed in modules like the code itself.
 const MARGIN = 4;
@@ -27,7 +29,7 @@ const code = computed(() => {
     }
     return { payload, path, size: count + MARGIN * 2, error: '' };
   } catch (generationError) {
-    return { error: `The QR code could not be generated: ${generationError.message}` };
+    return { error: t('qr.generationFailed', { reason: generationError.message }) };
   }
 });
 </script>
@@ -45,7 +47,7 @@ const code = computed(() => {
     v-else
     class="item-qr-code"
     role="img"
-    :aria-label="`QR code for ${code.payload}`"
+    :aria-label="$t('qr.codeFor', { payload: code.payload })"
     :viewBox="`0 0 ${code.size} ${code.size}`"
     xmlns="http://www.w3.org/2000/svg"
   >

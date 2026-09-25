@@ -62,13 +62,13 @@ onBeforeUnmount(release);
               id="about-dialog-title"
               class="modal-title"
             >
-              About
+              {{ $t('about.title') }}
             </h2>
             <button
               ref="closeButton"
               type="button"
               class="btn-close"
-              aria-label="Close About"
+              :aria-label="$t('about.close')"
               @click="closeAbout()"
             />
           </div>
@@ -77,17 +77,17 @@ onBeforeUnmount(release);
               <AppBrand />
             </div>
             <dl class="app-about-meta mb-3">
-              <dt>Version</dt>
+              <dt>{{ $t('about.version') }}</dt>
               <dd>{{ appInfo.version }}</dd>
-              <dt>Build</dt>
+              <dt>{{ $t('about.build') }}</dt>
               <dd class="font-monospace">
                 {{ appInfo.build }}
               </dd>
-              <dt>Build date</dt>
+              <dt>{{ $t('about.buildDate') }}</dt>
               <dd>{{ appInfo.buildDate }}</dd>
             </dl>
             <p class="mb-3">
-              Developed by {{ appInfo.developer }}
+              {{ $t('about.developedBy', { developer: appInfo.developer }) }}
             </p>
             <a
               class="btn btn-outline-secondary w-100"
@@ -101,7 +101,7 @@ onBeforeUnmount(release);
                 :stroke-width="1.75"
                 aria-hidden="true"
               />
-              GitHub repository
+              {{ $t('about.repository') }}
             </a>
             <button
               type="button"
@@ -114,7 +114,7 @@ onBeforeUnmount(release);
                 :stroke-width="1.75"
                 aria-hidden="true"
               />
-              Version History
+              {{ $t('versionHistory.title') }}
             </button>
             <AboutUpdate />
           </div>
@@ -124,7 +124,7 @@ onBeforeUnmount(release);
               class="btn w-100"
               @click="closeAbout()"
             >
-              Close
+              {{ $t('common.close') }}
             </button>
           </div>
         </div>

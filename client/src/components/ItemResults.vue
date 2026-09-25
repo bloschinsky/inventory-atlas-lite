@@ -28,44 +28,44 @@ const editRoute = item => `/items/${item.id}/edit`;
               <input
                 type="checkbox"
                 class="form-check-input m-0 align-middle"
-                aria-label="Select all items on this page"
+                :aria-label="$t('items.selectPage')"
                 :checked="pageSelected"
                 :indeterminate="pagePartlySelected"
                 @change="togglePage($event.target.checked)"
               >
             </th>
             <th scope="col">
-              Photo
+              {{ $t('items.fields.photo') }}
             </th>
             <th
               scope="col"
               class="name-cell"
             >
-              Name
+              {{ $t('items.fields.name') }}
             </th>
             <th scope="col">
-              Category
+              {{ $t('items.fields.category') }}
             </th>
             <th scope="col">
-              Condition
+              {{ $t('items.fields.condition') }}
             </th>
             <th
               scope="col"
               class="d-none d-xl-table-cell"
             >
-              Location
+              {{ $t('items.fields.location') }}
             </th>
             <th
               scope="col"
               class="d-none d-xl-table-cell"
             >
-              Stored inside
+              {{ $t('items.fields.storedInside') }}
             </th>
             <th
               scope="col"
               class="text-end"
             >
-              Actions
+              {{ $t('common.actions') }}
             </th>
           </tr>
         </thead>
@@ -78,7 +78,7 @@ const editRoute = item => `/items/${item.id}/edit`;
               <input
                 type="checkbox"
                 class="form-check-input m-0 align-middle"
-                :aria-label="`Select ${item.name}`"
+                :aria-label="$t('items.select', { name: item.name })"
                 :checked="labelSelection.has(item.uuid)"
                 @change="toggleLabelSelection(item.uuid, $event.target.checked)"
               >
@@ -101,7 +101,7 @@ const editRoute = item => `/items/${item.id}/edit`;
                 class="mt-1"
               >
                 <span class="badge bg-azure-lt text-wrap text-break text-start">
-                  Transferred to: {{ item.transferred_to }}
+                  {{ $t('items.transferredTo', { name: item.transferred_to }) }}
                 </span>
               </div>
               <span
@@ -111,7 +111,7 @@ const editRoute = item => `/items/${item.id}/edit`;
                 <template v-if="item.effective_location">{{ item.effective_location }}</template>
                 <template v-if="item.effective_location && item.parent_id"> · </template>
                 <template v-if="item.parent_id">
-                  Stored inside
+                  {{ $t('items.fields.storedInside') }}
                   <RouterLink :to="`/items/${item.parent_id}`">{{ item.parent_name }}</RouterLink>
                 </template>
               </span>
@@ -140,16 +140,16 @@ const editRoute = item => `/items/${item.id}/edit`;
               <RouterLink
                 :to="detailsRoute(item)"
                 class="btn btn-sm me-1"
-                :aria-label="`View ${item.name}`"
+                :aria-label="$t('items.viewItem', { name: item.name })"
               >
-                View
+                {{ $t('common.view') }}
               </RouterLink>
               <RouterLink
                 :to="editRoute(item)"
                 class="btn btn-sm btn-primary"
-                :aria-label="`Edit ${item.name}`"
+                :aria-label="$t('items.editItem', { name: item.name })"
               >
-                Edit
+                {{ $t('common.edit') }}
               </RouterLink>
             </td>
           </tr>
@@ -171,7 +171,7 @@ const editRoute = item => `/items/${item.id}/edit`;
             <input
               type="checkbox"
               class="form-check-input m-0"
-              :aria-label="`Select ${item.name}`"
+              :aria-label="$t('items.select', { name: item.name })"
               :checked="labelSelection.has(item.uuid)"
               @change="toggleLabelSelection(item.uuid, $event.target.checked)"
             >
@@ -195,7 +195,7 @@ const editRoute = item => `/items/${item.id}/edit`;
               v-if="item.parent_id"
               class="meta-text mb-0"
             >
-              Stored inside
+              {{ $t('items.fields.storedInside') }}
               <RouterLink :to="`/items/${item.parent_id}`">
                 {{ item.parent_name }}
               </RouterLink>
@@ -219,7 +219,7 @@ const editRoute = item => `/items/${item.id}/edit`;
               class="mb-0 mt-1"
             >
               <span class="badge bg-azure-lt text-wrap text-break text-start">
-                Transferred to: {{ item.transferred_to }}
+                {{ $t('items.transferredTo', { name: item.transferred_to }) }}
               </span>
             </p>
           </div>
@@ -228,16 +228,16 @@ const editRoute = item => `/items/${item.id}/edit`;
           <RouterLink
             :to="detailsRoute(item)"
             class="btn btn-sm flex-fill flex-sm-grow-0 px-sm-4"
-            :aria-label="`View ${item.name}`"
+            :aria-label="$t('items.viewItem', { name: item.name })"
           >
-            View
+            {{ $t('common.view') }}
           </RouterLink>
           <RouterLink
             :to="editRoute(item)"
             class="btn btn-sm btn-primary flex-fill flex-sm-grow-0 px-sm-4"
-            :aria-label="`Edit ${item.name}`"
+            :aria-label="$t('items.editItem', { name: item.name })"
           >
-            Edit
+            {{ $t('common.edit') }}
           </RouterLink>
         </div>
       </div>

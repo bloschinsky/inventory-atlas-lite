@@ -1,11 +1,13 @@
 <script setup>
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { api } from '../api.js';
 import PageHeader from '../components/PageHeader.vue';
 import { decodeQrFrom, decodeQrFromFile, readScannedText } from '../qrScan.js';
 
 const router = useRouter();
+const { t } = useI18n();
 const video = ref(null);
 const fileInput = ref(null);
 // starting → live → stopped, or unavailable when the browser cannot give us a camera at all.
@@ -23,10 +25,10 @@ let mounted = true;
 let handling = false;
 
 function cameraErrorMessage(caught) {
-  if (caught?.name === 'NotAllowedError' || caught?.name === 'SecurityError') return 'Camera access was denied.';
-  if (caught?.name === 'NotFoundError' || caught?.name === 'OverconstrainedError') return 'No camera was found on this device.';
-  if (caught?.name === 'NotReadableError') return 'The camera is being used by another application.';
-  return 'The camera could not be started.';
+  if (caught?.name === 'NotAllowedError' || caught?.name === 'SecurityError') return t('scan.errors.denied');
+  if (caught?.name === 'NotFoundError' || caught?.name === 'OverconstrainedError') return t('scan.errors.noCamera');
+  if (caught?.name === 'NotReadableError') return t('scan.errors.busy');
+  return t('scan.errors.cameraFailed');
 }
 
 function stopCamera() {
@@ -48,9 +50,7 @@ async function startCamera() {
   error.value = '';
   // Browsers only expose the camera to secure pages, so a plain-HTTP LAN address has no API at all.
   if (!navigator.mediaDevices?.getUserMedia) {
-    cameraUnavailable(window.isSecureContext
-      ? 'This browser does not offer camera access.'
-      : 'The live camera only works when the application is opened over HTTPS or on localhost.');
+    cameraUnavailable(t(window.isSecureContext ? 'scan.errors.noCameraApi' : 'scan.errors.insecure'));
     return;
   }
   camera.value = 'starting';
@@ -93,7 +93,7 @@ async function handle(text) {
   error.value = '';
   const result = readScannedText(text);
   if (result.error) {
-    error.value = result.error;
+    error.value = t(result.error);
     handling = false;
     return;
   }
@@ -119,10 +119,11 @@ async function scanImage(event) {
   error.value = '';
   try {
     const text = await decodeQrFromFile(file);
-    if (text === null) error.value = 'No QR code was found in this image.';
+    if (text === null) error.value = t('scan.errors.noCode');
     else await handle(text);
   } catch (caught) {
-    error.value = caught.message;
+    // decodeQrFromFile reports an unreadable image by the key of its message.
+    error.value = t(caught.message);
   }
 }
 
@@ -134,7 +135,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <PageHeader title="Scan QR" />
+  <PageHeader :title="$t('scan.title')" />
 
   <div class="row justify-content-center">
     <div class="col-12 col-md-8 col-lg-6">
@@ -145,13 +146,20 @@ onBeforeUnmount(() => {
             class="alert alert-warning mb-0"
           >
             <h2 class="alert-heading h4">
-              Camera unavailable
+              {{ $t('scan.unavailable') }}
             </h2>
             <p class="mb-1">
               {{ cameraProblem }}
             </p>
             <p class="mb-0">
-              You can still use <strong>Scan from image</strong> with a photo or a screenshot of the label.
+              <i18n-t
+                keypath="scan.useImage"
+                scope="global"
+              >
+                <template #action>
+                  <strong>{{ $t('scan.fromImage') }}</strong>
+                </template>
+              </i18n-t>
             </p>
           </div>
           <template v-else>
@@ -159,7 +167,7 @@ onBeforeUnmount(() => {
               v-show="camera !== 'stopped'"
               ref="video"
               class="app-scan-preview"
-              aria-label="Camera preview"
+              :aria-label="$t('scan.preview')"
               muted
               playsinline
             />
@@ -167,13 +175,13 @@ onBeforeUnmount(() => {
               v-if="camera === 'starting'"
               class="text-secondary text-center mb-0"
             >
-              Starting the camera…
+              {{ $t('scan.starting') }}
             </p>
             <p
               v-else-if="camera === 'live'"
               class="text-secondary text-center mb-0"
             >
-              Point the camera at an Inventory Atlas label.
+              {{ $t('scan.point') }}
             </p>
           </template>
 
@@ -186,7 +194,7 @@ onBeforeUnmount(() => {
               class="spinner-border spinner-border-sm"
               aria-hidden="true"
             />
-            Opening the item…
+            {{ $t('scan.opening') }}
           </div>
           <div
             v-if="error"
@@ -203,7 +211,7 @@ onBeforeUnmount(() => {
               class="btn btn-primary flex-fill"
               @click="startCamera"
             >
-              Scan again
+              {{ $t('scan.again') }}
             </button>
             <button
               type="button"
@@ -211,7 +219,7 @@ onBeforeUnmount(() => {
               :disabled="checking"
               @click="fileInput.click()"
             >
-              Scan from image
+              {{ $t('scan.fromImage') }}
             </button>
             <input
               ref="fileInput"
@@ -222,7 +230,7 @@ onBeforeUnmount(() => {
             >
           </div>
           <p class="meta-text mb-0">
-            Codes are read on this device; camera frames and chosen images are never uploaded.
+            {{ $t('scan.privacy') }}
           </p>
         </div>
       </section>

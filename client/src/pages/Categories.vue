@@ -1,28 +1,31 @@
 <script setup>
 import { onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { api, jsonOptions } from '../api.js';
 import { capabilities } from '../capabilities.js';
 import PageHeader from '../components/PageHeader.vue';
 import BatchAddFieldsDialog from '../components/BatchAddFieldsDialog.vue';
+import { FIELD_TYPES } from '../../../shared/fieldDefinitions.js';
 
 defineOptions({ name: 'CategoryManager' });
+const { t } = useI18n();
 
 const categories = ref([]); const selected = ref(null); const fields = ref([]); const categoryName = ref('');
 const newField = ref({ name: '', type: 'text' }); const error = ref(''); const dialogMode = ref('');
 async function load() { categories.value = await api('/api/categories'); if (selected.value) selected.value = categories.value.find(c => c.id === selected.value.id) || null; }
 async function select(category) { selected.value = category; fields.value = await api(`/api/categories/${category.id}/fields`); }
 async function addCategory() { try { await api('/api/categories', jsonOptions('POST', { name: categoryName.value })); categoryName.value = ''; await load(); } catch (e) { error.value = e.message; } }
-async function rename(category) { const name = prompt('New category name:', category.name); if (!name || name === category.name) return; try { await api(`/api/categories/${category.id}`, jsonOptions('PUT', { name })); await load(); } catch (e) { error.value = e.message; } }
-async function removeCategory(category) { if (!confirm(`Delete category “${category.name}”?`)) return; try { await api(`/api/categories/${category.id}`, { method: 'DELETE' }); if (selected.value?.id === category.id) { selected.value = null; fields.value = []; } await load(); } catch (e) { error.value = e.message; } }
+async function rename(category) { const name = prompt(t('categories.renamePrompt'), category.name); if (!name || name === category.name) return; try { await api(`/api/categories/${category.id}`, jsonOptions('PUT', { name })); await load(); } catch (e) { error.value = e.message; } }
+async function removeCategory(category) { if (!confirm(t('categories.confirmDelete', { name: category.name }))) return; try { await api(`/api/categories/${category.id}`, { method: 'DELETE' }); if (selected.value?.id === category.id) { selected.value = null; fields.value = []; } await load(); } catch (e) { error.value = e.message; } }
 async function addField() { try { await api(`/api/categories/${selected.value.id}/fields`, jsonOptions('POST', newField.value)); newField.value = { name: '', type: 'text' }; await select(selected.value); await load(); } catch (e) { error.value = e.message; } }
 async function batchCreated() { dialogMode.value = ''; await select(selected.value); await load(); }
-async function removeField(field) { if (!confirm(`Delete field “${field.name}”? Saved values may also be deleted.`)) return; try { await api(`/api/fields/${field.id}?confirm=true`, { method: 'DELETE' }); await select(selected.value); await load(); } catch (e) { error.value = e.message; } }
+async function removeField(field) { if (!confirm(t('categories.confirmDeleteField', { name: field.name }))) return; try { await api(`/api/fields/${field.id}?confirm=true`, { method: 'DELETE' }); await select(selected.value); await load(); } catch (e) { error.value = e.message; } }
 onMounted(() => load().catch(e => error.value = e.message));
 </script>
 <template>
   <PageHeader
-    title="Categories &amp; Fields"
-    subtitle="Categories group items; custom fields belong to one category."
+    :title="$t('categories.title')"
+    :subtitle="$t('categories.subtitle')"
   />
   <div
     v-if="error"
@@ -31,7 +34,7 @@ onMounted(() => load().catch(e => error.value = e.message));
   >
     {{ error }}<button
       class="btn-close"
-      aria-label="Dismiss error"
+      :aria-label="$t('common.dismissError')"
       @click="error = ''"
     />
   </div>
@@ -40,7 +43,7 @@ onMounted(() => load().catch(e => error.value = e.message));
       <div class="card">
         <div class="card-header">
           <h2 class="card-title">
-            Categories
+            {{ $t('categories.categories') }}
           </h2>
         </div><div class="card-body border-bottom">
           <form
@@ -50,10 +53,10 @@ onMounted(() => load().catch(e => error.value = e.message));
             <input
               v-model="categoryName"
               class="form-control"
-              placeholder="New category name"
+              :placeholder="$t('categories.newCategory')"
               required
             ><button class="btn btn-primary">
-              Add
+              {{ $t('common.add') }}
             </button>
           </form>
         </div>
@@ -71,22 +74,22 @@ onMounted(() => load().catch(e => error.value = e.message));
             <span><strong>{{ c.name }}</strong><small
               class="d-block"
               :class="selected?.id === c.id ? 'text-white-50' : 'text-secondary'"
-            >{{ c.item_count }} items · {{ c.field_count }} fields</small></span><span class="d-flex gap-1"><button
+            >{{ $t('categories.itemCount', c.item_count) }} · {{ $t('categories.fieldCount', c.field_count) }}</small></span><span class="d-flex gap-1"><button
               type="button"
               class="btn btn-sm"
               :class="selected?.id === c.id ? 'btn-outline-light' : 'btn-outline-secondary'"
               @click.stop="rename(c)"
-            >Rename</button><button
+            >{{ $t('common.rename') }}</button><button
               type="button"
               class="btn btn-sm"
               :class="selected?.id === c.id ? 'btn-outline-light' : 'btn-outline-danger'"
               @click.stop="removeCategory(c)"
-            >Delete</button></span>
+            >{{ $t('common.delete') }}</button></span>
           </div><div
             v-if="!categories.length"
             class="p-3 text-secondary"
           >
-            No categories yet.
+            {{ $t('categories.empty') }}
           </div>
         </div>
       </div>
@@ -95,13 +98,13 @@ onMounted(() => load().catch(e => error.value = e.message));
       <div class="card">
         <div class="card-header">
           <h2 class="card-title">
-            Fields <span v-if="selected">for {{ selected.name }}</span>
+            {{ selected ? $t('categories.fieldsFor', { name: selected.name }) : $t('categories.fields') }}
           </h2>
         </div><div
           v-if="!selected"
           class="card-body text-secondary"
         >
-          Select a category.
+          {{ $t('categories.selectCategory') }}
         </div><template v-else>
           <div class="card-body border-bottom">
             <form
@@ -112,28 +115,26 @@ onMounted(() => load().catch(e => error.value = e.message));
                 <input
                   v-model="newField.name"
                   class="form-control"
-                  placeholder="Field name"
+                  :placeholder="$t('categories.fieldName')"
                   required
                 >
               </div><div class="col-4">
                 <select
                   v-model="newField.type"
                   class="form-select"
-                  aria-label="Field type"
+                  :aria-label="$t('categories.fieldType')"
                 >
-                  <option value="text">
-                    Text
-                  </option><option value="number">
-                    Number
-                  </option><option value="date">
-                    Date
-                  </option><option value="boolean">
-                    Boolean
+                  <option
+                    v-for="type in FIELD_TYPES"
+                    :key="type.value"
+                    :value="type.value"
+                  >
+                    {{ $t(`fieldTypes.${type.value}`) }}
                   </option>
                 </select>
               </div><div class="col-2">
                 <button class="btn btn-primary w-100">
-                  Add
+                  {{ $t('common.add') }}
                 </button>
               </div>
             </form>
@@ -143,7 +144,7 @@ onMounted(() => load().catch(e => error.value = e.message));
                 class="btn btn-outline-primary btn-sm"
                 @click="dialogMode = 'json'"
               >
-                Batch Add Fields
+                {{ $t('batchFields.title') }}
               </button>
               <button
                 v-if="capabilities.ai.enabled"
@@ -151,7 +152,7 @@ onMounted(() => load().catch(e => error.value = e.message));
                 class="btn btn-outline-primary btn-sm"
                 @click="dialogMode = 'ai'"
               >
-                AI Add Fields
+                {{ $t('batchFields.aiTitle') }}
               </button>
             </div>
           </div>
@@ -161,17 +162,17 @@ onMounted(() => load().catch(e => error.value = e.message));
               :key="field.id"
               class="list-group-item d-flex justify-content-between align-items-center"
             >
-              <span>{{ field.name }} <span class="badge bg-blue-lt">{{ field.type }}</span></span><button
+              <span>{{ field.name }} <span class="badge bg-blue-lt">{{ $t(`fieldTypes.${field.type}`) }}</span></span><button
                 class="btn btn-outline-danger btn-sm"
                 @click="removeField(field)"
               >
-                Delete
+                {{ $t('common.delete') }}
               </button>
             </li><li
               v-if="!fields.length"
               class="list-group-item text-secondary"
             >
-              No custom fields.
+              {{ $t('categories.noFields') }}
             </li>
           </ul>
         </template>

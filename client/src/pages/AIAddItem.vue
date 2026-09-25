@@ -1,12 +1,14 @@
 <script setup>
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { api, apiBlob } from '../api.js';
 import { setPendingAiDraft } from '../aiDraft.js';
 import { capabilities } from '../capabilities.js';
 import PageHeader from '../components/PageHeader.vue';
 
 const router = useRouter();
+const { t } = useI18n();
 const image = ref(null);
 const description = ref('');
 const removeBackground = ref(false);
@@ -23,7 +25,7 @@ function selectImage(event) {
 }
 
 async function createDraft() {
-  if (!canSubmit.value) { error.value = 'Add a photo or describe the item before creating a draft.'; return; }
+  if (!canSubmit.value) { error.value = t('aiAddItem.inputRequired'); return; }
   creating.value = true; error.value = '';
   try {
     const data = new FormData();
@@ -46,7 +48,7 @@ async function createDraft() {
         const originalName = image.value.name.replace(/\.[^.]+$/, '') || 'item';
         finalPhoto = new File([backgroundResult.value], `${originalName}-background-removed.jpg`, { type: 'image/jpeg' });
       } else {
-        photoWarning = 'Background removal failed. The original photo will be used instead.';
+        photoWarning = t('aiAddItem.backgroundFailed');
       }
     }
     setPendingAiDraft(analysisResult.value, finalPhoto, photoWarning);
@@ -64,8 +66,8 @@ onBeforeUnmount(() => { if (previewUrl.value) URL.revokeObjectURL(previewUrl.val
 <template>
   <div class="form-card">
     <PageHeader
-      title="AI Add Item"
-      subtitle="Add a photo, describe the item, or use both. AI will prepare an editable draft for review."
+      :title="$t('aiAddItem.title')"
+      :subtitle="$t('aiAddItem.subtitle')"
     />
     <div
       v-if="error"
@@ -84,15 +86,14 @@ onBeforeUnmount(() => { if (previewUrl.value) URL.revokeObjectURL(previewUrl.val
           class="alert alert-info"
           role="status"
         >
-          The selected model does not support image input, so the draft is created from the
-          description alone. You can still add photos to the item while reviewing it.
+          {{ $t('aiAddItem.textOnly') }}
         </div>
         <template v-else>
           <div class="mb-3">
             <label
               class="form-label"
               for="ai-item-image"
-            >Item photo (optional)</label>
+            >{{ $t('aiAddItem.photo') }}</label>
             <input
               id="ai-item-image"
               class="form-control"
@@ -101,13 +102,13 @@ onBeforeUnmount(() => { if (previewUrl.value) URL.revokeObjectURL(previewUrl.val
               @change="selectImage"
             >
             <div class="form-text">
-              JPEG, PNG, WebP, or GIF; up to 15 MB. The original photo is always used for AI analysis.
+              {{ $t('aiAddItem.photoHelp') }}
             </div>
           </div>
           <img
             v-if="previewUrl"
             :src="previewUrl"
-            alt="Selected item preview"
+            :alt="$t('aiAddItem.preview')"
             class="img-thumbnail mb-3 app-ai-preview"
           >
           <template v-if="image">
@@ -117,10 +118,10 @@ onBeforeUnmount(() => { if (previewUrl.value) URL.revokeObjectURL(previewUrl.val
                 class="form-check-input"
                 type="checkbox"
               >
-              <span class="form-check-label">Remove background</span>
+              <span class="form-check-label">{{ $t('aiAddItem.removeBackground') }}</span>
             </label>
             <div class="form-text mb-3">
-              Runs locally and affects only the final inventory photo. AI analysis still uses the original.
+              {{ $t('aiAddItem.removeBackgroundHelp') }}
             </div>
           </template>
         </template>
@@ -128,18 +129,17 @@ onBeforeUnmount(() => { if (previewUrl.value) URL.revokeObjectURL(previewUrl.val
           <label
             class="form-label"
             for="ai-item-description"
-          >Item description (optional)</label>
+          >{{ $t('aiAddItem.description') }}</label>
           <textarea
             id="ai-item-description"
             v-model="description"
             class="form-control"
             rows="3"
             maxlength="2000"
-            placeholder="For example: Old NVIDIA graphics card. I think it is a RIVA TNT2."
+            :placeholder="$t('aiAddItem.descriptionPlaceholder')"
           />
           <div class="form-text">
-            Describe the item and include any details you already know, such as brand, model, serial
-            number, condition, purchase information, or location.
+            {{ $t('aiAddItem.descriptionHelp') }}
           </div>
         </div>
       </div>
@@ -148,7 +148,7 @@ onBeforeUnmount(() => { if (previewUrl.value) URL.revokeObjectURL(previewUrl.val
           to="/items"
           class="btn btn-outline-secondary"
         >
-          Cancel
+          {{ $t('common.cancel') }}
         </RouterLink>
         <button
           class="btn btn-primary"
@@ -159,7 +159,7 @@ onBeforeUnmount(() => { if (previewUrl.value) URL.revokeObjectURL(previewUrl.val
             class="spinner-border spinner-border-sm me-1"
             aria-hidden="true"
           />
-          {{ creating ? 'Creating Draft…' : 'Create Draft' }}
+          {{ creating ? $t('aiAddItem.creating') : $t('aiAddItem.create') }}
         </button>
       </div>
     </form>

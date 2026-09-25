@@ -42,6 +42,10 @@ inventory, so keep it on a trusted LAN or behind a VPN.
 
 ## 3. Recommended first setup
 
+To use the interface in Ukrainian, first choose **Українська** under **Settings → Interface →
+Language**; see [Change the interface language](#change-the-interface-language). The steps below use
+the English names.
+
 1. Open **Categories & Fields** in the navigation and create your first category, for example
    `Cameras`. Type the name into **New category name** and press **Add**.
 2. Click the category in the list to select it, then add its custom fields on the right: type a
@@ -451,6 +455,20 @@ already contains; the server rejects such a move with an error message.
    nothing on the server, so each browser and device can use a different mode.
 3. Until you press one of them, the application follows your operating system's colour scheme.
 
+### Change the interface language
+
+1. Open **Settings**. The first card, **Interface**, holds the **Language** selector.
+2. Choose **English** or **Українська**. Every page, the navigation, and open dialogs switch at once;
+   no reload is needed.
+3. The choice is stored in this browser only and survives a reload. Other browsers and devices keep
+   their own language, and a browser without a choice uses English.
+4. Dates, numbers, prices, and file sizes follow the chosen language, for example `Nov 18, 2024` and
+   `$49.99` in English, `18 лист. 2024 р.` and `49,99 USD` in Ukrainian. The stored values do not
+   change.
+5. Only the interface is translated. Item, category, and field names, descriptions, locations, and
+   every other value you entered are shown exactly as saved. Messages sent by the server, such as
+   validation errors, and the release notes in **Version History** are still in English.
+
 ### Download a backup
 
 1. Open **Data / Backup**.
@@ -725,6 +743,8 @@ backup, and keep the copies on a different machine than the server.
 - Only providers with an OpenAI-compatible API are supported, one at a time. Whether a model accepts
   photos is detected only for OpenAI and OpenRouter; for other servers set **Image input** yourself.
   Small local models may return unusable answers, which are reported and never saved.
+- The interface is available in English and Ukrainian only. Server messages, including validation
+  errors, and the release notes are shown in English in both languages.
 - Autocomplete is offered for text custom fields and **Transferred To** only, not for the name,
   condition, location, or description.
 - The live camera in **Scan QR** needs the application to be opened over HTTPS or on `localhost`.

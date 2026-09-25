@@ -10,7 +10,11 @@ import { UPDATE_STEPS } from '../../shared/updateSteps.js';
 export const phase = ref('idle');
 // The last successful /api/update/check answer.
 export const release = ref(null);
-export const message = ref('');
+/*
+  Texts are kept as translation keys with their parameters, so an update that is already running
+  follows a language change. A server error has no key and keeps its own text.
+*/
+export const message = ref(null);
 export const progress = ref('');
 // Which of UPDATE_PHASES the update is in, and the detailed step when the updater reports one.
 export const stage = ref(null);
@@ -28,14 +32,10 @@ const RELOAD_DELAY_MS = 2000;
   One readable line per state the updater reports. The updater's own output stays in the system
   journal: the dialog never shows shell output, only these fixed messages.
 */
-const PROGRESS = {
-  preparing: 'Preparing the update',
-  downloading: 'Downloading the new version',
-  backing_up: 'Creating a database backup',
-  installing: 'Installing the update',
-  restarting: 'Restarting the application',
-  verifying: 'Verifying the new version'
-};
+const PROGRESS_STATES = new Set(['preparing', 'downloading', 'backing_up', 'installing', 'restarting', 'verifying']);
+const progressKey = state => `update.progress.${state}`;
+const text = value => ({ text: value });
+const translated = (key, params = {}) => ({ key, params });
 
 // The phase of an updater that reports only its coarse state, such as the release being replaced.
 const STATE_PHASES = {
@@ -52,13 +52,13 @@ const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 export async function checkForUpdates() {
   phase.value = 'checking';
-  message.value = '';
+  message.value = null;
   try {
     release.value = await api('/api/update/check');
     phase.value = release.value.updateAvailable ? 'available' : 'current';
   } catch (error) {
     phase.value = 'error';
-    message.value = error.message;
+    message.value = text(error.message);
   }
 }
 
@@ -67,18 +67,18 @@ export const cancelUpdate = () => { phase.value = 'available'; };
 
 export async function startUpdate() {
   phase.value = 'updating';
-  progress.value = PROGRESS.preparing;
+  progress.value = progressKey('preparing');
   stage.value = STATE_PHASES.preparing;
   step.value = null;
   startedAt.value = Date.now();
   unreachableSince.value = null;
-  message.value = '';
+  message.value = null;
   try {
     // The request carries no body: the release, the repository, and the command are fixed server-side.
     await api('/api/update/apply', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
   } catch (error) {
     phase.value = 'failed';
-    message.value = error.message;
+    message.value = text(error.message);
     return;
   }
   await followUpdate();
@@ -97,36 +97,36 @@ async function followUpdate() {
     const status = await api('/api/update/status').catch(() => null);
     if (!status) {
       unreachableSince.value ??= Date.now();
-      progress.value = 'Waiting for the application to come back';
+      progress.value = 'update.progress.waiting';
       continue;
     }
     unreachableSince.value = null;
-    if (PROGRESS[status.state]) {
+    if (PROGRESS_STATES.has(status.state)) {
       step.value = STEPS.get(status.step) ?? null;
-      progress.value = step.value?.label ?? PROGRESS[status.state];
+      progress.value = step.value ? `update.steps.${step.value.id}.label` : progressKey(status.state);
       stage.value = step.value?.phase ?? STATE_PHASES[status.state];
       continue;
     }
     if (status.state === 'success') return waitForNewVersion(status.toVersion || target);
     if (status.state === 'rolled_back') {
       phase.value = 'rolled_back';
-      message.value = `Inventory Atlas Lite was restored to version ${status.fromVersion || target}. Your database was preserved.`;
+      message.value = translated('update.rolledBack', { version: status.fromVersion || target });
       return;
     }
     if (status.state === 'failed') {
       phase.value = 'failed';
-      message.value = 'The update did not complete. The installation was left as it was; the details are in the system log.';
+      message.value = translated('update.notCompleted');
       return;
     }
     // "idle" only means the updater has not written anything yet, so the loop keeps waiting.
   }
   phase.value = 'failed';
-  message.value = 'The update is taking longer than expected. Check the installation before starting another one.';
+  message.value = translated('update.tooLong');
 }
 
 // The page is only reloaded once the backend answers again and reports the version that was installed.
 async function waitForNewVersion(version) {
-  progress.value = PROGRESS.verifying;
+  progress.value = progressKey('verifying');
   stage.value = STATE_PHASES.verifying;
   step.value = null;
   unreachableSince.value = null;
@@ -135,7 +135,7 @@ async function waitForNewVersion(version) {
     const health = await api('/api/health').catch(() => null);
     if (health?.status === 'ok' && (!version || health.version === version)) {
       phase.value = 'done';
-      message.value = version ? `Inventory Atlas Lite ${version}` : '';
+      message.value = version ? text(`Inventory Atlas Lite ${version}`) : null;
       await wait(RELOAD_DELAY_MS);
       window.location.reload();
       return;
@@ -143,5 +143,5 @@ async function waitForNewVersion(version) {
     await wait(POLL_INTERVAL_MS);
   }
   phase.value = 'failed';
-  message.value = 'The update finished, but the application did not report the new version. Reload the page to check it.';
+  message.value = translated('update.versionNotReported');
 }

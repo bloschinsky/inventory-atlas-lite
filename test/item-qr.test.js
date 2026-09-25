@@ -74,8 +74,9 @@ test('the bundled scanner decoder reads a generated item code back from its pixe
 test('scanned text is classified into an item, a foreign code, or a broken item code', () => {
   assert.deepEqual(readScannedText(` ial:item:v1:${uuid}
 `), { uuid });
-  const foreign = 'This is not an Inventory Atlas QR code.';
-  const broken = 'This Inventory Atlas QR code is invalid or uses an unsupported format.';
+  // The scanner page translates these keys into the active interface language.
+  const foreign = 'scan.errors.foreignCode';
+  const broken = 'scan.errors.unsupportedCode';
   for (const value of [`https://example.com/items/${uuid}`, uuid, '', `ial:box:v1:${uuid}`]) {
     assert.deepEqual(readScannedText(value), { error: foreign }, JSON.stringify(value));
   }

@@ -1,13 +1,13 @@
 import { IconDashboard, IconDatabase, IconPackages, IconQrcode, IconSettings, IconTags } from '@tabler/icons-vue';
 
-// Single source of truth for the desktop sidebar and the mobile offcanvas menu.
+// Single source of truth for the desktop sidebar and the mobile offcanvas menu; labels are translation keys.
 export const navigationLinks = [
-  { to: '/dashboard', label: 'Dashboard', prefixes: [], icon: IconDashboard },
-  { to: '/items', label: 'Items', prefixes: ['/items'], icon: IconPackages },
-  { to: '/scan', label: 'Scan QR', prefixes: [], icon: IconQrcode },
-  { to: '/categories', label: 'Categories & Fields', prefixes: [], icon: IconTags },
-  { to: '/data', label: 'Data / Backup', prefixes: [], icon: IconDatabase },
-  { to: '/settings', label: 'Settings', prefixes: [], icon: IconSettings }
+  { to: '/dashboard', label: 'nav.dashboard', prefixes: [], icon: IconDashboard },
+  { to: '/items', label: 'nav.items', prefixes: ['/items'], icon: IconPackages },
+  { to: '/scan', label: 'nav.scanQr', prefixes: [], icon: IconQrcode },
+  { to: '/categories', label: 'nav.categories', prefixes: [], icon: IconTags },
+  { to: '/data', label: 'nav.data', prefixes: [], icon: IconDatabase },
+  { to: '/settings', label: 'nav.settings', prefixes: [], icon: IconSettings }
 ];
 
 // RouterLink would mark "/" active on every route, so the active link is matched explicitly.

@@ -10,6 +10,7 @@ document describes the current behaviour and its boundaries, not the original pl
 | [Inventory database reset](inventory-database-reset.md) | Reset the inventory from the Danger Zone to a fresh current-schema database after an impact review, typed confirmation, a single-use token, and a verified pre-reset backup, with automatic rollback. |
 | [Inventory Dashboard](dashboard.md) | Server-calculated inventory totals, documentation and placement metrics, plus category and condition distributions. |
 | [Application UI](application-ui.md) | The Tabler application shell: a folded desktop sidebar, a mobile offcanvas drawer, light/dark modes, and responsive pages. |
+| [Interface localization](interface-localization.md) | English and Ukrainian interface with a browser-local language setting, English fallback, plural rules, and locale-aware dates, numbers, and prices. |
 | [Item photo carousel](item-photo-carousel.md) | Browse an item's photos in a Tabler carousel with arrows, indicators, swipe, and drag, and keep a valid slide after a deletion. |
 | [Nested items](nested-items.md) | Store an item inside another item and browse its direct contents. |
 | [Effective location inheritance](effective-location-inheritance.md) | Display a contained item at the location of its outermost container while its own saved location stays editable. |

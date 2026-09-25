@@ -1,12 +1,15 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { api, jsonOptions } from '../api.js';
 import { setAiCapabilities } from '../capabilities.js';
+import { SUPPORTED_LOCALES, setLocale } from '../i18n/index.js';
 import CloudBackupSettings from '../components/CloudBackupSettings.vue';
 import PageHeader from '../components/PageHeader.vue';
 import { AI_PROVIDERS, aiProvider, isLocalNetworkHost } from '../../../shared/aiProviders.js';
 
 defineOptions({ name: 'SettingsPage' });
+const { t, locale } = useI18n();
 
 const form = reactive({
   enabled: false, provider: 'openai', displayName: '', baseUrl: '', model: 'gpt-5.6-luna', imageInput: 'auto', apiKey: '', clearApiKey: false
@@ -55,8 +58,11 @@ function syncSelectedModel() {
 }
 
 function modelLabel(model) {
-  return model.imageInput === false ? `${model.label} (text only)` : model.label;
+  return model.imageInput === false ? t('settings.ai.textOnlyModel', { model: model.label }) : model.label;
 }
+
+// Provider names are brands and stay as they are; only the generic custom entry is translated.
+const providerLabel = provider => (provider.id === 'custom' ? t('settings.ai.providers.custom.label') : provider.label);
 
 function applySettings(settings) {
   // The saved state is the source of truth for AI visibility, so an unsaved checkbox changes nothing.
@@ -97,7 +103,7 @@ async function loadModels() {
     showModels((await api('/api/ai/models', jsonOptions('POST', connectionForm()))).models);
   } catch (caught) {
     showModels([]);
-    modelError.value = `Could not load the model list. ${caught.message} You can continue using the configured model or enter a custom model ID.`;
+    modelError.value = t('settings.ai.modelsFailed', { reason: caught.message });
   } finally {
     modelsLoading.value = false;
   }
@@ -137,9 +143,47 @@ onMounted(async () => {
 <template>
   <div class="form-card">
     <PageHeader
-      title="Settings"
-      subtitle="Configure optional integrations for this installation."
+      :title="$t('settings.title')"
+      :subtitle="$t('settings.subtitle')"
     />
+    <section
+      class="card mb-3"
+      aria-labelledby="interface-settings-title"
+    >
+      <div class="card-header">
+        <h2
+          id="interface-settings-title"
+          class="card-title"
+        >
+          {{ $t('settings.interface.title') }}
+        </h2>
+      </div>
+      <div class="card-body">
+        <label
+          class="form-label"
+          for="interface-language"
+        >{{ $t('settings.interface.language') }}</label>
+        <!-- The choice applies at once and is kept only in this browser, never on the server. -->
+        <select
+          id="interface-language"
+          class="form-select"
+          :value="locale"
+          @change="setLocale($event.target.value)"
+        >
+          <option
+            v-for="option in SUPPORTED_LOCALES"
+            :key="option.code"
+            :value="option.code"
+            :lang="option.code"
+          >
+            {{ option.name }}
+          </option>
+        </select>
+        <div class="form-text">
+          {{ $t('settings.interface.languageHelp') }}
+        </div>
+      </div>
+    </section>
     <div
       v-if="error"
       class="alert alert-danger"
@@ -152,7 +196,7 @@ onMounted(async () => {
       class="alert alert-success"
       role="status"
     >
-      AI settings saved.
+      {{ $t('settings.ai.saved') }}
     </div>
     <form
       class="card"
@@ -160,7 +204,7 @@ onMounted(async () => {
     >
       <div class="card-header">
         <h2 class="card-title">
-          AI
+          {{ $t('settings.ai.title') }}
         </h2>
       </div>
       <div class="card-body">
@@ -168,7 +212,7 @@ onMounted(async () => {
           v-if="loading"
           class="text-secondary"
         >
-          Loading settings…
+          {{ $t('settings.loading') }}
         </div>
         <template v-else>
           <div class="mb-3">
@@ -179,20 +223,20 @@ onMounted(async () => {
                 type="checkbox"
                 :disabled="!keyAvailable"
               >
-              <span class="form-check-label">Enable AI features</span>
+              <span class="form-check-label">{{ $t('settings.ai.enable') }}</span>
             </label>
             <div
               v-if="!keyAvailable"
               class="form-text"
             >
-              Save an {{ preset.label }} API key below to enable AI features.
+              {{ $t('settings.ai.keyNeeded', { provider: providerLabel(preset) }) }}
             </div>
           </div>
           <div class="mb-3">
             <label
               class="form-label"
               for="ai-provider"
-            >Provider</label>
+            >{{ $t('settings.ai.provider') }}</label>
             <select
               id="ai-provider"
               v-model="form.provider"
@@ -204,11 +248,11 @@ onMounted(async () => {
                 :key="provider.id"
                 :value="provider.id"
               >
-                {{ provider.label }}
+                {{ providerLabel(provider) }}
               </option>
             </select>
             <div class="form-text">
-              {{ preset.help }}
+              {{ $t(`settings.ai.providers.${preset.id}.help`) }}
             </div>
           </div>
           <div
@@ -218,20 +262,20 @@ onMounted(async () => {
             <label
               class="form-label"
               for="ai-display-name"
-            >Display name</label>
+            >{{ $t('settings.ai.displayName') }}</label>
             <input
               id="ai-display-name"
               v-model="form.displayName"
               class="form-control"
               maxlength="60"
-              placeholder="For example: vLLM on the NAS"
+              :placeholder="$t('settings.ai.displayNamePlaceholder')"
             >
           </div>
           <div class="mb-3">
             <label
               class="form-label"
               for="ai-base-url"
-            >Base URL</label>
+            >{{ $t('settings.ai.baseUrl') }}</label>
             <input
               id="ai-base-url"
               v-model="form.baseUrl"
@@ -242,39 +286,45 @@ onMounted(async () => {
               :placeholder="preset.defaultBaseUrl || 'http://192.168.1.50:8000/v1'"
             >
             <div class="form-text">
-              The Inventory Atlas server connects to this address, not your browser, so
-              <code>localhost</code> means the machine or container running Inventory Atlas. For a
-              model server on another computer, use its LAN address, for example
-              <code>http://192.168.1.50:11434/v1</code>.
+              <i18n-t
+                keypath="settings.ai.baseUrlHelp"
+                scope="global"
+              >
+                <template #localhost>
+                  <code>localhost</code>
+                </template>
+                <template #example>
+                  <code>http://192.168.1.50:11434/v1</code>
+                </template>
+              </i18n-t>
             </div>
             <div
               v-if="insecureRemote"
               class="alert alert-warning mt-2 mb-0"
               role="alert"
             >
-              This remote address uses plain HTTP, so the API key and your inventory data are sent
-              unencrypted. Prefer HTTPS outside your local network.
+              {{ $t('settings.ai.insecure') }}
             </div>
           </div>
           <div class="mb-3">
             <label
               class="form-label"
               for="ai-api-key"
-            >API key</label>
+            >{{ $t('settings.ai.apiKey') }}</label>
             <input
               id="ai-api-key"
               v-model="form.apiKey"
               class="form-control"
               type="password"
               autocomplete="new-password"
-              :placeholder="`Enter a new ${preset.label} API key`"
+              :placeholder="$t('settings.ai.apiKeyPlaceholder', { provider: providerLabel(preset) })"
             >
             <div class="form-text">
-              <span v-if="!preset.apiKeyRequired">Optional for this provider. </span>
-              <span v-if="keyBelongsHere">Saved key: {{ maskedKey }}. Leave this blank to keep it.</span>
-              <span v-else-if="hasApiKey">The saved key belongs to the previous provider or base URL and is removed when you save, unless you enter it again.</span>
-              <span v-else>No API key is saved.</span>
-              The key stays on the server and is never returned to the browser.
+              <span v-if="!preset.apiKeyRequired">{{ $t('settings.ai.keyOptional') }} </span>
+              <span v-if="keyBelongsHere">{{ $t('settings.ai.keySaved', { key: maskedKey }) }}</span>
+              <span v-else-if="hasApiKey">{{ $t('settings.ai.keyStale') }}</span>
+              <span v-else>{{ $t('settings.ai.keyNone') }}</span>
+              {{ $t('settings.ai.keyPrivacy') }}
             </div>
           </div>
           <label
@@ -286,7 +336,7 @@ onMounted(async () => {
               class="form-check-input"
               type="checkbox"
             >
-            <span class="form-check-label">Remove the saved API key</span>
+            <span class="form-check-label">{{ $t('settings.ai.removeKey') }}</span>
           </label>
           <div class="mb-3">
             <button
@@ -295,7 +345,7 @@ onMounted(async () => {
               :disabled="testing"
               @click="testConnection"
             >
-              {{ testing ? 'Testing…' : 'Test connection' }}
+              {{ testing ? $t('common.testing') : $t('common.testConnection') }}
             </button>
             <div
               v-if="testResult"
@@ -310,7 +360,7 @@ onMounted(async () => {
             <label
               class="form-label"
               for="ai-model"
-            >Model</label>
+            >{{ $t('settings.ai.model') }}</label>
             <select
               id="ai-model"
               v-model="selectedModel"
@@ -325,19 +375,19 @@ onMounted(async () => {
                 {{ modelLabel(model) }}
               </option>
               <option value="custom">
-                Custom model...
+                {{ $t('settings.ai.customModelOption') }}
               </option>
             </select>
             <div class="form-text d-flex align-items-center gap-2">
-              <span v-if="modelsLoading">Loading available models…</span>
-              <span v-else>Models reported by the provider for this connection are shown.</span>
+              <span v-if="modelsLoading">{{ $t('settings.ai.modelsLoading') }}</span>
+              <span v-else>{{ $t('settings.ai.modelsHelp') }}</span>
               <button
                 class="btn btn-link btn-sm p-0"
                 type="button"
                 :disabled="modelsLoading"
                 @click="loadModels"
               >
-                Refresh models
+                {{ $t('settings.ai.refreshModels') }}
               </button>
             </div>
             <div
@@ -355,7 +405,7 @@ onMounted(async () => {
             <label
               class="form-label"
               for="ai-custom-model"
-            >Custom model ID</label>
+            >{{ $t('settings.ai.customModel') }}</label>
             <input
               id="ai-custom-model"
               v-model="form.model"
@@ -368,26 +418,24 @@ onMounted(async () => {
             <label
               class="form-label"
               for="ai-image-input"
-            >Image input</label>
+            >{{ $t('settings.ai.imageInput') }}</label>
             <select
               id="ai-image-input"
               v-model="form.imageInput"
               class="form-select"
             >
               <option value="auto">
-                Detect automatically
+                {{ $t('settings.ai.imageAuto') }}
               </option>
               <option value="supported">
-                Supported by this model
+                {{ $t('settings.ai.imageSupported') }}
               </option>
               <option value="unsupported">
-                Not supported (text only)
+                {{ $t('settings.ai.imageUnsupported') }}
               </option>
             </select>
             <div class="form-text">
-              AI Add Item needs a vision model to read photos. Automatic detection uses the provider's
-              model information where it exists; otherwise the photo is sent and a refusal is reported.
-              Choose "Not supported" for a text-only model to hide the photo option.
+              {{ $t('settings.ai.imageHelp') }}
             </div>
           </div>
         </template>
@@ -397,7 +445,7 @@ onMounted(async () => {
           class="btn btn-primary"
           :disabled="loading || saving"
         >
-          {{ saving ? 'Saving…' : 'Save settings' }}
+          {{ saving ? $t('common.saving') : $t('settings.save') }}
         </button>
       </div>
     </form>

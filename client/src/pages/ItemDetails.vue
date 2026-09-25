@@ -1,26 +1,27 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { api } from '../api.js';
+import { formatDate, formatDateTime, formatMoney } from '../i18n/index.js';
 import ItemPhotoViewer from '../components/ItemPhotoViewer.vue';
 import ItemQrDialog from '../components/ItemQrDialog.vue';
 import ItemThumbnail from '../components/ItemThumbnail.vue';
 
-const route = useRoute(); const router = useRouter();
+const route = useRoute(); const router = useRouter(); const { t } = useI18n();
 const item = ref(null); const error = ref(''); const qrOpen = ref(false);
-const formatDate = value => value ? new Date(value.replace(' ', 'T') + 'Z').toLocaleString() : '—';
-const formatPurchaseDate = value => new Date(`${value}T00:00:00Z`).toLocaleDateString(undefined, { dateStyle: 'medium', timeZone: 'UTC' });
-const displayValue = field => field.type === 'boolean' ? (field.value === '1' ? 'Yes' : 'No') : (field.value || '—');
+// Custom field values are user data: only the yes/no of a boolean belongs to the interface.
+const displayValue = field => field.type === 'boolean' ? t(field.value === '1' ? 'common.yes' : 'common.no') : (field.value || '—');
 // An item with neither a container nor contents would only produce an empty storage card.
 const hasStorage = computed(() => Boolean(item.value?.parent || item.value?.children.length));
 
 async function load() { try { item.value = await api(`/api/items/${route.params.id}`); } catch (e) { error.value = e.message; } }
 async function remove() {
-  if (!confirm(`Delete “${item.value.name}” and its photos?`)) return;
+  if (!confirm(t('itemDetails.confirmDelete', { name: item.value.name }))) return;
   try { await api(`/api/items/${item.value.id}`, { method: 'DELETE' }); router.push('/items'); } catch (e) { error.value = e.message; }
 }
 async function removePhoto(id) {
-  if (!confirm('Delete this photo?')) return;
+  if (!confirm(t('photos.confirmDelete'))) return;
   try { await api(`/api/photos/${id}`, { method: 'DELETE' }); await load(); } catch (e) { error.value = e.message; }
 }
 // The same component serves every /items/:id, so parent and contents links must reload it.
@@ -45,7 +46,7 @@ onMounted(load);
         class="spinner-border spinner-border-sm"
         aria-hidden="true"
       />
-      Loading item…
+      {{ $t('itemDetails.loading') }}
     </div>
   </div>
   <template v-else>
@@ -56,7 +57,7 @@ onMounted(load);
           <ol class="breadcrumb page-pretitle mb-1">
             <li class="breadcrumb-item">
               <RouterLink to="/items">
-                All items
+                {{ $t('itemDetails.allItems') }}
               </RouterLink>
             </li>
             <li
@@ -73,7 +74,7 @@ onMounted(load);
             v-if="item.transferred_to"
             class="badge bg-azure-lt text-wrap text-break text-start mt-2"
           >
-            Transferred to: {{ item.transferred_to }}
+            {{ $t('items.transferredTo', { name: item.transferred_to }) }}
           </span>
         </div>
         <div class="col-auto ms-auto d-flex flex-wrap gap-2">
@@ -81,21 +82,21 @@ onMounted(load);
             :to="`/items/${item.id}/edit`"
             class="btn btn-primary"
           >
-            Edit
+            {{ $t('common.edit') }}
           </RouterLink>
           <button
             type="button"
             class="btn"
             @click="qrOpen = true"
           >
-            QR Code
+            {{ $t('qr.title') }}
           </button>
           <button
             type="button"
             class="btn btn-outline-danger"
             @click="remove"
           >
-            Delete
+            {{ $t('common.delete') }}
           </button>
         </div>
       </div>
@@ -112,19 +113,19 @@ onMounted(load);
         <section class="card">
           <div class="card-header">
             <h2 class="card-title">
-              Details
+              {{ $t('itemDetails.details') }}
             </h2>
           </div>
           <div class="card-body">
             <dl class="row mb-0">
               <dt class="col-sm-4">
-                Condition
+                {{ $t('items.fields.condition') }}
               </dt>
               <dd class="col-sm-8 text-break">
                 {{ item.condition || '—' }}
               </dd>
               <dt class="col-sm-4">
-                Location
+                {{ $t('items.fields.location') }}
               </dt>
               <dd class="col-sm-8 text-break">
                 {{ item.effective_location || '—' }}
@@ -132,35 +133,35 @@ onMounted(load);
                   v-if="item.effective_location_source"
                   class="d-block meta-text"
                 >
-                  Displayed location is inherited from the parent container.
+                  {{ $t('items.inheritedLocation') }}
                 </span>
               </dd>
               <template v-if="item.purchase_date">
                 <dt class="col-sm-4">
-                  Purchase Date
+                  {{ $t('items.fields.purchaseDate') }}
                 </dt>
                 <dd class="col-sm-8 text-break">
-                  {{ formatPurchaseDate(item.purchase_date) }}
+                  {{ formatDate(item.purchase_date) }}
                 </dd>
               </template>
               <template v-if="item.purchase_price">
                 <dt class="col-sm-4">
-                  Purchase Price
+                  {{ $t('items.fields.purchasePrice') }}
                 </dt>
                 <dd class="col-sm-8 text-break">
-                  {{ item.purchase_price.amount }} {{ item.purchase_price.currency }}
+                  {{ formatMoney(item.purchase_price.amount, item.purchase_price.currency) }}
                 </dd>
               </template>
               <template v-if="item.serial_number">
                 <dt class="col-sm-4">
-                  Serial Number
+                  {{ $t('items.fields.serialNumber') }}
                 </dt>
                 <dd class="col-sm-8 text-break">
                   {{ item.serial_number }}
                 </dd>
               </template>
               <dt class="col-sm-4">
-                Description
+                {{ $t('items.fields.description') }}
               </dt>
               <dd class="col-sm-8 text-break mb-0">
                 {{ item.description || '—' }}
@@ -175,7 +176,7 @@ onMounted(load);
         >
           <div class="card-header">
             <h2 class="card-title">
-              {{ item.category_name }} fields
+              {{ $t('itemDetails.categoryFields', { category: item.category_name }) }}
             </h2>
           </div>
           <div class="card-body">
@@ -204,13 +205,13 @@ onMounted(load);
         >
           <div class="card-header">
             <h2 class="card-title">
-              Storage
+              {{ $t('itemDetails.storage') }}
             </h2>
           </div>
           <div class="card-body">
             <dl class="row mb-0">
               <dt class="col-sm-4">
-                Stored inside
+                {{ $t('items.fields.storedInside') }}
               </dt>
               <dd class="col-sm-8 text-break mb-0">
                 <RouterLink
@@ -228,7 +229,7 @@ onMounted(load);
           <template v-if="item.children.length">
             <div class="card-header border-top">
               <h3 class="card-title">
-                Contents
+                {{ $t('itemDetails.contents') }}
               </h3>
             </div>
             <ul class="list-group list-group-flush">
@@ -262,7 +263,7 @@ onMounted(load);
         <section class="card">
           <div class="card-header">
             <h2 class="card-title">
-              Record information
+              {{ $t('itemDetails.record') }}
             </h2>
           </div>
           <div class="card-body">
@@ -274,16 +275,16 @@ onMounted(load);
                 {{ item.uuid }}
               </dd>
               <dt class="col-sm-4">
-                Created
+                {{ $t('items.fields.created') }}
               </dt>
               <dd class="col-sm-8">
-                {{ formatDate(item.created_at) }}
+                {{ formatDateTime(item.created_at) || '—' }}
               </dd>
               <dt class="col-sm-4">
-                Updated
+                {{ $t('items.fields.updated') }}
               </dt>
               <dd class="col-sm-8 mb-0">
-                {{ formatDate(item.updated_at) }}
+                {{ formatDateTime(item.updated_at) || '—' }}
               </dd>
             </dl>
           </div>

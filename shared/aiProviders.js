@@ -1,6 +1,7 @@
 /*
   The AI provider presets offered in Settings, shared by the client and the server so both agree on
-  identifiers, default base URLs, and whether an API key is required. Every preset speaks the
+  identifiers, default base URLs, and whether an API key is required. Their help texts are
+  translated in the client locales under settings.ai.providers.<id>. Every preset speaks the
   OpenAI-style HTTP API; only OpenAI itself uses its native Responses endpoint.
 */
 export const AI_PROVIDERS = [
@@ -8,36 +9,31 @@ export const AI_PROVIDERS = [
     id: 'openai',
     label: 'OpenAI',
     defaultBaseUrl: 'https://api.openai.com/v1',
-    apiKeyRequired: true,
-    help: 'Uses the OpenAI API with structured outputs. Only the recommended models available to your key are listed.'
+    apiKeyRequired: true
   },
   {
     id: 'openrouter',
     label: 'OpenRouter',
     defaultBaseUrl: 'https://openrouter.ai/api/v1',
-    apiKeyRequired: true,
-    help: 'Routes requests to many hosted models. The model list shows which models accept images.'
+    apiKeyRequired: true
   },
   {
     id: 'ollama',
     label: 'Ollama',
     defaultBaseUrl: 'http://localhost:11434/v1',
-    apiKeyRequired: false,
-    help: 'A local Ollama server. No API key is normally needed. For photos, choose a vision model such as llava or qwen2.5vl.'
+    apiKeyRequired: false
   },
   {
     id: 'lmstudio',
     label: 'LM Studio',
     defaultBaseUrl: 'http://localhost:1234/v1',
-    apiKeyRequired: false,
-    help: 'The LM Studio local server. An API key is only needed when authentication is enabled in LM Studio.'
+    apiKeyRequired: false
   },
   {
     id: 'custom',
     label: 'Custom OpenAI-compatible',
     defaultBaseUrl: '',
-    apiKeyRequired: false,
-    help: 'Any endpoint that implements the OpenAI-style /models and /chat/completions API.'
+    apiKeyRequired: false
   }
 ];
 

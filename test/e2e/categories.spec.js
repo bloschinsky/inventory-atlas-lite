@@ -20,7 +20,7 @@ test('creates a category and its custom fields', async ({ page }) => {
     await page.getByPlaceholder('Field name').fill(name);
     await page.getByLabel('Field type').selectOption(type);
     await page.getByPlaceholder('Field name').press('Enter');
-    await expect(page.getByRole('listitem').filter({ hasText: name })).toContainText(type);
+    await expect(page.getByRole('listitem').filter({ hasText: name })).toContainText(type, { ignoreCase: true });
   }
 
   // The category summary reflects both new fields once the list reloads.
@@ -70,7 +70,7 @@ test('batch add fields reviews a pasted document before creating the fields', as
 
   await expect(dialog).toBeHidden();
   for (const [name, type] of [['Model', 'text'], ['Bus', 'text'], ['Release Year', 'number']]) {
-    await expect(page.getByRole('listitem').filter({ hasText: name })).toContainText(type);
+    await expect(page.getByRole('listitem').filter({ hasText: name })).toContainText(type, { ignoreCase: true });
   }
   await expect(entry).toContainText('0 items · 4 fields');
 });
@@ -190,7 +190,7 @@ test('AI add fields reviews the generated draft in the batch editor before creat
 
   await expect(dialog).toBeHidden();
   for (const [name, type] of [['Bus', 'text'], ['Released', 'number']]) {
-    await expect(page.getByRole('listitem').filter({ hasText: name })).toContainText(type);
+    await expect(page.getByRole('listitem').filter({ hasText: name })).toContainText(type, { ignoreCase: true });
   }
   await expect(entry).toContainText('0 items · 3 fields');
   expect(descriptions).toEqual([prompt, prompt]);

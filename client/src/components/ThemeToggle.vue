@@ -7,35 +7,35 @@ import { setTheme, theme } from '../theme.js';
   <div
     class="btn-group"
     role="group"
-    aria-label="Color mode"
+    :aria-label="$t('theme.colorMode')"
   >
     <button
       type="button"
       class="btn btn-icon"
       :class="theme === 'light' ? 'btn-primary' : 'btn-outline-secondary'"
       :aria-pressed="theme === 'light'"
-      title="Light mode"
+      :title="$t('theme.light')"
       @click="setTheme('light')"
     >
       <IconSun
         :size="18"
         :stroke-width="1.75"
       />
-      <span class="visually-hidden">Light mode</span>
+      <span class="visually-hidden">{{ $t('theme.light') }}</span>
     </button>
     <button
       type="button"
       class="btn btn-icon"
       :class="theme === 'dark' ? 'btn-primary' : 'btn-outline-secondary'"
       :aria-pressed="theme === 'dark'"
-      title="Dark mode"
+      :title="$t('theme.dark')"
       @click="setTheme('dark')"
     >
       <IconMoon
         :size="18"
         :stroke-width="1.75"
       />
-      <span class="visually-hidden">Dark mode</span>
+      <span class="visually-hidden">{{ $t('theme.dark') }}</span>
     </button>
   </div>
 </template>

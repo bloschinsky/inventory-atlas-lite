@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 
 /*
   The OAuth app credentials of one cloud storage provider. The saved secret is never sent back by the
@@ -11,6 +12,7 @@ const props = defineProps({
   busy: { type: Boolean, default: false }
 });
 const emit = defineEmits(['save', 'remove']);
+const { t } = useI18n();
 
 const clientId = ref('');
 const clientSecret = ref('');
@@ -18,6 +20,10 @@ const app = computed(() => props.provider.app);
 const idChanged = computed(() => clientId.value.trim() !== app.value.clientId);
 const savedSecretApplies = computed(() => app.value.hasClientSecret && !idChanged.value);
 const fieldId = name => `cloud-${props.provider.id}-${name}`;
+// The server names the two credentials the way each provider does ("app key", "client ID"); the
+// interface shows them through translation keys chosen by provider.
+const idLabel = computed(() => t(`cloud.apps.${props.provider.id}.id`));
+const secretLabel = computed(() => t(`cloud.apps.${props.provider.id}.secret`));
 
 watch(app, value => {
   clientId.value = value.clientId;
@@ -32,9 +38,15 @@ const save = () => emit('save', { clientId: clientId.value.trim(), clientSecret:
     v-if="app.source === 'environment'"
     class="meta-text mb-0"
   >
-    The app credentials come from the server environment
-    (<code>{{ provider.requiredSettings.join(', ') }}</code>) and can only be changed there.
-    {{ provider.label }} {{ app.idLabel }}: <code class="text-break">{{ app.clientId }}</code>.
+    <i18n-t
+      keypath="cloud.fromEnvironment"
+      scope="global"
+    >
+      <template #settings>
+        <code>{{ provider.requiredSettings.join(', ') }}</code>
+      </template>
+    </i18n-t>
+    {{ provider.label }} {{ idLabel }}: <code class="text-break">{{ app.clientId }}</code>.
   </p>
   <form
     v-else
@@ -44,7 +56,7 @@ const save = () => emit('save', { clientId: clientId.value.trim(), clientSecret:
       <label
         class="form-label"
         :for="fieldId('client-id')"
-      >{{ provider.label }} {{ app.idLabel }}</label>
+      >{{ provider.label }} {{ idLabel }}</label>
       <input
         :id="fieldId('client-id')"
         v-model="clientId"
@@ -59,14 +71,14 @@ const save = () => emit('save', { clientId: clientId.value.trim(), clientSecret:
         v-if="provider.connected"
         class="form-text"
       >
-        Disconnect {{ provider.label }} to use another app.
+        {{ $t('cloud.disconnectToChange', { provider: provider.label }) }}
       </div>
     </div>
     <div class="mb-3">
       <label
         class="form-label"
         :for="fieldId('client-secret')"
-      >{{ provider.label }} {{ app.secretLabel }}</label>
+      >{{ provider.label }} {{ secretLabel }}</label>
       <input
         :id="fieldId('client-secret')"
         v-model="clientSecret"
@@ -74,33 +86,33 @@ const save = () => emit('save', { clientId: clientId.value.trim(), clientSecret:
         type="password"
         maxlength="200"
         autocomplete="new-password"
-        :placeholder="`Enter a new ${app.secretLabel}`"
+        :placeholder="$t('cloud.secretPlaceholder', { secret: secretLabel })"
       >
       <div class="form-text">
-        <span v-if="savedSecretApplies">Saved {{ app.secretLabel }}: {{ app.clientSecretMasked }}. Leave this blank to keep it.</span>
-        <span v-else-if="app.hasClientSecret">The saved {{ app.secretLabel }} belongs to the previous {{ app.idLabel }} and is removed when you save, unless you enter it again.</span>
-        <span v-else-if="!app.secretRequired">Optional for {{ provider.label }}.</span>
-        <span v-else>No {{ app.secretLabel }} is saved.</span>
-        It stays on the server and is never returned to the browser.
+        <span v-if="savedSecretApplies">{{ $t('cloud.secretSaved', { secret: secretLabel, masked: app.clientSecretMasked }) }}</span>
+        <span v-else-if="app.hasClientSecret">{{ $t('cloud.secretStale', { secret: secretLabel, id: idLabel }) }}</span>
+        <span v-else-if="!app.secretRequired">{{ $t('cloud.secretOptional', { provider: provider.label }) }}</span>
+        <span v-else>{{ $t('cloud.secretNone', { secret: secretLabel }) }}</span>
+        {{ $t('cloud.secretPrivacy') }}
       </div>
     </div>
     <div class="d-flex flex-wrap gap-2">
       <button
         class="btn btn-outline-primary"
         :disabled="busy"
-        :aria-label="`Save ${provider.label} app credentials`"
+        :aria-label="$t('cloud.saveAppFor', { provider: provider.label })"
       >
-        Save app credentials
+        {{ $t('cloud.saveApp') }}
       </button>
       <button
         v-if="app.source === 'settings'"
         class="btn btn-outline-danger"
         type="button"
         :disabled="busy || provider.connected"
-        :aria-label="`Remove ${provider.label} app credentials`"
+        :aria-label="$t('cloud.removeAppFor', { provider: provider.label })"
         @click="emit('remove')"
       >
-        Remove
+        {{ $t('cloud.remove') }}
       </button>
     </div>
   </form>

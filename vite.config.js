@@ -39,6 +39,12 @@ export default defineConfig({
   plugins: [vue()],
   // Tabler and Tabler Icons are MIT licensed: keep their /*! */ copyright banners in the bundles.
   esbuild: { legalComments: 'inline' },
-  define: { __APP_BUILD_INFO__: JSON.stringify(buildInfo) },
+  define: {
+    __APP_BUILD_INFO__: JSON.stringify(buildInfo),
+    // vue-i18n compile-time flags: Composition API only, and no devtools hooks in production bundles.
+    __VUE_I18N_FULL_INSTALL__: true,
+    __VUE_I18N_LEGACY_API__: false,
+    __INTLIFY_PROD_DEVTOOLS__: false
+  },
   server: { host: '0.0.0.0', proxy: { '/api': `http://127.0.0.1:${apiPort}` } }
 });

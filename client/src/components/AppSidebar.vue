@@ -19,7 +19,7 @@ import ThemeToggle from './ThemeToggle.vue';
         <AppBrand compact />
       </RouterLink>
       <div class="navbar-collapse">
-        <nav aria-label="Main">
+        <nav :aria-label="$t('nav.main')">
           <AppNavigation />
         </nav>
         <!-- Two buttons don't fit the 4rem folded rail, so the toggle only shows once the

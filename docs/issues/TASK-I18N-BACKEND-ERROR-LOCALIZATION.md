@@ -2,9 +2,8 @@
 
 ## Depends On
 
-`TASK-I18N-FRONTEND-LOCALIZATION.md`
-
-Implement this after frontend i18n exists.
+Frontend localization, now implemented; see
+[`../features/interface-localization.md`](../features/interface-localization.md).
 
 ## Goal
 

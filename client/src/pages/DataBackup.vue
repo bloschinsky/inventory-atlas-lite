@@ -1,10 +1,13 @@
 <script setup>
 import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { api, jsonOptions } from '../api.js';
+import { formatFileSize } from '../i18n/index.js';
 import PageHeader from '../components/PageHeader.vue';
 import ResetDatabaseDialog from '../components/ResetDatabaseDialog.vue';
 
 defineOptions({ name: 'DataBackupPage' });
+const { t } = useI18n();
 
 const CONFIRMATION = 'RESTORE';
 
@@ -21,20 +24,10 @@ const resetResult = ref(null);
 const compatibility = computed(() => {
   const summary = validation.value?.summary;
   if (!summary) return '';
-  const upgraded = summary.migratedFrom !== null ? ', upgraded from an older backup' : '';
-  return `Compatible with this application (schema ${summary.schemaVersion})${upgraded}`;
+  return t(summary.migratedFrom !== null ? 'backup.compatibleUpgraded' : 'backup.compatible', { schema: summary.schemaVersion });
 });
 const busy = computed(() => validating.value || restoring.value);
 const canRestore = computed(() => Boolean(validation.value) && confirmation.value.trim().toUpperCase() === CONFIRMATION && !busy.value);
-
-const formatSize = bytes => {
-  if (bytes < 1024) return `${bytes} B`;
-  const units = ['KB', 'MB', 'GB'];
-  let size = bytes / 1024;
-  let unit = 0;
-  while (size >= 1024 && unit < units.length - 1) { size /= 1024; unit += 1; }
-  return `${size.toFixed(size >= 10 || unit === 0 ? 0 : 1)} ${units[unit]}`;
-};
 
 function selectFile(event) {
   file.value = event.target.files?.[0] || null;
@@ -110,34 +103,40 @@ async function finishReset(result) {
 <template>
   <div class="form-card">
     <PageHeader
-      title="Data / Backup"
-      subtitle="Keep your own copies of the inventory database, and restore one when you need it."
+      :title="$t('backup.title')"
+      :subtitle="$t('backup.subtitle')"
     />
     <section class="card mb-3">
       <div class="card-header">
         <h2 class="card-title">
-          SQLite backup
+          {{ $t('backup.sqlite') }}
         </h2>
       </div>
       <div class="card-body">
-        <p>Download a consistent snapshot containing all items, categories, custom fields, and photos.</p>
+        <p>{{ $t('backup.downloadText') }}</p>
         <a
           class="btn btn-primary"
           href="/api/backup"
-        >Download backup</a>
-        <p class="meta-text mt-3 mb-0">
-          To upload the same snapshot to Dropbox or Google Drive, now or on a schedule, use
-          <RouterLink to="/settings">
-            Cloud Backup in Settings
-          </RouterLink>.
-        </p>
+        >{{ $t('backup.download') }}</a>
+        <i18n-t
+          keypath="backup.cloudHint"
+          tag="p"
+          class="meta-text mt-3 mb-0"
+          scope="global"
+        >
+          <template #link>
+            <RouterLink to="/settings">
+              {{ $t('backup.cloudLink') }}
+            </RouterLink>
+          </template>
+        </i18n-t>
       </div>
     </section>
 
     <section class="card mb-3">
       <div class="card-header">
         <h2 class="card-title">
-          Restore from backup
+          {{ $t('backup.restoreTitle') }}
         </h2>
       </div>
       <div class="card-body">
@@ -147,16 +146,25 @@ async function finishReset(result) {
           role="status"
         >
           <h3 class="alert-title">
-            Backup restored successfully
+            {{ $t('backup.restored') }}
           </h3>
           <p class="mb-1">
-            The inventory now contains {{ success.summary.items }} item(s),
-            {{ success.summary.categories }} category(ies), and {{ success.summary.photos }} photo(s).
+            {{ $t('backup.restoredSummary', {
+              items: $t('counts.items', success.summary.items),
+              categories: $t('counts.categories', success.summary.categories),
+              photos: $t('counts.photos', success.summary.photos)
+            }) }}
           </p>
-          <p class="mb-0">
-            The database that was replaced was saved as <code>{{ success.safety_backup }}</code> in the
-            pre-restore backup directory. Opening the items list…
-          </p>
+          <i18n-t
+            keypath="backup.restoredSafety"
+            tag="p"
+            class="mb-0"
+            scope="global"
+          >
+            <template #file>
+              <code>{{ success.safety_backup }}</code>
+            </template>
+          </i18n-t>
         </div>
         <div
           v-if="error"
@@ -167,15 +175,14 @@ async function finishReset(result) {
         </div>
 
         <p>
-          Replace the whole inventory with a backup downloaded from this application. The file is checked
-          on the server before anything is changed.
+          {{ $t('backup.restoreText') }}
         </p>
 
         <div class="mb-3">
           <label
             class="form-label"
             for="restore-file"
-          >Backup file</label>
+          >{{ $t('backup.file') }}</label>
           <input
             id="restore-file"
             class="form-control"
@@ -185,9 +192,17 @@ async function finishReset(result) {
             @change="selectFile"
           >
           <div class="form-text">
-            An Inventory Atlas Lite SQLite backup, normally named <code>inventory-YYYY-MM-DD.sqlite</code>
-            (<code>.sqlite</code>, <code>.sqlite3</code>, or <code>.db</code>). The contents are validated,
-            not the file name.
+            <i18n-t
+              keypath="backup.fileHelp"
+              scope="global"
+            >
+              <template #name>
+                <code>inventory-YYYY-MM-DD.sqlite</code>
+              </template>
+              <template #extensions>
+                <code>.sqlite</code>, <code>.sqlite3</code>, <code>.db</code>
+              </template>
+            </i18n-t>
           </div>
         </div>
 
@@ -195,7 +210,7 @@ async function finishReset(result) {
           v-if="file"
           class="meta-text"
         >
-          Selected: <strong>{{ file.name }}</strong> ({{ formatSize(file.size) }})
+          {{ $t('backup.selected') }} <strong>{{ file.name }}</strong> ({{ formatFileSize(file.size) }})
         </p>
 
         <button
@@ -209,46 +224,49 @@ async function finishReset(result) {
             class="spinner-border spinner-border-sm me-1"
             aria-hidden="true"
           />
-          {{ validating ? 'Validating…' : 'Validate backup' }}
+          {{ validating ? $t('backup.validating') : $t('backup.validate') }}
         </button>
 
         <template v-if="validation">
           <h3 class="h4 mt-4">
-            Validation result
+            {{ $t('backup.validation') }}
           </h3>
           <dl class="row mb-3">
             <dt class="col-5 col-md-4">
-              File
+              {{ $t('backup.fileLabel') }}
             </dt>
             <dd class="col-7 col-md-8">
-              {{ validation.filename }} ({{ formatSize(validation.size_bytes) }})
+              {{ validation.filename }} ({{ formatFileSize(validation.size_bytes) }})
             </dd>
             <dt class="col-5 col-md-4">
-              Compatibility
+              {{ $t('backup.compatibility') }}
             </dt>
             <dd class="col-7 col-md-8">
               {{ compatibility }}
             </dd>
             <dt class="col-5 col-md-4">
-              Categories
+              {{ $t('categories.categories') }}
             </dt>
             <dd class="col-7 col-md-8">
               {{ validation.summary.categories }}
             </dd>
             <dt class="col-5 col-md-4">
-              Items
+              {{ $t('items.title') }}
             </dt>
             <dd class="col-7 col-md-8">
               {{ validation.summary.items }}
             </dd>
             <dt class="col-5 col-md-4">
-              Custom fields
+              {{ $t('backup.customFields') }}
             </dt>
             <dd class="col-7 col-md-8">
-              {{ validation.summary.fields }} definition(s), {{ validation.summary.fieldValues }} saved value(s)
+              {{ $t('backup.fieldSummary', {
+                definitions: $t('backup.definitions', validation.summary.fields),
+                values: $t('backup.values', validation.summary.fieldValues)
+              }) }}
             </dd>
             <dt class="col-5 col-md-4">
-              Photos
+              {{ $t('photos.title') }}
             </dt>
             <dd class="col-7 col-md-8">
               {{ validation.summary.photos }}
@@ -260,13 +278,13 @@ async function finishReset(result) {
             role="alert"
           >
             <h4 class="alert-title">
-              This replaces all current data
+              {{ $t('backup.warningTitle') }}
             </h4>
             <ul class="mb-0">
-              <li>All current items, categories, custom fields, values, and photos are replaced by this backup.</li>
-              <li>Everything added or changed after this backup was created disappears from the active database.</li>
-              <li>The current database is saved automatically as a pre-restore safety backup on the server first.</li>
-              <li>The application briefly becomes unavailable for changes and then reloads.</li>
+              <li>{{ $t('backup.warningReplaced') }}</li>
+              <li>{{ $t('backup.warningLost') }}</li>
+              <li>{{ $t('backup.warningSafety') }}</li>
+              <li>{{ $t('backup.warningReload') }}</li>
             </ul>
           </div>
 
@@ -274,7 +292,10 @@ async function finishReset(result) {
             <label
               class="form-label"
               for="restore-confirmation"
-            >Type <code>{{ CONFIRMATION }}</code> to confirm</label>
+            ><i18n-t
+              keypath="common.typeToConfirm"
+              scope="global"
+            ><template #phrase><code>{{ CONFIRMATION }}</code></template></i18n-t></label>
             <input
               id="restore-confirmation"
               v-model="confirmation"
@@ -297,11 +318,10 @@ async function finishReset(result) {
               class="spinner-border spinner-border-sm me-1"
               aria-hidden="true"
             />
-            {{ restoring ? 'Restoring…' : 'Restore backup' }}
+            {{ restoring ? $t('backup.restoring') : $t('backup.restore') }}
           </button>
           <p class="form-text mt-2 mb-0">
-            The validated file is kept on the server for {{ Math.round(validation.expires_in_seconds / 60) }} minutes.
-            After that, validate it again.
+            {{ $t('backup.expires', Math.round(validation.expires_in_seconds / 60)) }}
           </p>
         </template>
       </div>
@@ -310,20 +330,36 @@ async function finishReset(result) {
     <section class="card">
       <div class="card-header">
         <h2 class="card-title">
-          Where the data lives
+          {{ $t('backup.whereTitle') }}
         </h2>
       </div>
       <div class="card-body meta-text">
-        <p class="mb-2">
-          The live database is stored in <code>data/inventory.sqlite</code>, or in the directory set through
-          <code>DATA_DIR</code>. Photos are inside the same file, so the snapshot is the whole inventory.
-        </p>
-        <p class="mb-0">
-          Keep regular copies outside this server. Pre-restore safety backups are written to
-          <code>pre-restore-backups</code> next to the live database, and the ten most recent are kept.
-          Pre-reset safety backups are written to <code>pre-reset-backups</code> and are never removed
-          automatically.
-        </p>
+        <i18n-t
+          keypath="backup.whereLive"
+          tag="p"
+          class="mb-2"
+          scope="global"
+        >
+          <template #file>
+            <code>data/inventory.sqlite</code>
+          </template>
+          <template #variable>
+            <code>DATA_DIR</code>
+          </template>
+        </i18n-t>
+        <i18n-t
+          keypath="backup.whereCopies"
+          tag="p"
+          class="mb-0"
+          scope="global"
+        >
+          <template #restoreDir>
+            <code>pre-restore-backups</code>
+          </template>
+          <template #resetDir>
+            <code>pre-reset-backups</code>
+          </template>
+        </i18n-t>
       </div>
     </section>
 
@@ -338,7 +374,7 @@ async function finishReset(result) {
           id="danger-zone-title"
           class="card-title text-danger"
         >
-          Danger Zone
+          {{ $t('backup.dangerZone') }}
         </h2>
       </div>
       <div class="card-body">
@@ -348,25 +384,30 @@ async function finishReset(result) {
           role="status"
         >
           <h3 class="alert-title">
-            Database reset completed.
+            {{ $t('reset.completed') }}
           </h3>
           <p class="mb-1">
-            Inventory Atlas Lite is ready for a fresh inventory.
+            {{ $t('reset.ready') }}
           </p>
-          <p class="mb-0">
-            A safety backup of the removed inventory was saved as <code>{{ resetResult.safetyBackup }}</code>
-            in the pre-reset backup directory. Opening the items list…
-          </p>
+          <i18n-t
+            keypath="reset.safety"
+            tag="p"
+            class="mb-0"
+            scope="global"
+          >
+            <template #file>
+              <code>{{ resetResult.safetyBackup }}</code>
+            </template>
+          </i18n-t>
         </div>
         <h3 class="h4">
-          Reset Inventory Database
+          {{ $t('reset.title') }}
         </h3>
         <p class="mb-2">
-          Permanently remove all inventory items, photos, categories, and custom fields, and return
-          Inventory Atlas Lite to a fresh database state.
+          {{ $t('reset.text') }}
         </p>
         <p class="meta-text">
-          Application settings are preserved. A safety backup will be created automatically before reset.
+          {{ $t('reset.preserved') }}
         </p>
         <button
           class="btn btn-outline-danger"
@@ -374,7 +415,7 @@ async function finishReset(result) {
           :disabled="busy || Boolean(resetResult)"
           @click="resetOpen = true"
         >
-          Reset Inventory Database
+          {{ $t('reset.title') }}
         </button>
       </div>
     </section>

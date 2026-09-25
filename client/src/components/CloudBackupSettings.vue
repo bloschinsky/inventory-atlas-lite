@@ -1,15 +1,20 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { IconBrandDropbox, IconBrandGoogleDrive } from '@tabler/icons-vue';
 import { api, jsonOptions } from '../api.js';
+import { formatDateTime } from '../i18n/index.js';
 import CloudAppCredentials from './CloudAppCredentials.vue';
 
 const route = useRoute();
 const router = useRouter();
+const { t, locale } = useI18n();
 
 const icons = { dropbox: IconBrandDropbox, 'google-drive': IconBrandGoogleDrive };
-const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+// Sunday first, matching the weekday numbers the schedule stores; names come from the active locale.
+const weekdays = computed(() => Array.from({ length: 7 }, (_, index) =>
+  new Intl.DateTimeFormat(locale.value, { weekday: 'long', timeZone: 'UTC' }).format(new Date(Date.UTC(2023, 0, 1 + index)))));
 
 const overview = ref(null);
 const loading = ref(true);
@@ -27,9 +32,7 @@ const label = id => providers.value.find(provider => provider.id === id)?.label 
 const redirectUri = provider => provider.redirectUri || `${window.location.origin}${overview.value.callbackPath}`;
 
 // Every time is shown in the server's time zone, the one the schedule is entered in.
-const formatTime = value => (value
-  ? new Date(value).toLocaleString(undefined, { timeZone: overview.value.timezone, dateStyle: 'medium', timeStyle: 'short' })
-  : 'Never');
+const formatTime = value => (value ? formatDateTime(value, overview.value.timezone) : t('common.never'));
 
 function show(data) {
   overview.value = data;
@@ -78,8 +81,8 @@ async function connect(provider) {
 
 const backupNow = provider => act(`backup:${provider.id}`, async () => {
   const result = await api(`/api/cloud-backup/providers/${provider.id}/backup`, { method: 'POST' });
-  const cleanup = result.cleanup && !result.cleanup.ok ? ` Old backups could not be removed: ${result.cleanup.error}` : '';
-  return `Backup uploaded to ${provider.label} as ${result.file}.${cleanup}`;
+  const cleanup = result.cleanup && !result.cleanup.ok ? ` ${t('cloud.cleanupFailed', { reason: result.cleanup.error })}` : '';
+  return t('cloud.uploaded', { provider: provider.label, file: result.file }) + cleanup;
 });
 
 const testConnection = provider => act(`test:${provider.id}`, async () =>
@@ -87,17 +90,17 @@ const testConnection = provider => act(`test:${provider.id}`, async () =>
 
 const disconnect = provider => act(`disconnect:${provider.id}`, async () => {
   await api(`/api/cloud-backup/providers/${provider.id}`, { method: 'DELETE' });
-  return `${provider.label} disconnected. Its stored access was removed from this server.`;
+  return t('cloud.disconnected', { provider: provider.label });
 });
 
 const saveApp = (provider, credentials) => act(`app:${provider.id}`, async () => {
   await api(`/api/cloud-backup/providers/${provider.id}/app`, jsonOptions('PUT', credentials));
-  return `${provider.label} app credentials saved.`;
+  return t('cloud.appSaved', { provider: provider.label });
 });
 
 const removeApp = provider => act(`app:${provider.id}`, async () => {
   await api(`/api/cloud-backup/providers/${provider.id}/app`, { method: 'DELETE' });
-  return `${provider.label} app credentials removed.`;
+  return t('cloud.appRemoved', { provider: provider.label });
 });
 
 const saveSchedule = () => act('schedule', async () => {
@@ -105,15 +108,15 @@ const saveSchedule = () => act('schedule', async () => {
     schedule: { enabled: form.enabled, provider: form.provider || null, frequency: form.frequency, weekday: Number(form.weekday), time: form.time },
     retention: { mode: form.retentionMode, keep: Number(form.keep) }
   }));
-  return 'Backup schedule saved.';
+  return t('cloud.scheduleSaved');
 });
 
 onMounted(async () => {
   try { await load(); } catch (caught) { error.value = caught.message; } finally { loading.value = false; }
   // The OAuth callback reports only the outcome; the reason for a failure comes from the server status.
   const outcome = route.query.cloud;
-  if (outcome === 'connected') notice.value = `${label(route.query.provider)} connected.`;
-  if (outcome === 'error') error.value = status.value.connectError?.message || 'The cloud storage connection could not be completed.';
+  if (outcome === 'connected') notice.value = t('cloud.connectedNotice', { provider: label(route.query.provider) });
+  if (outcome === 'error') error.value = status.value.connectError?.message || t('cloud.connectFailed');
   if (outcome) router.replace({ query: {} });
 });
 </script>
@@ -128,13 +131,19 @@ onMounted(async () => {
         id="cloud-backup-title"
         class="card-title"
       >
-        Cloud Backup
+        {{ $t('cloud.title') }}
       </h2>
     </div>
     <div class="card-body">
       <p class="text-secondary">
-        Upload the same consistent snapshot as <strong>Download backup</strong> to Dropbox or Google Drive, right
-        now or on a schedule. The access granted by the provider stays on this server and is never part of a backup.
+        <i18n-t
+          keypath="cloud.intro"
+          scope="global"
+        >
+          <template #download>
+            <strong>{{ $t('backup.download') }}</strong>
+          </template>
+        </i18n-t>
       </p>
       <div
         v-if="notice"
@@ -154,7 +163,7 @@ onMounted(async () => {
         v-if="loading"
         class="text-secondary"
       >
-        Loading cloud backup settings…
+        {{ $t('cloud.loading') }}
       </div>
       <template v-else-if="overview">
         <div class="row g-3 mb-4">
@@ -183,29 +192,44 @@ onMounted(async () => {
                   class="badge ms-auto"
                   :class="provider.connected ? 'bg-green-lt' : 'bg-secondary-lt'"
                 >
-                  {{ provider.connected ? 'Connected' : (provider.configured ? 'Not connected' : 'Not configured') }}
+                  {{ $t(provider.connected ? 'cloud.connected' : (provider.configured ? 'cloud.notConnected' : 'cloud.notConfigured')) }}
                 </span>
               </div>
               <div class="card-body">
                 <template v-if="!provider.configured">
-                  <p class="mb-2">
-                    Enter the credentials of your {{ provider.label }} app below, or set
-                    <code
-                      v-for="(setting, index) in provider.requiredSettings"
-                      :key="setting"
-                    >{{ setting }}{{ index < provider.requiredSettings.length - 1 ? ' ' : '' }}</code>
-                    on the server.
-                  </p>
+                  <i18n-t
+                    keypath="cloud.enterCredentials"
+                    tag="p"
+                    class="mb-2"
+                    scope="global"
+                  >
+                    <template #provider>
+                      {{ provider.label }}
+                    </template>
+                    <template #settings>
+                      <code
+                        v-for="(setting, index) in provider.requiredSettings"
+                        :key="setting"
+                      >{{ setting }}{{ index < provider.requiredSettings.length - 1 ? ' ' : '' }}</code>
+                    </template>
+                  </i18n-t>
                   <p class="meta-text mb-0">
-                    Register this redirect URI with the app: <code class="text-break">{{ redirectUri(provider) }}</code>
+                    {{ $t('cloud.registerRedirect') }} <code class="text-break">{{ redirectUri(provider) }}</code>
                   </p>
                 </template>
                 <template v-else-if="!provider.connected">
-                  <p class="mb-2">
-                    Not connected. Backups will go to <strong>{{ provider.destination }}</strong>.
-                  </p>
+                  <i18n-t
+                    keypath="cloud.willGoTo"
+                    tag="p"
+                    class="mb-2"
+                    scope="global"
+                  >
+                    <template #destination>
+                      <strong>{{ provider.destination }}</strong>
+                    </template>
+                  </i18n-t>
                   <p class="meta-text">
-                    Redirect URI registered with the app: <code class="text-break">{{ redirectUri(provider) }}</code>
+                    {{ $t('cloud.registeredRedirect') }} <code class="text-break">{{ redirectUri(provider) }}</code>
                   </p>
                   <button
                     class="btn btn-primary"
@@ -213,25 +237,25 @@ onMounted(async () => {
                     :disabled="Boolean(busy)"
                     @click="connect(provider)"
                   >
-                    {{ busy === `connect:${provider.id}` ? 'Connecting…' : `Connect ${provider.label}` }}
+                    {{ busy === `connect:${provider.id}` ? $t('cloud.connecting') : $t('cloud.connect', { provider: provider.label }) }}
                   </button>
                 </template>
                 <template v-else>
                   <dl class="row mb-3">
                     <dt class="col-sm-4">
-                      Account
+                      {{ $t('cloud.account') }}
                     </dt>
                     <dd class="col-sm-8 text-break">
                       {{ provider.account }}
                     </dd>
                     <dt class="col-sm-4">
-                      Connected on
+                      {{ $t('cloud.connectedOn') }}
                     </dt>
                     <dd class="col-sm-8">
                       {{ formatTime(provider.connectedAt) }}
                     </dd>
                     <dt class="col-sm-4">
-                      Folder
+                      {{ $t('cloud.folder') }}
                     </dt>
                     <dd class="col-sm-8 mb-0">
                       {{ provider.destination }}
@@ -242,28 +266,28 @@ onMounted(async () => {
                       class="btn btn-primary"
                       type="button"
                       :disabled="Boolean(busy)"
-                      :aria-label="`Back up to ${provider.label} now`"
+                      :aria-label="$t('cloud.backupTo', { provider: provider.label })"
                       @click="backupNow(provider)"
                     >
-                      {{ busy === `backup:${provider.id}` ? 'Backing up…' : 'Backup now' }}
+                      {{ busy === `backup:${provider.id}` ? $t('cloud.backingUp') : $t('cloud.backupNow') }}
                     </button>
                     <button
                       class="btn btn-outline-secondary"
                       type="button"
                       :disabled="Boolean(busy)"
-                      :aria-label="`Test ${provider.label} connection`"
+                      :aria-label="$t('cloud.testProvider', { provider: provider.label })"
                       @click="testConnection(provider)"
                     >
-                      {{ busy === `test:${provider.id}` ? 'Testing…' : 'Test connection' }}
+                      {{ busy === `test:${provider.id}` ? $t('common.testing') : $t('common.testConnection') }}
                     </button>
                     <button
                       class="btn btn-outline-danger"
                       type="button"
                       :disabled="Boolean(busy)"
-                      :aria-label="`Disconnect ${provider.label}`"
+                      :aria-label="$t('cloud.disconnectProvider', { provider: provider.label })"
                       @click="disconnect(provider)"
                     >
-                      Disconnect
+                      {{ $t('cloud.disconnect') }}
                     </button>
                   </div>
                 </template>
@@ -272,7 +296,7 @@ onMounted(async () => {
                   :open="!provider.configured"
                 >
                   <summary class="mb-2">
-                    App credentials
+                    {{ $t('cloud.appCredentials') }}
                   </summary>
                   <CloudAppCredentials
                     :provider="provider"
@@ -290,7 +314,7 @@ onMounted(async () => {
           class="mb-4"
           @submit.prevent="saveSchedule"
         >
-          <h3>Automatic backups</h3>
+          <h3>{{ $t('cloud.automatic') }}</h3>
           <label class="form-check form-switch mb-3">
             <input
               v-model="form.enabled"
@@ -298,14 +322,14 @@ onMounted(async () => {
               type="checkbox"
               :disabled="!connected.length"
             >
-            <span class="form-check-label">Enable automatic backups</span>
+            <span class="form-check-label">{{ $t('cloud.enableAutomatic') }}</span>
           </label>
           <div class="row g-3 mb-3">
             <div class="col-sm-6 col-lg-3">
               <label
                 class="form-label"
                 for="cloud-destination"
-              >Back up to</label>
+              >{{ $t('cloud.destination') }}</label>
               <select
                 id="cloud-destination"
                 v-model="form.provider"
@@ -316,7 +340,7 @@ onMounted(async () => {
                   v-if="!connected.length"
                   value=""
                 >
-                  Connect a service first
+                  {{ $t('cloud.connectFirst') }}
                 </option>
                 <option
                   v-for="provider in connected"
@@ -331,17 +355,17 @@ onMounted(async () => {
               <label
                 class="form-label"
                 for="cloud-frequency"
-              >Frequency</label>
+              >{{ $t('cloud.frequency') }}</label>
               <select
                 id="cloud-frequency"
                 v-model="form.frequency"
                 class="form-select"
               >
                 <option value="daily">
-                  Daily
+                  {{ $t('cloud.daily') }}
                 </option>
                 <option value="weekly">
-                  Weekly
+                  {{ $t('cloud.weekly') }}
                 </option>
               </select>
             </div>
@@ -352,7 +376,7 @@ onMounted(async () => {
               <label
                 class="form-label"
                 for="cloud-weekday"
-              >Day of week</label>
+              >{{ $t('cloud.weekday') }}</label>
               <select
                 id="cloud-weekday"
                 v-model.number="form.weekday"
@@ -360,7 +384,7 @@ onMounted(async () => {
               >
                 <option
                   v-for="(day, index) in weekdays"
-                  :key="day"
+                  :key="index"
                   :value="index"
                 >
                   {{ day }}
@@ -371,7 +395,7 @@ onMounted(async () => {
               <label
                 class="form-label"
                 for="cloud-time"
-              >Time of day</label>
+              >{{ $t('cloud.time') }}</label>
               <input
                 id="cloud-time"
                 v-model="form.time"
@@ -382,26 +406,31 @@ onMounted(async () => {
             </div>
           </div>
           <div class="form-text mb-3">
-            Times use the server time zone: <strong>{{ overview.timezone }}</strong>. The server runs the backup
-            itself, so no browser needs to stay open. A backup missed while the server was off runs once shortly
-            after it starts again.
+            <i18n-t
+              keypath="cloud.timezoneHelp"
+              scope="global"
+            >
+              <template #timezone>
+                <strong>{{ overview.timezone }}</strong>
+              </template>
+            </i18n-t>
           </div>
           <div class="row g-3 mb-3">
             <div class="col-sm-6">
               <label
                 class="form-label"
                 for="cloud-retention"
-              >Retention</label>
+              >{{ $t('cloud.retention') }}</label>
               <select
                 id="cloud-retention"
                 v-model="form.retentionMode"
                 class="form-select"
               >
                 <option value="all">
-                  Keep all backups
+                  {{ $t('cloud.keepAll') }}
                 </option>
                 <option value="last">
-                  Keep only the newest backups
+                  {{ $t('cloud.keepNewest') }}
                 </option>
               </select>
             </div>
@@ -412,7 +441,7 @@ onMounted(async () => {
               <label
                 class="form-label"
                 for="cloud-keep"
-              >Backups to keep</label>
+              >{{ $t('cloud.keep') }}</label>
               <input
                 id="cloud-keep"
                 v-model.number="form.keep"
@@ -425,82 +454,88 @@ onMounted(async () => {
             </div>
           </div>
           <div class="form-text mb-3">
-            Retention applies after each successful cloud backup and only removes older
-            <code>inventory-atlas-lite-…Z.sqlite</code> files in the application's own backup folder.
+            <i18n-t
+              keypath="cloud.retentionHelp"
+              scope="global"
+            >
+              <template #files>
+                <code>inventory-atlas-lite-…Z.sqlite</code>
+              </template>
+            </i18n-t>
           </div>
           <button
             class="btn btn-primary"
             :disabled="Boolean(busy)"
           >
-            {{ busy === 'schedule' ? 'Saving…' : 'Save schedule' }}
+            {{ busy === 'schedule' ? $t('common.saving') : $t('cloud.saveSchedule') }}
           </button>
         </form>
 
-        <h3>Status</h3>
+        <h3>{{ $t('cloud.status') }}</h3>
         <dl
           class="row mb-0"
-          aria-label="Cloud backup status"
+          :aria-label="$t('cloud.statusLabel')"
         >
           <dt class="col-sm-4">
-            Last successful backup
+            {{ $t('cloud.lastSuccess') }}
           </dt>
           <dd class="col-sm-8">
             <template v-if="status.lastSuccess">
-              {{ formatTime(status.lastSuccess.at) }} to {{ label(status.lastSuccess.provider) }}
+              {{ $t('cloud.successTo', { time: formatTime(status.lastSuccess.at), provider: label(status.lastSuccess.provider) }) }}
               <span class="text-secondary text-break">({{ status.lastSuccess.file }})</span>
             </template>
             <template v-else>
-              Never
+              {{ $t('common.never') }}
             </template>
           </dd>
           <dt class="col-sm-4">
-            Last attempt
+            {{ $t('cloud.lastAttempt') }}
           </dt>
           <dd class="col-sm-8">
             <template v-if="status.running">
-              Running now ({{ label(status.running.provider) }})
+              {{ $t('cloud.running', { provider: label(status.running.provider) }) }}
             </template>
             <template v-else-if="status.lastAttempt">
-              {{ formatTime(status.lastAttempt.at) }}, {{ status.lastAttempt.trigger }},
-              {{ status.lastAttempt.ok ? 'succeeded' : 'failed' }}
+              {{ formatTime(status.lastAttempt.at) }}, {{ $t(`cloud.triggers.${status.lastAttempt.trigger}`) }},
+              {{ $t(status.lastAttempt.ok ? 'cloud.succeeded' : 'cloud.failed') }}
             </template>
             <template v-else>
-              Never
+              {{ $t('common.never') }}
             </template>
           </dd>
           <dt class="col-sm-4">
-            Service
+            {{ $t('cloud.service') }}
           </dt>
           <dd class="col-sm-8">
             {{ status.lastAttempt ? label(status.lastAttempt.provider) : '—' }}
           </dd>
           <dt class="col-sm-4">
-            Last error
+            {{ $t('cloud.lastError') }}
           </dt>
           <dd
             class="col-sm-8"
             :class="{ 'text-danger': status.lastAttempt?.error }"
           >
-            {{ status.lastAttempt?.error || 'None' }}
+            {{ status.lastAttempt?.error || $t('common.none') }}
           </dd>
           <template v-if="status.lastAttempt?.cleanup">
             <dt class="col-sm-4">
-              Retention cleanup
+              {{ $t('cloud.cleanup') }}
             </dt>
             <dd
               class="col-sm-8"
               :class="{ 'text-warning': !status.lastAttempt.cleanup.ok }"
             >
               {{ status.lastAttempt.cleanup.ok
-                ? `Removed ${status.lastAttempt.cleanup.deleted} old backup(s).`
-                : `Failed: ${status.lastAttempt.cleanup.error}` }}
+                ? $t('cloud.cleanupRemoved', status.lastAttempt.cleanup.deleted)
+                : $t('cloud.cleanupError', { reason: status.lastAttempt.cleanup.error }) }}
             </dd>
           </template>
           <dt class="col-sm-4">
-            Next scheduled run
+            {{ $t('cloud.nextRun') }}
           </dt>
           <dd class="col-sm-8 mb-0">
-            {{ status.nextRunAt ? `${formatTime(status.nextRunAt)} (${overview.timezone})` : 'Not scheduled' }}
+            {{ status.nextRunAt ? `${formatTime(status.nextRunAt)} (${overview.timezone})` : $t('cloud.notScheduled') }}
           </dd>
         </dl>
       </template>
