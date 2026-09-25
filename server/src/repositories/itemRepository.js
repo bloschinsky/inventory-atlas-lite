@@ -10,14 +10,40 @@ const ROOTS_CTE = `
   )
 `;
 
-// The free-text item search matches any of these columns.
+// The free-text item search matches any of these columns, plus every text-type custom field value.
 const SEARCH_COLUMNS = ['i.name', 'i.description', 'i.serial_number', 'i.transferred_to'];
+const CUSTOM_TEXT_SEARCH = `EXISTS (
+  SELECT 1 FROM item_field_values sv JOIN custom_fields sf ON sf.id = sv.field_id
+  WHERE sv.item_id = i.id AND sf.type = 'text' AND sv.value LIKE @search ESCAPE '\\'
+)`;
 
-const SORT_COLUMNS = {
+// The whitelist of core sort expressions. A request only ever selects a key here, never SQL. The
+// location is the effective one: the root container's, or the item's own when it has no root.
+const CORE_SORT = {
   name: 'i.name COLLATE NOCASE',
   category: 'c.name COLLATE NOCASE',
+  condition: 'i.condition COLLATE NOCASE',
+  location: "NULLIF(TRIM(CASE WHEN root.id IS NULL THEN i.location ELSE root.location END), '') COLLATE NOCASE",
+  purchaseDate: 'i.purchase_date',
+  purchasePrice: 'CAST(i.purchase_price_amount AS REAL)',
+  serialNumber: 'i.serial_number COLLATE NOCASE',
+  transferredTo: 'i.transferred_to COLLATE NOCASE',
   created: 'i.created_at',
   updated: 'i.updated_at'
+};
+
+// A merged custom column sorts by the value of whichever of its fields belongs to the item's
+// category. The field ids are bound as one JSON parameter; the type only selects a fixed wrapper.
+const CUSTOM_SORT_VALUE = `(
+  SELECT NULLIF(TRIM(sv.value), '') FROM item_field_values sv
+  WHERE sv.item_id = i.id AND sv.field_id IN (SELECT value FROM json_each(@sortFieldIds))
+  ORDER BY sv.field_id LIMIT 1
+)`;
+const CUSTOM_SORT = {
+  text: `${CUSTOM_SORT_VALUE} COLLATE NOCASE`,
+  number: `CAST(${CUSTOM_SORT_VALUE} AS REAL)`,
+  date: CUSTOM_SORT_VALUE,
+  boolean: CUSTOM_SORT_VALUE
 };
 
 export class ItemRepository {
@@ -80,13 +106,16 @@ export class ItemRepository {
     `).all(itemId, categoryId);
   }
 
-  search({ search, categoryId, sort, direction, limit, offset }) {
-    const column = SORT_COLUMNS[sort] || SORT_COLUMNS.name;
-    const order = direction === 'desc' ? 'DESC' : 'ASC';
+  /*
+    `sort` is either { core: key } or { fieldIds, type } of a merged custom column; unknown keys fall
+    back to the name. Empty values always come last, and the item id keeps equal values in a stable
+    order, so pagination never repeats or skips a row.
+  */
+  search({ search, categoryId, sort = {}, direction, limit, offset }) {
     const where = [];
     const params = {};
     if (search) {
-      where.push(`(${SEARCH_COLUMNS.map(column => `${column} LIKE @search ESCAPE '\\'`).join(' OR ')})`);
+      where.push(`(${[...SEARCH_COLUMNS.map(column => `${column} LIKE @search ESCAPE '\\'`), CUSTOM_TEXT_SEARCH].join(' OR ')})`);
       params.search = containsLike(search);
     }
     if (categoryId) {
@@ -95,6 +124,12 @@ export class ItemRepository {
     }
     const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
     const total = this.db.prepare(`SELECT COUNT(*) AS count FROM items i ${clause}`).get(params).count;
+    let column = CORE_SORT[sort.core] || CORE_SORT.name;
+    if (sort.fieldIds) {
+      column = CUSTOM_SORT[sort.type] || CUSTOM_SORT.text;
+      params.sortFieldIds = JSON.stringify(sort.fieldIds);
+    }
+    const order = direction === 'desc' ? 'DESC' : 'ASC';
     const rows = this.db.prepare(`
       ${ROOTS_CTE}
       SELECT i.id, i.uuid, i.name, i.condition, i.location, i.purchase_date,
@@ -107,9 +142,17 @@ export class ItemRepository {
       LEFT JOIN items parent ON parent.id = i.parent_item_id
       LEFT JOIN roots ON roots.id = i.id
       LEFT JOIN items root ON root.id = roots.root_id ${clause}
-      ORDER BY ${column} ${order}, i.id ASC LIMIT @limit OFFSET @offset
+      ORDER BY (${column}) IS NULL, ${column} ${order}, i.id ASC LIMIT @limit OFFSET @offset
     `).all({ ...params, limit, offset });
     return { rows, total };
+  }
+
+  // The values of the requested custom fields for one page of items, in a single statement.
+  listColumnValues(itemIds, fieldIds) {
+    return this.db.prepare(`
+      SELECT item_id, field_id, value FROM item_field_values
+      WHERE item_id IN (SELECT value FROM json_each(?)) AND field_id IN (SELECT value FROM json_each(?))
+    `).all(JSON.stringify(itemIds), JSON.stringify(fieldIds));
   }
 
   // Only what a printed label shows, for any number of items in one statement. The UUIDs travel as a

@@ -59,16 +59,17 @@ presentation layer over the existing API, and no CDN or other runtime internet d
 - A Tabler page header shows the title **Items**, the total item count as the page subtitle,
   **Batch Add from JSON** (see [`batch-add-items.md`](batch-add-items.md)), and the primary
   **Add item** action.
-- One card groups the labelled **Search**, **Category**, **Sort by**, and **Direction** controls.
-  Search keeps its 250 ms debounce, and changing a filter resets to the first page.
-- From `lg` upwards the results are a Tabler `card-table` with the Photo, Name, Category, Condition,
-  Location, **Stored inside**, and Actions columns. Location and Stored inside become their own
-  columns from `xl` (`1200px`); between `lg` and `xl` the same two values sit under the item name so
-  the table stays readable. A long value is truncated with its full text in the `title` attribute,
-  and the container is a link to its own page. Each row carries **View** and **Edit** links whose
-  accessible names include the item name.
-- Below `lg` each item is a card with a thumbnail, the name as the primary line, the category, the
-  container when the item is stored inside another one, the condition and location when present, and
+- One card groups the labelled **Search** and **Category** controls and the **Columns** picker;
+  below `lg` it also holds the compact **Sort** control. Search keeps its 250 ms debounce, and
+  changing a filter or the sort resets to the first page. Column choice and sorting are described in
+  [`item-list-columns-and-sorting.md`](item-list-columns-and-sorting.md).
+- From `lg` upwards the results are a Tabler `card-table` with the selection checkbox, the chosen
+  columns, and Actions; sortable headers use Tabler's `table-sort` button. A long value is truncated
+  with its full text in the `title` attribute, and the container is a link to its own page. The table
+  scrolls sideways inside its card when many columns are chosen. Each row carries **View** and
+  **Edit** links whose accessible names include the item name.
+- Below `lg` each item is a card with the name as the primary line, a thumbnail when the Photo
+  column is on, the category, every other chosen column with a value as a labelled line, and
   full-width **View** and **Edit** buttons of at least `44px`.
 - Every row and card starts with a **Select <item name>** checkbox for label printing, and the table
   header has **Select all items on this page**. A bar between the filters and the results shows the

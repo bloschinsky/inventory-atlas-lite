@@ -56,8 +56,7 @@ test('major pages render their Ukrainian interface', async ({ page }) => {
 
   await page.goto('/items');
   await page.mouse.move(600, 400);
-  await expect(page.getByLabel('Сортувати за')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Друк етикеток' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Колонки' })).toBeVisible();  await expect(page.getByRole('button', { name: 'Друк етикеток' })).toBeDisabled();
   await page.getByRole('button', { name: 'Про програму' }).first().click();
   const about = page.getByRole('dialog', { name: 'Про програму' });
   await expect(about.getByRole('button', { name: 'Перевірити оновлення' })).toBeVisible();

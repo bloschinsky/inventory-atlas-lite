@@ -73,6 +73,17 @@ test('inventory acceptance path persists and produces a valid backup', async () 
     assert.equal(list.pagination.total, 1);
     assert.ok(list.items[0].thumbnail_id);
 
+    // The Items view asks for the column catalog, then for exactly the custom values it shows.
+    const { fields: columns } = await request('/api/items/columns');
+    const brandColumn = columns.find(column => column.label === 'Brand');
+    assert.deepEqual(brandColumn, {
+      key: 'custom:text:brand', label: 'Brand', type: 'text', sortable: true, searchable: true, core: false, fieldIds: [brand.id]
+    });
+    assert.ok(columns.some(column => column.key === 'purchasePrice' && column.core && column.sortable));
+    const withBrand = await request(`/api/items?sort=${encodeURIComponent(brandColumn.key)}&direction=desc&fields=${encodeURIComponent(brandColumn.key)}`);
+    assert.deepEqual(withBrand.items[0].custom_values, { 'custom:text:brand': 'Olympus' });
+    assert.equal((await request(`/api/items?sort=${encodeURIComponent("name'--")}`)).pagination.total, 1);
+
     const dashboard = await request(`/api/dashboard?categoryId=${category.id}`);
     assert.equal(dashboard.totalItems, 1);
     assert.deepEqual(dashboard.photoCoverage, { withPhotos: 1, withoutPhotos: 0, percentage: 100 });

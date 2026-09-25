@@ -33,7 +33,9 @@ item's own saved `location` is never modified and stays the value the form edits
 - `ItemRepository.search()` prefixes the list query with a recursive CTE that walks down from every
   top-level item and labels each row with its root container, then joins that root for its id, uuid,
   name, and location. The whole page is resolved by the same single statement, so the list makes two
-  statements in total (the count and the page) at any nesting depth.
+  statements in total (the count and the page) at any nesting depth, plus one bulk statement for
+  custom column values when the view requests them. The Location column sorts by this effective
+  location.
 - Walking downwards from the roots also means a row that somehow belongs to a cycle is simply never
   labelled, and the list still answers.
 - `ItemRepository.findRoot(id)` resolves one item upwards through its parents with a depth guard and
@@ -45,7 +47,7 @@ item's own saved `location` is never modified and stays the value the form edits
 - Cycle protection in `ItemService.resolveParentId` is untouched, so an inheritance chain always
   terminates.
 - UI: `client/src/pages/ItemDetails.vue` (value and note), `client/src/components/ItemResults.vue`
-  (table cell, narrow line, phone card), and `client/src/pages/ItemForm.vue` (hints only; the field
+  (table cell and phone card line), and `client/src/pages/ItemForm.vue` (hints only; the field
   still edits the item's own location).
 
 ## Verification

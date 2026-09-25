@@ -13,15 +13,11 @@ Implemented behavior is documented separately in [`features/README.md`](features
    Includes a film-boxes-in-hand regression asset. See
    [`TASK-background-removal-quality-phase-2.md`](issues/TASK-background-removal-quality-phase-2.md).
 
-2. **Configurable item columns and sorting** — Planned. Adds saved column selection, server-side
-   table-header sorting, and matching compact metadata on mobile item cards. See
-   [`TASK-CONFIGURABLE-ITEM-COLUMNS-AND-SORTING.md`](issues/TASK-CONFIGURABLE-ITEM-COLUMNS-AND-SORTING.md).
-
-3. **User-defined item templates** — Planned. Adds reusable template storage and management that
+2. **User-defined item templates** — Planned. Adds reusable template storage and management that
    prefills the regular Add Item form without creating inventory records automatically. See
    [`TASK-ITEM-TEMPLATES.md`](issues/TASK-ITEM-TEMPLATES.md).
 
-4. **Duplicate existing item** — Planned; blocked by User-defined item templates. Adds an editable
+3. **Duplicate existing item** — Planned; blocked by User-defined item templates. Adds an editable
    prefilled Add Item draft from an existing item without copying its identity, photos, or container.
    See [`TASK-DUPLICATE-ITEM.md`](issues/TASK-DUPLICATE-ITEM.md).
 

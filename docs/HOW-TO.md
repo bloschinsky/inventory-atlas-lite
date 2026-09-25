@@ -395,17 +395,31 @@ enables the live camera.
 
 1. Open **Items**.
 2. Type into **Search**. The search runs as you type and matches the item name, description, serial
-   number, and **Transferred To** — not custom field values, condition, or location.
+   number, **Transferred To**, and the values of **text** custom fields — whether or not their column
+   is shown. It does not match condition, location, or number, date, and yes/no fields.
 3. Narrow the list with **Category** (**All categories** by default).
-4. **Sort by** Name, Category, Created, or Updated, with **Direction** Ascending or Descending.
-5. On a wide screen the results are a table with photo, name, category, condition, location,
-   **Stored inside**, and **View** / **Edit** buttons; the container name links to its own page. On a
-   narrower window the location and the container move under the item name, and on a phone each item
-   is a card with the same information and the same two buttons. The location shown is the inherited
-   one for items that sit inside a container. An item with **Transferred To** shows a
-   **Transferred to: …** badge under its name. The checkbox in front of each item selects it for
-   label printing.
-6. The list shows 12 items per page; use **Previous** and **Next** below the results. The total count
+4. Choose what the list shows with **Columns**: tick or untick Photo, Category, Condition, Location,
+   **Stored inside**, Purchase Date, Purchase Price, Serial Number, Transferred To, Created, Updated,
+   and your custom fields. **Name** always stays. Custom fields with the same name and type in
+   different categories share one column, so one **Brand** column shows the brand of every category
+   that has it; two fields with the same name but different types are listed separately with their
+   type in brackets. **Reset to default** returns to Photo, Name, Category, Condition, Location, and
+   **Stored inside**. The choice and the sort are remembered in this browser only.
+5. On a wide screen, click a column header to sort by it; the first click sorts ascending, the next
+   one descending, and an arrow marks the sorted column. Photo and **Stored inside** do not sort.
+   Empty values are always listed last, numbers and prices sort by amount (whatever the currency),
+   and dates by date. The sort covers the whole filtered list, not just the page on screen, and
+   changing it returns to the first page.
+6. On a wide screen the results are a table with the chosen columns and **View** / **Edit**
+   buttons; a missing value shows as **—**, and the container name links to its own page. The table
+   scrolls sideways when many columns are chosen. On a phone each item is a card with the name, the
+   photo if that column is on, the category, and every other chosen field as a labelled line (empty
+   ones are left out), plus the same two buttons. Phones sort with the **Sort** box above the list,
+   which offers the visible sortable columns, and the arrow button beside it, which reverses the
+   order. The location shown is the inherited one for items that sit inside a container. While the
+   **Transferred To** column is hidden, an item with a transfer shows a **Transferred to: …** badge
+   under its name. The checkbox in front of each item selects it for label printing.
+7. The list shows 12 items per page; use **Previous** and **Next** below the results. The total count
    is shown under the **Items** heading.
 
 ### Record where an item was transferred

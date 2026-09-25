@@ -13,9 +13,9 @@ separate container, room, or shelf entity.
 - The selector never offers the edited item itself or anything already stored inside it.
 - **Item details** shows `Stored inside` with a link to the parent, and a **Contents** section
   listing the direct children with their thumbnails and links.
-- The **Items** list shows the direct container in a `Stored inside` column that links to it, and
-  under the item name on narrower screens and on phone cards. Only the direct parent is shown; the
-  list is not a tree.
+- The **Items** list shows the direct container in a `Stored inside` column that links to it, and as
+  a `Stored inside:` line on phone cards, while that column is chosen (it is by default). Only the
+  direct parent is shown; the list is not a tree.
 - Nesting has no depth limit, and an item has at most one direct parent.
 - The plain-text `Location` field keeps describing where the physical object is, while
   `Stored inside` describes which other record holds it. A contained item is displayed at the

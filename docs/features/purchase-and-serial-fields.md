@@ -20,7 +20,8 @@ the Details card when populated. Existing items remain valid with all three prop
   and overlong serial numbers with the normal `{ "error": { "code", "params" } }` response.
 
 The item list response carries the same values. Free-text item search matches serial numbers in
-addition to names and descriptions. Purchase dates and prices do not add new filters or sort modes.
+addition to names and descriptions. Purchase dates, prices, and serial numbers can be shown and sorted
+as Items list columns; see [`item-list-columns-and-sorting.md`](item-list-columns-and-sorting.md).
 
 ## User interface
 

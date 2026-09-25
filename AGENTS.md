@@ -106,7 +106,11 @@ The project stays small and readable. Do not add:
 - `client/src/i18n/locales/` — `en.json` and `uk.json`, the interface messages grouped by feature.
 - `client/src/update.js` — shared state and polling of the update panel in the About dialog.
 - `client/src/capabilities.js` — shared visibility state of optional features, loaded once from `/api/capabilities`.
-- `client/src/pages/ItemsList.vue` — item list, search, filtering, sorting, and pagination.
+- `client/src/pages/ItemsList.vue` — item list, search, filtering, column choice, sorting, and pagination.
+- `client/src/components/ItemResults.vue` — the item table and phone cards, rendered from the visible column list.
+- `client/src/itemColumns.js` — Items view column labels, cell text formatting, and its preference storage key.
+- `client/src/useTablePreferences.js` — reusable browser-local table view state: visible columns, sort, reset, and reconciliation with the current columns.
+- `client/src/components/TableColumnPicker.vue` and `SortableHeader.vue` — reusable Columns menu and sortable table header cell.
 - `client/src/pages/ItemDetails.vue` — item details, photos, and deletion.
 - `client/src/pages/ItemForm.vue` — item creation/editing, custom field values, and photo uploads.
 - `client/src/pages/PrintLabels.vue` — `/labels/print`: A4 QR label sheets for the selected items, their layout presets, and print styles.
@@ -124,12 +128,13 @@ The project stays small and readable. Do not add:
 - `shared/itemValidation.js` — canonical item input rules, applied by the server and reused by the batch item preview.
 - `shared/itemImport.js` — category-scoped item import document format, template, structural reading, and per-draft review.
 - `shared/aiProviders.js` — AI provider presets (default base URLs, key requirements) and base-URL validation, shared by Settings and the server.
+- `shared/itemColumns.js` — Items view core columns, default sort, and the stable custom column key, shared by the client and the server.
 - `shared/itemQr.js` — canonical `ial:item:v1:<uuid>` QR payload with its encoder and strict decoder.
 - `shared/appError.js` — `AppError` (stable code, parameters, HTTP status) thrown by the shared rules and the server, and its `{ code, params }` body.
 - `server/src/index.js` — process entry point: port and production flag, the HTTP listener, and shutdown.
 - `server/src/app.js` — composition root: builds every repository, service, upload, and route table and assembles the Express app, including production static serving.
 - `server/src/routes/` — thin Express route tables; they parse the request, call one service, and shape the response.
-- `server/src/services/` — application and business logic, independent of Express request and response objects.
+- `server/src/services/` — application and business logic, independent of Express request and response objects. `itemColumns.js` builds the Items column catalog and merges same-name, same-type custom fields.
 - `server/src/repositories/` — all SQL and row mapping for the inventory tables.
 - `server/src/integrations/` — adapters for external or heavy dependencies: the AI providers (`openAiProvider.js`, `openAiCompatibleProvider.js`, and their shared `aiProviderHttp.js` transport), the GitHub release API, the local background-removal model, and the cloud storage providers (`dropboxStorageProvider.js`, `googleDriveStorageProvider.js`, and their shared `cloudStorageHttp.js` transport). AI features call `services/aiProviderService.js`, never an adapter directly; cloud backup reaches the storage adapters only through `services/cloudConnectionService.js`, and their OAuth app credentials come from `services/cloudAppSettingsService.js`.
 - `server/src/restore/` — restore and reset configuration, staged-upload sessions, the SQLite file checks, and `databaseMaintenance.js`: the shared maintenance lock, safety backup, atomic swap, and rollback used by the restore and reset services.

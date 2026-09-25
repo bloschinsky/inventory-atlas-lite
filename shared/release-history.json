@@ -1,5 +1,15 @@
 [
   {
+    "version": "0.35.0",
+    "date": "2026-09-25",
+    "changes": [
+      "Choose which item fields the Items list shows with the new Columns control, including purchase date and price, serial number, Transferred To, dates, and your own custom fields; Reset to default brings back the usual view.",
+      "Custom fields with the same name and type in different categories appear as one column, so a Brand column shows the brand of cameras and amplifiers alike.",
+      "Sort by clicking a column header, and click again to reverse; on a phone the cards show the chosen fields and a compact Sort control. The choice is remembered in this browser.",
+      "Search now also finds items by the values of text custom fields, whether or not their column is shown."
+    ]
+  },
+  {
     "version": "0.34.0",
     "date": "2026-09-25",
     "changes": [

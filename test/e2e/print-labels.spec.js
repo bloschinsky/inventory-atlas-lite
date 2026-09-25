@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { createCategory, createItem, unique } from './helpers.js';
 
 const phone = { width: 390, height: 844 };
-const search = page => page.getByPlaceholder('Search name, description, serial number or transferred to…');
+const search = page => page.getByPlaceholder('Search name, description, serial number, transferred to or text fields…');
 const labels = page => page.getByRole('group', { name: /^Label: / });
 const sheets = page => page.getByRole('region', { name: /^Label page / });
 const qrName = item => `QR code for ial:item:v1:${item.uuid}`;
@@ -74,7 +74,7 @@ test('selects items across pages and filters, then prints them from one batch re
   await expect(page.getByRole('checkbox', { name: `Select ${first.name}` })).toBeChecked();
 
   // Sorting, searching, and View keep working and keep the selection.
-  await page.getByLabel('Direction').selectOption('desc');
+  await page.getByRole('button', { name: 'Name', exact: true }).click();
   await expect(page.getByRole('row').nth(1)).toContainText(items[13].name);
   await search(page).fill(thirteenth.name);
   await expect(page.getByRole('row')).toHaveCount(2);

@@ -21,7 +21,7 @@ field is informational only: it has no states, no history, and no effect on any 
 - Saving the field never changes `location`, `parent_item_id`, or any other column.
 - Item detail responses and the item list rows include `transferred_to`.
 - The normal item search (`GET /api/items?search=`) matches `transferred_to` in addition to the
-  name, description, and serial number.
+  name, description, serial number, and text custom field values.
 - `GET /api/items/transferred-to-suggestions?search=&limit=` returns
   `[{ "value": "Vasyl", "usage_count": 3 }]`: distinct non-empty saved values grouped by
   `TRIM(transferred_to) COLLATE NOCASE`, filtered by a case-insensitive prefix, ordered by usage and
@@ -37,9 +37,13 @@ field is informational only: it has no states, no history, and no effect on any 
   offered on focus and while typing, but any new text can be saved and the field can be cleared.
 - When the value is set, the item page shows a `Transferred to: <value>` badge under the item name,
   and the Items list shows the same badge under the name in the desktop table and in the mobile
-  cards. The badge uses Tabler's informational `bg-azure-lt` style, wraps long values, and is not
-  rendered at all when the field is empty.
-- The Items search placeholder reads *Search name, description, serial number or transferred to…*.
+  cards while its **Transferred To** column is hidden; with the column shown, the value appears in
+  that column or card line instead. The badge uses Tabler's informational `bg-azure-lt` style, wraps
+  long values, and is not rendered at all when the field is empty.
+- The Items list can show and sort a **Transferred To** column; see
+  [`item-list-columns-and-sorting.md`](item-list-columns-and-sorting.md).
+- The Items search placeholder reads *Search name, description, serial number, transferred to or
+  text fields…*.
 
 ## Boundaries
 

@@ -1,14 +1,32 @@
 <script setup>
 import { computed } from 'vue';
 import ItemThumbnail from './ItemThumbnail.vue';
+import SortableHeader from './SortableHeader.vue';
+import { columnText } from '../itemColumns.js';
 import { labelSelection, toggleLabelSelection } from '../labelSelection.js';
 
-const props = defineProps({ items: { type: Array, required: true } });
+/*
+  `columns` are the visible columns in their display order. The table renders one cell per column;
+  the cards keep the name as the title and the photo beside it, and list every other column as a
+  labeled line. The selection checkbox and the actions are interface controls, never columns.
+*/
+const props = defineProps({
+  items: { type: Array, required: true },
+  columns: { type: Array, required: true },
+  sort: { type: String, required: true },
+  direction: { type: String, required: true }
+});
+defineEmits(['sort']);
 
 // The header checkbox covers the visible page only; selections made on other pages are left alone.
 const pageSelected = computed(() => props.items.length > 0 && props.items.every(item => labelSelection.has(item.uuid)));
 const pagePartlySelected = computed(() => !pageSelected.value && props.items.some(item => labelSelection.has(item.uuid)));
 const togglePage = selected => props.items.forEach(item => toggleLabelSelection(item.uuid, selected));
+
+const showPhoto = computed(() => props.columns.some(column => column.key === 'photo'));
+const metaColumns = computed(() => props.columns.filter(column => column.key !== 'photo' && column.key !== 'name'));
+// The transfer badge beside the name stands in for the Transferred To column while that column is hidden.
+const showTransferBadge = computed(() => !props.columns.some(column => column.key === 'transferredTo'));
 
 // The table and the card list show the same data through the same routes; only the markup differs.
 const detailsRoute = item => `/items/${item.id}`;
@@ -34,33 +52,16 @@ const editRoute = item => `/items/${item.id}/edit`;
                 @change="togglePage($event.target.checked)"
               >
             </th>
-            <th scope="col">
-              {{ $t('items.fields.photo') }}
-            </th>
-            <th
-              scope="col"
-              class="name-cell"
-            >
-              {{ $t('items.fields.name') }}
-            </th>
-            <th scope="col">
-              {{ $t('items.fields.category') }}
-            </th>
-            <th scope="col">
-              {{ $t('items.fields.condition') }}
-            </th>
-            <th
-              scope="col"
-              class="d-none d-xl-table-cell"
-            >
-              {{ $t('items.fields.location') }}
-            </th>
-            <th
-              scope="col"
-              class="d-none d-xl-table-cell"
-            >
-              {{ $t('items.fields.storedInside') }}
-            </th>
+            <SortableHeader
+              v-for="column in columns"
+              :key="column.key"
+              :class="{ 'name-cell': column.key === 'name' }"
+              :label="column.label"
+              :sortable="column.sortable"
+              :active="column.key === sort"
+              :direction="direction"
+              @sort="$emit('sort', column.key)"
+            />
             <th
               scope="col"
               class="text-end"
@@ -83,59 +84,51 @@ const editRoute = item => `/items/${item.id}/edit`;
                 @change="toggleLabelSelection(item.uuid, $event.target.checked)"
               >
             </td>
-            <td>
-              <ItemThumbnail
-                :photo-id="item.thumbnail_id"
-                :name="item.name"
-              />
-            </td>
-            <td class="name-cell">
-              <RouterLink
-                :to="detailsRoute(item)"
-                class="fw-semibold"
-              >
-                {{ item.name }}
-              </RouterLink>
-              <div
-                v-if="item.transferred_to"
-                class="mt-1"
-              >
-                <span class="badge bg-azure-lt text-wrap text-break text-start">
-                  {{ $t('items.transferredTo', { name: item.transferred_to }) }}
-                </span>
-              </div>
-              <span
-                v-if="item.effective_location || item.parent_id"
-                class="d-xl-none d-block meta-text"
-              >
-                <template v-if="item.effective_location">{{ item.effective_location }}</template>
-                <template v-if="item.effective_location && item.parent_id"> · </template>
-                <template v-if="item.parent_id">
-                  {{ $t('items.fields.storedInside') }}
-                  <RouterLink :to="`/items/${item.parent_id}`">{{ item.parent_name }}</RouterLink>
-                </template>
-              </span>
-            </td>
-            <td>{{ item.category_name }}</td>
-            <td>{{ item.condition || '—' }}</td>
-            <td
-              class="truncate-cell d-none d-xl-table-cell"
-              :title="item.effective_location || undefined"
+            <template
+              v-for="column in columns"
+              :key="column.key"
             >
-              {{ item.effective_location || '—' }}
-            </td>
-            <td class="truncate-cell d-none d-xl-table-cell">
-              <RouterLink
-                v-if="item.parent_id"
-                :to="`/items/${item.parent_id}`"
-                :title="item.parent_name"
+              <td v-if="column.key === 'photo'">
+                <ItemThumbnail
+                  :photo-id="item.thumbnail_id"
+                  :name="item.name"
+                />
+              </td>
+              <td
+                v-else-if="column.key === 'name'"
+                class="name-cell"
               >
-                {{ item.parent_name }}
-              </RouterLink>
-              <template v-else>
-                —
-              </template>
-            </td>
+                <RouterLink
+                  :to="detailsRoute(item)"
+                  class="fw-semibold"
+                >
+                  {{ item.name }}
+                </RouterLink>
+                <div
+                  v-if="showTransferBadge && item.transferred_to"
+                  class="mt-1"
+                >
+                  <span class="badge bg-azure-lt text-wrap text-break text-start">
+                    {{ $t('items.transferredTo', { name: item.transferred_to }) }}
+                  </span>
+                </div>
+              </td>
+              <td
+                v-else
+                class="truncate-cell"
+                :title="columnText(item, column) || undefined"
+              >
+                <RouterLink
+                  v-if="column.key === 'storedInside' && item.parent_id"
+                  :to="`/items/${item.parent_id}`"
+                >
+                  {{ item.parent_name }}
+                </RouterLink>
+                <template v-else>
+                  {{ columnText(item, column) || '—' }}
+                </template>
+              </td>
+            </template>
             <td class="text-end text-nowrap">
               <RouterLink
                 :to="detailsRoute(item)"
@@ -177,6 +170,7 @@ const editRoute = item => `/items/${item.id}/edit`;
             >
           </label>
           <ItemThumbnail
+            v-if="showPhoto"
             :photo-id="item.thumbnail_id"
             :name="item.name"
             large
@@ -188,34 +182,34 @@ const editRoute = item => `/items/${item.id}/edit`;
             >
               {{ item.name }}
             </RouterLink>
-            <p class="meta-text mb-0">
-              {{ item.category_name }}
-            </p>
-            <p
-              v-if="item.parent_id"
-              class="meta-text mb-0"
+            <!-- Empty values are left out to keep the card short; the category needs no label. -->
+            <template
+              v-for="column in metaColumns"
+              :key="column.key"
             >
-              {{ $t('items.fields.storedInside') }}
-              <RouterLink :to="`/items/${item.parent_id}`">
-                {{ item.parent_name }}
-              </RouterLink>
-            </p>
+              <p
+                v-if="columnText(item, column)"
+                class="meta-text mb-0"
+              >
+                <template v-if="column.key === 'category'">
+                  {{ columnText(item, column) }}
+                </template>
+                <template v-else>
+                  {{ column.label }}:
+                  <RouterLink
+                    v-if="column.key === 'storedInside'"
+                    :to="`/items/${item.parent_id}`"
+                  >
+                    {{ item.parent_name }}
+                  </RouterLink>
+                  <template v-else>
+                    {{ columnText(item, column) }}
+                  </template>
+                </template>
+              </p>
+            </template>
             <p
-              v-if="item.condition || item.effective_location"
-              class="meta-text mb-0"
-            >
-              <template v-if="item.condition">
-                {{ item.condition }}
-              </template>
-              <template v-if="item.condition && item.effective_location">
-                ·
-              </template>
-              <template v-if="item.effective_location">
-                {{ item.effective_location }}
-              </template>
-            </p>
-            <p
-              v-if="item.transferred_to"
+              v-if="showTransferBadge && item.transferred_to"
               class="mb-0 mt-1"
             >
               <span class="badge bg-azure-lt text-wrap text-break text-start">

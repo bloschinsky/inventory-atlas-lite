@@ -1,14 +1,17 @@
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { api } from '../api.js';
 import { capabilities } from '../capabilities.js';
+import { CORE_ITEM_COLUMNS, DEFAULT_ITEM_SORT, ITEMS_VIEW_STORAGE_KEY, labelColumns } from '../itemColumns.js';
 import { labelSelection, printLabelsRoute } from '../labelSelection.js';
+import { useTablePreferences } from '../useTablePreferences.js';
 import BatchAddItemsDialog from '../components/BatchAddItemsDialog.vue';
 import ItemResults from '../components/ItemResults.vue';
 import PageHeader from '../components/PageHeader.vue';
-import { IconJson, IconPrinter, IconSparkles } from '@tabler/icons-vue';
+import TableColumnPicker from '../components/TableColumnPicker.vue';
+import { IconArrowDown, IconArrowUp, IconJson, IconPrinter, IconSparkles } from '@tabler/icons-vue';
 
 const router = useRouter();
 const { t } = useI18n();
@@ -19,20 +22,42 @@ const loading = ref(true);
 const error = ref('');
 const notice = ref('');
 const batchOpen = ref(false);
-const filters = reactive({ search: '', categoryId: '', sort: 'name', direction: 'asc', page: 1 });
+const filters = reactive({ search: '', categoryId: '', page: 1 });
 let timer;
+let ready = false;
+
+// The core columns are known at once; the merged custom field columns arrive from the server.
+const columns = ref(CORE_ITEM_COLUMNS.map(column => ({ ...column, core: true })));
+const { state: view, reconcile, reset, toggleSort } = useTablePreferences(ITEMS_VIEW_STORAGE_KEY, { columns: CORE_ITEM_COLUMNS, defaultSort: DEFAULT_ITEM_SORT });
+const labeledColumns = computed(() => labelColumns(columns.value));
+const visibleColumns = computed(() => labeledColumns.value.filter(column => column.required || view.visible.includes(column.key)));
+// Only the custom columns on screen are requested, so the list never carries every field of every item.
+const customFields = computed(() => visibleColumns.value.filter(column => !column.core).map(column => column.key).join(','));
+// The phone sort offers the visible sortable columns, plus the active one when it is hidden.
+const mobileSortColumns = computed(() => labeledColumns.value.filter(column => column.sortable
+  && (column.key === view.sort || visibleColumns.value.includes(column))));
 
 const filtered = computed(() => Boolean(filters.search.trim() || filters.categoryId));
 const countLabel = computed(() => t('items.count', result.value.pagination.total));
 
 async function load() {
   loading.value = true; error.value = '';
-  const params = new URLSearchParams(Object.entries(filters).filter(([, value]) => value !== ''));
+  const params = new URLSearchParams(Object.entries({ ...filters, sort: view.sort, direction: view.direction, fields: customFields.value })
+    .filter(([, value]) => value !== ''));
   try { result.value = await api(`/api/items?${params}`); } catch (e) { error.value = e.message; } finally { loading.value = false; }
 }
-watch(() => [filters.categoryId, filters.sort, filters.direction, filters.page], load);
+watch(() => [filters.categoryId, filters.page, view.sort, view.direction, customFields.value], () => { if (ready) load(); });
 watch(() => filters.search, () => { clearTimeout(timer); filters.page = 1; timer = setTimeout(load, 250); });
 function changed() { filters.page = 1; }
+function sortBy(key) {
+  toggleSort(key);
+  filters.page = 1;
+}
+function resetView() {
+  reset();
+  reconcile(columns.value);
+  filters.page = 1;
+}
 const selectedLabel = computed(() => t('items.selected', labelSelection.size));
 const printLabels = () => router.push(printLabelsRoute(labelSelection));
 // The new items are shown by switching the list to their category; the list reloads through its watcher.
@@ -44,7 +69,18 @@ function batchCreated({ items, category }) {
   if (filters.categoryId === category.id) load();
   else filters.categoryId = category.id;
 }
-onMounted(async () => { try { categories.value = await api('/api/categories'); } catch (e) { error.value = e.message; } await load(); });
+onMounted(async () => {
+  try {
+    const [categoryList, catalog] = await Promise.all([api('/api/categories'), api('/api/items/columns')]);
+    categories.value = categoryList;
+    columns.value = catalog.fields;
+    reconcile(catalog.fields);
+  } catch (e) { error.value = e.message; }
+  // The saved view is corrected before the first request, so the list loads exactly once.
+  await nextTick();
+  ready = true;
+  await load();
+});
 </script>
 
 <template>
@@ -87,7 +123,7 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
 
   <div class="card mb-3">
     <div class="card-body row g-3 align-items-end">
-      <div class="col-12 col-lg-5">
+      <div class="col-12 col-lg-6">
         <label
           class="form-label"
           for="items-search"
@@ -100,7 +136,7 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
           :placeholder="$t('items.searchPlaceholder')"
         >
       </div>
-      <div class="col-12 col-sm-6 col-lg-3">
+      <div class="col-12 col-sm-6 col-lg-4">
         <label
           class="form-label"
           for="items-category"
@@ -123,49 +159,48 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
           </option>
         </select>
       </div>
-      <div class="col-6 col-sm-3 col-lg-2">
+      <div class="col-12 col-sm-6 col-lg-2">
+        <TableColumnPicker
+          v-model:visible="view.visible"
+          :columns="labeledColumns"
+          @reset="resetView"
+        />
+      </div>
+      <!-- Wide screens sort from the table headers; the cards get this compact equivalent. -->
+      <div class="col-12 d-lg-none">
         <label
           class="form-label"
           for="items-sort"
-        >{{ $t('items.sortBy') }}</label>
-        <select
-          id="items-sort"
-          v-model="filters.sort"
-          class="form-select"
-          @change="changed"
-        >
-          <option value="name">
-            {{ $t('items.fields.name') }}
-          </option>
-          <option value="category">
-            {{ $t('items.fields.category') }}
-          </option>
-          <option value="created">
-            {{ $t('items.fields.created') }}
-          </option>
-          <option value="updated">
-            {{ $t('items.fields.updated') }}
-          </option>
-        </select>
-      </div>
-      <div class="col-6 col-sm-3 col-lg-2">
-        <label
-          class="form-label"
-          for="items-direction"
-        >{{ $t('items.direction') }}</label>
-        <select
-          id="items-direction"
-          v-model="filters.direction"
-          class="form-select"
-          @change="changed"
-        >
-          <option value="asc">
-            {{ $t('items.ascending') }}
-          </option>
-          <option value="desc">
-            {{ $t('items.descending') }}
-          </option>
-        </select>
+        >{{ $t('tableView.sort') }}</label>
+        <div class="input-group">
+          <select
+            id="items-sort"
+            class="form-select"
+            :value="view.sort"
+            @change="sortBy($event.target.value)"
+          >
+            <option
+              v-for="column in mobileSortColumns"
+              :key="column.key"
+              :value="column.key"
+            >
+              {{ column.label }}
+            </option>
+          </select>
+          <button
+            type="button"
+            class="btn"
+            :aria-label="$t(view.direction === 'asc' ? 'tableView.ascending' : 'tableView.descending')"
+            :title="$t(view.direction === 'asc' ? 'tableView.ascending' : 'tableView.descending')"
+            @click="sortBy(view.sort)"
+          >
+            <component
+              :is="view.direction === 'asc' ? IconArrowUp : IconArrowDown"
+              :size="18"
+              aria-hidden="true"
+            />
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -264,6 +299,10 @@ onMounted(async () => { try { categories.value = await api('/api/categories'); }
   <ItemResults
     v-else
     :items="result.items"
+    :columns="visibleColumns"
+    :sort="view.sort"
+    :direction="view.direction"
+    @sort="sortBy"
   />
 
   <nav

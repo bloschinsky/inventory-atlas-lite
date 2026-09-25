@@ -1,6 +1,8 @@
 import { httpError } from '../httpError.js';
 import { errorBody } from '../../../shared/appError.js';
 import { itemImportRequestBody, readItemImportDocument } from '../../../shared/itemImport.js';
+import { isCustomColumnKey } from '../../../shared/itemColumns.js';
+import { buildItemColumns } from './itemColumns.js';
 import {
   nullableText, requiredText, validateFieldValue, validatePurchaseDate, validatePurchasePrice, validateSerialNumber,
   validateTransferredTo
@@ -52,19 +54,42 @@ export class ItemService {
     return withEffectiveLocation(itemResponse(item), this.items.findRoot(item.id));
   }
 
+  // Every column the Items view can show, including the merged custom field columns.
+  columns() {
+    return { fields: buildItemColumns(this.fields.listAll()) };
+  }
+
+  /*
+    `sort` and `fields` carry column keys from the columns catalog. They are only ever resolved to
+    known field ids here; an unknown key is ignored, and an unknown sort falls back to the name.
+    Only the requested custom columns get values, loaded for the whole page in one query.
+  */
   list(query = {}) {
     const page = Math.max(1, Number.parseInt(query.page) || 1);
     const pageSize = Math.min(100, Math.max(1, Number.parseInt(query.pageSize) || 12));
+    const requestedKeys = String(query.fields || '').split(',').filter(isCustomColumnKey);
+    const customColumns = requestedKeys.length || isCustomColumnKey(query.sort)
+      ? new Map(buildItemColumns(this.fields.listAll()).filter(column => !column.core).map(column => [column.key, column]))
+      : new Map();
+    const sortColumn = customColumns.get(query.sort);
     const { rows, total } = this.items.search({
       search: String(query.search || '').trim(),
       categoryId: Number.parseInt(query.categoryId) || null,
-      sort: query.sort,
+      sort: sortColumn ? { fieldIds: sortColumn.fieldIds, type: sortColumn.type } : { core: query.sort },
       direction: query.direction,
       limit: pageSize,
       offset: (page - 1) * pageSize
     });
+    const columnByFieldId = new Map(requestedKeys.map(key => customColumns.get(key)).filter(Boolean)
+      .flatMap(column => column.fieldIds.map(id => [id, column.key])));
+    const values = new Map(rows.map(row => [row.id, {}]));
+    if (columnByFieldId.size && rows.length) {
+      for (const value of this.items.listColumnValues(rows.map(row => row.id), [...columnByFieldId.keys()])) {
+        values.get(value.item_id)[columnByFieldId.get(value.field_id)] = value.value;
+      }
+    }
     return {
-      items: rows.map(listedItemResponse),
+      items: rows.map(row => ({ ...listedItemResponse(row), custom_values: values.get(row.id) })),
       pagination: { page, pageSize, total, pages: Math.max(1, Math.ceil(total / pageSize)) }
     };
   }

@@ -235,6 +235,78 @@ test('search, sorting, and pagination of the item list stay as the client expect
   assert.equal(itemService.list({ pageSize: '500' }).pagination.pageSize, 100);
 });
 
+test('core columns sort type-correctly with empty values last in both directions', () => {
+  const { categoryService, itemService } = build();
+  const tools = categoryService.create({ name: 'tools' });
+  const books = categoryService.create({ name: 'Books' });
+  const add = (name, category, extra = {}) => itemService.create({ name, category_id: category.id, ...extra });
+  add('Cheap', tools, { purchase_price: { amount: '9.5', currency: 'USD' }, purchase_date: '2024-02-01', serial_number: 'b-2' });
+  add('Dear', books, { purchase_price: { amount: '100', currency: 'EUR' }, purchase_date: '2023-12-31', serial_number: 'A-1' });
+  add('Unpriced', tools, { condition: 'good' });
+  const names = query => itemService.list(query).items.map(item => item.name);
+
+  // Prices compare as numbers (9.5 < 100), not as text ("100" < "9.5").
+  assert.deepEqual(names({ sort: 'purchasePrice' }), ['Cheap', 'Dear', 'Unpriced']);
+  assert.deepEqual(names({ sort: 'purchasePrice', direction: 'desc' }), ['Dear', 'Cheap', 'Unpriced']);
+  assert.deepEqual(names({ sort: 'purchaseDate' }), ['Dear', 'Cheap', 'Unpriced']);
+  assert.deepEqual(names({ sort: 'serialNumber' }), ['Dear', 'Cheap', 'Unpriced']);
+  assert.deepEqual(names({ sort: 'condition', direction: 'desc' }), ['Unpriced', 'Cheap', 'Dear']);
+  assert.deepEqual(names({ sort: 'category' }), ['Dear', 'Cheap', 'Unpriced']);
+  // An unknown or hostile sort key is never SQL: it falls back to the name order.
+  assert.deepEqual(names({ sort: 'name; DROP TABLE items', direction: 'sideways' }), ['Cheap', 'Dear', 'Unpriced']);
+  assert.deepEqual(names({ sort: 'custom:text:missing' }), ['Cheap', 'Dear', 'Unpriced']);
+  assert.equal(itemService.list().pagination.total, 3);
+});
+
+test('same-name custom fields merge into one column that is searched, sorted, and loaded on request', () => {
+  const { categoryService, customFieldService, itemService } = build();
+  const cameras = categoryService.create({ name: 'Cameras' });
+  const audio = categoryService.create({ name: 'Audio' });
+  const cameraBrand = customFieldService.create(cameras.id, { name: 'Brand', type: 'text' });
+  const audioBrand = customFieldService.create(audio.id, { name: 'brand', type: 'text' });
+  const cameraYear = customFieldService.create(cameras.id, { name: 'Year', type: 'number' });
+  const audioYear = customFieldService.create(audio.id, { name: 'Year', type: 'text' });
+  const bought = customFieldService.create(cameras.id, { name: 'Bought', type: 'date' });
+  const add = (name, category, values) => itemService.create({ name, category_id: category.id, field_values: values });
+  add('Leica', cameras, { [cameraBrand.id]: 'Leica', [cameraYear.id]: '9', [bought.id]: '2020-05-01' });
+  add('Nikon', cameras, { [cameraBrand.id]: 'nikon', [cameraYear.id]: '10', [bought.id]: '2019-01-01' });
+  add('Amp', audio, { [audioBrand.id]: 'Marantz', [audioYear.id]: 'vintage' });
+  add('Bare', cameras, {});
+
+  const custom = itemService.columns().fields.filter(column => !column.core);
+  // Compatible fields share one column; the same name with another type stays a separate column.
+  assert.deepEqual(custom.map(column => [column.key, column.label, column.type, column.fieldIds]), [
+    ['custom:date:bought', 'Bought', 'date', [bought.id]],
+    ['custom:text:brand', 'Brand', 'text', [cameraBrand.id, audioBrand.id]],
+    ['custom:number:year', 'Year', 'number', [cameraYear.id]],
+    ['custom:text:year', 'Year', 'text', [audioYear.id]]
+  ]);
+  assert.ok(itemService.columns().fields.some(column => column.core && column.key === 'name' && column.required));
+
+  const names = query => itemService.list(query).items.map(item => item.name);
+  assert.deepEqual(names({ sort: 'custom:text:brand' }), ['Leica', 'Amp', 'Nikon', 'Bare']);
+  assert.deepEqual(names({ sort: 'custom:text:brand', direction: 'desc' }), ['Nikon', 'Amp', 'Leica', 'Bare']);
+  // Numbers compare numerically and dates chronologically; items without a value stay last.
+  assert.deepEqual(names({ sort: 'custom:number:year' }), ['Leica', 'Nikon', 'Amp', 'Bare']);
+  assert.deepEqual(names({ sort: 'custom:number:year', direction: 'desc' }), ['Nikon', 'Leica', 'Amp', 'Bare']);
+  assert.deepEqual(names({ sort: 'custom:date:bought' }), ['Nikon', 'Leica', 'Amp', 'Bare']);
+
+  // Only the requested columns carry values, keyed by the column, never every field of the item.
+  const listed = itemService.list({ sort: 'name', fields: 'custom:text:brand,custom:unknown:x,name' }).items;
+  assert.deepEqual(listed.map(item => item.custom_values), [
+    { 'custom:text:brand': 'Marantz' }, {}, { 'custom:text:brand': 'Leica' }, { 'custom:text:brand': 'nikon' }
+  ]);
+  assert.deepEqual(itemService.list({ sort: 'name' }).items[0].custom_values, {});
+
+  // Search reaches text custom values whether or not their column is shown, and combines with the
+  // category filter, the sort, and the pagination.
+  assert.deepEqual(names({ search: 'maran' }), ['Amp']);
+  assert.deepEqual(names({ search: '2020' }), []);
+  assert.deepEqual(names({ search: 'i', categoryId: String(cameras.id), sort: 'custom:text:brand', direction: 'desc' }), ['Nikon', 'Leica']);
+  const page = itemService.list({ search: 'i', sort: 'custom:text:brand', pageSize: '1', page: '2' });
+  assert.deepEqual([page.items.map(item => item.name), page.pagination.total], [['Amp'], 3]);
+});
+
 test('Transferred To is optional free text that never touches the location', () => {
   const { categoryService, itemService } = build();
   const category = categoryService.create({ name: 'Tools' });

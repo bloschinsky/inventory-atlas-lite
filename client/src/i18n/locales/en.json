@@ -219,11 +219,7 @@
     "count": "{n} item | {n} items",
     "selected": "{n} selected",
     "batchCreated": "Created {n} item in {category}. | Created {n} items in {category}.",
-    "searchPlaceholder": "Search name, description, serial number or transferred to…",
-    "sortBy": "Sort by",
-    "direction": "Direction",
-    "ascending": "Ascending",
-    "descending": "Descending",
+    "searchPlaceholder": "Search name, description, serial number, transferred to or text fields…",
     "clearSelection": "Clear selection",
     "loading": "Loading items…",
     "noMatches": "No matching items",
@@ -253,6 +249,14 @@
       "created": "Created",
       "updated": "Updated"
     }
+  },
+  "tableView": {
+    "columns": "Columns",
+    "visibleColumns": "Visible columns",
+    "resetToDefault": "Reset to default",
+    "sort": "Sort",
+    "ascending": "Ascending order",
+    "descending": "Descending order"
   },
   "itemDetails": {
     "loading": "Loading item…",

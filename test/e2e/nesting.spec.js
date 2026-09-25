@@ -30,7 +30,7 @@ test('stores an item inside another one and links both directions', async ({ pag
 
   // The items list names the container on the contained item's row and links to it.
   await page.getByRole('link', { name: 'Items', exact: true }).click();
-  await page.getByPlaceholder('Search name, description, serial number or transferred to…').fill(cableName);
+  await page.getByPlaceholder('Search name, description, serial number, transferred to or text fields…').fill(cableName);
   const row = page.getByRole('row').filter({ hasText: cableName });
   await expect(row.getByRole('link', { name: boxName, exact: true })).toBeVisible();
   await row.getByRole('link', { name: boxName, exact: true }).click();
@@ -56,7 +56,7 @@ test('displays the location inherited from the container and restores the own on
   // The items list shows the same inherited location on the contained item's row.
   await page.goto('/items');
   await page.mouse.move(600, 400);
-  await page.getByPlaceholder('Search name, description, serial number or transferred to…').fill(lensName);
+  await page.getByPlaceholder('Search name, description, serial number, transferred to or text fields…').fill(lensName);
   await expect(page.getByRole('row').filter({ hasText: lensName })).toContainText(shelfLocation);
 
   // Editing still works on the item's own saved location, and removing the container shows it again.
