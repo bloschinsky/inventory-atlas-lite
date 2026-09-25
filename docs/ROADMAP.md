@@ -1,7 +1,7 @@
 # Roadmap overview
 
 This overview lists the active feature work planned for Inventory Atlas Lite. It is current as of
-2026-09-24. Each linked task file is the authoritative specification for scope, acceptance criteria,
+2026-09-25. Each linked task file is the authoritative specification for scope, acceptance criteria,
 and verification.
 
 Implemented behavior is documented separately in [`features/README.md`](features/README.md).
@@ -12,6 +12,26 @@ Implemented behavior is documented separately in [`features/README.md`](features
    extraction so the cutout favors the intended inventory item over hands and surrounding clutter.
    Includes a film-boxes-in-hand regression asset. See
    [`TASK-background-removal-quality-phase-2.md`](issues/TASK-background-removal-quality-phase-2.md).
+
+2. **Configurable item columns and sorting** — Planned. Adds saved column selection, server-side
+   table-header sorting, and matching compact metadata on mobile item cards. See
+   [`TASK-CONFIGURABLE-ITEM-COLUMNS-AND-SORTING.md`](issues/TASK-CONFIGURABLE-ITEM-COLUMNS-AND-SORTING.md).
+
+3. **User-defined item templates** — Planned. Adds reusable template storage and management that
+   prefills the regular Add Item form without creating inventory records automatically. See
+   [`TASK-ITEM-TEMPLATES.md`](issues/TASK-ITEM-TEMPLATES.md).
+
+4. **Duplicate existing item** — Planned; blocked by User-defined item templates. Adds an editable
+   prefilled Add Item draft from an existing item without copying its identity, photos, or container.
+   See [`TASK-DUPLICATE-ITEM.md`](issues/TASK-DUPLICATE-ITEM.md).
+
+5. **Frontend localization** — Planned. Adds English and Ukrainian interface locales, a persistent
+   language setting, and locale-aware formatting through Vue i18n. See
+   [`TASK-I18N-FRONTEND-LOCALIZATION.md`](issues/TASK-I18N-FRONTEND-LOCALIZATION.md).
+
+6. **Backend error localization** — Planned; blocked by Frontend localization. Replaces
+   backend-supplied English messages with stable error codes and parameters translated by the UI.
+   See [`TASK-I18N-BACKEND-ERROR-LOCALIZATION.md`](issues/TASK-I18N-BACKEND-ERROR-LOCALIZATION.md).
 
 ## Distribution
 
