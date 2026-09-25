@@ -15,7 +15,7 @@ const { form, categories, fields, start, fieldValues } = useItemDraftForm();
 form.parent_item_id = null;
 const existingPhotos = ref([]); const photos = ref([]);
 const error = ref(''); const saving = ref(false);
-const aiDraft = ref(null); const templateDraft = ref(null);
+const aiDraft = ref(null); const templateDraft = ref(null); const duplicateSource = ref(null);
 const photoWarning = ref('');
 const photoPreviews = ref([]);
 const itemId = ref(null); const parent = ref(null); const parentSearch = ref(''); const parentResults = ref([]);
@@ -53,7 +53,9 @@ async function removePhoto(id) { if (confirm(t('photos.confirmDelete'))) { await
 
 /*
   Every way of opening the form ends in one draft: the item being edited, a pending AI suggestion,
-  or a template chosen through ?template=<id>. A new item never keeps a link to its template.
+  a template chosen through ?template=<id>, or an item duplicated through ?duplicate=<id>. A new item
+  never keeps a link to its template or source item. A duplicate copies only the draft values: its
+  container, photos, and identity stay with the source item, so it starts top-level and without photos.
 */
 async function loadDraft() {
   if (editing.value) {
@@ -78,6 +80,15 @@ async function loadDraft() {
       error.value = e.message;
     }
     return templateDraft.value;
+  }
+  if (route.query.duplicate) {
+    // A source item that no longer exists leaves a blank form, like an unusable template.
+    try {
+      duplicateSource.value = await api(`/api/items/${encodeURIComponent(route.query.duplicate)}`);
+    } catch (e) {
+      error.value = e.message;
+    }
+    return duplicateSource.value && draftFromItem(duplicateSource.value);
   }
   return null;
 }
@@ -123,6 +134,13 @@ onMounted(async () => {
       {{ $t('templates.ignoredFields') }}
     </div>
     <div
+      v-if="duplicateSource"
+      class="alert alert-info"
+      role="status"
+    >
+      {{ $t('itemForm.duplicateNotice', { name: duplicateSource.name }) }}
+    </div>
+    <div
       v-if="photoWarning"
       class="alert alert-warning"
       role="alert"
@@ -154,6 +172,7 @@ onMounted(async () => {
           v-model:form="form"
           :categories="categories"
           :fields="fields"
+          :duplicate="Boolean(duplicateSource)"
         >
           <div class="mb-3">
             <label class="form-label">{{ $t('items.fields.storedInside') }}</label>

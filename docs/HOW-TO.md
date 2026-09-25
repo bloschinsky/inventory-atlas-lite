@@ -260,6 +260,19 @@ Changing the category while filling in the form loads that category's fields.
 next to it opens a menu with **Blank item** (the same blank form), **From template…** (see below),
 and **AI Add Item** while AI features are on.
 
+### Duplicate an item
+
+To add another item much like an existing one — `Box #2` after `Box #1`, for example — open the
+existing item and press **Duplicate**. The **Add item** form opens with all of the item's values,
+including its custom fields, and a note naming the source item. Nothing is created yet.
+
+1. Change what differs, at least the **Name**. A copied **Serial Number** carries a reminder that
+   serial numbers are often unique; clear or change it if needed.
+2. **Stored inside** starts empty and no photos are selected: choose a container or add photos if
+   the new item needs them.
+3. Press **Save item**. The result is a separate, ordinary item with its own QR code. The source item
+   is not changed, and editing or deleting either item later never affects the other.
+
 ### Save and use item templates
 
 A template is a reusable preset for items you add often, such as `Cardboard box 5 kg` or
@@ -383,7 +396,7 @@ web, create categories or fields, or make a second AI request.
 
 ### Show the QR code of an item
 
-1. Open the item from **Items** and press **QR Code**, next to **Edit** and **Delete**.
+1. Open the item from **Items** and press **QR Code**, next to **Edit**, **Duplicate**, and **Delete**.
 2. A small window shows the code, the item name, and the encoded text underneath.
 3. The code contains only the item's UUID, in the form `ial:item:v1:<uuid>`. It holds no address of
    your server, so a code you print stays valid if the installation moves to another machine, port,

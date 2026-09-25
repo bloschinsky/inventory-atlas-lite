@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.37.1",
+    "date": "2026-09-26",
+    "changes": [
+      "New Duplicate button on an item's page opens the Add Item form prefilled with that item's values, so similar items are added quickly; the copy is created only when you save it.",
+      "A duplicate never takes over the original's photos, container, or QR code, and a copied serial number carries a reminder that serial numbers are often unique."
+    ]
+  },
+  {
     "version": "0.37.0",
     "date": "2026-09-25",
     "changes": [

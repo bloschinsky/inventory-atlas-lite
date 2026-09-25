@@ -295,7 +295,8 @@
     "storage": "Storage",
     "contents": "Contents",
     "record": "Record information",
-    "confirmDelete": "Delete “{name}” and its photos?"
+    "confirmDelete": "Delete “{name}” and its photos?",
+    "duplicate": "Duplicate"
   },
   "itemForm": {
     "editTitle": "Edit item",
@@ -319,7 +320,9 @@
     "photosReady": "{n} photo ready to upload. Choose files to replace the selection. | {n} photos ready to upload. Choose files to replace the selection.",
     "photoLimits": "Up to 10 images, 15 MB each.",
     "save": "Save item",
-    "templateNotice": "Prefilled from the template “{name}”. Review and change any value before saving; the new item does not stay linked to the template."
+    "templateNotice": "Prefilled from the template “{name}”. Review and change any value before saving; the new item does not stay linked to the template.",
+    "duplicateNotice": "Prefilled from the item “{name}”. Review and change any value before saving; the new item is saved as a separate item without its photos or container.",
+    "duplicateSerialHint": "Serial numbers are often unique. Check the copied value before saving."
   },
   "templates": {
     "title": "Templates",

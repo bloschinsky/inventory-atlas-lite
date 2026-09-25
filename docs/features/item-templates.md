@@ -80,8 +80,8 @@ draft has the shape `{ categoryId, baseFields, dynamicFields }` that the AI anal
 template draft endpoint return; `draftFromItem()` and `draftFromTemplate()` build the same shape
 from an item or a template. `useItemDraftForm()` holds the shared form state, loads the categories
 and the fields of the chosen category, applies a draft, and returns only the values of the current
-category's fields. `ItemForm.vue` resolves its draft from the edited item, a pending AI draft, or
-`?template=`, and `TemplateForm.vue` from the edited template or `?fromItem=`.
+category's fields. `ItemForm.vue` resolves its draft from the edited item, a pending AI draft,
+`?template=`, or `?duplicate=` (see [Duplicate item](duplicate-item.md)), and `TemplateForm.vue` from the edited template or `?fromItem=`.
 
 ## Verification
 

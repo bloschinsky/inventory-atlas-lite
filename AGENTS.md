@@ -115,7 +115,7 @@ The project stays small and readable. Do not add:
 - `client/src/dashboardCharts.js` — on-demand loading of the ApexCharts copy bundled in `@tabler/core`, Tabler color resolution for the active mode, and the options of each Dashboard chart.
 - `client/src/components/DashboardChart.vue` — one ApexCharts instance: creation, in-place updates, and cleanup.
 - `client/src/pages/ItemDetails.vue` — item details, photos, and deletion.
-- `client/src/pages/ItemForm.vue` — item creation/editing, custom field values, and photo uploads; it is prefilled from an item draft (the edited item, an AI draft, or `?template=`).
+- `client/src/pages/ItemForm.vue` — item creation/editing, custom field values, and photo uploads; it is prefilled from an item draft (the edited item, an AI draft, `?template=`, or `?duplicate=`).
 - `client/src/itemDraft.js` — item drafts: the shared form state of the item form and the template editor, and the drafts built from an item or a template.
 - `client/src/components/ItemDraftFields.vue` — the item base and custom field inputs shared by the item form and the template editor.
 - `client/src/pages/Templates.vue` and `TemplateForm.vue` — the item template list and the template editor (also started from an item through `?fromItem=`).

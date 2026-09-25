@@ -4,13 +4,14 @@ import FieldAutocomplete from './FieldAutocomplete.vue';
 /*
   The item values shared by the item form and the template editor, bound to the form state of
   useItemDraftForm. For a template every value is an optional default: the item name may stay empty
-  and a yes/no field may stay unset. The default slot sits before the description, for the item's
-  container picker.
+  and a yes/no field may stay unset. A duplicated item only gets a hint next to its copied serial
+  number. The default slot sits before the description, for the item's container picker.
 */
 defineProps({
   categories: { type: Array, required: true },
   fields: { type: Array, required: true },
-  template: { type: Boolean, default: false }
+  template: { type: Boolean, default: false },
+  duplicate: { type: Boolean, default: false }
 });
 const form = defineModel('form', { type: Object, required: true });
 const currencies = Intl.supportedValuesOf('currency');
@@ -123,6 +124,12 @@ const currencies = Intl.supportedValuesOf('currency');
         class="form-text"
       >
         {{ $t('templates.serialHint') }}
+      </div>
+      <div
+        v-else-if="duplicate && form.serial_number"
+        class="form-text"
+      >
+        {{ $t('itemForm.duplicateSerialHint') }}
       </div>
     </div>
   </div>

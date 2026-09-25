@@ -84,6 +84,13 @@ onMounted(load);
           >
             {{ $t('common.edit') }}
           </RouterLink>
+          <!-- Opens the Add Item form prefilled from this item; the copy is created only when saved there. -->
+          <RouterLink
+            :to="{ path: '/items/new', query: { duplicate: item.id } }"
+            class="btn"
+          >
+            {{ $t('itemDetails.duplicate') }}
+          </RouterLink>
           <button
             type="button"
             class="btn"

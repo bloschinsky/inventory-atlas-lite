@@ -1,7 +1,7 @@
 # Roadmap overview
 
 This overview lists the active feature work planned for Inventory Atlas Lite. It is current as of
-2026-09-25. Each linked task file is the authoritative specification for scope, acceptance criteria,
+2026-09-26. Each linked task file is the authoritative specification for scope, acceptance criteria,
 and verification.
 
 Implemented behavior is documented separately in [`features/README.md`](features/README.md).
@@ -13,12 +13,7 @@ Implemented behavior is documented separately in [`features/README.md`](features
    Includes a film-boxes-in-hand regression asset. See
    [`TASK-background-removal-quality-phase-2.md`](issues/TASK-background-removal-quality-phase-2.md).
 
-2. **Duplicate existing item** — Planned; unblocked by the completed
-   [item templates](features/item-templates.md) and their shared item-draft prefill. Adds an editable
-   prefilled Add Item draft from an existing item without copying its identity, photos, or container.
-   See [`TASK-DUPLICATE-ITEM.md`](issues/TASK-DUPLICATE-ITEM.md).
-
-3. **Additional UI languages** — Planned; the English/Ukrainian localization foundation is complete.
+2. **Additional UI languages** — Planned; the English/Ukrainian localization foundation is complete.
    Adds Polish, German, Spanish, French, and Brazilian Portuguese with a central locale registry and
    automated translation-key completeness checks. See
    [`TASK-I18N-ADDITIONAL-LANGUAGES.md`](issues/TASK-I18N-ADDITIONAL-LANGUAGES.md).
