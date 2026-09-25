@@ -16,10 +16,12 @@ const { CustomFieldRepository } = await import('../server/src/repositories/custo
 const { DashboardRepository } = await import('../server/src/repositories/dashboardRepository.js');
 const { ItemPhotoRepository } = await import('../server/src/repositories/itemPhotoRepository.js');
 const { ItemRepository } = await import('../server/src/repositories/itemRepository.js');
+const { ItemTemplateRepository } = await import('../server/src/repositories/itemTemplateRepository.js');
 const { CategoryService } = await import('../server/src/services/categoryService.js');
 const { CustomFieldService } = await import('../server/src/services/customFieldService.js');
 const { DashboardService } = await import('../server/src/services/dashboardService.js');
 const { ItemService } = await import('../server/src/services/itemService.js');
+const { ItemTemplateService } = await import('../server/src/services/itemTemplateService.js');
 const { AiSettingsService } = await import('../server/src/services/aiSettingsService.js');
 
 const build = () => {
@@ -36,6 +38,7 @@ const build = () => {
     categoryService,
     customFieldService: new CustomFieldService(customFieldRepository, categoryService),
     itemService: new ItemService({ itemRepository, customFieldRepository, itemPhotoRepository, categoryRepository }),
+    itemTemplateService: new ItemTemplateService({ itemTemplateRepository: new ItemTemplateRepository(db), categoryRepository, customFieldRepository }),
     dashboardService: new DashboardService({ dashboardRepository: new DashboardRepository(db), categoryRepository })
   };
 };
@@ -684,4 +687,119 @@ test('label data is returned in selection order with the effective location and 
   failure(() => itemService.labels({ uuids: [crate.id] }), 400, 'LABELS_INVALID_UUIDS');
   const tooMany = Array.from({ length: 501 }, (_, index) => `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`);
   failure(() => itemService.labels({ uuids: tooMany }), 400, { code: 'LABELS_TOO_MANY', params: { max: 500, count: 501 } });
+});
+
+test('item templates are created, listed, edited, validated, and deleted apart from items', () => {
+  const { categoryService, customFieldService, itemService, itemTemplateService } = build();
+  const boxes = categoryService.create({ name: 'Boxes' });
+  const size = customFieldService.create(boxes.id, { name: 'Size', type: 'text' });
+  const weight = customFieldService.create(boxes.id, { name: 'Max weight', type: 'number' });
+  const sealed = customFieldService.create(boxes.id, { name: 'Sealed', type: 'boolean' });
+
+  const created = itemTemplateService.create({
+    name: '  Nova Poshta box 5 kg ',
+    category_id: String(boxes.id),
+    item_name: 'Cardboard box',
+    location: 'Garage',
+    purchase_price: { amount: '25', currency: 'uah' },
+    serial_number: '',
+    field_values: { [size.id]: '40x24x21', [weight.id]: '5', [sealed.id]: '' }
+  });
+  assert.equal(created.name, 'Nova Poshta box 5 kg');
+  assert.equal(created.category_name, 'Boxes');
+  assert.equal(created.item_name, 'Cardboard box');
+  assert.equal(created.serial_number, null);
+  assert.deepEqual(created.purchase_price, { amount: '25', currency: 'UAH' });
+  // An empty value is not stored, so it prefills nothing.
+  assert.deepEqual(created.field_values, { [size.id]: '40x24x21', [weight.id]: '5' });
+  assert.equal(created.ignored_field_count, 0);
+  assert.equal('uuid' in created, false);
+
+  // Only the template name and category are required; everything else may stay empty.
+  const minimal = itemTemplateService.create({ name: 'Archive container', category_id: boxes.id });
+  assert.equal(minimal.item_name, null);
+  assert.equal(minimal.purchase_price, null);
+  assert.deepEqual(itemTemplateService.list().map(template => template.name), ['Archive container', 'Nova Poshta box 5 kg']);
+
+  // A template is never an item and never counts toward the inventory.
+  assert.equal(itemService.list().pagination.total, 0);
+
+  const edited = itemTemplateService.update(created.id, {
+    name: 'Nova Poshta box', category_id: boxes.id, item_name: 'Box', field_values: { [sealed.id]: true }
+  });
+  assert.equal(edited.name, 'Nova Poshta box');
+  assert.equal(edited.location, null);
+  assert.deepEqual(edited.field_values, { [sealed.id]: '1' });
+
+  failure(() => itemTemplateService.create({ name: ' ', category_id: boxes.id }), 400, 'TEMPLATE_NAME_REQUIRED');
+  failure(() => itemTemplateService.create({ name: 'No category' }), 400, 'CATEGORY_REQUIRED');
+  failure(() => itemTemplateService.create({ name: 'Date', category_id: boxes.id, purchase_date: '2026-02-30' }), 400, 'INVALID_PURCHASE_DATE');
+  failure(() => itemTemplateService.create({ name: 'Price', category_id: boxes.id, purchase_price: { amount: '1', currency: 'XXXX' } }),
+    400, 'INVALID_PURCHASE_PRICE_CURRENCY');
+  failure(() => itemTemplateService.create({ name: 'Serial', category_id: boxes.id, serial_number: 'x'.repeat(256) }),
+    400, { code: 'SERIAL_NUMBER_TOO_LONG', params: { max: 255 } });
+  failure(() => itemTemplateService.create({ name: 'Weight', category_id: boxes.id, field_values: { [weight.id]: 'heavy' } }),
+    400, { code: 'INVALID_CUSTOM_FIELD_NUMBER', params: { field: 'Max weight' } });
+  const other = categoryService.create({ name: 'Other' });
+  failure(() => itemTemplateService.create({ name: 'Foreign', category_id: other.id, field_values: { [size.id]: 'A4' } }),
+    400, { code: 'FIELD_NOT_IN_CATEGORY', params: { fieldId: String(size.id) } });
+  assert.equal(itemTemplateService.list().length, 2);
+
+  itemTemplateService.remove(minimal.id);
+  assert.deepEqual(itemTemplateService.list().map(template => template.id), [created.id]);
+  failure(() => itemTemplateService.get(minimal.id), 404, 'TEMPLATE_NOT_FOUND');
+  failure(() => itemTemplateService.remove(minimal.id), 404, 'TEMPLATE_NOT_FOUND');
+});
+
+test('using a template yields an item draft that survives deleted fields and blocks a deleted category', () => {
+  const { categoryService, customFieldService, itemService, itemTemplateService } = build();
+  const drives = categoryService.create({ name: 'Drives' });
+  const capacity = customFieldService.create(drives.id, { name: 'Capacity', type: 'text' });
+  const rpm = customFieldService.create(drives.id, { name: 'RPM', type: 'number' });
+  const template = itemTemplateService.create({
+    name: 'IronWolf 4 TB', category_id: drives.id, item_name: 'Seagate IronWolf 4 TB', condition: 'New',
+    transferred_to: 'Office', field_values: { [capacity.id]: '4 TB', [rpm.id]: '5400' }
+  });
+
+  const draft = itemTemplateService.itemDraft(template.id);
+  assert.deepEqual(draft, {
+    templateName: 'IronWolf 4 TB',
+    categoryId: drives.id,
+    baseFields: {
+      name: 'Seagate IronWolf 4 TB', description: null, condition: 'New', location: null, purchase_date: null,
+      purchase_price: null, serial_number: null, transferred_to: 'Office'
+    },
+    dynamicFields: { [capacity.id]: '4 TB', [rpm.id]: '5400' },
+    ignoredFieldCount: 0
+  });
+
+  // The item is saved from the reviewed draft and keeps no link to the template.
+  const item = itemService.create({ ...draft.baseFields, name: 'Drive #1', category_id: draft.categoryId, field_values: draft.dynamicFields });
+  itemTemplateService.update(template.id, { name: 'IronWolf', category_id: drives.id, condition: 'Used' });
+  const loaded = itemService.get(item.id);
+  assert.equal(loaded.condition, 'New');
+  assert.deepEqual(loaded.fields.map(field => field.value), ['4 TB', '5400']);
+  itemTemplateService.remove(template.id);
+  assert.equal(itemService.get(item.id).name, 'Drive #1');
+
+  // A deleted custom field is ignored and reported instead of breaking the template.
+  const kept = itemTemplateService.create({
+    name: 'Drive preset', category_id: drives.id, field_values: { [capacity.id]: '8 TB', [rpm.id]: '7200' }
+  });
+  customFieldService.remove(rpm.id, true);
+  assert.deepEqual(itemTemplateService.itemDraft(kept.id).dynamicFields, { [capacity.id]: '8 TB' });
+  assert.equal(itemTemplateService.get(kept.id).ignored_field_count, 1);
+  // Saving the template again drops the stale value for good.
+  itemTemplateService.update(kept.id, { name: 'Drive preset', category_id: drives.id, field_values: { [capacity.id]: '8 TB' } });
+  assert.equal(itemTemplateService.get(kept.id).ignored_field_count, 0);
+
+  // A template whose category is gone stays listed and editable, but cannot be used until repaired.
+  const spare = categoryService.create({ name: 'Spare parts' });
+  const orphan = itemTemplateService.create({ name: 'Orphan', category_id: spare.id });
+  categoryService.remove(spare.id);
+  assert.equal(itemTemplateService.list().find(entry => entry.id === orphan.id).category_name, null);
+  assert.equal(itemTemplateService.get(orphan.id).category_id, null);
+  failure(() => itemTemplateService.itemDraft(orphan.id), 409, 'TEMPLATE_CATEGORY_MISSING');
+  const repaired = itemTemplateService.update(orphan.id, { name: 'Orphan', category_id: drives.id });
+  assert.equal(itemTemplateService.itemDraft(repaired.id).categoryId, drives.id);
 });

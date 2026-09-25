@@ -77,7 +77,10 @@ async function seedInventory() {
   const photos = new FormData();
   photos.append('photos', new Blob([Buffer.from('89504e470d0a1a0a', 'hex')], { type: 'image/png' }), 'lens.png');
   await request(`/api/items/${lens.id}/photos`, { method: 'POST', body: photos });
-  return { category, brand, box, lens };
+  const template = await request('/api/item-templates', json('POST', {
+    name: 'Lens preset', category_id: category.id, item_name: 'Helios', field_values: { [brand.id]: 'KMZ' }
+  }));
+  return { category, brand, box, lens, template };
 }
 
 const itemNames = async () => (await request('/api/items?pageSize=100')).items.map(item => item.name).sort();
@@ -87,17 +90,19 @@ test('a downloaded backup is validated, summarized, and fully restored over newe
   let server;
   try {
     server = await startServer(dataDir);
-    const { category, lens } = await seedInventory();
+    const { category, brand, lens, template } = await seedInventory();
     const backup = await downloadBackup();
 
     // Everything created after the backup must be gone once it is restored.
     await request('/api/items', json('POST', { name: 'Temporary item', category_id: category.id }));
     assert.deepEqual(await itemNames(), ['Box A', 'Helios 44-2', 'Temporary item']);
+    await request('/api/item-templates', json('POST', { name: 'Temporary preset', category_id: category.id }));
+    await request(`/api/item-templates/${template.id}`, json('PUT', { name: 'Renamed preset', category_id: category.id }));
 
     const validated = await uploadBackup(backup);
     assert.equal(validated.status, 200);
     assert.deepEqual(validated.body.summary, {
-      categories: 1, items: 2, fields: 1, fieldValues: 1, photos: 1, schemaVersion: 1, migratedFrom: null
+      categories: 1, items: 2, fields: 1, fieldValues: 1, photos: 1, templates: 1, schemaVersion: 2, migratedFrom: null
     });
     assert.equal(validated.body.filename, 'inventory-2026-09-17.sqlite');
     assert.equal(validated.body.size_bytes, backup.length);
@@ -120,6 +125,11 @@ test('a downloaded backup is validated, summarized, and fully restored over newe
     assert.equal(restoredLens.photos.length, 1);
     assert.equal(restoredLens.fields.find(field => field.name === 'Brand').value, 'KMZ');
     assert.equal(restoredLens.transferred_to, 'Vasyl');
+    // Templates are application data and come back exactly as they were backed up.
+    assert.deepEqual((await request('/api/item-templates')).map(item => item.name), ['Lens preset']);
+    const restoredTemplate = await request(`/api/item-templates/${template.id}`);
+    assert.equal(restoredTemplate.item_name, 'Helios');
+    assert.deepEqual(restoredTemplate.field_values, { [brand.id]: 'KMZ' });
 
     // The safety backup is a self-contained, valid database of the replaced state.
     assert.deepEqual(safetyBackups(dataDir), [result.safety_backup]);
@@ -268,7 +278,7 @@ test('a backup from before schema versioning is migrated on the staged copy and 
     assert.equal(validated.status, 200);
     assert.equal(validated.body.summary.items, 1);
     assert.equal(validated.body.summary.migratedFrom, 0);
-    assert.equal(validated.body.summary.schemaVersion, 1);
+    assert.equal(validated.body.summary.schemaVersion, 2);
 
     // The uploaded source file on disk is untouched by validation.
     const source = new Database(legacyPath, { readonly: true });
@@ -284,6 +294,8 @@ test('a backup from before schema versioning is migrated on the staged copy and 
       name: 'Added after restore', category_id: 1, serial_number: 'SN-1'
     }));
     assert.equal(restored.serial_number, 'SN-1');
+    const preset = await request('/api/item-templates', json('POST', { name: 'Legacy preset', category_id: 1 }));
+    assert.equal(preset.category_name, 'Legacy cameras');
   } finally {
     if (server) await stopServer(server);
     await rm(dataDir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });

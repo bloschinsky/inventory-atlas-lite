@@ -36,6 +36,7 @@ test('resets the inventory from the Danger Zone after reviewing the impact and c
   await createItem(request, { name: unique('Reset book'), category_id: books.id });
   await addPhoto(request, camera.id);
   await addPhoto(request, lens.id);
+  expect((await request.post('/api/item-templates', { data: { name: unique('Reset preset'), category_id: books.id } })).ok()).toBeTruthy();
 
   await page.goto('/data');
   // A fresh page can keep the pointer at (0, 0), which expands the folded sidebar over the content.
@@ -45,7 +46,7 @@ test('resets the inventory from the Danger Zone after reviewing the impact and c
 
   const dialog = page.getByRole('dialog', { name: 'Reset Inventory Database' });
   await expect(dialog.getByRole('list', { name: 'Data that will be removed' }).getByRole('listitem')).toHaveText([
-    '3 items', '2 categories', '3 custom fields', '2 custom field values', '2 photos'
+    '3 items', '2 categories', '3 custom fields', '2 custom field values', '2 photos', '1 item template'
   ]);
 
   // The destructive button needs both the acknowledgement and the exact phrase.

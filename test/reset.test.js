@@ -67,6 +67,7 @@ async function seedInventory() {
   const photos = new FormData();
   photos.append('photos', new Blob([Buffer.from('89504e470d0a1a0a', 'hex')], { type: 'image/png' }), 'lens.png');
   await request(`/api/items/${lens.id}/photos`, { method: 'POST', body: photos });
+  await request('/api/item-templates', json('POST', { name: 'Lens preset', category_id: category.id, field_values: { [brand.id]: 'KMZ' } }));
   return { category };
 }
 
@@ -96,7 +97,7 @@ test('prepare reports the current counts and a short-lived token without changin
 
     const prepared = await prepareReset();
     assert.equal(prepared.status, 200);
-    assert.deepEqual(prepared.body.counts, { categories: 1, items: 2, fields: 1, fieldValues: 1, photos: 1 });
+    assert.deepEqual(prepared.body.counts, { categories: 1, items: 2, fields: 1, fieldValues: 1, photos: 1, templates: 1 });
     assert.match(prepared.body.resetToken, /^[0-9a-f]{64}$/);
     assert.equal(prepared.body.expiresInSeconds, 300);
     assert.ok(!JSON.stringify(prepared.body).includes(dataDir));
@@ -192,7 +193,7 @@ test('a reset swaps in a fresh current-schema database and keeps settings and ba
     const applied = await applyReset(prepared.resetToken);
     assert.equal(applied.status, 200);
     assert.equal(applied.body.message, 'Database reset completed.');
-    assert.deepEqual(applied.body.counts, { categories: 0, items: 0, fields: 0, fieldValues: 0, photos: 0 });
+    assert.deepEqual(applied.body.counts, { categories: 0, items: 0, fields: 0, fieldValues: 0, photos: 0, templates: 0 });
     assert.match(applied.body.safetyBackup, /^pre-reset-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}Z(-[0-9a-f]{4})?\.sqlite$/);
     assert.ok(!JSON.stringify(applied.body).includes(dataDir));
 
@@ -200,7 +201,7 @@ test('a reset swaps in a fresh current-schema database and keeps settings and ba
     inspect(activePath, connection => {
       assert.deepEqual(schema(connection), freshSchema);
       assert.equal(connection.pragma('integrity_check', { simple: true }), 'ok');
-      assert.equal(Number(connection.pragma('user_version', { simple: true })), 1);
+      assert.equal(Number(connection.pragma('user_version', { simple: true })), 2);
       assert.ok(Object.values(rowCounts(connection)).every(count => count === 0));
     });
     assert.deepEqual(await itemNames(), []);
@@ -216,7 +217,9 @@ test('a reset swaps in a fresh current-schema database and keeps settings and ba
     assert.deepEqual(listDir(path.join(dataDir, 'pre-reset-backups')).filter(name => name.includes('-wal') || name.includes('-shm')), []);
     inspect(backupPath, connection => {
       assert.equal(connection.pragma('integrity_check', { simple: true }), 'ok');
-      assert.deepEqual(rowCounts(connection), { categories: 1, custom_fields: 1, item_field_values: 1, item_photos: 1, items: 2 });
+      assert.deepEqual(rowCounts(connection), {
+        categories: 1, custom_fields: 1, item_field_values: 1, item_photos: 1, item_template_field_values: 1, item_templates: 1, items: 2
+      });
     });
     assert.equal(await readFile(path.join(dataDir, 'ai-settings.json'), 'utf8'), settings);
     assert.equal(await readFile(path.join(dataDir, 'pre-restore-backups', 'pre-restore-2026-01-01T00-00-00Z.sqlite'), 'utf8'), 'earlier restore');

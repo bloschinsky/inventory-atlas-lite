@@ -10,7 +10,8 @@
     "main": "Main",
     "mainNavigation": "Main navigation",
     "openMenu": "Open navigation menu",
-    "closeMenu": "Close navigation menu"
+    "closeMenu": "Close navigation menu",
+    "templates": "Templates"
   },
   "theme": {
     "colorMode": "Color mode",
@@ -273,7 +274,10 @@
       "photo": "Photo",
       "created": "Created",
       "updated": "Updated"
-    }
+    },
+    "addOptions": "More ways to add an item",
+    "addBlank": "Blank item",
+    "addFromTemplate": "From template…"
   },
   "tableView": {
     "columns": "Columns",
@@ -314,7 +318,42 @@
     "addPhotos": "Add photos",
     "photosReady": "{n} photo ready to upload. Choose files to replace the selection. | {n} photos ready to upload. Choose files to replace the selection.",
     "photoLimits": "Up to 10 images, 15 MB each.",
-    "save": "Save item"
+    "save": "Save item",
+    "templateNotice": "Prefilled from the template “{name}”. Review and change any value before saving; the new item does not stay linked to the template."
+  },
+  "templates": {
+    "title": "Templates",
+    "count": "{n} template | {n} templates",
+    "intro": "Templates are reusable presets for new items. Using one opens the regular Add Item form prefilled, so every value can be reviewed before the item is saved.",
+    "add": "Add template",
+    "editTitle": "Edit template",
+    "save": "Save template",
+    "name": "Template name",
+    "nameHelp": "Identifies the template in lists, for example “Cardboard box 5 kg”.",
+    "itemName": "Default item name",
+    "defaultsNotice": "These values are defaults for future items. Leave a field empty to keep it blank in new items.",
+    "fromItemNotice": "Prefilled from the item “{name}”. Remove item-specific values before saving.",
+    "serialHint": "Unique values such as serial numbers are usually best left blank in a template.",
+    "notSet": "Not set",
+    "categoryMissing": "Category missing",
+    "categoryMissingNotice": "The category of this template no longer exists. Choose a category to repair the template; until then it cannot be used.",
+    "ignoredFields": "Some template fields no longer exist and were ignored.",
+    "repairFirst": "Edit the template and choose a category before using it.",
+    "use": "Use",
+    "useNamed": "Use {name}",
+    "editNamed": "Edit {name}",
+    "deleteNamed": "Delete {name}",
+    "confirmDelete": "Delete the template “{name}”? Items created from it are not affected.",
+    "modified": "Modified",
+    "loading": "Loading templates…",
+    "emptyTitle": "No templates yet",
+    "emptyText": "Create a template for items you add often, or save an existing item as a template from its details page.",
+    "noMatches": "No matching templates",
+    "noMatchesText": "Try a different search term.",
+    "searchPlaceholder": "Search template name, category or item name…",
+    "pickTitle": "Add item from template",
+    "manage": "Manage templates",
+    "saveAsTemplate": "Save as template"
   },
   "aiAddItem": {
     "title": "AI Add Item",
@@ -467,7 +506,8 @@
     "categories": "{n} category | {n} categories",
     "fields": "{n} custom field | {n} custom fields",
     "fieldValues": "{n} custom field value | {n} custom field values",
-    "photos": "{n} photo | {n} photos"
+    "photos": "{n} photo | {n} photos",
+    "templates": "{n} item template | {n} item templates"
   },
   "settings": {
     "title": "Settings",
@@ -624,7 +664,7 @@
     "title": "Data / Backup",
     "subtitle": "Keep your own copies of the inventory database, and restore one when you need it.",
     "sqlite": "SQLite backup",
-    "downloadText": "Download a consistent snapshot containing all items, categories, custom fields, and photos.",
+    "downloadText": "Download a consistent snapshot containing all items, categories, custom fields, photos, and item templates.",
     "download": "Download backup",
     "cloudHint": "To upload the same snapshot to Dropbox or Google Drive, now or on a schedule, use {link}.",
     "cloudLink": "Cloud Backup in Settings",
@@ -648,7 +688,7 @@
     "definitions": "{n} definition | {n} definitions",
     "values": "{n} saved value | {n} saved values",
     "warningTitle": "This replaces all current data",
-    "warningReplaced": "All current items, categories, custom fields, values, and photos are replaced by this backup.",
+    "warningReplaced": "All current items, categories, custom fields, values, photos, and item templates are replaced by this backup.",
     "warningLost": "Everything added or changed after this backup was created disappears from the active database.",
     "warningSafety": "The current database is saved automatically as a pre-restore safety backup on the server first.",
     "warningReload": "The application briefly becomes unavailable for changes and then reloads.",
@@ -662,7 +702,7 @@
   },
   "reset": {
     "title": "Reset Inventory Database",
-    "text": "Permanently remove all inventory items, photos, categories, and custom fields, and return Inventory Atlas Lite to a fresh database state.",
+    "text": "Permanently remove all inventory items, photos, categories, custom fields, and item templates, and return Inventory Atlas Lite to a fresh database state.",
     "preserved": "Application settings are preserved. A safety backup will be created automatically before reset.",
     "completed": "Database reset completed.",
     "ready": "Inventory Atlas Lite is ready for a fresh inventory.",
@@ -897,7 +937,10 @@
     "UPLOAD_FAILED": "The upload could not be processed.",
     "UPLOAD_FILE_TOO_LARGE": "A file is larger than the 15 MB upload limit.",
     "UPLOAD_TOO_MANY_FILES": "Too many files. Upload at most 10 at a time.",
-    "UPLOAD_UNEXPECTED_FILE": "The upload contains an unexpected file."
+    "UPLOAD_UNEXPECTED_FILE": "The upload contains an unexpected file.",
+    "TEMPLATE_CATEGORY_MISSING": "The category of this template no longer exists. Edit the template and choose a category before using it.",
+    "TEMPLATE_NAME_REQUIRED": "Template name is required.",
+    "TEMPLATE_NOT_FOUND": "Template not found."
   },
   "notices": {
     "AI_CONNECTED": "Connected to {provider}. {count} model is available. | Connected to {provider}. {count} models are available.",

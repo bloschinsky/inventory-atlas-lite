@@ -14,6 +14,11 @@ test('the primary pages are reachable from the navigation bar', async ({ page })
   // The sidebar marks the open page for assistive technology, not only with color.
   await expect(page.getByRole('link', { name: 'Categories & Fields' })).toHaveAttribute('aria-current', 'page');
 
+  await page.getByRole('link', { name: 'Templates', exact: true }).click();
+  await expect(page).toHaveURL('/templates');
+  await expect(page.getByRole('heading', { name: 'Templates', level: 1 })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Templates', exact: true })).toHaveAttribute('aria-current', 'page');
+
   await page.getByRole('link', { name: 'Data / Backup' }).click();
   await expect(page).toHaveURL('/data');
   await expect(page.getByRole('heading', { name: 'Data / Backup' })).toBeVisible();

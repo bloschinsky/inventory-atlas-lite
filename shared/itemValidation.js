@@ -63,6 +63,22 @@ export const validateSerialNumber = value => shortText(value, { invalid: 'INVALI
 
 export const validateTransferredTo = value => shortText(value, { invalid: 'INVALID_TRANSFERRED_TO', tooLong: 'TRANSFERRED_TO_TOO_LONG' });
 
+// The optional base attributes shared by items and item templates, validated the same way for both.
+export const readItemDetails = body => {
+  const purchaseDate = validatePurchaseDate(body.purchase_date);
+  const purchasePrice = validatePurchasePrice(body.purchase_price);
+  return {
+    description: nullableText(body.description),
+    condition: nullableText(body.condition),
+    location: nullableText(body.location),
+    purchaseDate,
+    purchasePriceAmount: purchasePrice.amount,
+    purchasePriceCurrency: purchasePrice.currency,
+    serialNumber: validateSerialNumber(body.serial_number),
+    transferredTo: validateTransferredTo(body.transferred_to)
+  };
+};
+
 const trueValues = ['true', true, 1, '1'];
 const booleanValues = [...trueValues, 'false', false, 0, '0'];
 const isNumeric = raw => (typeof raw === 'number' && Number.isFinite(raw))
@@ -79,4 +95,15 @@ export const validateFieldValue = (type, raw, field) => {
   if (type === 'boolean' && !booleanValues.includes(raw)) throw invalid('INVALID_CUSTOM_FIELD_BOOLEAN', { field });
   if (type === 'boolean') return trueValues.includes(raw) ? '1' : '0';
   return type === 'date' ? raw.trim() : String(raw);
+};
+
+// Custom field values keyed by field id, checked against `fields`, the fields of the chosen category.
+export const readFieldValues = (values = {}, fields) => {
+  if (!values || typeof values !== 'object' || Array.isArray(values)) throw invalid('FIELD_VALUES_NOT_OBJECT');
+  const allowed = new Map(fields.map(field => [String(field.id), field]));
+  return Object.entries(values).map(([fieldId, raw]) => {
+    const field = allowed.get(String(fieldId));
+    if (!field) throw invalid('FIELD_NOT_IN_CATEGORY', { fieldId: String(fieldId) });
+    return [Number(fieldId), validateFieldValue(field.type, raw, field.name)];
+  });
 };

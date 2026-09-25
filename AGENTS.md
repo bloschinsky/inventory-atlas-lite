@@ -115,7 +115,11 @@ The project stays small and readable. Do not add:
 - `client/src/dashboardCharts.js` — on-demand loading of the ApexCharts copy bundled in `@tabler/core`, Tabler color resolution for the active mode, and the options of each Dashboard chart.
 - `client/src/components/DashboardChart.vue` — one ApexCharts instance: creation, in-place updates, and cleanup.
 - `client/src/pages/ItemDetails.vue` — item details, photos, and deletion.
-- `client/src/pages/ItemForm.vue` — item creation/editing, custom field values, and photo uploads.
+- `client/src/pages/ItemForm.vue` — item creation/editing, custom field values, and photo uploads; it is prefilled from an item draft (the edited item, an AI draft, or `?template=`).
+- `client/src/itemDraft.js` — item drafts: the shared form state of the item form and the template editor, and the drafts built from an item or a template.
+- `client/src/components/ItemDraftFields.vue` — the item base and custom field inputs shared by the item form and the template editor.
+- `client/src/pages/Templates.vue` and `TemplateForm.vue` — the item template list and the template editor (also started from an item through `?fromItem=`).
+- `client/src/components/AddItemMenu.vue` and `TemplatePickerDialog.vue` — the Items page Add item split button and its template picker.
 - `client/src/pages/PrintLabels.vue` — `/labels/print`: A4 QR label sheets for the selected items, their layout presets, and print styles.
 - `client/src/labelSelection.js` — item selection for label printing, shared by the Items list, the QR modal, and the print view.
 - `client/src/pages/ScanQr.vue` — `/scan`: live camera and image QR scanning that opens the matching item.
@@ -199,6 +203,7 @@ are mandatory for all frontend work:
 - `custom_fields` belong to a category and have the type `text`, `number`, `date`, or `boolean`.
 - `items` have a UUID, category, basic text attributes, and timestamps.
 - `item_field_values` store custom field values as text; booleans are normalized to `"1"` or `"0"`.
+- `item_templates` and `item_template_field_values` store user-defined presets for new items. A template is never an item; deleting its category sets `category_id` to NULL, and template values of deleted fields are ignored when read.
 - `item_photos` stores metadata and BLOB data in the same database. The API accepts up to 10 JPEG/PNG/WebP/GIF files of 15 MB each.
 - Foreign keys are enabled. Related fields, values, and photos are deleted according to their `ON DELETE` rules; do not bypass those rules with manual operations.
 - `DATA_DIR` changes the persistent data directory. Tests must use a temporary directory instead of the working database in `data/`.

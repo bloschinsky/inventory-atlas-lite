@@ -3,10 +3,7 @@ import { errorBody } from '../../../shared/appError.js';
 import { itemImportRequestBody, readItemImportDocument } from '../../../shared/itemImport.js';
 import { isCustomColumnKey } from '../../../shared/itemColumns.js';
 import { buildItemColumns } from './itemColumns.js';
-import {
-  nullableText, requiredText, validateFieldValue, validatePurchaseDate, validatePurchasePrice, validateSerialNumber,
-  validateTransferredTo
-} from '../../../shared/itemValidation.js';
+import { readFieldValues, readItemDetails, requiredText } from '../../../shared/itemValidation.js';
 
 // The stored purchase price columns are presented as one object, exactly as the API always has.
 const itemResponse = item => {
@@ -154,44 +151,15 @@ export class ItemService {
     return parentId;
   }
 
-  validateValues(categoryId, values = {}) {
-    if (!values || typeof values !== 'object' || Array.isArray(values)) throw httpError(400, 'FIELD_VALUES_NOT_OBJECT');
-    const allowed = new Map(this.fields.listTypesByCategory(categoryId).map(field => [String(field.id), field]));
-    return Object.entries(values).map(([fieldId, raw]) => {
-      const field = allowed.get(String(fieldId));
-      if (!field) throw httpError(400, 'FIELD_NOT_IN_CATEGORY', { fieldId: String(fieldId) });
-      return [Number(fieldId), validateFieldValue(field.type, raw, field.name)];
-    });
-  }
-
   // Shared attribute rules of create and update. The field values are returned separately because
   // they are written to their own table once the item row exists.
   readAttributes(body, itemId = null) {
     const name = requiredText(body?.name, 'ITEM_NAME_REQUIRED');
     const categoryId = Number.parseInt(body?.category_id);
     if (!this.categories.findById(categoryId)) throw httpError(400, 'CATEGORY_REQUIRED');
-    const values = this.validateValues(categoryId, body.field_values);
+    const values = readFieldValues(body.field_values, this.fields.listTypesByCategory(categoryId));
     const parentId = this.resolveParentId(body.parent_item_id, itemId);
-    const purchaseDate = validatePurchaseDate(body.purchase_date);
-    const purchasePrice = validatePurchasePrice(body.purchase_price);
-    const serialNumber = validateSerialNumber(body.serial_number);
-    const transferredTo = validateTransferredTo(body.transferred_to);
-    return {
-      values,
-      attributes: {
-        name,
-        categoryId,
-        description: nullableText(body.description),
-        condition: nullableText(body.condition),
-        location: nullableText(body.location),
-        purchaseDate,
-        purchasePriceAmount: purchasePrice.amount,
-        purchasePriceCurrency: purchasePrice.currency,
-        serialNumber,
-        transferredTo,
-        parentId
-      }
-    };
+    return { values, attributes: { name, categoryId, ...readItemDetails(body), parentId } };
   }
 
   // Callers wrap it in a transaction, so the item row and its field values are written together.

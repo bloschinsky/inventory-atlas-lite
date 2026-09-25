@@ -91,6 +91,13 @@ onMounted(load);
           >
             {{ $t('qr.title') }}
           </button>
+          <!-- Opens the template editor prefilled from this item; nothing is saved until it is confirmed there. -->
+          <RouterLink
+            :to="{ path: '/templates/new', query: { fromItem: item.id } }"
+            class="btn"
+          >
+            {{ $t('templates.saveAsTemplate') }}
+          </RouterLink>
           <button
             type="button"
             class="btn btn-outline-danger"

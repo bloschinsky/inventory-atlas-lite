@@ -271,6 +271,12 @@ async function finishReset(result) {
             <dd class="col-7 col-md-8">
               {{ validation.summary.photos }}
             </dd>
+            <dt class="col-5 col-md-4">
+              {{ $t('templates.title') }}
+            </dt>
+            <dd class="col-7 col-md-8">
+              {{ validation.summary.templates }}
+            </dd>
           </dl>
 
           <div

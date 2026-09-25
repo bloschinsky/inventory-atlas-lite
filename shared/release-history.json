@@ -1,5 +1,15 @@
 [
   {
+    "version": "0.37.0",
+    "date": "2026-09-25",
+    "changes": [
+      "New Templates page: save reusable presets for items you add often, with default values for every item field and the category's custom fields.",
+      "Use a template, or choose From template… in the Add item menu, to open the regular Add Item form prefilled; every value can be changed before the item is saved, and the item never stays linked to the template.",
+      "Save as template on an item's page starts a new template from that item, so item-specific values such as the serial number can be cleared first.",
+      "Templates are included in database backups and restores, and a template whose category or fields were deleted keeps working or asks to be repaired instead of failing."
+    ]
+  },
+  {
     "version": "0.36.0",
     "date": "2026-09-25",
     "changes": [

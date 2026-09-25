@@ -36,7 +36,8 @@ GET /api/capabilities → { "ai": { "enabled": false, "imageInput": true } }
 
 While `ai.enabled` is `false`:
 
-- **AI Add Item** is absent from the *Items* page header and from its empty state.
+- **AI Add Item** is absent from the *Items* page header, from its empty state, and from the **Add item**
+  split-button menu.
 - **AI Add Fields** is absent from *Categories & Fields*. **Batch Add Fields** is not an AI action
   and stays available.
 - `/items/ai` is not a usable page: a router guard redirects the navigation to `/items`, so a typed

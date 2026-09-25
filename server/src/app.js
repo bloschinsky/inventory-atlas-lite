@@ -8,6 +8,7 @@ import { CustomFieldRepository } from './repositories/customFieldRepository.js';
 import { DashboardRepository } from './repositories/dashboardRepository.js';
 import { ItemPhotoRepository } from './repositories/itemPhotoRepository.js';
 import { ItemRepository } from './repositories/itemRepository.js';
+import { ItemTemplateRepository } from './repositories/itemTemplateRepository.js';
 import { DatabaseMaintenance } from './restore/databaseMaintenance.js';
 import { RestoreStagingStore } from './restore/stagingStore.js';
 import { maxUploadBytes, resetBackupDir, resetTokenTtlMs, safetyBackupDir, stagingDir, tokenTtlMs } from './restore/restoreConfig.js';
@@ -37,6 +38,7 @@ import { CustomFieldService } from './services/customFieldService.js';
 import { DashboardService } from './services/dashboardService.js';
 import { ImageService } from './services/imageService.js';
 import { ItemService } from './services/itemService.js';
+import { ItemTemplateService } from './services/itemTemplateService.js';
 import { PhotoService } from './services/photoService.js';
 import { ResetService } from './services/resetService.js';
 import { RestoreService } from './services/restoreService.js';
@@ -52,6 +54,7 @@ import { createDashboardRoutes } from './routes/dashboardRoutes.js';
 import { createFieldRoutes } from './routes/fieldRoutes.js';
 import { createImageRoutes } from './routes/imageRoutes.js';
 import { createItemRoutes } from './routes/itemRoutes.js';
+import { createItemTemplateRoutes } from './routes/itemTemplateRoutes.js';
 import { createPhotoRoutes } from './routes/photoRoutes.js';
 import { createResetRoutes } from './routes/resetRoutes.js';
 import { createSystemRoutes } from './routes/systemRoutes.js';
@@ -70,6 +73,7 @@ export function createApp({ production = false } = {}) {
   const customFieldRepository = new CustomFieldRepository(db);
   const itemRepository = new ItemRepository(db);
   const itemPhotoRepository = new ItemPhotoRepository(db);
+  const itemTemplateRepository = new ItemTemplateRepository(db);
   const dashboardRepository = new DashboardRepository(db);
 
   // Restore and reset both replace the active database, so they share one maintenance state.
@@ -110,6 +114,7 @@ export function createApp({ production = false } = {}) {
   const categoryService = new CategoryService(categoryRepository);
   const customFieldService = new CustomFieldService(customFieldRepository, categoryService);
   const itemService = new ItemService({ itemRepository, customFieldRepository, itemPhotoRepository, categoryRepository });
+  const itemTemplateService = new ItemTemplateService({ itemTemplateRepository, categoryRepository, customFieldRepository });
   const photoService = new PhotoService({ itemRepository, itemPhotoRepository });
   const dashboardService = new DashboardService({ dashboardRepository, categoryRepository });
   const imageService = new ImageService({ removeBackground });
@@ -157,6 +162,7 @@ export function createApp({ production = false } = {}) {
   app.use(createDashboardRoutes({ dashboardService }));
   app.use(createFieldRoutes({ customFieldService, aiFieldService }));
   app.use(createItemRoutes({ itemService }));
+  app.use(createItemTemplateRoutes({ itemTemplateService }));
   app.use(createPhotoRoutes({ photoService, imageUpload }));
   app.use(createSystemRoutes({ maintenance, db, appVersion }));
   app.use(createUpdateRoutes({ updateService }));

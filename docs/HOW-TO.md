@@ -117,6 +117,7 @@ saved.
 | **Transferred To** | A free-text note about who or where an item went when it was lent, given away, sold, or otherwise transferred, such as `Vasyl` or `Sold via OLX`. It is informational only and never changes the location. |
 | **QR code** | A code generated from the item's UUID, shown on request from the item page and printed on labels. It identifies the record and contains no address of your server. **Scan QR** reads it back and opens the item. |
 | **Photo** | An image stored inside the database together with the item. |
+| **Template** | A reusable preset of default values for new items of one category. Using it prefills the **Add item** form; it is never an item itself and the items created from it stay independent. |
 | **Backup** | A downloadable copy of the whole SQLite database, photos included. |
 | **Restore** | Replacing the whole inventory with the contents of such a backup file. |
 
@@ -254,6 +255,49 @@ unusable, the message explains why and your description stays in the modal for a
 5. Add photos, then press **Save item**.
 
 Changing the category while filling in the form loads that category's fields.
+
+**Add item** is a split button: its main part opens the blank form described above, and the arrow
+next to it opens a menu with **Blank item** (the same blank form), **From template…** (see below),
+and **AI Add Item** while AI features are on.
+
+### Save and use item templates
+
+A template is a reusable preset for items you add often, such as `Cardboard box 5 kg` or
+`Seagate IronWolf 4 TB`. It is not an item: it never appears in **Items**, is not counted on the
+Dashboard, and has no QR code, photos, or container. Using a template never creates an item by
+itself — it opens the regular **Add item** form prefilled, and the item is created only when you
+press **Save item** there.
+
+1. Open **Templates** in the navigation and press **Add template**.
+2. Enter a **Template name**, which is how the template is listed, and choose a **Category**. Both
+   are required.
+3. Fill in only the values new items should start with: **Default item name**, **Condition**,
+   **Location**, **Transferred To**, **Purchase Date**, **Purchase Price**, **Serial Number**,
+   **Description**, and the category's custom fields. Every value is optional; an empty field stays
+   empty in new items, and a Boolean field can stay **Not set**. Values are checked with the same
+   rules as an item. Changing the category loads that category's fields.
+4. Press **Save template**. The list shows each template's name, category, default item name, and
+   when it was last modified, sorted by name; **Search** filters it by name, category, or item name.
+
+To create an item from a template, press **Use** in the template's row, or open **Items**, press the
+arrow next to **Add item**, choose **From template…**, and pick the template. The **Add item** form
+opens with the template's values and a note naming the template. Change anything you like, add
+photos, and press **Save item**. The new item keeps no link to the template: editing or deleting the
+template later never changes items created from it.
+
+To start a template from an existing item, open the item and press **Save as template**. The template
+editor opens with the item's category, base fields, and custom field values, and its name as the
+template name. Nothing is saved yet. Clear values that belong only to that one item — a serial
+number or purchase date, for example — and press **Save template**. Photos and the container are
+never copied into a template.
+
+**Edit** in a template's row changes the template, and **Delete** removes it after a confirmation.
+
+If a custom field used by a template is deleted, the template keeps working without that value, and
+the template editor and the prefilled item form show `Some template fields no longer exist and were
+ignored.` If the template's category is deleted, the template stays in the list marked **Category
+missing** and its **Use** button is disabled. Press **Edit**, choose a category, and save to repair
+it; another category is never chosen for you.
 
 ### Add several items at once from JSON
 
@@ -564,7 +608,7 @@ was created disappears from the active database. It is not a merge or an import.
    not the file name.
 3. Press **Validate backup**. The file is uploaded and checked on the server. Nothing has changed yet.
 4. Read the **Validation result**: the file name and size, the compatibility line, and how many
-   categories, items, custom fields, values, and photos the backup contains. If these numbers do not
+   categories, items, custom fields, values, photos, and templates the backup contains. If these numbers do not
    match the backup you expect, stop here and select another file.
 5. Read the red warning. Before the replacement the application writes a **pre-restore safety
    backup** of the current database on the server, and during the final swap it refuses changes for
@@ -583,13 +627,14 @@ cannot overlap the final swap.
 ### Reset the inventory database
 
 Resetting **permanently removes the whole inventory** — every item, photo, category, custom field,
-and saved value — and leaves an empty database, as on a fresh installation. Application settings,
+saved value, and item template — and leaves an empty database, as on a fresh installation. Application settings,
 such as the AI settings and the API key, and all existing backups are kept.
 
 1. Download a backup first if you might want the data again.
 2. Open **Data / Backup** and scroll to the red **Danger Zone** at the bottom of the page.
 3. Press **Reset Inventory Database**. The dialog asks the server for the current numbers and lists
-   how many items, categories, custom fields, custom field values, and photos will be removed.
+   how many items, categories, custom fields, custom field values, photos, and item templates will be
+   removed.
    Nothing has changed yet; **Cancel** closes the dialog.
 4. Tick **I understand that all inventory data will be permanently removed.**
 5. Type `RESET INVENTORY` exactly, in capitals. **Reset Database** stays disabled until both the

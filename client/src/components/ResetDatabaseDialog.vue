@@ -28,7 +28,8 @@ const impact = computed(() => {
     t('counts.categories', counts.categories),
     t('counts.fields', counts.fields),
     t('counts.fieldValues', counts.fieldValues),
-    t('counts.photos', counts.photos)
+    t('counts.photos', counts.photos),
+    t('counts.templates', counts.templates)
   ];
 });
 

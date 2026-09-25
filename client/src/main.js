@@ -15,6 +15,8 @@ import AIAddItem from './pages/AIAddItem.vue';
 import Settings from './pages/Settings.vue';
 import ScanQr from './pages/ScanQr.vue';
 import PrintLabels from './pages/PrintLabels.vue';
+import Templates from './pages/Templates.vue';
+import TemplateForm from './pages/TemplateForm.vue';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -26,6 +28,9 @@ const router = createRouter({
     { path: '/items/new', component: ItemForm },
     { path: '/items/:id', component: ItemDetails },
     { path: '/items/:id/edit', component: ItemForm },
+    { path: '/templates', component: Templates },
+    { path: '/templates/new', component: TemplateForm },
+    { path: '/templates/:id/edit', component: TemplateForm },
     { path: '/scan', component: ScanQr },
     { path: '/labels/print', component: PrintLabels },
     { path: '/categories', component: Categories },

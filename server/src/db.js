@@ -13,8 +13,9 @@ export const databasePath = path.join(dataDir, 'inventory.sqlite');
   Schema version stored in PRAGMA user_version. Databases created before restore existed report 0;
   applySchema() upgrades them in place. Restore refuses a backup that reports a higher number,
   because it was written by a newer release whose schema this one cannot read.
+  Version 2 added the item template tables.
 */
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 // Tables and columns that every Inventory Atlas Lite database has ever had. Restore validation uses
 // them to recognize one of our backups before deciding whether it only needs the usual migrations.
@@ -33,7 +34,10 @@ export const CURRENT_SCHEMA = {
   items: [...CORE_SCHEMA.items, 'purchase_date', 'purchase_price_amount', 'purchase_price_currency',
     'serial_number', 'transferred_to', 'parent_item_id', 'created_at', 'updated_at'],
   custom_fields: [...CORE_SCHEMA.custom_fields, 'created_at', 'updated_at'],
-  item_photos: [...CORE_SCHEMA.item_photos, 'created_at']
+  item_photos: [...CORE_SCHEMA.item_photos, 'created_at'],
+  item_templates: ['id', 'name', 'category_id', 'item_name', 'description', 'condition', 'location', 'purchase_date',
+    'purchase_price_amount', 'purchase_price_currency', 'serial_number', 'transferred_to', 'created_at', 'updated_at'],
+  item_template_field_values: ['id', 'template_id', 'field_id', 'value']
 };
 
 // Creates missing tables, runs the additive migrations, and stamps the current schema version.
@@ -86,6 +90,33 @@ export const applySchema = connection => {
       mime_type TEXT NOT NULL,
       data BLOB NOT NULL,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    -- A template is a preset for new items, never an item. Deleting its category keeps the template
+    -- with no category, so it stays visible and can be repaired instead of silently moving elsewhere.
+    CREATE TABLE IF NOT EXISTS item_templates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+      item_name TEXT,
+      description TEXT,
+      condition TEXT,
+      location TEXT,
+      purchase_date TEXT,
+      purchase_price_amount TEXT,
+      purchase_price_currency TEXT,
+      serial_number TEXT,
+      transferred_to TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    -- field_id deliberately has no foreign key: the value of a deleted field stays behind, so the
+    -- template can report that it was ignored instead of losing it without a word.
+    CREATE TABLE IF NOT EXISTS item_template_field_values (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      template_id INTEGER NOT NULL REFERENCES item_templates(id) ON DELETE CASCADE,
+      field_id INTEGER NOT NULL,
+      value TEXT NOT NULL,
+      UNIQUE(template_id, field_id)
     );
     CREATE INDEX IF NOT EXISTS idx_items_category ON items(category_id);
     CREATE INDEX IF NOT EXISTS idx_items_name ON items(name COLLATE NOCASE);

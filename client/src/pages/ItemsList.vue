@@ -7,6 +7,7 @@ import { capabilities } from '../capabilities.js';
 import { CORE_ITEM_COLUMNS, DEFAULT_ITEM_SORT, ITEMS_VIEW_STORAGE_KEY, labelColumns } from '../itemColumns.js';
 import { labelSelection, printLabelsRoute } from '../labelSelection.js';
 import { useTablePreferences } from '../useTablePreferences.js';
+import AddItemMenu from '../components/AddItemMenu.vue';
 import BatchAddItemsDialog from '../components/BatchAddItemsDialog.vue';
 import ItemResults from '../components/ItemResults.vue';
 import PageHeader from '../components/PageHeader.vue';
@@ -112,12 +113,7 @@ onMounted(async () => {
         />
         {{ $t('items.batchAdd') }}
       </button>
-      <RouterLink
-        to="/items/new"
-        class="btn btn-primary"
-      >
-        {{ $t('items.add') }}
-      </RouterLink>
+      <AddItemMenu />
     </template>
   </PageHeader>
 

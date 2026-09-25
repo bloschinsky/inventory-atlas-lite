@@ -14,6 +14,7 @@ document describes the current behaviour and its boundaries, not the original pl
 | [Interface localization](interface-localization.md) | English and Ukrainian interface with a browser-local language setting, English fallback, plural rules, and locale-aware dates, numbers, and prices. |
 | [Item photo carousel](item-photo-carousel.md) | Browse an item's photos in a Tabler carousel with arrows, indicators, swipe, and drag, and keep a valid slide after a deletion. |
 | [Item list columns and sorting](item-list-columns-and-sorting.md) | Choose the Items list columns, including merged same-name custom fields, sort the whole filtered list on the server from the table headers or a compact phone control, and search text custom values. |
+| [Item templates](item-templates.md) | Save user-defined presets of default item values, use one to prefill the regular Add Item form, start one from an existing item, and keep templates safe across deleted fields and categories. |
 | [Nested items](nested-items.md) | Store an item inside another item and browse its direct contents. |
 | [Effective location inheritance](effective-location-inheritance.md) | Display a contained item at the location of its outermost container while its own saved location stays editable. |
 | [Batch Add Fields](batch-add-fields.md) | Paste a field-definition document, review and edit the proposed fields, and create them in one atomic batch. |

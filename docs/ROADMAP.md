@@ -13,15 +13,12 @@ Implemented behavior is documented separately in [`features/README.md`](features
    Includes a film-boxes-in-hand regression asset. See
    [`TASK-background-removal-quality-phase-2.md`](issues/TASK-background-removal-quality-phase-2.md).
 
-2. **User-defined item templates** — Planned. Adds reusable template storage and management that
-   prefills the regular Add Item form without creating inventory records automatically. See
-   [`TASK-ITEM-TEMPLATES.md`](issues/TASK-ITEM-TEMPLATES.md).
-
-3. **Duplicate existing item** — Planned; blocked by User-defined item templates. Adds an editable
+2. **Duplicate existing item** — Planned; unblocked by the completed
+   [item templates](features/item-templates.md) and their shared item-draft prefill. Adds an editable
    prefilled Add Item draft from an existing item without copying its identity, photos, or container.
    See [`TASK-DUPLICATE-ITEM.md`](issues/TASK-DUPLICATE-ITEM.md).
 
-4. **Additional UI languages** — Planned; the English/Ukrainian localization foundation is complete.
+3. **Additional UI languages** — Planned; the English/Ukrainian localization foundation is complete.
    Adds Polish, German, Spanish, French, and Brazilian Portuguese with a central locale registry and
    automated translation-key completeness checks. See
    [`TASK-I18N-ADDITIONAL-LANGUAGES.md`](issues/TASK-I18N-ADDITIONAL-LANGUAGES.md).

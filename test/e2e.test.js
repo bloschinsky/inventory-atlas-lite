@@ -849,3 +849,62 @@ test('the API returns the inherited effective location without rewriting saved l
     await rm(dataDir, { recursive: true, force: true });
   }
 });
+
+test('item templates are managed through their own API and kept over a restart and in backups', async () => {
+  const dataDir = await mkdtemp(path.join(os.tmpdir(), 'inventory-templates-test-'));
+  let server;
+  try {
+    server = await startServer(dataDir);
+    const category = await request('/api/categories', json('POST', { name: 'Storage' }));
+    const size = await request(`/api/categories/${category.id}/fields`, json('POST', { name: 'Size', type: 'text' }));
+    const template = await request('/api/item-templates', json('POST', {
+      name: 'Plastic storage box', category_id: category.id, item_name: 'Storage box', location: 'Shelf 2',
+      field_values: { [size.id]: '60 L' }
+    }));
+    assert.equal(template.category_name, 'Storage');
+    assert.deepEqual(template.field_values, { [size.id]: '60 L' });
+
+    const listed = await request('/api/item-templates');
+    assert.deepEqual(listed.map(entry => [entry.name, entry.category_name, entry.item_name]), [['Plastic storage box', 'Storage', 'Storage box']]);
+    // Templates never appear among items.
+    assert.equal((await request('/api/items')).pagination.total, 0);
+
+    const draft = await request(`/api/item-templates/${template.id}/item-draft`);
+    assert.equal(draft.categoryId, category.id);
+    assert.equal(draft.baseFields.location, 'Shelf 2');
+    assert.deepEqual(draft.dynamicFields, { [size.id]: '60 L' });
+
+    const updated = await request(`/api/item-templates/${template.id}`, json('PUT', {
+      name: 'Storage box 60 L', category_id: category.id, item_name: 'Storage box', field_values: { [size.id]: '60 L' }
+    }));
+    assert.equal(updated.location, null);
+    assert.equal(await failedStatus('/api/item-templates', json('POST', { name: '', category_id: category.id })), 400);
+    assert.equal(await failedStatus(`/api/item-templates/${template.id}`, json('PUT', { name: 'Box', category_id: 999 })), 400);
+    assert.equal(await failedStatus('/api/item-templates/999'), 404);
+
+    const backupResponse = await fetch(`${base}/api/backup`);
+    assert.ok(backupResponse.ok);
+    const backupPath = path.join(dataDir, 'templates-backup.sqlite');
+    await writeFile(backupPath, Buffer.from(await backupResponse.arrayBuffer()));
+    const backup = new Database(backupPath, { readonly: true });
+    assert.deepEqual(backup.prepare('SELECT name, item_name FROM item_templates').all(), [{ name: 'Storage box 60 L', item_name: 'Storage box' }]);
+    assert.deepEqual(backup.prepare('SELECT field_id, value FROM item_template_field_values').all(), [{ field_id: size.id, value: '60 L' }]);
+    backup.close();
+
+    await stopServer(server);
+    server = await startServer(dataDir);
+    assert.equal((await request(`/api/item-templates/${template.id}`)).name, 'Storage box 60 L');
+
+    // Deleting the category keeps the template, which then refuses to be used until it is repaired.
+    await request(`/api/categories/${category.id}`, { method: 'DELETE' });
+    assert.equal((await request('/api/item-templates'))[0].category_name, null);
+    assert.equal(await failedStatus(`/api/item-templates/${template.id}/item-draft`), 409);
+
+    await request(`/api/item-templates/${template.id}`, { method: 'DELETE' });
+    assert.deepEqual(await request('/api/item-templates'), []);
+    assert.equal(await failedStatus(`/api/item-templates/${template.id}`, { method: 'DELETE' }), 404);
+  } finally {
+    if (server) await stopServer(server);
+    await rm(dataDir, { recursive: true, force: true });
+  }
+});

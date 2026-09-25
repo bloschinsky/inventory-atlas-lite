@@ -16,7 +16,7 @@ the replacement fails. Settings stored outside the SQLite file and all existing 
   preserved, and that a safety backup is created first. Its **Reset Inventory Database** button is an
   outline danger button that only opens a dialog.
 - Opening the dialog asks the server for the current impact and lists the number of items,
-  categories, custom fields, custom field values, and photos that will be removed. The counts are
+  categories, custom fields, custom field values, photos, and item templates that will be removed. The counts are
   never taken from client state.
 - **Reset Database** stays disabled until the checkbox *I understand that all inventory data will be
   permanently removed.* is ticked and exactly `RESET INVENTORY` is typed. The phrase is compared
@@ -34,7 +34,7 @@ the replacement fails. Settings stored outside the SQLite file and all existing 
 
 - `POST /api/database/reset/prepare` refuses to start while a restore or reset runs (`409`) or a
   failed replacement awaits manual recovery (`503`). Otherwise it returns
-  `{ counts: { categories, items, fields, fieldValues, photos }, resetToken, expiresInSeconds }` and
+  `{ counts: { categories, items, fields, fieldValues, photos, templates }, resetToken, expiresInSeconds }` and
   changes nothing.
 - `POST /api/database/reset/apply` takes `{ "resetToken": "…", "confirmation": "RESET INVENTORY" }`
   and answers `{ message: "Database reset completed.", counts, safetyBackup }` with the bare file name
