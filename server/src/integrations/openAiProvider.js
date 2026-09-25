@@ -30,7 +30,7 @@ export class OpenAiProvider {
   async listModels() {
     const response = await this.http.send('models', { timeoutMs: 15_000 });
     if (!response.ok) this.http.failModelList(response);
-    if (!Array.isArray(response.body?.data)) throw httpError(`${this.label} returned an invalid model list.`, 502);
+    if (!Array.isArray(response.body?.data)) throw httpError(502, 'AI_INVALID_MODEL_LIST', { provider: this.label });
     const availableIds = new Set(response.body.data.map(model => model?.id));
     return preferredModels.filter(model => availableIds.has(model.id)).map(model => ({ ...model, imageInput: true }));
   }
@@ -55,11 +55,11 @@ export class OpenAiProvider {
     });
     if (!response.ok) this.http.fail(response, { task, model, image: Boolean(image) });
     const text = outputText(response.body);
-    if (!text) throw httpError(`${this.label} returned no usable result.`, 502);
+    if (!text) throw httpError(502, 'AI_NO_RESULT', { provider: this.label });
     try {
       return { data: JSON.parse(text), usage: response.body.usage || null };
     } catch {
-      throw httpError(`${this.label} returned an invalid structured response.`, 502);
+      throw httpError(502, 'AI_INVALID_RESPONSE');
     }
   }
 }

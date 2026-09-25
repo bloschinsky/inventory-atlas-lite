@@ -128,15 +128,15 @@ test('apply requires the exact phrase and a live, single-use reset token', async
 
     const missing = await applyReset(undefined);
     assert.equal(missing.status, 400);
-    assert.match(missing.body.error, /token is missing/);
+    assert.equal(missing.body.error.code, 'RESET_TOKEN_MISSING');
     for (const phrase of ['reset inventory', 'RESET', 'RESET INVENTORY ', '']) {
       const wrong = await applyReset(resetToken, phrase);
       assert.equal(wrong.status, 400);
-      assert.match(wrong.body.error, /Type RESET INVENTORY to confirm/);
+      assert.deepEqual(wrong.body.error, { code: 'RESET_CONFIRMATION_REQUIRED', params: { phrase: 'RESET INVENTORY' } });
     }
     const invalid = await applyReset('a'.repeat(64));
     assert.equal(invalid.status, 400);
-    assert.match(invalid.body.error, /invalid or was already used/);
+    assert.equal(invalid.body.error.code, 'RESET_TOKEN_INVALID');
     assert.equal((await itemNames()).length, 2);
     assert.deepEqual(preResetBackups(dataDir), []);
 
@@ -144,18 +144,18 @@ test('apply requires the exact phrase and a live, single-use reset token', async
     assert.equal((await applyReset(resetToken)).status, 200);
     const replay = await applyReset(resetToken);
     assert.equal(replay.status, 400);
-    assert.match(replay.body.error, /invalid or was already used/);
+    assert.equal(replay.body.error.code, 'RESET_TOKEN_INVALID');
 
     // Preparing again invalidates an older token, so a stale dialog can never apply.
     const stale = (await prepareReset()).body.resetToken;
     const current = (await prepareReset()).body.resetToken;
-    assert.match((await applyReset(stale)).body.error, /invalid or was already used/);
+    assert.equal((await applyReset(stale)).body.error.code, 'RESET_TOKEN_INVALID');
 
     await new Promise(resolve => setTimeout(resolve, 3200));
     const expired = await applyReset(current);
     assert.equal(expired.status, 400);
-    assert.match(expired.body.error, /expired/);
-    assert.match((await applyReset(current)).body.error, /invalid or was already used/);
+    assert.equal(expired.body.error.code, 'RESET_TOKEN_EXPIRED');
+    assert.equal((await applyReset(current)).body.error.code, 'RESET_TOKEN_INVALID');
 
     // Only the one successful reset wrote a backup.
     assert.equal(preResetBackups(dataDir).length, 1);
@@ -245,14 +245,14 @@ test('a reset swaps in a fresh current-schema database and keeps settings and ba
 
 test('a failing reset step aborts or rolls back and leaves the original inventory usable', async () => {
   const failures = [
-    ['safety-backup', /safety backup of the current database could not be created/, 0],
-    ['safety-verify', /safety backup of the current database failed verification/, 0],
-    ['fresh-database', /fresh database could not be created/, 1],
-    ['fresh-verify', /fresh database failed its integrity or schema check/, 1],
-    ['swap', /while the database was being replaced\. The previous inventory was recovered/, 1],
-    ['after-swap', /post-reset health check\. The previous inventory was recovered/, 1]
+    ['safety-backup', 'SAFETY_BACKUP_FAILED', 0],
+    ['safety-verify', 'SAFETY_BACKUP_UNVERIFIED', 0],
+    ['fresh-database', 'RESET_FRESH_DATABASE_FAILED', 1],
+    ['fresh-verify', 'RESET_FRESH_DATABASE_UNVERIFIED', 1],
+    ['swap', 'RESET_ROLLED_BACK_SWAP', 1],
+    ['after-swap', 'RESET_ROLLED_BACK_HEALTH', 1]
   ];
-  for (const [step, message, backups] of failures) {
+  for (const [step, code, backups] of failures) {
     const dataDir = await mkdtemp(path.join(os.tmpdir(), `inventory-reset-${step}-test-`));
     let server;
     try {
@@ -263,8 +263,8 @@ test('a failing reset step aborts or rolls back and leaves the original inventor
       const { body: prepared } = await prepareReset();
       const applied = await applyReset(prepared.resetToken);
       assert.equal(applied.status, 500, step);
-      assert.match(applied.body.error, message, step);
-      assert.ok(!applied.body.error.includes(dataDir), step);
+      // Only the stable code and no parameters reach the browser: no path, message, or stack.
+      assert.deepEqual(applied.body.error, { code, params: {} }, step);
 
       // The original inventory is intact, and the application is ready and writable again.
       assert.deepEqual(await itemNames(), before, step);
@@ -274,7 +274,7 @@ test('a failing reset step aborts or rolls back and leaves the original inventor
       assert.equal(preResetBackups(dataDir).length, backups, step);
       assert.deepEqual(listDir(dataDir).filter(name => name.startsWith('reset-candidate-')), [], step);
       // A failed apply consumed its token.
-      assert.match((await applyReset(prepared.resetToken)).body.error, /invalid or was already used/, step);
+      assert.equal((await applyReset(prepared.resetToken)).body.error.code, 'RESET_TOKEN_INVALID', step);
     } finally {
       if (server) await stopServer(server);
       await removeDir(dataDir);
@@ -318,7 +318,7 @@ test('a reset never overlaps a restore, a backup download, or normal writes', as
     assert.equal((await prepareReset()).status, 409);
     const blocked = await applyReset(second.resetToken);
     assert.equal(blocked.status, 409);
-    assert.match(blocked.body.error, /Another database restore or reset is already running/);
+    assert.equal(blocked.body.error.code, 'DATABASE_OPERATION_RUNNING');
     assert.equal((await restoring).status, 200);
     assert.deepEqual(await itemNames(), ['Box A', 'Helios 44-2']);
   } finally {

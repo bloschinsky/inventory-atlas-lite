@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { api, jsonOptions } from '../api.js';
+import { translateError } from '../i18n/index.js';
 import {
   FIELD_TYPES, MAX_BATCH_FIELDS, blockingRows, creatableFields,
   fieldDefinitionDocument, parseFieldDefinitionDocument, readFieldDefinitionDocument,
@@ -45,7 +46,7 @@ function preview() {
     drafts.value = parseFieldDefinitionDocument(source.value);
   } catch (parseError) {
     drafts.value = null;
-    error.value = parseError.message;
+    error.value = translateError(parseError);
   }
 }
 // The AI answer is untrusted input: it is read with the same reader the pasted document uses.
@@ -57,7 +58,8 @@ async function generate() {
     drafts.value = readFieldDefinitionDocument(document);
   } catch (generateError) {
     drafts.value = null;
-    error.value = generateError.message;
+    // An API refusal is already translated; a document the shared reader rejects is translated here.
+    error.value = generateError.name === 'ApiError' ? generateError.message : translateError(generateError);
   } finally {
     generating.value = false;
   }
@@ -232,9 +234,9 @@ onBeforeUnmount(() => {
                       :class="rows[index].status === 'new' ? 'bg-green-lt' : 'bg-red-lt'"
                     >{{ $t(`batchFields.statuses.${rows[index].status}`) }}</span>
                     <small
-                      v-if="rows[index].message"
+                      v-if="rows[index].error"
                       class="d-block text-danger"
-                    >{{ rows[index].message }}</small>
+                    >{{ translateError(rows[index].error) }}</small>
                   </td>
                   <td>
                     <button

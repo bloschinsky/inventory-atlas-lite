@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { errorBody } from '../../../shared/appError.js';
 import { httpError } from '../httpError.js';
 import { backupFileName, defaultSettings, isOwnBackupName, nextRunAfter, validateSettings } from '../cloudBackup/schedule.js';
 
@@ -89,8 +90,8 @@ export class CloudBackupService {
     const at = this.now().toISOString();
     const attempt = { at, provider: id, trigger, ok: false, file: null, size: null, error: null, cleanup: null };
     if (this.running) {
-      if (trigger === 'scheduled') this.record({ ...attempt, error: 'Skipped because another cloud backup was running.' });
-      throw httpError('A cloud backup is already running. Wait for it to finish.', 409);
+      if (trigger === 'scheduled') this.record({ ...attempt, error: { code: 'CLOUD_BACKUP_SKIPPED', params: {} } });
+      throw httpError(409, 'CLOUD_BACKUP_RUNNING');
     }
     this.running = { provider: id, trigger, startedAt: at };
     let snapshot = null;
@@ -103,9 +104,10 @@ export class CloudBackupService {
       attempt.cleanup = await this.applyRetention(id, name);
       console.log(`[cloud-backup] ${trigger} backup uploaded to ${provider.label}: ${name}`);
     } catch (error) {
-      failure = error.status ? error : httpError(`The backup to ${provider.label} failed unexpectedly.`, 500);
-      attempt.error = failure.message;
-      console.warn(`[cloud-backup] ${trigger} backup to ${provider.label} failed: ${error.status ? error.message : error.stack}`);
+      failure = error.code && error.status ? error : httpError(500, 'CLOUD_BACKUP_FAILED', { provider: provider.label });
+      // Kept as { code, params } in the status file, so the browser shows it in its own language.
+      attempt.error = errorBody(failure);
+      console.warn(`[cloud-backup] ${trigger} backup to ${provider.label} failed: ${failure === error ? error.message : error.stack}`);
     } finally {
       if (snapshot) fs.rmSync(snapshot, { force: true });
       this.record(attempt);
@@ -136,7 +138,7 @@ export class CloudBackupService {
       return { ok: true, deleted, error: null };
     } catch (error) {
       console.warn(`[cloud-backup] retention cleanup failed: ${error.message}`);
-      return { ok: false, deleted, error: error.status ? error.message : 'Old backups could not be removed.' };
+      return { ok: false, deleted, error: error.code && error.status ? errorBody(error) : { code: 'CLOUD_CLEANUP_FAILED', params: {} } };
     }
   }
 }

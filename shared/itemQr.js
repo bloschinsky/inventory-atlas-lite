@@ -3,6 +3,8 @@
   keeps working after the deployment moves to another host, port, domain, or backup restore.
 */
 
+import { AppError } from './appError.js';
+
 export const ITEM_QR_PREFIX = 'ial:item';
 export const ITEM_QR_VERSION = 'v1';
 
@@ -14,7 +16,7 @@ const text = value => typeof value === 'string' ? value.trim() : '';
 // Builds ial:item:v1:<uuid>. Case is normalized so the same item always produces the same code.
 export function encodeItemQrPayload(uuid) {
   const normalized = text(uuid).toLowerCase();
-  if (!UUID_PATTERN.test(normalized)) throw new Error(`Invalid item UUID: ${JSON.stringify(uuid)}.`);
+  if (!UUID_PATTERN.test(normalized)) throw new AppError('ITEM_QR_INVALID_UUID', { uuid: String(uuid) });
   return `${ITEM_QR_PREFIX}:${ITEM_QR_VERSION}:${normalized}`;
 }
 
@@ -22,9 +24,9 @@ export function encodeItemQrPayload(uuid) {
 export function decodeItemQrPayload(value) {
   const parts = text(value).split(':');
   if (parts.length !== 4 || `${parts[0]}:${parts[1]}` !== ITEM_QR_PREFIX) {
-    throw new Error('This code is not an Inventory Atlas item code.');
+    throw new AppError('ITEM_QR_FOREIGN');
   }
-  if (parts[2] !== ITEM_QR_VERSION) throw new Error(`Unsupported item code version: ${JSON.stringify(parts[2])}.`);
-  if (!UUID_PATTERN.test(parts[3])) throw new Error('The item code does not contain a valid UUID.');
+  if (parts[2] !== ITEM_QR_VERSION) throw new AppError('ITEM_QR_UNSUPPORTED_VERSION', { version: parts[2] });
+  if (!UUID_PATTERN.test(parts[3])) throw new AppError('ITEM_QR_INVALID_UUID', { uuid: parts[3] });
   return parts[3];
 }

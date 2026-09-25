@@ -1,3 +1,4 @@
+import { AppError, errorBody } from './appError.js';
 import {
   requiredText, validateFieldValue, validatePurchaseDate, validatePurchasePrice, validateSerialNumber,
   validateTransferredTo
@@ -6,7 +7,8 @@ import {
 /*
   Application-level item import format shared by the batch editor and the API. It describes items in
   product terms: custom fields are keyed by their names, and nothing the server owns (IDs, UUIDs,
-  timestamps, containment) can be expressed in it.
+  timestamps, containment) can be expressed in it. Refusals are AppErrors whose parameters carry the
+  1-based item position and the property or field concerned.
 */
 
 export const ITEM_IMPORT_VERSION = 1;
@@ -19,8 +21,7 @@ const priceProperties = ['amount', 'currency'];
 
 const isPlainObject = value => !!value && typeof value === 'object' && !Array.isArray(value);
 const key = name => name.trim().toLowerCase();
-// Custom field messages name the field, both in the preview and in API errors.
-export const fieldLabel = name => `Field "${name}"`;
+const refuse = (code, params) => new AppError(code, params, 400);
 
 // Built from the category's current fields on every call, so the template can never drift from them.
 export function itemImportTemplate(category, fields) {
@@ -51,41 +52,45 @@ const draftFieldValue = (type, value) => {
 };
 
 const readItem = (item, index, fieldsByKey) => {
-  const position = `Item ${index + 1}`;
-  if (!isPlainObject(item)) throw new Error(`${position} must be a JSON object.`);
+  const position = index + 1;
+  if (!isPlainObject(item)) throw refuse('IMPORT_ITEM_NOT_OBJECT', { index: position });
   const unsupported = Object.keys(item).find(property => !itemProperties.includes(property));
-  if (unsupported) throw new Error(`${position} has an unsupported property "${unsupported}". Supported properties: ${itemProperties.join(', ')}.`);
+  if (unsupported) {
+    throw refuse('IMPORT_ITEM_UNSUPPORTED_PROPERTY', { index: position, property: unsupported, supported: itemProperties.join(', ') });
+  }
   for (const property of textProperties) {
     if (item[property] !== undefined && item[property] !== null && typeof item[property] !== 'string') {
-      throw new Error(`${position} "${property}" must be text or null.`);
+      throw refuse('IMPORT_ITEM_TEXT_EXPECTED', { index: position, property });
     }
   }
 
   const price = item.purchasePrice ?? {};
-  if (!isPlainObject(price)) throw new Error(`${position} "purchasePrice" must be an object with "amount" and "currency".`);
+  if (!isPlainObject(price)) throw refuse('IMPORT_PRICE_NOT_OBJECT', { index: position });
   const unsupportedPrice = Object.keys(price).find(property => !priceProperties.includes(property));
-  if (unsupportedPrice) throw new Error(`${position} "purchasePrice" has an unsupported property "${unsupportedPrice}". Supported properties: ${priceProperties.join(', ')}.`);
+  if (unsupportedPrice) {
+    throw refuse('IMPORT_PRICE_UNSUPPORTED_PROPERTY', { index: position, property: unsupportedPrice, supported: priceProperties.join(', ') });
+  }
   if (!['number', 'string', 'undefined'].includes(typeof price.amount) && price.amount !== null) {
-    throw new Error(`${position} purchase price amount must be a number, text, or null.`);
+    throw refuse('IMPORT_PRICE_AMOUNT_TYPE', { index: position });
   }
   if (!['string', 'undefined'].includes(typeof price.currency) && price.currency !== null) {
-    throw new Error(`${position} purchase price currency must be text or null.`);
+    throw refuse('IMPORT_PRICE_CURRENCY_TYPE', { index: position });
   }
 
   const values = item.customFields ?? {};
-  if (!isPlainObject(values)) throw new Error(`${position} "customFields" must be an object keyed by field name.`);
+  if (!isPlainObject(values)) throw refuse('IMPORT_CUSTOM_FIELDS_NOT_OBJECT', { index: position });
   const customFields = Object.fromEntries([...fieldsByKey.values()].map(field => [field.name, '']));
   const seen = new Set();
   for (const [name, value] of Object.entries(values)) {
     const field = fieldsByKey.get(key(name));
     if (!field) {
-      const known = [...fieldsByKey.values()].map(known => known.name).join(', ') || 'none';
-      throw new Error(`${position} has an unknown custom field "${name}". Fields of this category: ${known}.`);
+      const known = [...fieldsByKey.values()].map(known => known.name).join(', ') || '—';
+      throw refuse('IMPORT_UNKNOWN_CUSTOM_FIELD', { index: position, field: name, known });
     }
-    if (seen.has(field.id)) throw new Error(`${position} sets custom field "${field.name}" more than once.`);
+    if (seen.has(field.id)) throw refuse('IMPORT_DUPLICATE_CUSTOM_FIELD', { index: position, field: field.name });
     seen.add(field.id);
     if (value !== null && !['string', 'number', 'boolean'].includes(typeof value)) {
-      throw new Error(`${position} custom field "${field.name}" must be text, a number, true/false, or null.`);
+      throw refuse('IMPORT_CUSTOM_FIELD_VALUE_TYPE', { index: position, field: field.name });
     }
     customFields[field.name] = draftFieldValue(field.type, value);
   }
@@ -105,21 +110,21 @@ const readItem = (item, index, fieldsByKey) => {
   so those drafts stay visible and editable instead of failing the whole document.
 */
 export function readItemImportDocument(document, { categoryName, fields }) {
-  if (!isPlainObject(document)) throw new Error('The document must be a JSON object with "version", "category", and "items".');
+  if (!isPlainObject(document)) throw refuse('IMPORT_DOCUMENT_NOT_OBJECT');
   const unknown = Object.keys(document).find(property => !documentProperties.includes(property));
-  if (unknown) throw new Error(`Unsupported document property "${unknown}". Supported properties: ${documentProperties.join(', ')}.`);
-  if (document.version === undefined) throw new Error(`The document must declare "version": ${ITEM_IMPORT_VERSION}.`);
+  if (unknown) throw refuse('UNSUPPORTED_DOCUMENT_PROPERTY', { property: unknown, supported: documentProperties.join(', ') });
+  if (document.version === undefined) throw refuse('DOCUMENT_VERSION_MISSING', { expected: ITEM_IMPORT_VERSION });
   if (document.version !== ITEM_IMPORT_VERSION) {
-    throw new Error(`Unsupported document version: ${JSON.stringify(document.version)}. Expected ${ITEM_IMPORT_VERSION}.`);
+    throw refuse('UNSUPPORTED_DOCUMENT_VERSION', { version: JSON.stringify(document.version), expected: ITEM_IMPORT_VERSION });
   }
-  if (typeof document.category !== 'string' || !document.category.trim()) throw new Error('The document must name its "category".');
+  if (typeof document.category !== 'string' || !document.category.trim()) throw refuse('IMPORT_CATEGORY_MISSING');
   if (key(document.category) !== key(categoryName)) {
-    throw new Error(`The document is for category "${document.category.trim()}", but "${categoryName}" is selected.`);
+    throw refuse('IMPORT_CATEGORY_MISMATCH', { document: document.category.trim(), selected: categoryName });
   }
-  if (!Array.isArray(document.items)) throw new Error('The document must contain an "items" array.');
-  if (!document.items.length) throw new Error('The document does not contain any items.');
+  if (!Array.isArray(document.items)) throw refuse('IMPORT_ITEMS_MISSING');
+  if (!document.items.length) throw refuse('IMPORT_NO_ITEMS');
   if (document.items.length > MAX_BATCH_ITEMS) {
-    throw new Error(`A batch accepts at most ${MAX_BATCH_ITEMS} items; the document contains ${document.items.length}.`);
+    throw refuse('IMPORT_TOO_MANY_ITEMS', { max: MAX_BATCH_ITEMS, count: document.items.length });
   }
   const fieldsByKey = new Map(fields.map(field => [key(field.name), field]));
   return document.items.map((item, index) => readItem(item, index, fieldsByKey));
@@ -130,7 +135,8 @@ export function parseItemImportDocument(text, context) {
   try {
     document = JSON.parse(text);
   } catch (error) {
-    throw new Error(`Invalid JSON: ${error.message}`, { cause: error });
+    // The parser's wording comes from the JavaScript engine; it is kept as diagnostic context.
+    throw Object.assign(refuse('INVALID_JSON', { detail: error.message }), { cause: error });
   }
   return readItemImportDocument(document, context);
 }
@@ -142,21 +148,21 @@ const check = (errors, property, work) => {
   try {
     work();
   } catch (error) {
-    errors[property] = error.message;
+    errors[property] = errorBody(error);
   }
 };
 
-// Inline errors of one draft, produced by the canonical item rules the API applies on create.
+// Inline errors of one draft as { code, params }, from the canonical item rules the API applies on create.
 export function reviewItemDraft(draft, fields) {
   const errors = {};
-  check(errors, 'name', () => requiredText(draft.name, 'Item name'));
+  check(errors, 'name', () => requiredText(draft.name, 'ITEM_NAME_REQUIRED'));
   check(errors, 'purchaseDate', () => validatePurchaseDate(draft.purchaseDate));
   check(errors, 'purchasePrice', () => validatePurchasePrice(draft.purchasePrice));
   check(errors, 'serialNumber', () => validateSerialNumber(draft.serialNumber));
   check(errors, 'transferredTo', () => validateTransferredTo(draft.transferredTo));
   const fieldErrors = {};
   for (const field of fields) {
-    check(fieldErrors, field.name, () => validateFieldValue(field.type, draft.customFields[field.name], fieldLabel(field.name)));
+    check(fieldErrors, field.name, () => validateFieldValue(field.type, draft.customFields[field.name], field.name));
   }
   if (Object.keys(fieldErrors).length) errors.customFields = fieldErrors;
   return errors;

@@ -35,6 +35,22 @@ export const createI18nOptions = ({ locale, messages, warn = false }) => ({
   fallbackWarn: warn
 });
 
+/*
+  Turns a server message { code, params } into text through `<namespace>.<code>`, so the backend never
+  needs to know the interface language. A parameter that is itself such a message (a nested reason)
+  is translated first, and a numeric `count` selects the plural form. An unknown code falls back to a
+  generic message that names it; a plain string is older stored text and is shown as it is.
+*/
+export function translateMessage({ t, te }, message, namespace = 'errors') {
+  if (typeof message === 'string') return message;
+  if (!message?.code) return t('errors.UNKNOWN', { code: '—' });
+  const key = `${namespace}.${message.code}`;
+  if (!te(key, DEFAULT_LOCALE)) return t('errors.UNKNOWN', { code: message.code });
+  const params = Object.fromEntries(Object.entries(message.params ?? {}).map(([name, value]) =>
+    [name, value && typeof value === 'object' ? translateMessage({ t, te }, value) : value]));
+  return typeof params.count === 'number' ? t(key, params, params.count) : t(key, params);
+}
+
 // SQLite stores timestamps as "YYYY-MM-DD HH:MM:SS" in UTC; ISO strings and epoch numbers pass through.
 const toDate = value => new Date(typeof value === 'string' && /^\d{4}-\d{2}-\d{2} /.test(value) ? `${value.replace(' ', 'T')}Z` : value);
 

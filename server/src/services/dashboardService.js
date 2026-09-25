@@ -19,10 +19,10 @@ export class DashboardService {
   resolveScope(rawCategoryId) {
     if (rawCategoryId === undefined) return null;
     if (typeof rawCategoryId !== 'string' || !/^[1-9]\d*$/.test(rawCategoryId)) {
-      throw httpError('Category ID must be a positive integer.');
+      throw httpError(400, 'INVALID_CATEGORY_ID');
     }
     const category = this.categories.findById(Number(rawCategoryId));
-    if (!category) throw httpError('Category not found.', 404);
+    if (!category) throw httpError(404, 'CATEGORY_NOT_FOUND');
     return category;
   }
 

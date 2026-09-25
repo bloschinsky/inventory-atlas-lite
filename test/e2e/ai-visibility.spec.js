@@ -63,11 +63,11 @@ test('keeps rejecting AI requests on the server while AI features are disabled',
     multipart: { image: { name: 'sample-photo.png', mimeType: 'image/png', buffer: fs.readFileSync(fixture) } }
   });
   expect(analyze.status()).toBe(409);
-  expect((await analyze.json()).error).toContain('AI features are disabled');
+  expect((await analyze.json()).error).toEqual({ code: 'AI_DISABLED', params: {} });
 
   const fields = await request.post(`/api/categories/${category.id}/fields/ai`, { data: { description: 'Anything' } });
   expect(fields.status()).toBe(409);
-  expect((await fields.json()).error).toContain('AI features are disabled');
+  expect((await fields.json()).error).toEqual({ code: 'AI_DISABLED', params: {} });
 });
 
 test('shows every AI action and allows the AI page while AI features are enabled', async ({ page, request }) => {

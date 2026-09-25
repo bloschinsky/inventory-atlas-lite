@@ -399,14 +399,20 @@ test('batch item import creates the whole batch atomically and keeps it over a r
     assert.deepEqual(created.map(item => item.name), ['Router', 'Switch']);
     assert.ok(created.every(item => /^[0-9a-f-]{36}$/.test(item.uuid)));
 
-    // One invalid item refuses the whole batch with an actionable message and writes nothing.
+    // One invalid item refuses the whole batch with a positioned, structured reason and writes nothing.
     const rejected = await fetch(`${base}/api/items/batch`, batch([{ name: 'Modem' }, { name: 'Hub', customFields: { Ports: 'four' } }]));
     assert.equal(rejected.status, 400);
-    assert.equal((await rejected.json()).error, 'Item 2: Field "Ports" must be a number.');
+    assert.deepEqual((await rejected.json()).error, {
+      code: 'BATCH_ITEM_INVALID',
+      params: { index: 2, reason: { code: 'INVALID_CUSTOM_FIELD_NUMBER', params: { field: 'Ports' } } }
+    });
     const unknown = await fetch(`${base}/api/items/batch`, batch([{ name: 'Modem', customFields: { Colour: 'Black' } }]));
-    assert.match((await unknown.json()).error, /unknown custom field "Colour"/);
+    assert.deepEqual((await unknown.json()).error, {
+      code: 'IMPORT_UNKNOWN_CUSTOM_FIELD', params: { index: 1, field: 'Colour', known: 'Brand, Ports, Released, Working' }
+    });
     const invalidJson = await fetch(`${base}/api/items/batch`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"categoryId":' });
     assert.equal(invalidJson.status, 400);
+    assert.deepEqual(await invalidJson.json(), { error: { code: 'INVALID_JSON_BODY', params: {} } });
     assert.equal((await request('/api/items')).pagination.total, 2);
 
     await stopServer(server);
@@ -430,7 +436,7 @@ test('batch field creation validates the whole document and commits it atomicall
   const rejected = async (categoryId, fields, version) => {
     const response = await batch(categoryId, fields, version);
     assert.equal(response.status, 400);
-    return (await response.json()).error;
+    return (await response.json()).error.code;
   };
   try {
     server = await startServer(dataDir);
@@ -449,17 +455,17 @@ test('batch field creation validates the whole document and commits it atomicall
     assert.equal((await request(`/api/categories/${category.id}/fields`)).length, 4);
 
     // Every blocking rule is reported, and a rejected batch leaves the category untouched.
-    assert.match(await rejected(category.id, [{ name: 'Weight', type: 'number' }, { name: 'brand', type: 'text' }]), /already exists/);
-    assert.match(await rejected(category.id, [{ name: 'Weight', type: 'number' }, { name: 'weight', type: 'text' }]), /more than once/);
-    assert.match(await rejected(category.id, [{ name: 'Colour', type: 'select' }]), /Unsupported field type: select/);
-    assert.match(await rejected(category.id, [{ name: '   ', type: 'text' }]), /Field name is required/);
-    assert.match(await rejected(category.id, [{ name: 'Location', type: 'text' }]), /built-in item attribute/);
-    assert.match(await rejected(category.id, [{ name: 'Weight', type: 'number', required: true }]), /Required custom fields are not supported/);
-    assert.match(await rejected(category.id, [{ name: 'Colour', type: 'select', options: ['Red'] }]), /unsupported property "options"/);
-    assert.match(await rejected(category.id, [{ name: 'Weight', type: 'number' }], 2), /Unsupported document version/);
-    assert.match(await rejected(category.id, 'nope'), /"fields" array/);
-    assert.match(await rejected(category.id, []), /does not contain any fields/);
-    assert.match(await rejected(category.id, Array.from({ length: 51 }, (_value, index) => ({ name: `Spec ${index}`, type: 'text' }))), /at most 50 fields/);
+    assert.equal(await rejected(category.id, [{ name: 'Weight', type: 'number' }, { name: 'brand', type: 'text' }]), 'FIELD_ALREADY_EXISTS');
+    assert.equal(await rejected(category.id, [{ name: 'Weight', type: 'number' }, { name: 'weight', type: 'text' }]), 'FIELD_DUPLICATE_IN_BATCH');
+    assert.equal(await rejected(category.id, [{ name: 'Colour', type: 'select' }]), 'UNSUPPORTED_FIELD_TYPE');
+    assert.equal(await rejected(category.id, [{ name: '   ', type: 'text' }]), 'FIELD_NAME_REQUIRED');
+    assert.equal(await rejected(category.id, [{ name: 'Location', type: 'text' }]), 'FIELD_NAME_RESERVED');
+    assert.equal(await rejected(category.id, [{ name: 'Weight', type: 'number', required: true }]), 'REQUIRED_FIELD_UNSUPPORTED');
+    assert.equal(await rejected(category.id, [{ name: 'Colour', type: 'select', options: ['Red'] }]), 'FIELD_DEFINITION_UNSUPPORTED_PROPERTY');
+    assert.equal(await rejected(category.id, [{ name: 'Weight', type: 'number' }], 2), 'UNSUPPORTED_DOCUMENT_VERSION');
+    assert.equal(await rejected(category.id, 'nope'), 'FIELDS_MISSING');
+    assert.equal(await rejected(category.id, []), 'FIELDS_NONE');
+    assert.equal(await rejected(category.id, Array.from({ length: 51 }, (_value, index) => ({ name: `Spec ${index}`, type: 'text' }))), 'FIELDS_TOO_MANY');
     assert.equal((await request(`/api/categories/${category.id}/fields`)).length, 4);
 
     assert.equal((await batch(999999, [{ name: 'Weight', type: 'number' }])).status, 404);
@@ -499,7 +505,7 @@ test('a deployment without a privileged updater refuses to update itself', async
 
     const refused = await fetch(`${base}/api/update/apply`, { method: 'POST' });
     assert.equal(refused.status, 501);
-    assert.deepEqual(await refused.json(), { error: 'This installation cannot update itself automatically.' });
+    assert.deepEqual(await refused.json(), { error: { code: 'UPDATE_UNSUPPORTED', params: {} } });
 
     const crossSite = await fetch(`${base}/api/update/apply`, { method: 'POST', headers: { 'sec-fetch-site': 'cross-site' } });
     assert.equal(crossSite.status, 403);
@@ -770,7 +776,7 @@ test('AI field generation returns a reviewable draft and never writes to the cat
 
     // Generation alone changes nothing; the existing batch endpoint stays the only create path.
     assert.equal((await request(`/api/categories/${category.id}/fields`)).length, 1);
-    assert.match((await (await fetch(`${base}/api/categories/${category.id}/fields/batch`, json('POST', draft))).json()).error, /already exists/);
+    assert.equal((await (await fetch(`${base}/api/categories/${category.id}/fields/batch`, json('POST', draft))).json()).error.code, 'FIELD_ALREADY_EXISTS');
     const created = await request(`/api/categories/${category.id}/fields/batch`, json('POST', {
       version: 1, fields: draft.fields.filter(field => field.name !== 'brand')
     }));

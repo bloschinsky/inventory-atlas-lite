@@ -30,19 +30,19 @@ export function nextRunAfter(schedule, from) {
 
 // Validates a submitted settings document. A schedule can only be enabled for a connected provider.
 export function validateSettings(input, connectedProviders) {
-  if (!input || typeof input !== 'object' || Array.isArray(input)) throw httpError('Invalid cloud backup settings.');
+  if (!input || typeof input !== 'object' || Array.isArray(input)) throw httpError(400, 'INVALID_CLOUD_SETTINGS');
   const schedule = input.schedule ?? {};
   const retention = input.retention ?? {};
-  if (typeof schedule.enabled !== 'boolean') throw httpError('Automatic backups must be enabled or disabled.');
-  if (!['daily', 'weekly'].includes(schedule.frequency)) throw httpError('Frequency must be daily or weekly.');
+  if (typeof schedule.enabled !== 'boolean') throw httpError(400, 'INVALID_CLOUD_ENABLED');
+  if (!['daily', 'weekly'].includes(schedule.frequency)) throw httpError(400, 'INVALID_CLOUD_FREQUENCY');
   const weekday = schedule.weekday ?? 0;
-  if (!Number.isInteger(weekday) || weekday < 0 || weekday > 6) throw httpError('Choose a day of the week.');
-  if (typeof schedule.time !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(schedule.time)) throw httpError('Time must be in HH:MM format.');
+  if (!Number.isInteger(weekday) || weekday < 0 || weekday > 6) throw httpError(400, 'INVALID_CLOUD_WEEKDAY');
+  if (typeof schedule.time !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(schedule.time)) throw httpError(400, 'INVALID_CLOUD_TIME');
   const provider = schedule.provider || null;
-  if (schedule.enabled && !connectedProviders.includes(provider)) throw httpError('Choose a connected provider for automatic backups.');
-  if (!['all', 'last'].includes(retention.mode)) throw httpError('Retention must keep all backups or the last N backups.');
+  if (schedule.enabled && !connectedProviders.includes(provider)) throw httpError(400, 'CLOUD_SCHEDULE_PROVIDER_REQUIRED');
+  if (!['all', 'last'].includes(retention.mode)) throw httpError(400, 'INVALID_CLOUD_RETENTION');
   const keep = retention.keep ?? defaultSettings().retention.keep;
-  if (!Number.isInteger(keep) || keep < 1 || keep > MAX_KEEP_LAST) throw httpError(`Keep between 1 and ${MAX_KEEP_LAST} backups.`);
+  if (!Number.isInteger(keep) || keep < 1 || keep > MAX_KEEP_LAST) throw httpError(400, 'INVALID_CLOUD_KEEP', { max: MAX_KEEP_LAST });
   return {
     schedule: { enabled: schedule.enabled, provider, frequency: schedule.frequency, weekday, time: schedule.time },
     retention: { mode: retention.mode, keep }

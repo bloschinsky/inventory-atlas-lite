@@ -55,7 +55,8 @@ The scanner uses `decodeItemQrPayload` from `shared/itemQr.js`; it defines no fo
     canvas, scaled so the longest side is at most 1600 px, and returns the decoded text or `null`.
     Live frames skip the inverted-colour pass; a chosen image tries both.
   - `decodeQrFromFile(file)` decodes a chosen file through `createImageBitmap`.
-  - `readScannedText(text)` returns `{ uuid }` or `{ error }` with the messages above.
+  - `readScannedText(text)` returns `{ uuid }` or `{ error }` with the translation key of the
+    message above; the page shows it in the active language.
 - `client/src/pages/ScanQr.vue` owns the camera state (`starting`, `live`, `stopped`,
   `unavailable`), samples a frame every 150 ms onto one reused canvas, and guards every result with a
   single `handling` flag that is set before the camera stops and kept after a successful navigation.

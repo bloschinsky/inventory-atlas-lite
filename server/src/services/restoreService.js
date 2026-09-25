@@ -4,6 +4,7 @@ import {
   assertDiskSpace, badRequest, fileSize, validateStagedDatabase, verifyDatabaseFile
 } from '../restore/databaseFile.js';
 import { CONFIRMATION_PHRASE, safetyBackupsKept } from '../restore/restoreConfig.js';
+import { httpError } from '../httpError.js';
 
 /*
   Restoring a backup replaces the whole inventory, so the sequence is deliberately defensive:
@@ -65,10 +66,10 @@ export class RestoreService {
   // Second stage: the short-lived single-use token plus the explicit confirmation phrase.
   async apply(token, confirmation) {
     this.maintenance.assertRecoverable();
-    if (confirmation !== CONFIRMATION_PHRASE) throw badRequest(`Type ${CONFIRMATION_PHRASE} to confirm that current data will be replaced.`);
-    if (typeof token !== 'string' || !token) throw badRequest('A validated backup is required. Validate the file again.');
+    if (confirmation !== CONFIRMATION_PHRASE) throw badRequest('RESTORE_CONFIRMATION_REQUIRED', { phrase: CONFIRMATION_PHRASE });
+    if (typeof token !== 'string' || !token) throw badRequest('RESTORE_TOKEN_MISSING');
     this.staging.sweepExpired();
-    if (!this.staging.has(token)) throw badRequest('The restore session is unknown or has expired. Validate the file again.');
+    if (!this.staging.has(token)) throw badRequest('RESTORE_SESSION_EXPIRED');
     this.maintenance.acquire('restore');
 
     const stagedFile = this.staging.claim(token).file;
@@ -77,7 +78,7 @@ export class RestoreService {
     let swapStarted = false;
     try {
       await this.maintenance.waitForBackupDownloads();
-      if (!fs.existsSync(stagedFile)) throw badRequest('The staged backup is no longer available. Validate the file again.');
+      if (!fs.existsSync(stagedFile)) throw badRequest('RESTORE_STAGED_MISSING');
       // The staged file is checked once more so nothing can have changed since validation.
       const summary = validateStagedDatabase(stagedFile);
 
@@ -107,9 +108,9 @@ export class RestoreService {
     } catch (error) {
       console.error('[restore] restore failed', error);
       this.staging.discardUpload(stagedFile);
-      if (!swapStarted) throw error.status ? error : badRequest('The backup could not be restored. The current data was not changed.');
-      this.maintenance.recover(safetyPath, 'The restore failed and the previous database could not be recovered automatically. The application is stopped for writes; recover the pre-restore backup manually.');
-      throw Object.assign(new Error('The restore failed and the previous database was recovered. No data was lost.'), { status: 500 });
+      if (!swapStarted) throw error.code && error.status ? error : badRequest('RESTORE_FAILED');
+      this.maintenance.recover(safetyPath, 'RESTORE_RECOVERY_FAILED');
+      throw httpError(500, 'RESTORE_ROLLED_BACK');
     } finally {
       this.maintenance.release();
     }

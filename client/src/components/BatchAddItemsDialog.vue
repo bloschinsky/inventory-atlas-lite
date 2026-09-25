@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { api, jsonOptions } from '../api.js';
+import { translateError } from '../i18n/index.js';
 import {
   MAX_BATCH_ITEMS, hasDraftErrors, itemImportDocument, itemImportTemplate, parseItemImportDocument,
   reviewItemDraft
@@ -54,7 +55,7 @@ function preview() {
     drafts.value = parseItemImportDocument(source.value, { categoryName: category.value.name, fields: fields.value });
   } catch (parseError) {
     drafts.value = null;
-    error.value = parseError.message;
+    error.value = translateError(parseError);
   }
 }
 function insertTemplate() {
@@ -230,7 +231,7 @@ onBeforeUnmount(() => {
                     :class="{ 'is-invalid': reviews[index].name }"
                   >
                   <div class="invalid-feedback">
-                    {{ reviews[index].name }}
+                    {{ translateError(reviews[index].name) }}
                   </div>
                 </div>
                 <div class="col-md-6">
@@ -267,7 +268,7 @@ onBeforeUnmount(() => {
                     :class="{ 'is-invalid': reviews[index].transferredTo }"
                   >
                   <div class="invalid-feedback">
-                    {{ reviews[index].transferredTo }}
+                    {{ translateError(reviews[index].transferredTo) }}
                   </div>
                 </div>
                 <div class="col-md-6">
@@ -283,7 +284,7 @@ onBeforeUnmount(() => {
                     type="date"
                   >
                   <div class="invalid-feedback">
-                    {{ reviews[index].purchaseDate }}
+                    {{ translateError(reviews[index].purchaseDate) }}
                   </div>
                 </div>
                 <div class="col-md-6">
@@ -298,7 +299,7 @@ onBeforeUnmount(() => {
                     :class="{ 'is-invalid': reviews[index].serialNumber }"
                   >
                   <div class="invalid-feedback">
-                    {{ reviews[index].serialNumber }}
+                    {{ translateError(reviews[index].serialNumber) }}
                   </div>
                 </div>
                 <div class="col-md-6">
@@ -340,7 +341,7 @@ onBeforeUnmount(() => {
                       </option>
                     </select>
                     <div class="invalid-feedback">
-                      {{ reviews[index].purchasePrice }}
+                      {{ translateError(reviews[index].purchasePrice) }}
                     </div>
                   </div>
                 </div>
@@ -396,7 +397,7 @@ onBeforeUnmount(() => {
                     :inputmode="field.type === 'number' ? 'decimal' : undefined"
                   >
                   <div class="invalid-feedback">
-                    {{ reviews[index].customFields?.[field.name] }}
+                    {{ translateError(reviews[index].customFields?.[field.name]) }}
                   </div>
                 </div>
               </div>

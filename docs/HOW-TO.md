@@ -466,8 +466,9 @@ already contains; the server rejects such a move with an error message.
    `$49.99` in English, `18 лист. 2024 р.` and `49,99 USD` in Ukrainian. The stored values do not
    change.
 5. Only the interface is translated. Item, category, and field names, descriptions, locations, and
-   every other value you entered are shown exactly as saved. Messages sent by the server, such as
-   validation errors, and the release notes in **Version History** are still in English.
+   every other value you entered are shown exactly as saved. Error messages, such as a refused
+   deletion or an invalid backup file, follow the chosen language too; the release notes in
+   **Version History** stay in English.
 
 ### Download a backup
 
@@ -743,8 +744,8 @@ backup, and keep the copies on a different machine than the server.
 - Only providers with an OpenAI-compatible API are supported, one at a time. Whether a model accepts
   photos is detected only for OpenAI and OpenRouter; for other servers set **Image input** yourself.
   Small local models may return unusable answers, which are reported and never saved.
-- The interface is available in English and Ukrainian only. Server messages, including validation
-  errors, and the release notes are shown in English in both languages.
+- The interface, including error messages, is available in English and Ukrainian only. The release
+  notes in **Version History** are shown in English in both languages.
 - Autocomplete is offered for text custom fields and **Transferred To** only, not for the name,
   condition, location, or description.
 - The live camera in **Scan QR** needs the application to be opened over HTTPS or on `localhost`.

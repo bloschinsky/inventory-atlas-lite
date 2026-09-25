@@ -41,9 +41,11 @@ const build = () => {
 };
 
 // Services report refusals as errors carrying the HTTP status the API answers with.
-const failure = (work, status, message) => assert.throws(work, error => {
+// `expected` is a stable error code, or the full { code, params } body when the parameters matter.
+const failure = (work, status, expected) => assert.throws(work, error => {
   assert.equal(error.status, status, `expected status ${status}, received ${error.status}: ${error.message}`);
-  assert.equal(error.message, message);
+  if (typeof expected === 'string') assert.equal(error.code, expected);
+  else assert.deepEqual({ code: error.code, params: error.params }, expected);
   return true;
 });
 
@@ -75,13 +77,13 @@ test('the item service enforces the item rules and returns the API shape', () =>
   assert.equal(loaded.parent, null);
   assert.deepEqual(loaded.children, []);
 
-  failure(() => itemService.create({ name: ' ', category_id: category.id }), 400, 'Item name is required.');
-  failure(() => itemService.create({ name: 'X', category_id: 999 }), 400, 'Valid category is required.');
-  failure(() => itemService.create({ name: 'X', category_id: category.id, purchase_date: '2026-02-31' }), 400, 'Purchase date must be a valid date.');
-  failure(() => itemService.create({ name: 'X', category_id: category.id, purchase_price: { amount: '1', currency: 'XYZ' } }), 400, 'Purchase price currency must be a valid ISO 4217 code.');
-  failure(() => itemService.create({ name: 'X', category_id: category.id, serial_number: 'S'.repeat(256) }), 400, 'Serial number must be 255 characters or fewer.');
-  failure(() => itemService.create({ name: 'X', category_id: category.id, field_values: { 999: 'x' } }), 400, 'Field 999 does not belong to the selected category.');
-  failure(() => itemService.get(4242), 404, 'Item not found.');
+  failure(() => itemService.create({ name: ' ', category_id: category.id }), 400, 'ITEM_NAME_REQUIRED');
+  failure(() => itemService.create({ name: 'X', category_id: 999 }), 400, 'CATEGORY_REQUIRED');
+  failure(() => itemService.create({ name: 'X', category_id: category.id, purchase_date: '2026-02-31' }), 400, 'INVALID_PURCHASE_DATE');
+  failure(() => itemService.create({ name: 'X', category_id: category.id, purchase_price: { amount: '1', currency: 'XYZ' } }), 400, 'INVALID_PURCHASE_PRICE_CURRENCY');
+  failure(() => itemService.create({ name: 'X', category_id: category.id, serial_number: 'S'.repeat(256) }), 400, { code: 'SERIAL_NUMBER_TOO_LONG', params: { max: 255 } });
+  failure(() => itemService.create({ name: 'X', category_id: category.id, field_values: { 999: 'x' } }), 400, { code: 'FIELD_NOT_IN_CATEGORY', params: { fieldId: '999' } });
+  failure(() => itemService.get(4242), 404, 'ITEM_NOT_FOUND');
 });
 
 test('a failed item creation writes nothing at all', () => {
@@ -92,7 +94,7 @@ test('a failed item creation writes nothing at all', () => {
   failure(
     () => itemService.create({ name: 'Drill', category_id: category.id, field_values: { [rating.id]: 'not a number' } }),
     400,
-    'Field "Rating" must be a number.'
+    { code: 'INVALID_CUSTOM_FIELD_NUMBER', params: { field: 'Rating' } }
   );
   assert.equal(itemService.list().pagination.total, 0);
 });
@@ -148,27 +150,31 @@ test('batch item import creates every item through the regular item rules', () =
   );
 
   // Every refusal names the problem and leaves the two items above as the only ones.
-  const refused = (body, message) => failure(() => itemService.createBatch(body), 400, message);
+  const refused = (body, expected) => failure(() => itemService.createBatch(body), 400, expected);
+  const inItem = (index, code, params = {}) => ({ code: 'BATCH_ITEM_INVALID', params: { index, reason: { code, params } } });
   const batch = (items, extra = {}) => ({ categoryId: category.id, document: { ...document(items), ...extra } });
-  refused(batch([{ name: 'X' }], { category: 'Other' }), 'The document is for category "Other", but "Computer Equipment" is selected.');
-  refused({ categoryId: other.id, document: document([{ name: 'X' }]) }, 'The document is for category "Computer Equipment", but "Other" is selected.');
-  refused(batch([{ name: 'X' }], { version: 2 }), 'Unsupported document version: 2. Expected 1.');
-  refused(batch([{ name: 'X' }], { source: 'excel' }), 'Unsupported document property "source". Supported properties: version, category, items.');
-  refused(batch([]), 'The document does not contain any items.');
-  refused({ categoryId: category.id, document: { version: 1, category: 'Computer Equipment' } }, 'The document must contain an "items" array.');
-  refused(batch(Array.from({ length: 101 }, (_value, index) => ({ name: `Item ${index}` }))), 'A batch accepts at most 100 items; the document contains 101.');
+  refused(batch([{ name: 'X' }], { category: 'Other' }), { code: 'IMPORT_CATEGORY_MISMATCH', params: { document: 'Other', selected: 'Computer Equipment' } });
+  refused({ categoryId: other.id, document: document([{ name: 'X' }]) }, { code: 'IMPORT_CATEGORY_MISMATCH', params: { document: 'Computer Equipment', selected: 'Other' } });
+  refused(batch([{ name: 'X' }], { version: 2 }), { code: 'UNSUPPORTED_DOCUMENT_VERSION', params: { version: '2', expected: 1 } });
+  refused(batch([{ name: 'X' }], { source: 'excel' }), { code: 'UNSUPPORTED_DOCUMENT_PROPERTY', params: { property: 'source', supported: 'version, category, items' } });
+  refused(batch([]), 'IMPORT_NO_ITEMS');
+  refused({ categoryId: category.id, document: { version: 1, category: 'Computer Equipment' } }, 'IMPORT_ITEMS_MISSING');
+  refused(batch(Array.from({ length: 101 }, (_value, index) => ({ name: `Item ${index}` }))), { code: 'IMPORT_TOO_MANY_ITEMS', params: { max: 100, count: 101 } });
   // Server-owned values cannot be supplied by an import.
   refused(batch([{ name: 'X', uuid: '00000000-0000-4000-8000-000000000000' }]),
-    'Item 1 has an unsupported property "uuid". Supported properties: name, condition, location, description, transferredTo, purchaseDate, serialNumber, purchasePrice, customFields.');
-  refused(batch([{ name: 'X', customFields: { Colour: 'Red' } }]), 'Item 1 has an unknown custom field "Colour". Fields of this category: Brand, Ports, Released, Working.');
-  refused(batch([{ name: 'X' }, { name: 'Y', customFields: { Ports: 'many' } }]), 'Item 2: Field "Ports" must be a number.');
-  refused(batch([{ name: 'X', customFields: { Released: '2024-02-30' } }]), 'Item 1: Field "Released" must be a valid date.');
-  refused(batch([{ name: 'X', customFields: { Working: 'maybe' } }]), 'Item 1: Field "Working" must be a boolean.');
-  refused(batch([{ name: 'X', purchasePrice: { amount: '-1', currency: 'UAH' } }]), 'Item 1: Purchase price amount must be a non-negative decimal with up to four decimal places.');
-  refused(batch([{ name: 'X', purchasePrice: { amount: '1', currency: 'ABC' } }]), 'Item 1: Purchase price currency must be a valid ISO 4217 code.');
-  refused(batch([{ name: 'X', serialNumber: 'S'.repeat(256) }]), 'Item 1: Serial number must be 255 characters or fewer.');
-  refused(batch([{ name: 'X' }, { name: '  ' }]), 'Item 2: Item name is required.');
-  failure(() => itemService.createBatch({ categoryId: 999, document: document([{ name: 'X' }]) }), 400, 'Valid category is required.');
+    { code: 'IMPORT_ITEM_UNSUPPORTED_PROPERTY', params: {
+      index: 1, property: 'uuid',
+      supported: 'name, condition, location, description, transferredTo, purchaseDate, serialNumber, purchasePrice, customFields'
+    } });
+  refused(batch([{ name: 'X', customFields: { Colour: 'Red' } }]), { code: 'IMPORT_UNKNOWN_CUSTOM_FIELD', params: { index: 1, field: 'Colour', known: 'Brand, Ports, Released, Working' } });
+  refused(batch([{ name: 'X' }, { name: 'Y', customFields: { Ports: 'many' } }]), inItem(2, 'INVALID_CUSTOM_FIELD_NUMBER', { field: 'Ports' }));
+  refused(batch([{ name: 'X', customFields: { Released: '2024-02-30' } }]), inItem(1, 'INVALID_CUSTOM_FIELD_DATE', { field: 'Released' }));
+  refused(batch([{ name: 'X', customFields: { Working: 'maybe' } }]), inItem(1, 'INVALID_CUSTOM_FIELD_BOOLEAN', { field: 'Working' }));
+  refused(batch([{ name: 'X', purchasePrice: { amount: '-1', currency: 'UAH' } }]), inItem(1, 'INVALID_PURCHASE_PRICE_AMOUNT'));
+  refused(batch([{ name: 'X', purchasePrice: { amount: '1', currency: 'ABC' } }]), inItem(1, 'INVALID_PURCHASE_PRICE_CURRENCY'));
+  refused(batch([{ name: 'X', serialNumber: 'S'.repeat(256) }]), inItem(1, 'SERIAL_NUMBER_TOO_LONG', { max: 255 }));
+  refused(batch([{ name: 'X' }, { name: '  ' }]), inItem(2, 'ITEM_NAME_REQUIRED'));
+  failure(() => itemService.createBatch({ categoryId: 999, document: document([{ name: 'X' }]) }), 400, 'CATEGORY_REQUIRED');
   assert.equal(itemService.list().pagination.total, 2);
 });
 
@@ -203,10 +209,10 @@ test('containment rules reject impossible parents and protect filled containers'
   const box = itemService.create({ name: 'Box', category_id: category.id });
   const inner = itemService.create({ name: 'Inner box', category_id: category.id, parent_item_id: box.id });
 
-  failure(() => itemService.update(box.id, { name: 'Box', category_id: category.id, parent_item_id: box.id }), 400, 'An item cannot be stored inside itself.');
-  failure(() => itemService.update(box.id, { name: 'Box', category_id: category.id, parent_item_id: inner.id }), 400, 'An item cannot be stored inside one of its own contents.');
-  failure(() => itemService.create({ name: 'Lost', category_id: category.id, parent_item_id: 9999 }), 400, 'Parent item not found.');
-  failure(() => itemService.remove(box.id), 409, 'This item contains 1 item(s). Move or delete them first.');
+  failure(() => itemService.update(box.id, { name: 'Box', category_id: category.id, parent_item_id: box.id }), 400, 'ITEM_CANNOT_CONTAIN_ITSELF');
+  failure(() => itemService.update(box.id, { name: 'Box', category_id: category.id, parent_item_id: inner.id }), 400, 'ITEM_PARENT_CYCLE');
+  failure(() => itemService.create({ name: 'Lost', category_id: category.id, parent_item_id: 9999 }), 400, 'PARENT_ITEM_NOT_FOUND');
+  failure(() => itemService.remove(box.id), 409, { code: 'ITEM_HAS_CHILDREN', params: { count: 1 } });
 
   // A container is only offered as a parent when it cannot create a cycle.
   assert.deepEqual(itemService.parentCandidates({ excludeId: box.id }).map(row => row.name), []);
@@ -250,8 +256,8 @@ test('Transferred To is optional free text that never touches the location', () 
   assert.equal(save(kept, '').transferred_to, null);
 
   failure(() => itemService.create({ name: 'Too long', ...base, transferred_to: 'x'.repeat(256) }), 400,
-    'Transferred To must be 255 characters or fewer.');
-  failure(() => itemService.create({ name: 'Not text', ...base, transferred_to: 42 }), 400, 'Transferred To must be text.');
+    { code: 'TRANSFERRED_TO_TOO_LONG', params: { max: 255 } });
+  failure(() => itemService.create({ name: 'Not text', ...base, transferred_to: 42 }), 400, 'INVALID_TRANSFERRED_TO');
 
   // The normal item search finds everything handed to the same person.
   itemService.create({ name: 'Ladder', ...base, transferred_to: 'vasyl ' });
@@ -282,16 +288,16 @@ test('categories and their fields guard their own deletions', () => {
   const brand = customFieldService.create(category.id, { name: 'Brand', type: 'text' });
   const item = itemService.create({ name: 'Guitar', category_id: category.id, field_values: { [brand.id]: 'Fender' } });
 
-  failure(() => categoryService.remove(category.id), 409, 'Category is used by 1 item(s). Move or delete them first.');
-  failure(() => customFieldService.create(category.id, { name: 'Broken', type: 'colour' }), 400, 'Invalid field type.');
-  failure(() => customFieldService.remove(brand.id, false), 409, 'This field has 1 saved value(s). Confirm deletion to remove them.');
+  failure(() => categoryService.remove(category.id), 409, { code: 'CATEGORY_IN_USE', params: { count: 1 } });
+  failure(() => customFieldService.create(category.id, { name: 'Broken', type: 'colour' }), 400, { code: 'UNSUPPORTED_FIELD_TYPE', params: { type: 'colour' } });
+  failure(() => customFieldService.remove(brand.id, false), 409, { code: 'FIELD_HAS_VALUES', params: { count: 1 } });
   assert.deepEqual(customFieldService.suggestions(brand.id, { search: 'fen' }), [{ value: 'Fender', usage_count: 1 }]);
 
   customFieldService.remove(brand.id, true);
   assert.deepEqual(customFieldService.listForCategory(category.id), []);
   itemService.remove(item.id);
   categoryService.remove(category.id);
-  failure(() => categoryService.requireCategory(category.id), 404, 'Category not found.');
+  failure(() => categoryService.requireCategory(category.id), 404, 'CATEGORY_NOT_FOUND');
 });
 
 test('the batch field document is reviewed again before anything is created', () => {
@@ -338,8 +344,8 @@ test('the dashboard summarizes the inventory and its optional category scope', (
   ]);
   assert.ok(scoped.categoryDistribution.find(row => row.label === 'Cameras').selected);
 
-  failure(() => dashboardService.overview({ categoryId: 'all' }), 400, 'Category ID must be a positive integer.');
-  failure(() => dashboardService.overview({ categoryId: '999' }), 404, 'Category not found.');
+  failure(() => dashboardService.overview({ categoryId: 'all' }), 400, 'INVALID_CATEGORY_ID');
+  failure(() => dashboardService.overview({ categoryId: '999' }), 404, 'CATEGORY_NOT_FOUND');
 });
 
 test('the displayed location is inherited from the top-most container', () => {
@@ -422,17 +428,17 @@ test('AI features stay off until a key is saved with them', () => {
   // Asking for AI without a key is stored as off, so the saved state never promises what cannot run.
   assert.equal(service.write(savable({ enabled: true })).enabled, false);
   assert.equal(service.read().enabled, false);
-  assert.throws(() => service.requireUsableSettings('Add a key.'), /Add a key\./);
+  assert.throws(() => service.requireUsableSettings(), { status: 409, code: 'AI_API_KEY_MISSING' });
 
   // The key and the switch may arrive in the same save.
   const configured = service.write(savable({ enabled: true, apiKey: 'sk-services-test-key' }));
   assert.equal(configured.enabled, true);
   assert.equal(configured.hasApiKey, true);
-  assert.equal(service.requireUsableSettings('Add a key.').apiKey, 'sk-services-test-key');
+  assert.equal(service.requireUsableSettings().apiKey, 'sk-services-test-key');
 
   // Turning AI off keeps the key, so re-enabling needs no new one.
   assert.equal(service.write(savable({ enabled: false })).hasApiKey, true);
-  assert.throws(() => service.requireUsableSettings('Add a key.'), /AI features are disabled/);
+  assert.throws(() => service.requireUsableSettings(), { status: 409, code: 'AI_DISABLED' });
   assert.equal(service.write(savable({ enabled: true })).enabled, true);
 
   // Removing the key turns AI off with it.
@@ -469,9 +475,9 @@ test('label data is returned in selection order with the effective location and 
     missing: [deleted.uuid]
   });
 
-  failure(() => itemService.labels({}), 400, 'Select at least one item to print.');
-  failure(() => itemService.labels({ uuids: [] }), 400, 'Select at least one item to print.');
-  failure(() => itemService.labels({ uuids: [crate.id] }), 400, 'Items must be identified by their UUIDs.');
+  failure(() => itemService.labels({}), 400, 'LABELS_NO_ITEMS');
+  failure(() => itemService.labels({ uuids: [] }), 400, 'LABELS_NO_ITEMS');
+  failure(() => itemService.labels({ uuids: [crate.id] }), 400, 'LABELS_INVALID_UUIDS');
   const tooMany = Array.from({ length: 501 }, (_, index) => `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`);
-  failure(() => itemService.labels({ uuids: tooMany }), 400, 'A print job can contain at most 500 labels, but 501 items were selected.');
+  failure(() => itemService.labels({ uuids: tooMany }), 400, { code: 'LABELS_TOO_MANY', params: { max: 500, count: 501 } });
 });

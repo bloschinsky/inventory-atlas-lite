@@ -80,11 +80,11 @@ export class GoogleDriveStorageProvider {
   fail(response, task) {
     const reason = response.body?.error?.errors?.[0]?.reason || response.body?.error?.status || '';
     if (/storageQuotaExceeded|quotaExceeded/.test(reason)) {
-      throw cloudError('Google Drive storage is full. Free up space or choose a smaller retention, then try again.', 507, 'quota');
+      throw cloudError(507, 'CLOUD_QUOTA', 'quota', { provider: 'Google Drive' });
     }
-    if (/rateLimitExceeded|userRateLimitExceeded/.test(reason)) throw cloudError('Google Drive rate limit reached. Try again later.', 503, 'rate_limited');
+    if (/rateLimitExceeded|userRateLimitExceeded/.test(reason)) throw cloudError(503, 'CLOUD_RATE_LIMITED', 'rate_limited', { provider: 'Google Drive' });
     if (response.status === 403 || response.status === 404) {
-      throw cloudError('Google Drive refused the backup folder. Connect Google Drive again so the application can recreate it.', 502, 'invalid_destination');
+      throw cloudError(502, 'GOOGLE_DRIVE_FOLDER_REFUSED', 'invalid_destination');
     }
     this.http.fail(response, task, task === 'upload the backup' ? 'upload_failed' : 'provider_error');
   }
@@ -112,7 +112,7 @@ export class GoogleDriveStorageProvider {
     const created = await this.api(accessToken, 'drive/v3/files?fields=id', {
       method: 'POST', json: { name, mimeType: FOLDER_TYPE, parents: [parentId] }, task: 'create the backup folder'
     });
-    if (!created.body?.id) throw cloudError('Google Drive did not create the backup folder.', 502, 'invalid_destination');
+    if (!created.body?.id) throw cloudError(502, 'GOOGLE_DRIVE_FOLDER_NOT_CREATED', 'invalid_destination');
     return created.body.id;
   }
 
@@ -133,7 +133,7 @@ export class GoogleDriveStorageProvider {
       task: 'upload the backup'
     });
     const location = session.headers.get('location');
-    if (!location) throw cloudError('Google Drive did not start the upload.', 502, 'upload_failed');
+    if (!location) throw cloudError(502, 'CLOUD_UPLOAD_NOT_STARTED', 'upload_failed', { provider: 'Google Drive' });
     let result = null;
     for await (const chunk of fileChunks(file, this.chunkBytes)) {
       const last = chunk.offset + chunk.bytes.length - 1;
@@ -148,7 +148,7 @@ export class GoogleDriveStorageProvider {
       if (!response.ok) this.fail(response, 'upload the backup');
       result = response.body;
     }
-    if (!result?.id) throw cloudError('Google Drive did not confirm the upload.', 502, 'upload_failed');
+    if (!result?.id) throw cloudError(502, 'CLOUD_UPLOAD_NOT_CONFIRMED', 'upload_failed', { provider: 'Google Drive' });
     return { id: result.id, name, size };
   }
 

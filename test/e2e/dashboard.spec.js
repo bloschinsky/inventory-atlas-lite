@@ -57,7 +57,7 @@ test('shows loading, errors with retry, and ignores an older filter response', a
     dashboardCalls += 1;
     if (dashboardCalls === 1) {
       await initialPaused;
-      await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: 'Dashboard unavailable.' }) });
+      await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: { code: 'UNEXPECTED_ERROR', params: {} } }) });
       return;
     }
     await route.continue();
@@ -66,7 +66,7 @@ test('shows loading, errors with retry, and ignores an older filter response', a
   await expect(page.getByText('Loading dashboard…')).toBeVisible();
   releaseInitial();
   await navigation;
-  await expect(page.getByText('Dashboard unavailable.')).toBeVisible();
+  await expect(page.getByText('Unexpected server error. The details are in the server log.')).toBeVisible();
   await page.getByRole('button', { name: 'Retry' }).click();
   await expect(page.getByText('Total items')).toBeVisible();
 

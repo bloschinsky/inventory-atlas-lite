@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { httpError } from '../httpError.js';
 
 export const createResetRoutes = ({ resetService }) => {
   const router = Router();
@@ -7,7 +8,7 @@ export const createResetRoutes = ({ resetService }) => {
   // one without a CORS preflight, which this server never grants.
   const requireJson = (req, res, next) => (req.is('application/json')
     ? next()
-    : res.status(415).json({ error: 'Send the reset request as JSON from the Data / Backup page.' }));
+    : next(httpError(415, 'RESET_JSON_REQUIRED')));
 
   /*
     Resetting the inventory is deliberately two requests. Prepare changes nothing: it reports the

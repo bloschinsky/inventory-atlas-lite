@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { errorBody } from '../../../shared/appError.js';
 import { httpError } from '../httpError.js';
 
 const PENDING_TTL_MS = 10 * 60 * 1000;
@@ -28,14 +29,14 @@ export class CloudConnectionService {
 
   provider(id) {
     const provider = this.providers.get(id);
-    if (!provider) throw httpError('Unknown cloud storage provider.', 404);
+    if (!provider) throw httpError(404, 'CLOUD_PROVIDER_UNKNOWN');
     return provider;
   }
 
   configuredProvider(id) {
     const provider = this.provider(id);
     if (!provider.configured) {
-      throw httpError(`${provider.label} is not configured. Enter its app credentials in Settings → Cloud Backup, or set ${provider.requiredSettings.join(' and ')} on the server.`, 409);
+      throw httpError(409, 'CLOUD_NOT_CONFIGURED', { provider: provider.label, settings: provider.requiredSettings.join(', ') });
     }
     return provider;
   }
@@ -82,7 +83,7 @@ export class CloudConnectionService {
     const provider = this.provider(id);
     const clientId = typeof input?.clientId === 'string' ? input.clientId.trim() : '';
     if (this.connection(id)?.refreshToken && clientId !== this.appSettings.resolve(id).clientId) {
-      throw httpError(`Disconnect ${provider.label} before changing its ${provider.appFields.idLabel}.`, 409);
+      throw httpError(409, 'CLOUD_APP_ID_LOCKED', { provider: provider.label });
     }
     this.appSettings.save(provider, input);
   }
@@ -90,9 +91,9 @@ export class CloudConnectionService {
   clearApp(id) {
     const provider = this.provider(id);
     if (this.appSettings.fromEnvironment(id)) {
-      throw httpError(`The ${provider.label} app credentials are set in the server environment. Remove them there.`, 409);
+      throw httpError(409, 'CLOUD_APP_FROM_ENVIRONMENT', { provider: provider.label });
     }
-    if (this.connection(id)?.refreshToken) throw httpError(`Disconnect ${provider.label} before removing its app credentials.`, 409);
+    if (this.connection(id)?.refreshToken) throw httpError(409, 'CLOUD_APP_IN_USE', { provider: provider.label });
     this.appSettings.clear(id);
   }
 
@@ -116,25 +117,23 @@ export class CloudConnectionService {
     forged callback can never store tokens.
   */
   async complete({ state, cookieState, code, error }) {
-    let providerLabel = 'The provider';
+    let providerLabel = null;
     try {
       const pending = typeof state === 'string' ? this.pending.get(state) : undefined;
       // The cookie binds the callback to the browser that pressed Connect.
       if (!pending || cookieState !== state) {
-        throw httpError('The connection request could not be verified. Start Connect again from Settings.', 400);
+        throw httpError(400, 'CLOUD_CONNECT_UNVERIFIED');
       }
       this.pending.delete(state);
       const provider = this.configuredProvider(pending.providerId);
       providerLabel = provider.label;
-      if (pending.expiresAt <= Date.now()) throw httpError(`The ${provider.label} connection request expired. Start Connect again.`, 400);
+      if (pending.expiresAt <= Date.now()) throw httpError(400, 'CLOUD_CONNECT_EXPIRED', { provider: provider.label });
       if (error) {
-        throw httpError(error === 'access_denied'
-          ? `${provider.label} access was not granted, so nothing was connected.`
-          : `${provider.label} did not complete the connection. Try again.`, 400);
+        throw httpError(400, error === 'access_denied' ? 'CLOUD_CONNECT_DENIED' : 'CLOUD_CONNECT_INCOMPLETE', { provider: provider.label });
       }
-      if (typeof code !== 'string' || !code) throw httpError(`${provider.label} did not return an authorization code. Try again.`, 400);
+      if (typeof code !== 'string' || !code) throw httpError(400, 'CLOUD_CONNECT_NO_CODE', { provider: provider.label });
       const tokens = await provider.exchangeCode({ code, codeVerifier: pending.codeVerifier, redirectUri: pending.redirectUri });
-      if (!tokens.refreshToken) throw httpError(`${provider.label} did not grant offline access, which scheduled backups need. Try again.`, 502);
+      if (!tokens.refreshToken) throw httpError(502, 'CLOUD_CONNECT_NO_OFFLINE_ACCESS', { provider: provider.label });
       const account = await provider.account(tokens.accessToken);
       this.credentialsStore.update(credentials => {
         credentials[provider.id] = { account, connectedAt: new Date().toISOString(), refreshToken: tokens.refreshToken };
@@ -144,10 +143,10 @@ export class CloudConnectionService {
       console.log(`[cloud-backup] ${provider.label} connected`);
       return { provider: provider.id, label: provider.label, account };
     } catch (caught) {
-      const message = caught.status ? caught.message : `${providerLabel} could not be connected. Try again.`;
-      if (!caught.status) console.error('[cloud-backup] connection failed', caught);
-      this.lastConnectError = { message, at: new Date().toISOString() };
-      throw httpError(message, caught.status || 500);
+      const failure = caught.code && caught.status ? caught : httpError(500, 'CLOUD_CONNECT_FAILED', { provider: providerLabel ?? '' });
+      if (failure !== caught) console.error('[cloud-backup] connection failed', caught);
+      this.lastConnectError = { error: errorBody(failure), at: new Date().toISOString() };
+      throw failure;
     }
   }
 
@@ -170,14 +169,14 @@ export class CloudConnectionService {
   async withAccess(id, work) {
     const provider = this.configuredProvider(id);
     const refreshToken = this.connection(id)?.refreshToken;
-    if (!refreshToken) throw httpError(`${provider.label} is not connected. Connect it in Settings first.`, 409);
+    if (!refreshToken) throw httpError(409, 'CLOUD_NOT_CONNECTED', { provider: provider.label });
     const cached = this.accessTokens.get(id);
     const fresh = !cached || cached.expiresAt - EXPIRY_MARGIN_MS <= Date.now();
     const token = fresh ? await this.refresh(provider, refreshToken) : cached.token;
     try {
       return await work(provider, token);
     } catch (error) {
-      if (error.code !== 'unauthorized' || fresh) throw error;
+      if (error.reason !== 'unauthorized' || fresh) throw error;
       return work(provider, await this.refresh(provider, refreshToken));
     }
   }
@@ -185,7 +184,7 @@ export class CloudConnectionService {
   async test(id) {
     const account = await this.withAccess(id, (provider, token) => provider.check(token));
     this.credentialsStore.update(credentials => { if (credentials[id]) credentials[id].account = account; });
-    return { message: `Connected to ${this.provider(id).label} as ${account}.`, account };
+    return { notice: { code: 'CLOUD_CONNECTED', params: { provider: this.provider(id).label, account } }, account };
   }
 
   // Revokes the grant where the provider still accepts it, then forgets the tokens in every case.

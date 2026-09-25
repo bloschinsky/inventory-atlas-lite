@@ -37,7 +37,7 @@ export class UpdateService {
     const latest = await this.releaseClient.latestStable();
     const comparison = latest ? compareVersions(latest.version, this.appVersion) : null;
     if (latest && comparison === null) {
-      throw httpError('The latest release could not be compared with the running version.', 502);
+      throw httpError(502, 'UPDATE_VERSION_COMPARE_FAILED');
     }
     return {
       currentVersion: this.appVersion,
@@ -82,25 +82,25 @@ export class UpdateService {
 
   async apply() {
     if (!this.deployment.canSelfUpdate) {
-      throw httpError('This installation cannot update itself automatically.', 501);
+      throw httpError(501, 'UPDATE_UNSUPPORTED');
     }
     // Two requests can overlap only here; everything after this point is guarded by the flag.
-    if (this.#starting) throw httpError('An update is already running.', 409);
+    if (this.#starting) throw httpError(409, 'UPDATE_RUNNING');
     this.#starting = true;
     try {
       if (ACTIVE_UPDATE_STATES.has(this.status().state)) {
-        throw httpError('An update is already running.', 409);
+        throw httpError(409, 'UPDATE_RUNNING');
       }
       if (!this.trigger.isInstalled()) {
-        throw httpError('The update service is not installed on this system.', 500);
+        throw httpError(500, 'UPDATE_SERVICE_MISSING');
       }
       const available = await this.check();
-      if (!available.updateAvailable) throw httpError('No newer release is available.', 400);
+      if (!available.updateAvailable) throw httpError(400, 'UPDATE_NOT_AVAILABLE');
       try {
         this.trigger.start();
       } catch (error) {
         console.error(error);
-        throw httpError('Could not start the update service.', 500);
+        throw httpError(500, 'UPDATE_START_FAILED');
       }
       this.#requested = {
         at: this.now(),

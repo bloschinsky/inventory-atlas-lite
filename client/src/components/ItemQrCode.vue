@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import qrcode from 'qrcode-generator';
 import { encodeItemQrPayload } from '../../../shared/itemQr.js';
+import { translateError } from '../i18n/index.js';
 
 const props = defineProps({ uuid: { type: String, required: true } });
 const { t } = useI18n();
@@ -29,7 +30,7 @@ const code = computed(() => {
     }
     return { payload, path, size: count + MARGIN * 2, error: '' };
   } catch (generationError) {
-    return { error: t('qr.generationFailed', { reason: generationError.message }) };
+    return { error: t('qr.generationFailed', { reason: translateError(generationError) }) };
   }
 });
 </script>

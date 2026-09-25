@@ -35,13 +35,13 @@ export class DatabaseMaintenance {
   }
 
   assertRecoverable() {
-    if (this.criticalFailure) throw unavailable('The application is in a failed database recovery state and needs manual recovery.');
+    if (this.criticalFailure) throw unavailable('DATABASE_RECOVERY_REQUIRED');
   }
 
   // Refuses to start while another replacement runs or a failed one is waiting for manual recovery.
   assertIdle() {
     this.assertRecoverable();
-    if (this.operation) throw conflict('Another database restore or reset is already running. Try again in a moment.');
+    if (this.operation) throw conflict('DATABASE_OPERATION_RUNNING');
   }
 
   acquire(operation) {
@@ -54,7 +54,7 @@ export class DatabaseMaintenance {
   }
 
   beginBackupDownload() {
-    if (this.operation) throw unavailable('The database is being restored or reset. Try the download again in a moment.');
+    if (this.operation) throw unavailable('BACKUP_DOWNLOAD_UNAVAILABLE');
     this.backupsInFlight += 1;
   }
 
@@ -66,7 +66,7 @@ export class DatabaseMaintenance {
     for (let attempt = 0; this.backupsInFlight > 0 && attempt < 100; attempt++) {
       await new Promise(resolve => setTimeout(resolve, 50));
     }
-    if (this.backupsInFlight > 0) throw conflict('A backup download is still running. Try again in a moment.');
+    if (this.backupsInFlight > 0) throw conflict('BACKUP_DOWNLOAD_RUNNING');
   }
 
   // Test-only hooks, named after the running operation: RESTORE_TEST_FAILURE / RESET_TEST_FAILURE make
@@ -98,7 +98,7 @@ export class DatabaseMaintenance {
     } catch (error) {
       console.error(`[${this.operation}] safety backup failed`, error);
       if (file) fs.rmSync(file, { force: true });
-      throw httpError('The safety backup of the current database could not be created. Nothing was changed.', 500);
+      throw httpError(500, 'SAFETY_BACKUP_FAILED');
     }
     try {
       this.testFailure('safety-verify');
@@ -107,7 +107,7 @@ export class DatabaseMaintenance {
       console.error(`[${this.operation}] safety backup verification failed`, error);
       // An unverified copy is not a recovery point, so it does not stay next to the real ones.
       fs.rmSync(file, { force: true });
-      throw httpError('The safety backup of the current database failed verification. Nothing was changed.', 500);
+      throw httpError(500, 'SAFETY_BACKUP_UNVERIFIED');
     }
     return file;
   }
@@ -143,13 +143,13 @@ export class DatabaseMaintenance {
 
   // Puts the safety backup back after a failed swap. If even that fails, writes stay blocked and
   // nothing is deleted: every recoverable file stays on disk and its path is logged on the server.
-  recover(safetyPath, criticalMessage) {
+  recover(safetyPath, criticalCode) {
     try {
       this.rollback(safetyPath);
     } catch (recoveryError) {
       this.criticalFailure = { safetyPath, at: new Date().toISOString() };
       console.error(`[${this.operation}] CRITICAL: rollback failed. Safety backup kept at ${safetyPath}, active database at ${this.database.path}`, recoveryError);
-      throw httpError(criticalMessage, 500);
+      throw httpError(500, criticalCode);
     }
   }
 }

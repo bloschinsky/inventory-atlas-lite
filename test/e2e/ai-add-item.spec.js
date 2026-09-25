@@ -143,7 +143,7 @@ test('keeps the AI draft and original photo when local background removal fails'
   await page.route('**/api/images/remove-background', route => route.fulfill({
     status: 500,
     contentType: 'application/json',
-    body: JSON.stringify({ error: 'Local processing failed.' })
+    body: JSON.stringify({ error: { code: 'BACKGROUND_INVALID_MASK', params: {} } })
   }));
 
   await page.goto('/items/ai');
@@ -161,13 +161,13 @@ test('keeps the selected image and description after a recoverable draft error',
   await page.route('**/api/ai/items/analyze', route => route.fulfill({
     status: 503,
     contentType: 'application/json',
-    body: JSON.stringify({ error: 'OpenAI rate limit reached. Try again later.' })
+    body: JSON.stringify({ error: { code: 'AI_PROVIDER_RATE_LIMITED', params: { provider: 'OpenAI' } } })
   }));
   await page.goto('/items/ai');
   await page.getByLabel('Item photo (optional)').setInputFiles(fixture);
   await page.getByLabel('Item description (optional)').fill('Keep this hint');
   await page.getByRole('button', { name: 'Create Draft' }).click();
-  await expect(page.getByRole('alert')).toContainText('rate limit');
+  await expect(page.getByRole('alert')).toHaveText('OpenAI rate limit reached. Try again later.');
   await expect(page.getByLabel('Item description (optional)')).toHaveValue('Keep this hint');
   await expect(page.getByRole('img', { name: 'Selected item preview' })).toBeVisible();
 });
@@ -277,7 +277,7 @@ test('offers background removal only once a photo is selected and keeps the desc
   await page.route('**/api/ai/items/analyze', route => route.fulfill({
     status: 503,
     contentType: 'application/json',
-    body: JSON.stringify({ error: 'OpenAI rate limit reached. Try again later.' })
+    body: JSON.stringify({ error: { code: 'AI_PROVIDER_RATE_LIMITED', params: { provider: 'OpenAI' } } })
   }));
 
   await page.goto('/items/ai');
@@ -292,7 +292,7 @@ test('offers background removal only once a photo is selected and keeps the desc
 
   await page.getByLabel('Item description (optional)').fill('Keep this description');
   await page.getByRole('button', { name: 'Create Draft' }).click();
-  await expect(page.getByRole('alert')).toContainText('rate limit');
+  await expect(page.getByRole('alert')).toHaveText('OpenAI rate limit reached. Try again later.');
   await expect(page.getByRole('alert')).not.toContainText('image');
   await expect(page.getByLabel('Item description (optional)')).toHaveValue('Keep this description');
   await expect(page.getByLabel('Remove background')).toBeVisible();

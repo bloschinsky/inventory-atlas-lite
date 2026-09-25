@@ -89,14 +89,14 @@ test('background removal reports a photo the model found no subject in', async (
   const source = await sharp({ create: { width: 200, height: 200, channels: 3, background: '#808080' } }).png().toBuffer();
   await assert.rejects(
     removeBackgroundWithSession(source, sessionReturning(new Float32Array(MODEL_SIZE * MODEL_SIZE).fill(0.1))),
-    error => error.message.includes('no distinct subject')
+    error => error.code === 'BACKGROUND_NO_SUBJECT'
   );
 });
 
 test('background removal rejects data that cannot be decoded as an image', async () => {
   await assert.rejects(
     removeBackgroundWithSession(Buffer.from('not an image'), {}),
-    error => error.status === 400 && error.message.includes('decoded safely')
+    error => error.status === 400 && error.code === 'IMAGE_DECODE_FAILED'
   );
 });
 

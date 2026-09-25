@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { BackupService } from '../services/backupService.js';
+import { httpError } from '../httpError.js';
 import { maxUploadBytes } from '../restore/restoreConfig.js';
 
 export const createBackupRoutes = ({ backupService, maintenance, restoreService, restoreUpload }) => {
@@ -26,14 +27,14 @@ export const createBackupRoutes = ({ backupService, maintenance, restoreService,
       if (error) {
         restoreService.staging.discardUpload(req.file?.path);
         if (error.code === 'LIMIT_FILE_SIZE') {
-          return res.status(413).json({ error: `The backup is larger than the ${Math.round(maxUploadBytes / (1024 * 1024))} MB restore limit.` });
+          return next(httpError(413, 'RESTORE_FILE_TOO_LARGE', { maxMb: Math.round(maxUploadBytes / (1024 * 1024)) }));
         }
         if (error.code === 'LIMIT_FILE_COUNT' || error.code === 'LIMIT_UNEXPECTED_FILE') {
-          return res.status(400).json({ error: 'Select exactly one backup file.' });
+          return next(httpError(400, 'RESTORE_SINGLE_FILE'));
         }
         return next(error);
       }
-      if (!req.file) return res.status(400).json({ error: 'Choose a backup file to validate.' });
+      if (!req.file) return next(httpError(400, 'RESTORE_FILE_REQUIRED'));
       try {
         res.json(restoreService.validateUpload(req.file));
       } catch (validationError) { next(validationError); }

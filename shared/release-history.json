@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.34.0",
+    "date": "2026-09-25",
+    "changes": [
+      "Error messages from the server now appear in the chosen interface language, English or Ukrainian, including refused deletions, invalid imports, backup and restore problems, cloud backup, AI provider, and update errors.",
+      "Counts in error messages use the right plural forms, and item, category, and field names inside them are shown exactly as you entered them.",
+      "Unexpected server failures now show a short generic message; their technical details stay in the server log instead of reaching the browser."
+    ]
+  },
+  {
     "version": "0.33.0",
     "date": "2026-09-25",
     "changes": [

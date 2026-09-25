@@ -11,7 +11,7 @@ function savedBaseUrl(value, preset) {
 }
 
 function requireBaseUrl(value) {
-  try { return normalizeBaseUrl(value); } catch (error) { throw httpError(error.message); }
+  return normalizeBaseUrl(value);
 }
 
 // A connection can run once it has an endpoint and, where the provider needs one, a key.
@@ -61,12 +61,12 @@ export class AiSettingsService {
   }
 
   write(input) {
-    if (!input || typeof input !== 'object' || Array.isArray(input)) throw httpError('Invalid AI settings.');
-    if (typeof input.enabled !== 'boolean') throw httpError('AI enabled must be true or false.');
+    if (!input || typeof input !== 'object' || Array.isArray(input)) throw httpError(400, 'INVALID_AI_SETTINGS');
+    if (typeof input.enabled !== 'boolean') throw httpError(400, 'INVALID_AI_ENABLED');
     const model = typeof input.model === 'string' ? input.model.trim() : '';
-    if (!model || model.length > MAX_AI_MODEL_LENGTH) throw httpError(`Model is required and must be ${MAX_AI_MODEL_LENGTH} characters or fewer.`);
+    if (!model || model.length > MAX_AI_MODEL_LENGTH) throw httpError(400, 'INVALID_AI_MODEL', { max: MAX_AI_MODEL_LENGTH });
     const imageInput = input.imageInput ?? defaults.imageInput;
-    if (!IMAGE_INPUT_OPTIONS.includes(imageInput)) throw httpError('Image input must be auto, supported, or unsupported.');
+    if (!IMAGE_INPUT_OPTIONS.includes(imageInput)) throw httpError(400, 'INVALID_IMAGE_INPUT');
     const endpoint = this.endpoint(input);
     const settings = { enabled: input.enabled, ...endpoint, model, imageInput, apiKey: this.apiKeyFor(endpoint, input) };
     // Enabling without a usable connection is not an error, it simply cannot take effect: the request
@@ -82,11 +82,11 @@ export class AiSettingsService {
   // The provider, display name, and base URL of a submitted form; the preset's URL when none is given.
   endpoint(input) {
     const preset = aiProvider(input.provider);
-    if (!preset) throw httpError('Choose a supported AI provider.');
+    if (!preset) throw httpError(400, 'UNSUPPORTED_AI_PROVIDER');
     let displayName = '';
     if (preset.id === 'custom' && input.displayName !== undefined && input.displayName !== null) {
       if (typeof input.displayName !== 'string' || input.displayName.trim().length > MAX_AI_DISPLAY_NAME_LENGTH) {
-        throw httpError(`Display name must be ${MAX_AI_DISPLAY_NAME_LENGTH} characters or fewer.`);
+        throw httpError(400, 'AI_DISPLAY_NAME_TOO_LONG', { max: MAX_AI_DISPLAY_NAME_LENGTH });
       }
       displayName = input.displayName.trim();
     }
@@ -103,7 +103,7 @@ export class AiSettingsService {
   */
   apiKeyFor(endpoint, input) {
     if (input.apiKey !== undefined && input.apiKey !== null && input.apiKey !== '') {
-      if (typeof input.apiKey !== 'string' || !input.apiKey.trim() || input.apiKey.trim().length > 512) throw httpError('API key is invalid.');
+      if (typeof input.apiKey !== 'string' || !input.apiKey.trim() || input.apiKey.trim().length > 512) throw httpError(400, 'INVALID_API_KEY');
       return input.apiKey.trim();
     }
     const current = this.read();
@@ -119,17 +119,17 @@ export class AiSettingsService {
     const settings = input === undefined ? this.read() : { ...this.endpoint(input), apiKey: '' };
     if (input !== undefined) settings.apiKey = this.apiKeyFor(settings, { apiKey: input.apiKey });
     const label = AiSettingsService.label(settings);
-    if (!settings.apiKey && aiProvider(settings.provider).apiKeyRequired) throw httpError(`Enter the ${label} API key first.`, 409);
+    if (!settings.apiKey && aiProvider(settings.provider).apiKeyRequired) throw httpError(409, 'AI_API_KEY_REQUIRED', { provider: label });
     return { provider: settings.provider, label, baseUrl: settings.baseUrl, apiKey: settings.apiKey };
   }
 
   // Shared by the AI use cases: they may only run with a configured, enabled provider.
-  requireUsableSettings(action) {
+  requireUsableSettings() {
     const settings = this.read();
     const label = AiSettingsService.label(settings);
     // The missing key is reported first: it is the reason AI is off in that case.
-    if (!settings.apiKey && aiProvider(settings.provider).apiKeyRequired) throw httpError(`Add an ${label} API key in Settings before ${action}.`, 409);
-    if (!settings.enabled) throw httpError('AI features are disabled. Enable them in Settings.', 409);
+    if (!settings.apiKey && aiProvider(settings.provider).apiKeyRequired) throw httpError(409, 'AI_API_KEY_MISSING', { provider: label });
+    if (!settings.enabled) throw httpError(409, 'AI_DISABLED');
     return { ...settings, label };
   }
 }

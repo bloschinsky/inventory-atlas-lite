@@ -4,6 +4,8 @@
   independent of the SQLite columns used to store it.
 */
 
+import { AppError } from './appError.js';
+
 export const FIELD_DEFINITION_VERSION = 1;
 export const MAX_BATCH_FIELDS = 50;
 export const MAX_FIELD_NAME_LENGTH = 60;
@@ -24,31 +26,34 @@ const reservedNames = new Set(RESERVED_FIELD_NAMES.map(name => name.toLowerCase(
 
 const isPlainObject = value => !!value && typeof value === 'object' && !Array.isArray(value);
 const key = name => name.trim().toLowerCase();
+const refuse = (code, params) => new AppError(code, params, 400);
 
 /*
   Structural checks only: everything a user can fix inside the preview editor is left to
   reviewFieldDefinitions so invalid rows stay visible and editable instead of failing the import.
 */
 export function readFieldDefinitionDocument(document) {
-  if (!isPlainObject(document)) throw new Error('The document must be a JSON object with a "fields" array.');
+  if (!isPlainObject(document)) throw refuse('FIELDS_DOCUMENT_NOT_OBJECT');
   const unknown = Object.keys(document).find(property => !documentProperties.includes(property));
-  if (unknown) throw new Error(`Unsupported document property "${unknown}". Supported properties: ${documentProperties.join(', ')}.`);
+  if (unknown) throw refuse('UNSUPPORTED_DOCUMENT_PROPERTY', { property: unknown, supported: documentProperties.join(', ') });
   if (document.version !== undefined && document.version !== FIELD_DEFINITION_VERSION) {
-    throw new Error(`Unsupported document version: ${JSON.stringify(document.version)}. Expected ${FIELD_DEFINITION_VERSION}.`);
+    throw refuse('UNSUPPORTED_DOCUMENT_VERSION', { version: JSON.stringify(document.version), expected: FIELD_DEFINITION_VERSION });
   }
-  if (!Array.isArray(document.fields)) throw new Error('The document must contain a "fields" array.');
-  if (!document.fields.length) throw new Error('The document does not contain any fields.');
+  if (!Array.isArray(document.fields)) throw refuse('FIELDS_MISSING');
+  if (!document.fields.length) throw refuse('FIELDS_NONE');
   if (document.fields.length > MAX_BATCH_FIELDS) {
-    throw new Error(`A batch accepts at most ${MAX_BATCH_FIELDS} fields; the document contains ${document.fields.length}.`);
+    throw refuse('FIELDS_TOO_MANY', { max: MAX_BATCH_FIELDS, count: document.fields.length });
   }
   return document.fields.map((field, index) => {
-    const position = `Field ${index + 1}`;
-    if (!isPlainObject(field)) throw new Error(`${position} must be a JSON object.`);
+    const position = index + 1;
+    if (!isPlainObject(field)) throw refuse('FIELD_DEFINITION_NOT_OBJECT', { index: position });
     const unsupported = Object.keys(field).find(property => !fieldProperties.includes(property));
-    if (unsupported) throw new Error(`${position} has an unsupported property "${unsupported}". Supported properties: ${fieldProperties.join(', ')}.`);
-    if (field.name !== undefined && typeof field.name !== 'string') throw new Error(`${position} name must be text.`);
-    if (field.type !== undefined && typeof field.type !== 'string') throw new Error(`${position} type must be text.`);
-    if (field.required !== undefined && typeof field.required !== 'boolean') throw new Error(`${position} "required" must be true or false.`);
+    if (unsupported) {
+      throw refuse('FIELD_DEFINITION_UNSUPPORTED_PROPERTY', { index: position, property: unsupported, supported: fieldProperties.join(', ') });
+    }
+    if (field.name !== undefined && typeof field.name !== 'string') throw refuse('FIELD_DEFINITION_NAME_TYPE', { index: position });
+    if (field.type !== undefined && typeof field.type !== 'string') throw refuse('FIELD_DEFINITION_TYPE_TYPE', { index: position });
+    if (field.required !== undefined && typeof field.required !== 'boolean') throw refuse('FIELD_DEFINITION_REQUIRED_TYPE', { index: position });
     return { name: field.name ?? '', type: field.type ?? '', required: field.required ?? false };
   });
 }
@@ -58,21 +63,25 @@ export function parseFieldDefinitionDocument(text) {
   try {
     document = JSON.parse(text);
   } catch (error) {
-    throw new Error(`Invalid JSON: ${error.message}`, { cause: error });
+    // The parser's wording comes from the JavaScript engine; it is kept as diagnostic context.
+    throw Object.assign(refuse('INVALID_JSON', { detail: error.message }), { cause: error });
   }
   return readFieldDefinitionDocument(document);
 }
 
+// A blocked row carries its reason as { code, params }, the same body the API refuses the batch with.
+const blocked = (status, code, params = {}) => ({ status, error: { code, params } });
+
 const reviewOne = (draft, existing, seen) => {
   const name = String(draft.name ?? '').trim();
-  if (!name) return { status: 'invalid', message: 'Field name is required.' };
-  if (name.length > MAX_FIELD_NAME_LENGTH) return { status: 'invalid', message: `Field name must be ${MAX_FIELD_NAME_LENGTH} characters or fewer.` };
-  if (reservedNames.has(key(name))) return { status: 'invalid', message: `"${name}" is a built-in item attribute and cannot be a custom field.` };
-  if (!supportedTypes.has(draft.type)) return { status: 'invalid-type', message: `Unsupported field type: ${draft.type || '(missing)'}.` };
-  if (draft.required) return { status: 'invalid', message: `Required custom fields are not supported yet; use "required": false for "${name}".` };
-  if (existing.has(key(name))) return { status: 'exists', message: `Field "${name}" already exists in this category.` };
-  if (seen.has(key(name))) return { status: 'duplicate', message: `Field "${name}" appears more than once in this batch.` };
-  return { status: 'new', message: '' };
+  if (!name) return blocked('invalid', 'FIELD_NAME_REQUIRED');
+  if (name.length > MAX_FIELD_NAME_LENGTH) return blocked('invalid', 'FIELD_NAME_TOO_LONG', { max: MAX_FIELD_NAME_LENGTH });
+  if (reservedNames.has(key(name))) return blocked('invalid', 'FIELD_NAME_RESERVED', { name });
+  if (!supportedTypes.has(draft.type)) return blocked('invalid-type', 'UNSUPPORTED_FIELD_TYPE', { type: draft.type || '—' });
+  if (draft.required) return blocked('invalid', 'REQUIRED_FIELD_UNSUPPORTED', { name });
+  if (existing.has(key(name))) return blocked('exists', 'FIELD_ALREADY_EXISTS', { name });
+  if (seen.has(key(name))) return blocked('duplicate', 'FIELD_DUPLICATE_IN_BATCH', { name });
+  return { status: 'new', error: null };
 };
 
 // Every draft keeps its own status so the preview can flag rows and recalculate after each edit.

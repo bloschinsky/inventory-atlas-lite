@@ -125,6 +125,7 @@ The project stays small and readable. Do not add:
 - `shared/itemImport.js` — category-scoped item import document format, template, structural reading, and per-draft review.
 - `shared/aiProviders.js` — AI provider presets (default base URLs, key requirements) and base-URL validation, shared by Settings and the server.
 - `shared/itemQr.js` — canonical `ial:item:v1:<uuid>` QR payload with its encoder and strict decoder.
+- `shared/appError.js` — `AppError` (stable code, parameters, HTTP status) thrown by the shared rules and the server, and its `{ code, params }` body.
 - `server/src/index.js` — process entry point: port and production flag, the HTTP listener, and shutdown.
 - `server/src/app.js` — composition root: builds every repository, service, upload, and route table and assembles the Express app, including production static serving.
 - `server/src/routes/` — thin Express route tables; they parse the request, call one service, and shape the response.
@@ -134,13 +135,14 @@ The project stays small and readable. Do not add:
 - `server/src/restore/` — restore and reset configuration, staged-upload sessions, the SQLite file checks, and `databaseMaintenance.js`: the shared maintenance lock, safety backup, atomic swap, and rollback used by the restore and reset services.
 - `server/src/cloudBackup/` — cloud backup configuration, the owner-only JSON file store for its credentials and state, schedule rules, and the in-process scheduler timer.
 - `server/src/update/` — deployment capability, version comparison, the updater's status file, and the privileged update trigger.
-- `server/src/http/` — transport middleware: uploads, the maintenance guard, and the central error handler.
+- `server/src/http/` — transport middleware: uploads, the maintenance guard, and the central error handler that answers `{ error: { code, params } }`.
 - `server/src/db.js` — database path, SQLite connection, PRAGMAs, current table/index schema, and the fresh-database initializer used by the reset.
 - `test/e2e.test.js` — end-to-end acceptance test for the API, persistence, photos, and backups.
 - `test/services.test.js` — service-level regression tests that run without HTTP against a temporary database.
 - `test/background-removal.test.js` — local cutout tests: stubbed model output for the composition
   rules, plus one full run of the real model over the regression photo when it is installed.
 - `test/i18n.test.js` — locale parity, message compilation, fallback, Ukrainian plurals, and locale-aware formatting.
+- `test/errors.test.js` — error code coverage in both locales, the error response mapping, and error translation.
 - `test/cloud-backup.test.js` — cloud backup services, adapters, scheduler, and API against the local Dropbox/Google Drive stub in `test/e2e/cloudProviderStub.js`.
 - `test/fixtures/` — real source photos used as regression input by the Node.js tests.
 - `test/e2e/` — Playwright browser tests, their fixtures, shared helpers, and the run launcher.
@@ -174,10 +176,14 @@ are mandatory for all frontend work:
 - Show dates, numbers, money, and file sizes through the formatters in `client/src/i18n/index.js`;
   never change stored values or API formats for display.
 - Never translate user data: item, category, and field names, descriptions, locations, entered
-  values, serial numbers, and imported data are shown exactly as stored. Server error messages are
-  still shown as the API returns them.
+  values, serial numbers, and imported data are shown exactly as stored.
+- Server errors arrive as `{ code, params }` and are shown through `translateError` (and success
+  notices through `translateNotice`) from `client/src/i18n/index.js`; `api()` already throws an
+  `ApiError` whose message is translated. Dynamic values travel as parameters, a count as
+  `params.count` for pluralization, and a nested reason as a `{ code, params }` parameter.
 - `test/i18n.test.js` fails when the two locales do not define the same keys or a message does not
-  compile; keep it passing.
+  compile, and `test/errors.test.js` fails when a code used in `server/src` or `shared` has no message;
+  keep both passing.
 
 ## Data model and important constraints
 
@@ -193,7 +199,9 @@ are mandatory for all frontend work:
 
 - Before editing, read the related Vue components, API routes, schema, and tests so the end-to-end contract remains intact.
 - Preserve the existing compact style and use installed dependencies. Add a dependency only when it clearly simplifies the implementation needed now.
-- Validate data on the server. Return API errors as `{ "error": "..." }`, as expected by `client/src/api.js`.
+- Validate data on the server. Return API errors as `{ "error": { "code": "...", "params": {} } }` by throwing
+  `httpError(status, code, params)` or the shared `AppError`; never send human-readable text from the server.
+  Add every new code under `errors` (or `notices` for success messages) in both `en.json` and `uk.json`.
 - Schema changes must be safe for existing `data/inventory.sqlite` databases; do not rely only on creating a fresh database.
 - Keep the application suitable for self-hosted use without external runtime services.
 - Do not manually edit `dist/`, `node_modules/`, or SQLite files.

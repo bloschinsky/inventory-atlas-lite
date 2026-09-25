@@ -9,7 +9,7 @@ export const createImageUpload = () => multer({
   limits: { fileSize: 15 * 1024 * 1024, files: 10 },
   fileFilter: (_req, file, done) => {
     const valid = imageTypes.has(file.mimetype);
-    done(valid ? null : httpError('Only JPEG, PNG, WebP, and GIF images are allowed.'), valid);
+    done(valid ? null : httpError(400, 'UNSUPPORTED_IMAGE_TYPE'), valid);
   }
 });
 

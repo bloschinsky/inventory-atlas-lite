@@ -33,7 +33,7 @@ export class GitHubReleaseClient {
 
   async #load() {
     const releases = await this.#request(`/repos/${this.owner}/${this.repository}/releases?per_page=20`);
-    if (!Array.isArray(releases)) throw httpError('GitHub returned an unexpected response.', 502);
+    if (!Array.isArray(releases)) throw httpError(502, 'GITHUB_INVALID_RESPONSE');
     const value = this.#newestStable(releases);
     this.#cache = { value, expiresAt: this.now() + this.cacheTtlMs };
     return value;
@@ -64,20 +64,20 @@ export class GitHubReleaseClient {
       });
     } catch (error) {
       console.error(error);
-      throw httpError('Could not reach GitHub to check for updates.', 502);
+      throw httpError(502, 'GITHUB_UNREACHABLE');
     }
     if (response.status === 403 || response.status === 429) {
-      throw httpError('GitHub is rate limiting update checks. Try again later.', 503);
+      throw httpError(503, 'GITHUB_RATE_LIMITED');
     }
     if (!response.ok) {
       console.error(`GitHub answered ${response.status} for ${pathname}.`);
-      throw httpError('GitHub could not be queried for the latest release.', 502);
+      throw httpError(502, 'GITHUB_REQUEST_FAILED', { status: response.status });
     }
     try {
       return await response.json();
     } catch (error) {
       console.error(error);
-      throw httpError('GitHub returned an unexpected response.', 502);
+      throw httpError(502, 'GITHUB_INVALID_RESPONSE');
     }
   }
 }

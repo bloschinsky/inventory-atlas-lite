@@ -8,7 +8,7 @@ export class CategoryService {
 
   requireCategory(id) {
     const category = this.categories.findById(id);
-    if (!category) throw httpError('Category not found.', 404);
+    if (!category) throw httpError(404, 'CATEGORY_NOT_FOUND');
     return category;
   }
 
@@ -17,19 +17,19 @@ export class CategoryService {
   }
 
   create(input) {
-    const name = requiredText(input?.name, 'Category name');
+    const name = requiredText(input?.name, 'CATEGORY_NAME_REQUIRED');
     return this.categories.findById(this.categories.insert(name));
   }
 
   rename(id, input) {
     this.requireCategory(id);
-    this.categories.updateName(id, requiredText(input?.name, 'Category name'));
+    this.categories.updateName(id, requiredText(input?.name, 'CATEGORY_NAME_REQUIRED'));
     return this.categories.findById(id);
   }
 
   remove(id) {
     const used = this.categories.countItemsUsing(id);
-    if (used) throw httpError(`Category is used by ${used} item(s). Move or delete them first.`, 409);
-    if (!this.categories.deleteById(id)) throw httpError('Category not found.', 404);
+    if (used) throw httpError(409, 'CATEGORY_IN_USE', { count: used });
+    if (!this.categories.deleteById(id)) throw httpError(404, 'CATEGORY_NOT_FOUND');
   }
 }

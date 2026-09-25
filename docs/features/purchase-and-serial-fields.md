@@ -17,7 +17,7 @@ the Details card when populated. Existing items remain valid with all three prop
 - `serial_number` is nullable text limited to 255 characters. Outer whitespace is trimmed, while
   case, separators, spaces inside the value, and leading zeroes are preserved.
 - The server rejects malformed dates, negative or non-decimal amounts, unsupported currency codes,
-  and overlong serial numbers with the normal `{ "error": "..." }` response.
+  and overlong serial numbers with the normal `{ "error": { "code", "params" } }` response.
 
 The item list response carries the same values. Free-text item search matches serial numbers in
 addition to names and descriptions. Purchase dates and prices do not add new filters or sort modes.

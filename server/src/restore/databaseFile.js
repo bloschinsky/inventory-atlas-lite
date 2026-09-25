@@ -9,15 +9,15 @@ import { CORE_SCHEMA, CURRENT_SCHEMA, SCHEMA_VERSION, applySchema } from '../db.
   there is no state to hold and nothing to substitute.
 */
 
-export const badRequest = message => httpError(message, 400);
-export const conflict = message => httpError(message, 409);
-export const unavailable = message => httpError(message, 503);
+export const badRequest = (code, params) => httpError(400, code, params);
+export const conflict = (code, params) => httpError(409, code, params);
+export const unavailable = (code, params) => httpError(503, code, params);
 
-// Only our own messages reach the browser; anything SQLite says stays in the server log.
-export const asUserError = (error, message) => {
-  if (error?.status) return error;
+// Only our own error codes reach the browser; anything SQLite says stays in the server log.
+export const asUserError = (error, code) => {
+  if (error?.code && error?.status) return error;
   console.error('[restore]', error);
-  return badRequest(message);
+  return badRequest(code);
 };
 
 export const ensureDirectory = directory => fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
@@ -43,9 +43,9 @@ const freeBytes = directory => {
   } catch { return null; }
 };
 
-export const assertDiskSpace = (directory, needed, message = 'Not enough free disk space to restore this backup safely.') => {
+export const assertDiskSpace = (directory, needed, code = 'RESTORE_DISK_SPACE') => {
   const free = freeBytes(directory);
-  if (free !== null && free < needed) throw unavailable(message);
+  if (free !== null && free < needed) throw unavailable(code);
 };
 
 const hasSqliteHeader = file => {
@@ -57,12 +57,13 @@ const hasSqliteHeader = file => {
 
 const tableColumns = (connection, table) => connection.prepare(`PRAGMA table_info(${table})`).all().map(column => column.name);
 
-const checkSchema = (connection, expected, message) => {
+// `failure` builds the error a missing table or column is reported with.
+const checkSchema = (connection, expected, failure) => {
   const tables = new Set(connection.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all().map(row => row.name));
   for (const [table, columns] of Object.entries(expected)) {
-    if (!tables.has(table)) throw badRequest(message);
+    if (!tables.has(table)) throw failure();
     const present = new Set(tableColumns(connection, table));
-    for (const column of columns) if (!present.has(column)) throw badRequest(message);
+    for (const column of columns) if (!present.has(column)) throw failure();
   }
 };
 
@@ -79,37 +80,37 @@ export const summarize = connection => ({
   works on our own copy, which may be journal-collapsed and migrated in place.
 */
 export const validateStagedDatabase = file => {
-  if (!fs.existsSync(file) || !fileSize(file)) throw badRequest('The uploaded file is empty.');
-  if (!hasSqliteHeader(file)) throw badRequest('The selected file is not a SQLite database.');
+  if (!fs.existsSync(file) || !fileSize(file)) throw badRequest('BACKUP_FILE_EMPTY');
+  if (!hasSqliteHeader(file)) throw badRequest('BACKUP_NOT_SQLITE');
 
   let candidate;
   try {
     candidate = new Database(file, { fileMustExist: true });
   } catch (error) {
-    throw asUserError(error, 'The selected file could not be opened as a SQLite database.');
+    throw asUserError(error, 'BACKUP_UNOPENABLE');
   }
   try {
     // Collapsing the journal makes the candidate a single self-contained file, so the restored
     // database can never depend on a -wal the upload did not include.
     candidate.pragma('journal_mode = delete');
     if (candidate.pragma('integrity_check', { simple: true }) !== 'ok') {
-      throw badRequest('The selected database failed its integrity check and cannot be restored.');
+      throw badRequest('BACKUP_INTEGRITY_FAILED');
     }
     const version = Number(candidate.pragma('user_version', { simple: true })) || 0;
     if (version > SCHEMA_VERSION) {
-      throw badRequest('This backup was created by a newer version of Inventory Atlas Lite and cannot be restored.');
+      throw badRequest('BACKUP_FROM_NEWER_VERSION');
     }
-    checkSchema(candidate, CORE_SCHEMA, 'This file is not an Inventory Atlas Lite backup.');
+    checkSchema(candidate, CORE_SCHEMA, () => badRequest('BACKUP_NOT_INVENTORY_ATLAS'));
     // An older but recognized backup is migrated on the staged copy only, then checked again.
     if (version < SCHEMA_VERSION) applySchema(candidate);
-    checkSchema(candidate, CURRENT_SCHEMA, 'This backup is not compatible with the current application version.');
+    checkSchema(candidate, CURRENT_SCHEMA, () => badRequest('BACKUP_INCOMPATIBLE'));
     if (candidate.pragma('foreign_key_check').length) {
-      throw badRequest('The selected database contains broken relationships and cannot be restored.');
+      throw badRequest('BACKUP_BROKEN_RELATIONSHIPS');
     }
     const summary = summarize(candidate);
     return { ...summary, schemaVersion: SCHEMA_VERSION, migratedFrom: version < SCHEMA_VERSION ? version : null };
   } catch (error) {
-    throw asUserError(error, 'The selected database could not be read as an Inventory Atlas Lite backup.');
+    throw asUserError(error, 'BACKUP_UNREADABLE');
   } finally {
     try { candidate.close(); } catch { /* already closed */ }
     removeSidecars(file);
@@ -126,7 +127,7 @@ export const verifyDatabaseFile = (file, message, collapse = false) => {
   try {
     if (collapse) connection.pragma('journal_mode = delete');
     if (connection.pragma('integrity_check', { simple: true }) !== 'ok') throw new Error(message);
-    checkSchema(connection, CURRENT_SCHEMA, message);
+    checkSchema(connection, CURRENT_SCHEMA, () => new Error(message));
     summarize(connection);
   } finally {
     connection.close();

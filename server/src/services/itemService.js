@@ -1,5 +1,6 @@
 import { httpError } from '../httpError.js';
-import { fieldLabel, itemImportRequestBody, readItemImportDocument } from '../../../shared/itemImport.js';
+import { errorBody } from '../../../shared/appError.js';
+import { itemImportRequestBody, readItemImportDocument } from '../../../shared/itemImport.js';
 import {
   nullableText, requiredText, validateFieldValue, validatePurchaseDate, validatePurchasePrice, validateSerialNumber,
   validateTransferredTo
@@ -42,7 +43,7 @@ export class ItemService {
 
   requireItem(id) {
     const item = this.items.findDetailed(id);
-    if (!item) throw httpError('Item not found.', 404);
+    if (!item) throw httpError(404, 'ITEM_NOT_FOUND');
     return item;
   }
 
@@ -89,11 +90,11 @@ export class ItemService {
   // selected are reported back instead of failing the whole job.
   labels(body) {
     const uuids = body?.uuids;
-    if (!Array.isArray(uuids) || !uuids.length) throw httpError('Select at least one item to print.');
-    if (uuids.some(uuid => typeof uuid !== 'string')) throw httpError('Items must be identified by their UUIDs.');
+    if (!Array.isArray(uuids) || !uuids.length) throw httpError(400, 'LABELS_NO_ITEMS');
+    if (uuids.some(uuid => typeof uuid !== 'string')) throw httpError(400, 'LABELS_INVALID_UUIDS');
     const requested = [...new Set(uuids.map(uuid => uuid.trim().toLowerCase()))];
     if (requested.length > MAX_LABELS_PER_PRINT) {
-      throw httpError(`A print job can contain at most ${MAX_LABELS_PER_PRINT} labels, but ${requested.length} items were selected.`);
+      throw httpError(400, 'LABELS_TOO_MANY', { max: MAX_LABELS_PER_PRINT, count: requested.length });
     }
     const found = new Map(this.items.findLabels(requested).map(row => [row.uuid, {
       uuid: row.uuid,
@@ -120,30 +121,30 @@ export class ItemService {
   resolveParentId(raw, itemId = null) {
     if (raw === null || raw === undefined || raw === '') return null;
     const parentId = Number.parseInt(raw);
-    if (!Number.isInteger(parentId) || !this.items.findRef(parentId)) throw httpError('Parent item not found.');
-    if (itemId && parentId === itemId) throw httpError('An item cannot be stored inside itself.');
+    if (!Number.isInteger(parentId) || !this.items.findRef(parentId)) throw httpError(400, 'PARENT_ITEM_NOT_FOUND');
+    if (itemId && parentId === itemId) throw httpError(400, 'ITEM_CANNOT_CONTAIN_ITSELF');
     if (itemId && this.items.listDescendantIds(itemId).includes(parentId)) {
-      throw httpError('An item cannot be stored inside one of its own contents.');
+      throw httpError(400, 'ITEM_PARENT_CYCLE');
     }
     return parentId;
   }
 
   validateValues(categoryId, values = {}) {
-    if (!values || typeof values !== 'object' || Array.isArray(values)) throw httpError('Field values must be an object.');
+    if (!values || typeof values !== 'object' || Array.isArray(values)) throw httpError(400, 'FIELD_VALUES_NOT_OBJECT');
     const allowed = new Map(this.fields.listTypesByCategory(categoryId).map(field => [String(field.id), field]));
     return Object.entries(values).map(([fieldId, raw]) => {
       const field = allowed.get(String(fieldId));
-      if (!field) throw httpError(`Field ${fieldId} does not belong to the selected category.`);
-      return [Number(fieldId), validateFieldValue(field.type, raw, fieldLabel(field.name))];
+      if (!field) throw httpError(400, 'FIELD_NOT_IN_CATEGORY', { fieldId: String(fieldId) });
+      return [Number(fieldId), validateFieldValue(field.type, raw, field.name)];
     });
   }
 
   // Shared attribute rules of create and update. The field values are returned separately because
   // they are written to their own table once the item row exists.
   readAttributes(body, itemId = null) {
-    const name = requiredText(body?.name, 'Item name');
+    const name = requiredText(body?.name, 'ITEM_NAME_REQUIRED');
     const categoryId = Number.parseInt(body?.category_id);
-    if (!this.categories.findById(categoryId)) throw httpError('Valid category is required.');
+    if (!this.categories.findById(categoryId)) throw httpError(400, 'CATEGORY_REQUIRED');
     const values = this.validateValues(categoryId, body.field_values);
     const parentId = this.resolveParentId(body.parent_item_id, itemId);
     const purchaseDate = validatePurchaseDate(body.purchase_date);
@@ -188,19 +189,20 @@ export class ItemService {
   */
   createBatch(body) {
     const category = this.categories.findById(Number.parseInt(body?.categoryId));
-    if (!category) throw httpError('Valid category is required.');
+    if (!category) throw httpError(400, 'CATEGORY_REQUIRED');
     const fields = this.fields.listByCategory(category.id);
     let drafts;
     try {
       drafts = readItemImportDocument(body.document, { categoryName: category.name, fields });
     } catch (error) {
-      throw Object.assign(error, { status: 400 });
+      throw error.status ? error : httpError(400, 'INVALID_REQUEST');
     }
     const ids = this.items.transaction(() => drafts.map((draft, index) => {
       try {
         return this.insertItem(itemImportRequestBody(draft, category.id, fields));
       } catch (error) {
-        if (error.status) error.message = `Item ${index + 1}: ${error.message}`;
+        // The refusal of one draft names its position; the original reason travels as a nested error.
+        if (error.code && error.status) throw httpError(error.status, 'BATCH_ITEM_INVALID', { index: index + 1, reason: errorBody(error) });
         throw error;
       }
     }));
@@ -221,7 +223,7 @@ export class ItemService {
   remove(id) {
     const item = this.requireItem(id);
     const contained = this.items.countChildren(item.id);
-    if (contained) throw httpError(`This item contains ${contained} item(s). Move or delete them first.`, 409);
+    if (contained) throw httpError(409, 'ITEM_HAS_CHILDREN', { count: contained });
     this.items.deleteById(item.id);
   }
 }

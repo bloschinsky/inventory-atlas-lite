@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { httpError } from '../httpError.js';
 
 /*
   Starting an update is the one request in this API with a lasting effect on the machine, so it is a
@@ -9,14 +10,14 @@ import { Router } from 'express';
 const sameOriginOnly = (req, res, next) => {
   const site = req.get('sec-fetch-site');
   if (site && site !== 'same-origin' && site !== 'none') {
-    return res.status(403).json({ error: 'Update requests must come from the application itself.' });
+    return next(httpError(403, 'UPDATE_FOREIGN_ORIGIN'));
   }
   const origin = req.get('origin');
   if (origin) {
     let host;
     try { host = new URL(origin).host; } catch { host = null; }
     if (host !== req.get('host')) {
-      return res.status(403).json({ error: 'Update requests must come from the application itself.' });
+      return next(httpError(403, 'UPDATE_FOREIGN_ORIGIN'));
     }
   }
   next();

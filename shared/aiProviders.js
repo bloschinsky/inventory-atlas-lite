@@ -1,3 +1,5 @@
+import { AppError } from './appError.js';
+
 /*
   The AI provider presets offered in Settings, shared by the client and the server so both agree on
   identifiers, default base URLs, and whether an API key is required. Their help texts are
@@ -40,6 +42,7 @@ export const AI_PROVIDERS = [
 export const DEFAULT_AI_PROVIDER = 'openai';
 export const MAX_AI_MODEL_LENGTH = 200;
 export const MAX_AI_DISPLAY_NAME_LENGTH = 60;
+const MAX_BASE_URL_LENGTH = 500;
 // Whether the configured model accepts images: detected from provider metadata, or set by the user.
 export const IMAGE_INPUT_OPTIONS = ['auto', 'supported', 'unsupported'];
 
@@ -59,18 +62,18 @@ export function isLocalNetworkHost(hostname) {
 }
 
 /*
-  Returns the canonical base URL, without a trailing slash, or throws an Error whose message is shown
-  to the user. Only the scheme, host, port, and path are accepted: credentials, a query, or a
+  Returns the canonical base URL, without a trailing slash, or throws an AppError the API answers with
+  as a 400. Only the scheme, host, port, and path are accepted: credentials, a query, or a
   fragment would be silently carried into every provider request.
 */
 export function normalizeBaseUrl(value) {
   const text = typeof value === 'string' ? value.trim() : '';
-  if (!text) throw new Error('Base URL is required.');
-  if (text.length > 500) throw new Error('Base URL must be 500 characters or fewer.');
+  if (!text) throw new AppError('BASE_URL_REQUIRED');
+  if (text.length > MAX_BASE_URL_LENGTH) throw new AppError('BASE_URL_TOO_LONG', { max: MAX_BASE_URL_LENGTH });
   let url;
-  try { url = new globalThis.URL(text); } catch { throw new Error('Base URL must be a full URL such as http://192.168.1.50:11434/v1.'); }
-  if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error('Base URL must start with http:// or https://.');
-  if (url.username || url.password) throw new Error('Base URL must not contain credentials. Use the API key field instead.');
-  if (url.search || url.hash || text.includes('?') || text.includes('#')) throw new Error('Base URL must not contain a query or fragment.');
+  try { url = new globalThis.URL(text); } catch { throw new AppError('BASE_URL_INVALID'); }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new AppError('BASE_URL_PROTOCOL');
+  if (url.username || url.password) throw new AppError('BASE_URL_CREDENTIALS');
+  if (url.search || url.hash || text.includes('?') || text.includes('#')) throw new AppError('BASE_URL_QUERY');
   return `${url.origin}${url.pathname.replace(/\/+$/, '')}`;
 }

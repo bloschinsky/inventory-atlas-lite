@@ -12,10 +12,10 @@ export class ImageService {
   }
 
   async removeImageBackground(upload) {
-    if (!upload) throw httpError('Choose an image to process.');
+    if (!upload) throw httpError(400, 'IMAGE_REQUIRED');
     const mimeType = detectImageMime(upload.buffer);
     if (!mimeType || mimeType !== upload.mimetype) {
-      throw httpError('The uploaded file is not a valid JPEG, PNG, WebP, or GIF image.');
+      throw httpError(400, 'INVALID_IMAGE');
     }
     const image = await this.removeBackground(upload.buffer);
     const baseName = path.parse(upload.originalname).name.slice(0, 180) || 'item';

@@ -31,15 +31,16 @@ the conventions of the active language; stored values and the API are unchanged.
 
 - User data: item, category, and custom-field names, descriptions, conditions, locations,
   Transferred To, serial numbers, entered field values, and imported JSON are shown exactly as stored.
-- Server messages: API errors and messages such as a connection test result are displayed as the
-  server returns them, in English. Their localization through stable error codes is planned in
-  [`TASK-I18N-BACKEND-ERROR-LOCALIZATION.md`](../issues/TASK-I18N-BACKEND-ERROR-LOCALIZATION.md).
-  Validation messages produced by the shared item and field rules in `shared/` belong to the same
-  contract and stay English as well.
 - Release notes in Version History, which are bundled release data, and fixed technical text such as
   confirmation phrases (`RESTORE`, `RESET INVENTORY`), file names, paths, and environment variables.
 - Summary buckets that the Dashboard API names in English (`Other`, `Not specified`) are recognized
   by their keys and translated in the browser; user-entered conditions stay as they are.
+
+## Server messages
+
+API errors, validation refusals from the shared rules, and connection test results arrive as stable
+codes with parameters and are translated in the browser; see [`api-error-codes.md`](api-error-codes.md).
+User data and diagnostic values inside them are inserted unchanged.
 
 ## Locale-aware formatting
 

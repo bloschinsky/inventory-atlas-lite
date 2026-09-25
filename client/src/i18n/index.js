@@ -37,6 +37,10 @@ export function setLocale(value) {
   }
 }
 
+// Server errors and notices arrive as { code, params } and are translated in the active locale.
+export const translateError = message => core.translateMessage(i18n.global, message);
+export const translateNotice = message => core.translateMessage(i18n.global, message, 'notices');
+
 // Display formatting in the active locale. Reading the locale here keeps every template that calls them reactive.
 export const formatDateTime = (value, timeZone) => core.formatDateTime(value, locale.value, timeZone);
 export const formatDate = value => core.formatDate(value, locale.value);

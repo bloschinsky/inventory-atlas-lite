@@ -141,7 +141,7 @@ test('AI add fields reviews the generated draft in the batch editor before creat
     generateCalls += 1;
     descriptions.push(JSON.parse(route.request().postData()).description);
     if (generateCalls === 1) {
-      return route.fulfill({ status: 502, contentType: 'application/json', body: JSON.stringify({ error: 'OpenAI is unavailable. Try again later.' }) });
+      return route.fulfill({ status: 502, contentType: 'application/json', body: JSON.stringify({ error: { code: 'AI_PROVIDER_REQUEST_FAILED', params: { provider: 'OpenAI', status: 503 } } }) });
     }
     return route.fulfill({
       status: 200,
@@ -169,7 +169,7 @@ test('AI add fields reviews the generated draft in the batch editor before creat
   await dialog.getByRole('button', { name: 'Generate Fields' }).click();
 
   // A failed call reports the reason and keeps the prompt, so it can be retried unchanged.
-  await expect(dialog.getByRole('alert')).toContainText('OpenAI is unavailable.');
+  await expect(dialog.getByRole('alert')).toHaveText('OpenAI could not complete the request (HTTP 503). Try again later.');
   await expect(dialog.getByLabel('Field description')).toHaveValue(prompt);
   await dialog.getByRole('button', { name: 'Generate Fields' }).click();
 

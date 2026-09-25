@@ -91,10 +91,12 @@ async function connect(connections, id, { cookie } = {}) {
   });
 }
 
-const rejects = (promise, status, pattern, code) => assert.rejects(promise, error => {
+// `expected` is the stable error code or the full { code, params } body; `reason` the adapter's internal class.
+const rejects = (promise, status, expected, reason) => assert.rejects(promise, error => {
   assert.equal(error.status, status, `expected status ${status}, received ${error.status}: ${error.message}`);
-  assert.match(error.message, pattern);
-  if (code) assert.equal(error.code, code);
+  if (typeof expected === 'string') assert.equal(error.code, expected);
+  else assert.deepEqual({ code: error.code, params: error.params }, expected);
+  if (reason) assert.equal(error.reason, reason);
   return true;
 });
 
@@ -125,10 +127,10 @@ test('schedule rules compute the next local run and validate settings', () => {
 
   const valid = { schedule: { enabled: true, provider: 'dropbox', frequency: 'weekly', weekday: 2, time: '04:30' }, retention: { mode: 'last', keep: 5 } };
   assert.deepEqual(validateSettings(valid, ['dropbox']), valid);
-  assert.throws(() => validateSettings(valid, []), /connected provider/);
-  assert.throws(() => validateSettings({ ...valid, schedule: { ...valid.schedule, time: '25:00' } }, ['dropbox']), /HH:MM/);
-  assert.throws(() => validateSettings({ ...valid, schedule: { ...valid.schedule, frequency: 'hourly' } }, ['dropbox']), /daily or weekly/);
-  assert.throws(() => validateSettings({ ...valid, retention: { mode: 'last', keep: 0 } }, ['dropbox']), /Keep between/);
+  assert.throws(() => validateSettings(valid, []), { status: 400, code: 'CLOUD_SCHEDULE_PROVIDER_REQUIRED' });
+  assert.throws(() => validateSettings({ ...valid, schedule: { ...valid.schedule, time: '25:00' } }, ['dropbox']), { code: 'INVALID_CLOUD_TIME' });
+  assert.throws(() => validateSettings({ ...valid, schedule: { ...valid.schedule, frequency: 'hourly' } }, ['dropbox']), { code: 'INVALID_CLOUD_FREQUENCY' });
+  assert.throws(() => validateSettings({ ...valid, retention: { mode: 'last', keep: 0 } }, ['dropbox']), { code: 'INVALID_CLOUD_KEEP', params: { max: 365 } });
 
   assert.equal(backupFileName(new Date('2026-09-24T08:05:09.123Z')), 'inventory-atlas-lite-2026-09-24T08-05-09Z.sqlite');
   assert.equal(isOwnBackupName('inventory-atlas-lite-2026-09-24T08-05-09Z.sqlite'), true);
@@ -167,20 +169,20 @@ test('OAuth connects both providers with PKCE and stores only the refresh token,
 
 test('the OAuth callback is refused without the matching browser state, on replay, and when access is denied', async () => {
   const { connections, credentialsFile } = await build();
-  await rejects(connect(connections, 'dropbox', { cookie: 'forged-state' }), 400, /could not be verified/);
+  await rejects(connect(connections, 'dropbox', { cookie: 'forged-state' }), 400, 'CLOUD_CONNECT_UNVERIFIED');
   assert.equal(fs.existsSync(credentialsFile), false);
-  assert.match(connections.lastConnectError.message, /could not be verified/);
+  assert.deepEqual(connections.lastConnectError.error, { code: 'CLOUD_CONNECT_UNVERIFIED', params: {} });
 
   const { state, authorizationUrl } = connections.begin('dropbox', ORIGIN);
   const callback = new URL((await fetch(authorizationUrl, { redirect: 'manual' })).headers.get('location'));
   const code = callback.searchParams.get('code');
   await connections.complete({ state, cookieState: state, code });
-  await rejects(connections.complete({ state, cookieState: state, code }), 400, /could not be verified/);
+  await rejects(connections.complete({ state, cookieState: state, code }), 400, 'CLOUD_CONNECT_UNVERIFIED');
 
   stub.denyNext = true;
-  await rejects(connect(connections, 'google-drive'), 400, /Google Drive access was not granted/);
+  await rejects(connect(connections, 'google-drive'), 400, { code: 'CLOUD_CONNECT_DENIED', params: { provider: 'Google Drive' } });
   assert.deepEqual(connections.connectedIds(), ['dropbox']);
-  await rejects(connections.complete({ state: undefined, cookieState: undefined }), 400, /could not be verified/);
+  await rejects(connections.complete({ state: undefined, cookieState: undefined }), 400, 'CLOUD_CONNECT_UNVERIFIED');
 });
 
 test('a manual Dropbox backup uploads the consistent snapshot in chunks and records the result', async () => {
@@ -227,7 +229,7 @@ test('a failed upload leaves the live database untouched and is reported with a 
   await connect(connections, 'dropbox');
   const before = db.prepare('SELECT COUNT(*) AS items FROM items').get();
   stub.failures.push({ match: 'upload_session/finish', status: 409, body: { error_summary: 'path/insufficient_space/' }, times: 1 });
-  await rejects(service.run('dropbox'), 507, /Dropbox is full/, 'quota');
+  await rejects(service.run('dropbox'), 507, { code: 'CLOUD_QUOTA', params: { provider: 'Dropbox' } }, 'quota');
 
   assert.deepEqual(db.prepare('SELECT COUNT(*) AS items FROM items').get(), before);
   assert.equal(db.pragma('integrity_check', { simple: true }), 'ok');
@@ -235,7 +237,7 @@ test('a failed upload leaves the live database untouched and is reported with a 
   const state = stateStore.read();
   assert.equal(state.lastSuccess, null);
   assert.equal(state.history[0].ok, false);
-  assert.match(state.history[0].error, /Dropbox is full/);
+  assert.deepEqual(state.history[0].error, { code: 'CLOUD_QUOTA', params: { provider: 'Dropbox' } });
   assert.equal(service.running, null);
 
   // Nothing about the failure blocks the next backup.
@@ -265,7 +267,7 @@ test('retention keeps the newest N own backups and never touches other files', a
   const third = await service.run('dropbox');
   assert.equal(third.ok, true);
   assert.equal(third.cleanup.ok, false);
-  assert.match(third.cleanup.error, /unavailable/);
+  assert.deepEqual(third.cleanup.error, { code: 'CLOUD_PROVIDER_UNAVAILABLE', params: { provider: 'Dropbox', status: 500 } });
   assert.equal(stateStore.read().lastSuccess.file, third.file);
 });
 
@@ -282,11 +284,14 @@ test('expired access tokens are refreshed for unattended runs, and a revoked gra
 
   // An access token the provider rejects before its expiry is refreshed once and the call retried.
   connections.accessTokens.set('dropbox', { token: 'rejected-token', expiresAt: Date.now() + 3600_000 });
-  assert.match((await connections.test('dropbox')).message, /^Connected to Dropbox as Stub Dropbox User/);
+  const tested = await connections.test('dropbox');
+  assert.equal(tested.notice.code, 'CLOUD_CONNECTED');
+  assert.equal(tested.notice.params.provider, 'Dropbox');
+  assert.match(tested.notice.params.account, /^Stub Dropbox User/);
 
   stub.revokeAll();
   connections.accessTokens.clear();
-  await rejects(service.run('dropbox'), 502, /Dropbox access has expired or was revoked/, 'auth_revoked');
+  await rejects(service.run('dropbox'), 502, { code: 'CLOUD_ACCESS_REVOKED', params: { provider: 'Dropbox' } }, 'auth_revoked');
 });
 
 test('disconnect revokes the grant, removes the credentials, and switches off a schedule using it', async () => {
@@ -302,7 +307,7 @@ test('disconnect revokes the grant, removes the credentials, and switches off a 
   assert.equal(stored.dropbox, undefined);
   assert.ok(stored['google-drive']);
   assert.deepEqual(connections.connectedIds(), ['google-drive']);
-  await rejects(service.run('dropbox'), 409, /Dropbox is not connected/);
+  await rejects(service.run('dropbox'), 409, { code: 'CLOUD_NOT_CONNECTED', params: { provider: 'Dropbox' } });
   assert.equal(stateStore.read().settings.schedule.enabled, false);
   assert.equal(stateStore.read().nextRunAt, null);
 
@@ -350,7 +355,7 @@ test('scheduled runs survive a restart and never run the same slot twice', async
   stub.failures.push({ match: 'upload_session/start', status: 503, times: 1 });
   clock.now = new Date(2026, 8, 28, 3, 0, 5);
   await restartedScheduler.tick();
-  assert.match(stateStore.read().history[0].error, /Dropbox is unavailable/);
+  assert.deepEqual(stateStore.read().history[0].error, { code: 'CLOUD_PROVIDER_UNAVAILABLE', params: { provider: 'Dropbox', status: 503 } });
   assert.equal(stateStore.read().nextRunAt, new Date(2026, 8, 29, 3, 0).toISOString());
 });
 
@@ -358,14 +363,14 @@ test('only one cloud backup runs at a time', async () => {
   const { service, connections, stateStore, maintenance } = await build();
   await connect(connections, 'dropbox');
   const first = service.run('dropbox');
-  await rejects(service.run('dropbox'), 409, /already running/);
-  await rejects(service.run('dropbox', 'scheduled'), 409, /already running/);
+  await rejects(service.run('dropbox'), 409, 'CLOUD_BACKUP_RUNNING');
+  await rejects(service.run('dropbox', 'scheduled'), 409, 'CLOUD_BACKUP_RUNNING');
   assert.equal((await first).ok, true);
-  assert.match(stateStore.read().history[1].error, /Skipped because another cloud backup was running/);
+  assert.deepEqual(stateStore.read().history[1].error, { code: 'CLOUD_BACKUP_SKIPPED', params: {} });
 
   // The snapshot respects the restore and reset lock like a download does.
   maintenance.acquire('restore');
-  await rejects(service.run('dropbox'), 503, /being restored or reset/);
+  await rejects(service.run('dropbox'), 503, 'BACKUP_DOWNLOAD_UNAVAILABLE');
   maintenance.release();
 });
 
@@ -386,30 +391,31 @@ test('provider failures are normalized into application errors', async () => {
   const hanging = createServer(() => {});
   await new Promise(resolve => hanging.listen(0, '127.0.0.1', resolve));
   const http = new CloudStorageHttp({ label: 'Dropbox' });
-  await rejects(http.send(`http://127.0.0.1:${hanging.address().port}/`, { timeoutMs: 50 }), 504, /did not answer in time/, 'timeout');
+  await rejects(http.send(`http://127.0.0.1:${hanging.address().port}/`, { timeoutMs: 50 }), 504, { code: 'CLOUD_TIMEOUT', params: { provider: 'Dropbox' } }, 'timeout');
   hanging.closeAllConnections();
   await new Promise(resolve => hanging.close(resolve));
-  await rejects(http.send(`http://127.0.0.1:${hanging.address()?.port || 1}/`), 502, /Could not reach Dropbox/, 'unavailable');
+  await rejects(http.send(`http://127.0.0.1:${hanging.address()?.port || 1}/`), 502, { code: 'CLOUD_UNREACHABLE', params: { provider: 'Dropbox' } }, 'unavailable');
 
-  assert.throws(() => http.fail({ status: 429 }, 'list the backups'), error => error.code === 'rate_limited' && error.status === 503);
-  assert.throws(() => http.fail({ status: 503 }, 'list the backups'), error => error.code === 'unavailable');
-  assert.throws(() => http.fail({ status: 401 }, 'list the backups'), error => error.code === 'unauthorized');
-  assert.throws(() => http.failToken({ status: 400, body: { error: 'invalid_grant' } }, 'refresh'), error => error.code === 'auth_revoked');
-  assert.throws(() => http.failToken({ status: 401, body: { error: 'invalid_client' } }, 'refresh'), error => error.code === 'not_configured');
+  assert.throws(() => http.fail({ status: 429 }, 'list the backups'), error => error.reason === 'rate_limited' && error.status === 503);
+  assert.throws(() => http.fail({ status: 503 }, 'list the backups'), error => error.reason === 'unavailable');
+  assert.throws(() => http.fail({ status: 401 }, 'list the backups'), error => error.reason === 'unauthorized');
+  assert.throws(() => http.failToken({ status: 400, body: { error: 'invalid_grant' } }, 'refresh'), error => error.reason === 'auth_revoked');
+  assert.throws(() => http.failToken({ status: 401, body: { error: 'invalid_client' } }, 'refresh'), error => error.reason === 'not_configured');
 
   const drive = new GoogleDriveStorageProvider({ endpoints: googleDriveConfig.endpoints, app: () => googleDriveConfig });
-  assert.throws(() => drive.fail({ status: 403, body: { error: { errors: [{ reason: 'storageQuotaExceeded' }] } } }, 'upload the backup'), error => error.code === 'quota');
-  assert.throws(() => drive.fail({ status: 403, body: { error: { errors: [{ reason: 'userRateLimitExceeded' }] } } }, 'upload the backup'), error => error.code === 'rate_limited');
-  assert.throws(() => drive.fail({ status: 404, body: { error: { message: 'File not found' } } }, 'upload the backup'), error => error.code === 'invalid_destination');
-  assert.throws(() => drive.fail({ status: 400, body: {} }, 'upload the backup'), error => error.code === 'upload_failed');
+  assert.throws(() => drive.fail({ status: 403, body: { error: { errors: [{ reason: 'storageQuotaExceeded' }] } } }, 'upload the backup'), error => error.reason === 'quota');
+  assert.throws(() => drive.fail({ status: 403, body: { error: { errors: [{ reason: 'userRateLimitExceeded' }] } } }, 'upload the backup'), error => error.reason === 'rate_limited');
+  assert.throws(() => drive.fail({ status: 404, body: { error: { message: 'File not found' } } }, 'upload the backup'), error => error.reason === 'invalid_destination');
+  assert.throws(() => drive.fail({ status: 400, body: {} }, 'upload the backup'), error => error.reason === 'upload_failed');
   const dropbox = new DropboxStorageProvider({ endpoints: dropboxConfig.endpoints, app: () => dropboxConfig });
-  assert.throws(() => dropbox.fail({ status: 409, body: { error_summary: 'path/no_write_permission/' } }, 'upload the backup'), error => error.code === 'invalid_destination');
+  assert.throws(() => dropbox.fail({ status: 409, body: { error_summary: 'path/no_write_permission/' } }, 'upload the backup'), error => error.reason === 'invalid_destination');
 
   const { connections } = await build();
-  await rejects(connections.withAccess('dropbox', () => {}), 409, /Dropbox is not connected/);
-  await rejects(connections.test('onedrive'), 404, /Unknown cloud storage provider/);
+  await rejects(connections.withAccess('dropbox', () => {}), 409, { code: 'CLOUD_NOT_CONNECTED', params: { provider: 'Dropbox' } });
+  await rejects(connections.test('onedrive'), 404, 'CLOUD_PROVIDER_UNKNOWN');
   const unconfigured = cloudServices(new JsonFileStore({ file: path.join(process.env.DATA_DIR, 'none.json'), defaults: () => ({}) }), {});
-  assert.throws(() => unconfigured.begin('google-drive', ORIGIN), /Google Drive is not configured. Enter its app credentials in Settings → Cloud Backup, or set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET/);
+  assert.throws(() => unconfigured.begin('google-drive', ORIGIN),
+    { status: 409, code: 'CLOUD_NOT_CONFIGURED', params: { provider: 'Google Drive', settings: 'GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET' } });
 });
 
 test('app credentials entered in Settings are stored outside SQLite, masked, and tied to their app', async () => {
@@ -423,11 +429,11 @@ test('app credentials entered in Settings are stored outside SQLite, masked, and
   });
   assert.equal(app('dropbox').source, 'environment');
   assert.equal(app('dropbox').clientSecretMasked, '••••••••cret');
-  assert.throws(() => connections.saveApp('dropbox', { clientId: 'other' }), /set in the server environment/);
-  assert.throws(() => connections.clearApp('dropbox'), /set in the server environment/);
+  assert.throws(() => connections.saveApp('dropbox', { clientId: 'other' }), { status: 409, code: 'CLOUD_APP_FROM_ENVIRONMENT', params: { provider: 'Dropbox' } });
+  assert.throws(() => connections.clearApp('dropbox'), { status: 409, code: 'CLOUD_APP_FROM_ENVIRONMENT', params: { provider: 'Dropbox' } });
 
-  assert.throws(() => connections.saveApp('google-drive', { clientId: 'ui-client.apps.googleusercontent.com' }), /Enter the Google Drive client secret/);
-  assert.throws(() => connections.saveApp('google-drive', { clientId: 'has spaces', clientSecret: 'x' }), /valid Google Drive client ID/);
+  assert.throws(() => connections.saveApp('google-drive', { clientId: 'ui-client.apps.googleusercontent.com' }), { status: 400, code: 'CLOUD_APP_SECRET_REQUIRED', params: { provider: 'Google Drive' } });
+  assert.throws(() => connections.saveApp('google-drive', { clientId: 'has spaces', clientSecret: 'x' }), { status: 400, code: 'CLOUD_APP_ID_INVALID', params: { provider: 'Google Drive' } });
   connections.saveApp('google-drive', { clientId: ' ui-client.apps.googleusercontent.com ', clientSecret: 'ui-google-secret-4321' });
   assert.deepEqual(app('google-drive'), {
     source: 'settings', clientId: 'ui-client.apps.googleusercontent.com', hasClientSecret: true, clientSecretMasked: '••••••••4321',
@@ -440,22 +446,22 @@ test('app credentials entered in Settings are stored outside SQLite, masked, and
   // A blank secret keeps the saved one for the same app; another client ID drops it.
   connections.saveApp('google-drive', { clientId: 'ui-client.apps.googleusercontent.com', clientSecret: '' });
   assert.equal(app('google-drive').clientSecretMasked, '••••••••4321');
-  assert.throws(() => connections.saveApp('google-drive', { clientId: 'another.apps.googleusercontent.com' }), /Enter the Google Drive client secret/);
+  assert.throws(() => connections.saveApp('google-drive', { clientId: 'another.apps.googleusercontent.com' }), { status: 400, code: 'CLOUD_APP_SECRET_REQUIRED', params: { provider: 'Google Drive' } });
 
   // The saved credentials are what the connection uses, and they are locked while connected.
   const { authorizationUrl } = connections.begin('google-drive', ORIGIN);
   assert.equal(new URL(authorizationUrl).searchParams.get('client_id'), 'ui-client.apps.googleusercontent.com');
   await connect(connections, 'google-drive');
   assert.ok(stub.requests.some(request => request.path === '/google/token'));
-  assert.throws(() => connections.saveApp('google-drive', { clientId: 'another.apps.googleusercontent.com', clientSecret: 'x' }), /Disconnect Google Drive before changing its client ID/);
-  assert.throws(() => connections.clearApp('google-drive'), /Disconnect Google Drive before removing its app credentials/);
+  assert.throws(() => connections.saveApp('google-drive', { clientId: 'another.apps.googleusercontent.com', clientSecret: 'x' }), { status: 409, code: 'CLOUD_APP_ID_LOCKED', params: { provider: 'Google Drive' } });
+  assert.throws(() => connections.clearApp('google-drive'), { status: 409, code: 'CLOUD_APP_IN_USE', params: { provider: 'Google Drive' } });
   connections.saveApp('google-drive', { clientId: 'ui-client.apps.googleusercontent.com', clientSecret: 'rotated-secret-9999' });
   assert.equal(app('google-drive').clientSecretMasked, '••••••••9999');
 
   await connections.disconnect('google-drive');
   connections.clearApp('google-drive');
   assert.equal(app('google-drive').source, null);
-  assert.throws(() => connections.begin('google-drive', ORIGIN), /Google Drive is not configured/);
+  assert.throws(() => connections.begin('google-drive', ORIGIN), { code: 'CLOUD_NOT_CONFIGURED' });
   assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).apps['google-drive'], undefined);
 });
 
@@ -510,7 +516,8 @@ test('the cloud backup API connects, backs up, keeps secrets on the server, and 
     assert.equal(state.providers[0].redirectUri, null);
     const refused = await fetch(`${base}/api/cloud-backup/providers/google-drive/connect`, { method: 'POST' });
     assert.equal(refused.status, 409);
-    assert.match((await refused.json()).error, /GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET/);
+    assert.deepEqual((await refused.json()).error,
+      { code: 'CLOUD_NOT_CONFIGURED', params: { provider: 'Google Drive', settings: 'GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET' } });
 
     // Google Drive gets its app credentials through the API instead; the secret never comes back.
     const putApp = body => fetch(`${base}/api/cloud-backup/providers/google-drive/app`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -544,7 +551,7 @@ test('the cloud backup API connects, backs up, keeps secrets on the server, and 
     assert.equal(forged.headers.get('location'), '/settings?cloud=error');
     state = await overview();
     assert.equal(state.providers[0].connected, false);
-    assert.match(state.status.connectError.message, /could not be verified/);
+    assert.deepEqual(state.status.connectError.error, { code: 'CLOUD_CONNECT_UNVERIFIED', params: {} });
 
     const second = await fetch(`${base}/api/cloud-backup/providers/dropbox/connect`, { method: 'POST' });
     const secondCookie = second.headers.get('set-cookie').split(';')[0];

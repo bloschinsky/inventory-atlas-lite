@@ -18,6 +18,7 @@ const { GitHubReleaseClient } = await import('../server/src/integrations/githubR
 const { UpdateService } = await import('../server/src/services/updateService.js');
 const { createUpdateRoutes } = await import('../server/src/routes/updateRoutes.js');
 const { errorHandler } = await import('../server/src/http/errorHandler.js');
+const { httpError } = await import('../server/src/httpError.js');
 
 const release = (tag, extra = {}) => ({
   tag_name: tag,
@@ -47,9 +48,9 @@ const service = (overrides = {}) => new UpdateService({
   ...overrides
 });
 
-const rejects = (work, status, message) => assert.rejects(work, error => {
+const rejects = (work, status, code) => assert.rejects(work, error => {
   assert.equal(error.status, status, `expected status ${status}, received ${error.status}: ${error.message}`);
-  if (message) assert.equal(error.message, message);
+  if (code) assert.equal(error.code, code);
   return true;
 });
 
@@ -120,12 +121,12 @@ test('the release client returns the latest stable release and caches it', async
 test('the release client reports GitHub failures as readable errors', async () => {
   const failing = body => new GitHubReleaseClient({ owner: 'o', repository: 'r', fetchImpl: async () => body });
 
-  await rejects(() => failing(jsonResponse({}, 403)).latestStable(), 503, 'GitHub is rate limiting update checks. Try again later.');
-  await rejects(() => failing(jsonResponse({}, 500)).latestStable(), 502, 'GitHub could not be queried for the latest release.');
-  await rejects(() => failing(jsonResponse({ message: 'Not Found' })).latestStable(), 502, 'GitHub returned an unexpected response.');
+  await rejects(() => failing(jsonResponse({}, 403)).latestStable(), 503, 'GITHUB_RATE_LIMITED');
+  await rejects(() => failing(jsonResponse({}, 500)).latestStable(), 502, 'GITHUB_REQUEST_FAILED');
+  await rejects(() => failing(jsonResponse({ message: 'Not Found' })).latestStable(), 502, 'GITHUB_INVALID_RESPONSE');
 
   const offline = new GitHubReleaseClient({ owner: 'o', repository: 'r', fetchImpl: async () => { throw new Error('network down'); } });
-  await rejects(() => offline.latestStable(), 502, 'Could not reach GitHub to check for updates.');
+  await rejects(() => offline.latestStable(), 502, 'GITHUB_UNREACHABLE');
 
   // A repository without any stable release is not an error; there is simply nothing to offer.
   const empty = new GitHubReleaseClient({ owner: 'o', repository: 'r', fetchImpl: async () => jsonResponse([release('v1.0.0', { draft: true })]) });
@@ -170,19 +171,19 @@ test('the update check compares the running version with the latest stable relea
 
   await rejects(
     () => service({ releaseClient: { latestStable: async () => ({ version: 'nightly' }) } }).check(),
-    502, 'The latest release could not be compared with the running version.'
+    502, 'UPDATE_VERSION_COMPARE_FAILED'
   );
 });
 
 test('deployments without a privileged updater expose no self-update', async () => {
   const docker = service({ deployment: { type: 'docker', canSelfUpdate: false } });
   assert.equal((await docker.check()).canSelfUpdate, false);
-  await rejects(() => docker.apply(), 501, 'This installation cannot update itself automatically.');
+  await rejects(() => docker.apply(), 501, 'UPDATE_UNSUPPORTED');
 
   // A Proxmox installation made before the updater unit existed reports the truth as well.
   const stale = service({ trigger: { isInstalled: () => false, start: () => {} } });
   assert.equal((await stale.check()).canSelfUpdate, false);
-  await rejects(() => stale.apply(), 500, 'The update service is not installed on this system.');
+  await rejects(() => stale.apply(), 500, 'UPDATE_SERVICE_MISSING');
 });
 
 test('applying an update triggers the updater once and reports its progress', async () => {
@@ -202,14 +203,14 @@ test('applying an update triggers the updater once and reports its progress', as
   assert.deepEqual([accepted.fromVersion, accepted.toVersion], ['0.9.0', '0.10.0']);
 
   // A second request while the updater has not reported yet must not start another update.
-  await rejects(() => updating.apply(), 409, 'An update is already running.');
+  await rejects(() => updating.apply(), 409, 'UPDATE_RUNNING');
 
   // Once the updater writes its own status, that is what the interface follows.
   clock += 5000;
   reported.state = 'installing';
   reported.reportedAt = new Date(clock).toISOString();
   assert.equal(updating.status().state, 'installing');
-  await rejects(() => updating.apply(), 409, 'An update is already running.');
+  await rejects(() => updating.apply(), 409, 'UPDATE_RUNNING');
 
   reported.state = 'success';
   clock += 5000;
@@ -241,7 +242,7 @@ test('an updater killed before its final state no longer blocks the next update'
 
   // Within the updater's timeout the state may still be real, so the update stays exclusive.
   assert.equal(orphaned.status().state, 'preparing');
-  await rejects(() => orphaned.apply(), 409, 'An update is already running.');
+  await rejects(() => orphaned.apply(), 409, 'UPDATE_RUNNING');
 
   clock += 60 * 60 * 1000;
   const interrupted = orphaned.status();
@@ -257,7 +258,7 @@ test('an updater killed before its final state no longer blocks the next update'
 });
 
 test('an update is refused when the running version is already the latest', async () => {
-  await rejects(() => service({ appVersion: '0.10.0' }).apply(), 400, 'No newer release is available.');
+  await rejects(() => service({ appVersion: '0.10.0' }).apply(), 400, 'UPDATE_NOT_AVAILABLE');
 });
 
 test('the trigger writes one marker file and nothing else', async () => {
@@ -299,14 +300,17 @@ test('the update API answers with the documented statuses', async t => {
   assert.equal((await post()).status, 202);
 
   // A page on another site must not be able to start an update.
-  assert.equal((await post({ 'sec-fetch-site': 'cross-site' })).status, 403);
+  const foreign = await post({ 'sec-fetch-site': 'cross-site' });
+  assert.equal(foreign.status, 403);
+  assert.deepEqual(await foreign.json(), { error: { code: 'UPDATE_FOREIGN_ORIGIN', params: {} } });
   assert.equal((await post({ origin: 'https://attacker.invalid' })).status, 403);
   assert.equal((await post({ 'sec-fetch-site': 'same-origin' })).status, 202);
 
-  for (const status of [409, 400, 501, 500]) {
-    apply = async () => { throw Object.assign(new Error('Refused.'), { status }); };
+  // Application errors keep their status and code; the browser translates the code.
+  for (const [status, code] of [[409, 'UPDATE_RUNNING'], [400, 'UPDATE_NOT_AVAILABLE'], [501, 'UPDATE_UNSUPPORTED'], [500, 'UPDATE_START_FAILED']]) {
+    apply = async () => { throw httpError(status, code); };
     const response = await post();
     assert.equal(response.status, status);
-    assert.deepEqual(await response.json(), { error: 'Refused.' });
+    assert.deepEqual(await response.json(), { error: { code, params: {} } });
   }
 });

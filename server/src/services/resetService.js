@@ -50,13 +50,13 @@ export class ResetService {
 
   // Single use: a matching token is consumed before the reset starts, whatever the outcome.
   claimToken(token) {
-    if (typeof token !== 'string' || !token) throw badRequest('The reset token is missing. Open the reset dialog again.');
+    if (typeof token !== 'string' || !token) throw badRequest('RESET_TOKEN_MISSING');
     const pending = this.pending;
     if (!pending || !crypto.timingSafeEqual(pending.hash, hashToken(token))) {
-      throw badRequest('The reset token is invalid or was already used. Open the reset dialog again.');
+      throw badRequest('RESET_TOKEN_INVALID');
     }
     this.pending = null;
-    if (pending.expiresAt <= Date.now()) throw badRequest('The reset token has expired. Open the reset dialog again.');
+    if (pending.expiresAt <= Date.now()) throw badRequest('RESET_TOKEN_EXPIRED');
   }
 
   createCandidate(file) {
@@ -66,7 +66,7 @@ export class ResetService {
       fs.chmodSync(file, 0o600);
     } catch (error) {
       console.error('[reset] fresh database initialization failed', error);
-      throw httpError('The fresh database could not be created. Nothing was changed.', 500);
+      throw httpError(500, 'RESET_FRESH_DATABASE_FAILED');
     }
     try {
       this.maintenance.testFailure('fresh-verify');
@@ -75,7 +75,7 @@ export class ResetService {
       try { assertEmptyCurrentSchema(candidate); } finally { candidate.close(); }
     } catch (error) {
       console.error('[reset] fresh database verification failed', error);
-      throw httpError('The fresh database failed its integrity or schema check. Nothing was changed.', 500);
+      throw httpError(500, 'RESET_FRESH_DATABASE_UNVERIFIED');
     }
   }
 
@@ -90,7 +90,7 @@ export class ResetService {
   async apply(token, confirmation) {
     this.maintenance.assertRecoverable();
     if (confirmation !== RESET_CONFIRMATION_PHRASE) {
-      throw badRequest(`Type ${RESET_CONFIRMATION_PHRASE} to confirm that all inventory data will be removed.`);
+      throw badRequest('RESET_CONFIRMATION_REQUIRED', { phrase: RESET_CONFIRMATION_PHRASE });
     }
     this.claimToken(token);
     this.maintenance.acquire('reset');
@@ -101,7 +101,7 @@ export class ResetService {
     try {
       await this.maintenance.waitForBackupDownloads();
       assertDiskSpace(this.dataDir, 2 * fileSize(this.maintenance.database.path) + 16 * 1024 * 1024,
-        'Not enough free disk space for the safety backup. Nothing was changed.');
+        'RESET_DISK_SPACE');
       safetyPath = await this.maintenance.writeSafetyBackup(this.backupDir, 'pre-reset');
       this.createCandidate(candidatePath);
       await this.maintenance.testPause();
@@ -115,10 +115,9 @@ export class ResetService {
       return { counts, safetyBackup: path.basename(safetyPath) };
     } catch (error) {
       console.error('[reset] reset failed', error);
-      if (stage === 'prepare') throw error.status ? error : httpError('The inventory could not be reset. Nothing was changed.', 500);
-      this.maintenance.recover(safetyPath, 'The reset failed and the previous inventory could not be recovered automatically. The application is stopped for writes; recover the pre-reset backup manually.');
-      const reason = stage === 'swap' ? 'while the database was being replaced' : 'its post-reset health check';
-      throw httpError(`The reset failed ${reason}. The previous inventory was recovered from the safety backup; no data was lost.`, 500);
+      if (stage === 'prepare') throw error.status ? error : httpError(500, 'RESET_FAILED');
+      this.maintenance.recover(safetyPath, 'RESET_RECOVERY_FAILED');
+      throw httpError(500, stage === 'swap' ? 'RESET_ROLLED_BACK_SWAP' : 'RESET_ROLLED_BACK_HEALTH');
     } finally {
       fs.rmSync(candidatePath, { force: true });
       this.maintenance.release();

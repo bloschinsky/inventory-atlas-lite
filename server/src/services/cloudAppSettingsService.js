@@ -38,9 +38,9 @@ export class CloudAppSettingsService {
     return { source, clientId, hasClientSecret: Boolean(clientSecret), clientSecretMasked: mask(clientSecret) };
   }
 
-  static text(value, message) {
+  static text(value, code, provider) {
     const text = typeof value === 'string' ? value.trim() : '';
-    if (!text || text.length > MAX_LENGTH || !idPattern.test(text)) throw httpError(message);
+    if (!text || text.length > MAX_LENGTH || !idPattern.test(text)) throw httpError(400, code, { provider });
     return text;
   }
 
@@ -51,18 +51,18 @@ export class CloudAppSettingsService {
   save(provider, input) {
     const { label, appFields } = provider;
     if (this.fromEnvironment(provider.id)) {
-      throw httpError(`The ${label} app credentials are set in the server environment. Change them there.`, 409);
+      throw httpError(409, 'CLOUD_APP_FROM_ENVIRONMENT', { provider: label });
     }
-    if (!input || typeof input !== 'object' || Array.isArray(input)) throw httpError(`Invalid ${label} app credentials.`);
-    const clientId = CloudAppSettingsService.text(input.clientId, `Enter a valid ${label} ${appFields.idLabel}.`);
+    if (!input || typeof input !== 'object' || Array.isArray(input)) throw httpError(400, 'CLOUD_APP_INVALID', { provider: label });
+    const clientId = CloudAppSettingsService.text(input.clientId, 'CLOUD_APP_ID_INVALID', label);
     const current = this.saved(provider.id);
     let clientSecret = '';
     if (input.clientSecret !== undefined && input.clientSecret !== null && input.clientSecret !== '') {
-      clientSecret = CloudAppSettingsService.text(input.clientSecret, `Enter a valid ${label} ${appFields.secretLabel}.`);
+      clientSecret = CloudAppSettingsService.text(input.clientSecret, 'CLOUD_APP_SECRET_INVALID', label);
     } else if (current?.clientId === clientId) {
       clientSecret = current.clientSecret || '';
     }
-    if (appFields.secretRequired && !clientSecret) throw httpError(`Enter the ${label} ${appFields.secretLabel}.`);
+    if (appFields.secretRequired && !clientSecret) throw httpError(400, 'CLOUD_APP_SECRET_REQUIRED', { provider: label });
     this.store.update(credentials => {
       credentials.apps = { ...credentials.apps, [provider.id]: { clientId, clientSecret } };
     });

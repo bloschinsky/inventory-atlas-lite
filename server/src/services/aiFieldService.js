@@ -1,3 +1,4 @@
+import { errorBody } from '../../../shared/appError.js';
 import { httpError } from '../httpError.js';
 import {
   FIELD_DEFINITION_VERSION, FIELD_TYPES, MAX_BATCH_FIELDS, MAX_FIELD_NAME_LENGTH,
@@ -51,12 +52,11 @@ export class AiFieldService {
   async generateForCategory(categoryId, rawDescription) {
     const category = this.categoryService.requireCategory(categoryId);
     const description = typeof rawDescription === 'string' ? rawDescription.trim() : '';
-    if (!description) throw httpError('Describe the fields you need.');
-    if (description.length > 2000) throw httpError('The description must be 2,000 characters or fewer.');
+    if (!description) throw httpError(400, 'AI_FIELDS_DESCRIPTION_REQUIRED');
+    if (description.length > 2000) throw httpError(400, 'DESCRIPTION_TOO_LONG', { max: 2000 });
 
     const existingFieldNames = this.fields.listNamesByCategory(category.id);
     const { data: document } = await this.ai.generateStructuredData({
-      action: 'generating fields',
       purpose: 'field generation',
       instructions,
       input: JSON.stringify({
@@ -72,13 +72,13 @@ export class AiFieldService {
       task: 'suggest fields'
     });
     if (document && typeof document === 'object' && Array.isArray(document.fields) && !document.fields.length) {
-      throw httpError('The AI did not suggest any fields. Describe the category in more detail and try again.', 422);
+      throw httpError(422, 'AI_NO_FIELDS');
     }
     let drafts;
     try {
       drafts = readFieldDefinitionDocument(document);
     } catch (error) {
-      throw httpError(`The AI returned fields that do not match the supported format. ${error.message}`, 502);
+      throw httpError(502, 'AI_INVALID_FIELDS', { reason: errorBody(error) });
     }
     return { version: FIELD_DEFINITION_VERSION, fields: drafts };
   }

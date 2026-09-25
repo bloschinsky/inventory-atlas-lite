@@ -170,7 +170,7 @@ test('invalid uploads are rejected and leave the active database untouched', asy
 
     const notSqlite = await uploadBackup(Buffer.from('This is a plain text file, not a database.'), 'notes.sqlite');
     assert.equal(notSqlite.status, 400);
-    assert.match(notSqlite.body.error, /not a SQLite database/);
+    assert.equal(notSqlite.body.error.code, 'BACKUP_NOT_SQLITE');
 
     const empty = await uploadBackup(Buffer.alloc(0));
     assert.equal(empty.status, 400);
@@ -180,7 +180,7 @@ test('invalid uploads are rejected and leave the active database untouched', asy
     corrupted.fill(0x7a, 8192, Math.min(corrupted.length, 24576));
     const corruptedResult = await uploadBackup(corrupted);
     assert.equal(corruptedResult.status, 400);
-    assert.match(corruptedResult.body.error, /integrity check|could not be read|not an Inventory Atlas Lite backup/);
+    assert.ok(['BACKUP_INTEGRITY_FAILED', 'BACKUP_UNREADABLE', 'BACKUP_UNOPENABLE', 'BACKUP_NOT_INVENTORY_ATLAS'].includes(corruptedResult.body.error.code));
 
     // A valid SQLite database from an unrelated application.
     const unrelatedPath = path.join(dataDir, 'unrelated.sqlite');
@@ -189,7 +189,7 @@ test('invalid uploads are rejected and leave the active database untouched', asy
     unrelated.close();
     const unrelatedResult = await uploadBackup(await readFile(unrelatedPath), 'other-app.db');
     assert.equal(unrelatedResult.status, 400);
-    assert.match(unrelatedResult.body.error, /not an Inventory Atlas Lite backup/);
+    assert.equal(unrelatedResult.body.error.code, 'BACKUP_NOT_INVENTORY_ATLAS');
 
     // An incomplete inventory schema: the photo table is missing.
     const incompletePath = path.join(dataDir, 'incomplete.sqlite');
@@ -212,12 +212,12 @@ test('invalid uploads are rejected and leave the active database untouched', asy
     newer.close();
     const newerResult = await uploadBackup(await readFile(newerPath));
     assert.equal(newerResult.status, 400);
-    assert.match(newerResult.body.error, /newer version/);
+    assert.equal(newerResult.body.error.code, 'BACKUP_FROM_NEWER_VERSION');
 
     // More than one uploaded file.
     const multiple = await uploadBackup(backup, 'first.sqlite', [['backup', backup, 'second.sqlite']]);
     assert.equal(multiple.status, 400);
-    assert.match(multiple.body.error, /exactly one backup file/);
+    assert.equal(multiple.body.error.code, 'RESTORE_SINGLE_FILE');
 
     // Nothing was staged or changed by any rejected upload.
     assert.deepEqual(stagedFiles(dataDir), []);
@@ -316,7 +316,7 @@ test('restore tokens are single-use, confirmed explicitly, and expire with their
     await new Promise(resolve => setTimeout(resolve, 1500));
     const expired = await applyRestore(expiring.body.restore_token);
     assert.equal(expired.status, 400);
-    assert.match((await expired.json()).error, /expired/);
+    assert.equal((await expired.json()).error.code, 'RESTORE_SESSION_EXPIRED');
     // The staged file of an expired session is removed.
     assert.deepEqual(stagedFiles(dataDir), []);
   } finally {
@@ -337,7 +337,8 @@ test('an upload above the configured limit is refused with 413', async () => {
 
     const response = await uploadBackup(backup);
     assert.equal(response.status, 413);
-    assert.match(response.body.error, /restore limit/);
+    assert.equal(response.body.error.code, 'RESTORE_FILE_TOO_LARGE');
+    assert.equal(typeof response.body.error.params.maxMb, 'number');
     // The partially written upload is cleaned up.
     assert.deepEqual(stagedFiles(dataDir), []);
   } finally {
@@ -360,8 +361,7 @@ test('a failure after the swap rolls the safety backup back automatically', asyn
     const applied = await applyRestore(validated.body.restore_token);
     assert.equal(applied.status, 500);
     const failure = await applied.json();
-    assert.match(failure.error, /previous database was recovered/);
-    assert.ok(!failure.error.includes(dataDir));
+    assert.deepEqual(failure.error, { code: 'RESTORE_ROLLED_BACK', params: {} });
 
     // The original data is back and the application accepts writes again.
     assert.deepEqual(await itemNames(), before);

@@ -65,6 +65,28 @@ test('major pages render their Ukrainian interface', async ({ page }) => {
   await expect(about).toBeHidden();
 });
 
+test('server errors arrive as codes and are shown in the active language', async ({ page, request }) => {
+  const category = await createCategory(request, unique('Shelves'));
+  const box = await createItem(request, { name: unique('Box'), category_id: category.id });
+  for (const name of ['Cable', 'Charger', 'Adapter']) {
+    await createItem(request, { name: unique(name), category_id: category.id, parent_item_id: box.id });
+  }
+  // The API itself never sends text, only the code and its parameters.
+  const refused = await request.delete(`/api/items/${box.id}`);
+  expect(refused.status()).toBe(409);
+  expect(await refused.json()).toEqual({ error: { code: 'ITEM_HAS_CHILDREN', params: { count: 3 } } });
+
+  await inUkrainian(page);
+  await page.goto(`/items/${box.id}`);
+  page.once('dialog', dialog => dialog.accept());
+  await page.getByRole('button', { name: 'Видалити', exact: true }).click();
+  await expect(page.getByRole('alert')).toHaveText('Цей предмет містить 3 предмети. Спершу перемістіть або видаліть їх.');
+
+  await page.evaluate(key => localStorage.setItem(key, 'en'), STORAGE_KEY);
+  await page.goto('/items/999999');
+  await expect(page.getByRole('alert')).toHaveText('Item not found.');
+});
+
 test('Ukrainian formats dates and money but never translates or changes the item itself', async ({ page, request }) => {
   const categoryName = unique('Photo gear');
   const category = await createCategory(request, categoryName, [{ name: 'Mount', type: 'boolean' }]);

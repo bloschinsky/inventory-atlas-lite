@@ -16,7 +16,7 @@ field is informational only: it has no states, no history, and no effect on any 
 - `POST /api/items` and `PUT /api/items/:id` accept `transferred_to`. The value is trimmed; an empty
   or whitespace-only value, `null`, or an omitted value is stored as `NULL`. Values longer than 255
   characters, the limit of the other short base fields, and non-string values are rejected with a
-  `400` `{ "error": "..." }` response. The rule lives in `validateTransferredTo`, which shares its
+  `400` `{ "error": { "code", "params" } }` response. The rule lives in `validateTransferredTo`, which shares its
   implementation with the serial-number rule in `server/src/services/itemValidation.js`.
 - Saving the field never changes `location`, `parent_item_id`, or any other column.
 - Item detail responses and the item list rows include `transferred_to`.

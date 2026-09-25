@@ -17,8 +17,8 @@ export class CustomFieldService {
 
   create(categoryId, input) {
     this.categoryService.requireCategory(categoryId);
-    const name = requiredText(input?.name, 'Field name');
-    if (!allowedTypes.has(input?.type)) throw httpError('Invalid field type.');
+    const name = requiredText(input?.name, 'FIELD_NAME_REQUIRED');
+    if (!allowedTypes.has(input?.type)) throw httpError(400, 'UNSUPPORTED_FIELD_TYPE', { type: String(input?.type ?? '—') });
     return this.fields.insert(categoryId, name, input.type);
   }
 
@@ -31,18 +31,18 @@ export class CustomFieldService {
     try {
       drafts = readFieldDefinitionDocument(document);
     } catch (error) {
-      throw Object.assign(error, { status: 400 });
+      throw error.status ? error : httpError(400, 'INVALID_REQUEST');
     }
     const rows = reviewFieldDefinitions(drafts, this.fields.listNamesByCategory(category.id));
     const blocked = blockingRows(rows);
-    if (blocked.length) throw httpError(blocked[0].message);
+    if (blocked.length) throw httpError(400, blocked[0].error.code, blocked[0].error.params);
     return this.fields.findByIds(this.fields.insertMany(category.id, creatableFields(rows)));
   }
 
   suggestions(fieldId, { search, limit }) {
     const field = this.fields.findById(fieldId);
-    if (!field) throw httpError('Field not found.', 404);
-    if (field.type !== 'text') throw httpError('Suggestions are available for text fields only.');
+    if (!field) throw httpError(404, 'FIELD_NOT_FOUND');
+    if (field.type !== 'text') throw httpError(400, 'SUGGESTIONS_TEXT_ONLY');
     return this.fields.listValueSuggestions(
       field.id,
       String(search || '').trim(),
@@ -52,9 +52,9 @@ export class CustomFieldService {
 
   remove(fieldId, confirmed) {
     const field = this.fields.findWithValueCount(fieldId);
-    if (!field) throw httpError('Field not found.', 404);
+    if (!field) throw httpError(404, 'FIELD_NOT_FOUND');
     if (field.value_count && !confirmed) {
-      throw httpError(`This field has ${field.value_count} saved value(s). Confirm deletion to remove them.`, 409);
+      throw httpError(409, 'FIELD_HAS_VALUES', { count: field.value_count });
     }
     this.fields.deleteById(fieldId);
   }

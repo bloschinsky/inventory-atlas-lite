@@ -153,11 +153,15 @@ every other write.
 
 ### Error handling
 
-Failures become `{ "error": "…" }` with a stable `code` on the server side: `not_configured` (missing
-or rejected app credentials, `409`), `auth_revoked` (refresh token expired or revoked), `unauthorized`,
-`timeout` (`504`), `unavailable` (unreachable or 5xx), `rate_limited` (`503`), `quota` (`507`),
-`invalid_destination`, `upload_failed`, and `provider_error`. A denied or cancelled consent, an expired
-or forged callback, and a missing refresh token have their own messages.
+Failures become `{ "error": { "code", "params" } }` as described in
+[`api-error-codes.md`](api-error-codes.md), for example `CLOUD_NOT_CONFIGURED` (`409`),
+`CLOUD_ACCESS_REVOKED`, `CLOUD_ACCESS_REJECTED`, `CLOUD_TIMEOUT` (`504`), `CLOUD_UNREACHABLE` and
+`CLOUD_PROVIDER_UNAVAILABLE`, `CLOUD_RATE_LIMITED` (`503`), `CLOUD_QUOTA` (`507`), the folder and upload
+codes, and `CLOUD_REQUEST_FAILED`. The adapters keep their internal classification (`not_configured`,
+`auth_revoked`, `unauthorized`, `timeout`, `unavailable`, `rate_limited`, `quota`, `invalid_destination`,
+`upload_failed`, `provider_error`) in a separate `reason` property. A denied or cancelled consent, an
+expired or forged callback, and a missing refresh token have their own codes. The history, the cleanup
+result, and the last connection failure are stored as `{ code, params }`.
 
 ## Operator notes
 

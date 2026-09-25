@@ -3,7 +3,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { api, jsonOptions } from '../api.js';
 import { setAiCapabilities } from '../capabilities.js';
-import { SUPPORTED_LOCALES, setLocale } from '../i18n/index.js';
+import { SUPPORTED_LOCALES, setLocale, translateNotice } from '../i18n/index.js';
 import CloudBackupSettings from '../components/CloudBackupSettings.vue';
 import PageHeader from '../components/PageHeader.vue';
 import { AI_PROVIDERS, aiProvider, isLocalNetworkHost } from '../../../shared/aiProviders.js';
@@ -114,7 +114,7 @@ async function testConnection() {
   testResult.value = null;
   try {
     const result = await api('/api/ai/test', jsonOptions('POST', connectionForm()));
-    testResult.value = { ok: true, message: result.message };
+    testResult.value = { ok: true, message: translateNotice(result.notice) };
     if (result.models.length) { modelError.value = ''; showModels(result.models); }
   } catch (caught) {
     testResult.value = { ok: false, message: caught.message };

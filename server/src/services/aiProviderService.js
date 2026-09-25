@@ -20,29 +20,29 @@ export class AiProviderService {
     const connection = this.settingsService.connection(form);
     try {
       const models = await this.createProvider(connection).listModels();
-      return { message: `Connected to ${connection.label}. ${models.length === 1 ? '1 model is' : `${models.length} models are`} available.`, models };
+      return { notice: { code: 'AI_CONNECTED', params: { provider: connection.label, count: models.length } }, models };
     } catch (error) {
       // The endpoint answered, so it is reachable; it just cannot say which models it has.
-      if (error.listUnsupported) return { message: `Connected to ${connection.label}, but it does not list its models. Enter the model ID manually.`, models: [] };
+      if (error.listUnsupported) return { notice: { code: 'AI_CONNECTED_NO_MODEL_LIST', params: { provider: connection.label } }, models: [] };
       throw error;
     }
   }
 
   // Fails fast, before a feature does any other work, when AI cannot run at all.
-  assertReady(action) {
-    this.settingsService.requireUsableSettings(action);
+  assertReady() {
+    this.settingsService.requireUsableSettings();
   }
 
   /*
     `image` is `{ buffer, mimeType }` or null. A model that is known not to read images is refused
     before anything is sent; an unknown one is tried, and its refusal is reported the same way.
   */
-  async generateStructuredData({ action, purpose, image = null, ...request }) {
-    const settings = this.settingsService.requireUsableSettings(action);
+  async generateStructuredData({ purpose, image = null, ...request }) {
+    const settings = this.settingsService.requireUsableSettings();
     const provider = this.createProvider({ provider: settings.provider, label: settings.label, baseUrl: settings.baseUrl, apiKey: settings.apiKey });
     const capabilities = settings.imageInput === 'auto' && image ? await provider.modelCapabilities(settings.model) : {};
     const imageInput = settings.imageInput === 'auto' ? capabilities.imageInput : settings.imageInput === 'supported';
-    if (image && imageInput === false) throw httpError('The selected model does not support image input.', 422);
+    if (image && imageInput === false) throw httpError(422, 'AI_IMAGE_UNSUPPORTED');
 
     const started = Date.now();
     const log = details => console.info('AI request', { purpose, provider: settings.provider, model: settings.model, image: Boolean(image), durationMs: Date.now() - started, ...details });

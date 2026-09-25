@@ -82,10 +82,10 @@ export class DropboxStorageProvider {
   fail(response, task) {
     const summary = String(response.body?.error_summary || '');
     if (/insufficient_space|insufficient_quota/.test(summary)) {
-      throw cloudError('Dropbox is full. Free up space or choose a smaller retention, then try again.', 507, 'quota');
+      throw cloudError(507, 'CLOUD_QUOTA', 'quota', { provider: 'Dropbox' });
     }
     if (/malformed_path|disallowed_name|no_write_permission|conflict/.test(summary)) {
-      throw cloudError('Dropbox refused the backup folder. Check that the app still has App folder access.', 502, 'invalid_destination');
+      throw cloudError(502, 'DROPBOX_FOLDER_REFUSED', 'invalid_destination');
     }
     this.http.fail(response, task, task === 'upload the backup' ? 'upload_failed' : 'provider_error');
   }
@@ -121,13 +121,13 @@ export class DropboxStorageProvider {
     for await (const chunk of fileChunks(file, this.chunkBytes)) {
       if (sessionId === null) {
         sessionId = (await this.content(accessToken, 'files/upload_session/start', { close: false }, chunk.bytes))?.session_id;
-        if (!sessionId) throw cloudError('Dropbox did not start the upload.', 502, 'upload_failed');
+        if (!sessionId) throw cloudError(502, 'CLOUD_UPLOAD_NOT_STARTED', 'upload_failed', { provider: 'Dropbox' });
       } else {
         await this.content(accessToken, 'files/upload_session/append_v2', { cursor: { session_id: sessionId, offset: chunk.offset }, close: false }, chunk.bytes);
       }
       size = chunk.offset + chunk.bytes.length;
     }
-    if (sessionId === null) throw cloudError('The backup snapshot is empty.', 500, 'upload_failed');
+    if (sessionId === null) throw cloudError(500, 'BACKUP_SNAPSHOT_EMPTY', 'upload_failed');
     const metadata = await this.content(accessToken, 'files/upload_session/finish', {
       cursor: { session_id: sessionId, offset: size },
       commit: { path: `${FOLDER}/${name}`, mode: 'add', autorename: false, mute: true }

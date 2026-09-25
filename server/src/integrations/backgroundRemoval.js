@@ -2,6 +2,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as ort from 'onnxruntime-node';
 import sharp from 'sharp';
+import { AppError } from '../../../shared/appError.js';
 
 /*
   Local cutout pipeline. The segmentation model is IS-Net (rembg's "isnet-general-use"), a
@@ -83,7 +84,7 @@ async function decodedImage(image) {
       .raw()
       .toBuffer({ resolveWithObject: true });
   } catch {
-    throw Object.assign(new Error('The uploaded image could not be decoded safely.'), { status: 400 });
+    throw new AppError('IMAGE_DECODE_FAILED', {}, 400);
   }
 }
 
@@ -126,7 +127,7 @@ function hysteresisMask(values) {
       stack[top++] = index;
     }
   }
-  if (top === 0) throw new Error('The segmentation model found no distinct subject.');
+  if (top === 0) throw new AppError('BACKGROUND_NO_SUBJECT', {}, 500);
   while (top > 0) {
     const index = stack[--top];
     const count = neighbours(index, around);
@@ -239,7 +240,7 @@ function subjectBounds(alpha, width, height) {
       if (y > bottom) bottom = y;
     }
   }
-  if (right < left || bottom < top) throw new Error('The segmentation model found no visible subject.');
+  if (right < left || bottom < top) throw new AppError('BACKGROUND_NO_SUBJECT', {}, 500);
   return { left, top, width: right - left + 1, height: bottom - top + 1 };
 }
 
@@ -319,7 +320,7 @@ export async function removeBackgroundWithSession(image, session) {
   const result = await session.run({ [inputName]: tensor });
   const output = result[session.outputNames[0]];
   if (!output?.data || output.data.length !== MODEL_SIZE * MODEL_SIZE) {
-    throw new Error('The segmentation model returned an invalid mask.');
+    throw new AppError('BACKGROUND_INVALID_MASK', {}, 500);
   }
   return renderResult(source, silhouette(output.data));
 }

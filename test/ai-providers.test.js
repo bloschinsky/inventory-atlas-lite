@@ -28,10 +28,14 @@ const { OpenAiCompatibleProvider, parseJsonText } = await import('../server/src/
 const settingsPath = () => path.join(process.env.DATA_DIR, `ai-settings-${Math.random().toString(36).slice(2)}.json`);
 const pngBytes = Buffer.from('89504e470d0a1a0a0000000d49484452', 'hex');
 
-// Rejects with an error carrying the expected HTTP status and a message matching `pattern`.
-const rejects = (promise, status, pattern) => assert.rejects(promise, error => {
+// Rejects with the expected HTTP status and `expected`: a stable error code, or the full { code, params } body.
+const matches = (error, expected) => {
+  if (typeof expected === 'string') assert.equal(error.code, expected);
+  else assert.deepEqual({ code: error.code, params: error.params }, expected);
+};
+const rejects = (promise, status, expected) => assert.rejects(promise, error => {
   assert.equal(error.status, status, `expected status ${status}, received ${error.status}: ${error.message}`);
-  assert.match(error.message, pattern);
+  matches(error, expected);
   return true;
 });
 
@@ -72,12 +76,12 @@ test('the provider presets carry their default base URLs and key requirements', 
 
   assert.equal(normalizeBaseUrl(' http://192.168.1.50:11434/v1/ '), 'http://192.168.1.50:11434/v1');
   assert.equal(normalizeBaseUrl('https://openrouter.ai/api/v1'), 'https://openrouter.ai/api/v1');
-  assert.throws(() => normalizeBaseUrl(''), /Base URL is required/);
-  assert.throws(() => normalizeBaseUrl('localhost:11434'), /http:\/\/ or https:\/\//);
-  assert.throws(() => normalizeBaseUrl('ftp://example.com/v1'), /http:\/\/ or https:\/\//);
-  assert.throws(() => normalizeBaseUrl('not a url'), /full URL/);
-  assert.throws(() => normalizeBaseUrl('https://user:secret@example.com/v1'), /credentials/);
-  assert.throws(() => normalizeBaseUrl('https://example.com/v1?key=1'), /query or fragment/);
+  assert.throws(() => normalizeBaseUrl(''), { code: 'BASE_URL_REQUIRED', status: 400 });
+  assert.throws(() => normalizeBaseUrl('localhost:11434'), { code: 'BASE_URL_PROTOCOL' });
+  assert.throws(() => normalizeBaseUrl('ftp://example.com/v1'), { code: 'BASE_URL_PROTOCOL' });
+  assert.throws(() => normalizeBaseUrl('not a url'), { code: 'BASE_URL_INVALID' });
+  assert.throws(() => normalizeBaseUrl('https://user:secret@example.com/v1'), { code: 'BASE_URL_CREDENTIALS' });
+  assert.throws(() => normalizeBaseUrl('https://example.com/v1?key=1'), { code: 'BASE_URL_QUERY' });
 
   for (const host of ['localhost', '127.0.0.1', '192.168.1.50', '10.0.0.2', '172.20.0.1', 'nas.local', 'ollama', '[::1]', '[fd00::5]']) {
     assert.equal(isLocalNetworkHost(host), true, host);
@@ -105,7 +109,7 @@ test('each preset saves its default or overridden base URL with the key it requi
   // Keys are required by the hosted presets: enabling without one is stored as off.
   assert.equal(save({ provider: 'openrouter' }).enabled, false);
   assert.equal(service.publicSettings().baseUrl, 'https://openrouter.ai/api/v1');
-  assert.throws(() => service.requireUsableSettings('generating fields'), /Add an OpenRouter API key in Settings before generating fields\./);
+  assert.throws(() => service.requireUsableSettings(), { status: 409, code: 'AI_API_KEY_MISSING', params: { provider: 'OpenRouter' } });
   const openRouter = save({ provider: 'openrouter', apiKey: 'sk-or-test-abcd' });
   assert.equal(openRouter.enabled, true);
   assert.equal(openRouter.apiKeyMasked, '••••••••abcd');
@@ -120,8 +124,8 @@ test('each preset saves its default or overridden base URL with the key it requi
   assert.equal(save({ provider: 'lmstudio', baseUrl: 'http://10.0.0.8:1234/v1' }).enabled, true);
 
   // A custom endpoint has no default address and carries its own display name.
-  assert.throws(() => save({ provider: 'custom' }), error => error.status === 400 && /Base URL is required/.test(error.message));
-  assert.throws(() => save({ provider: 'custom', baseUrl: 'file:///etc/passwd' }), /http:\/\/ or https:\/\//);
+  assert.throws(() => save({ provider: 'custom' }), { status: 400, code: 'BASE_URL_REQUIRED' });
+  assert.throws(() => save({ provider: 'custom', baseUrl: 'file:///etc/passwd' }), { code: 'BASE_URL_PROTOCOL' });
   const custom = save({ provider: 'custom', displayName: 'vLLM on the NAS', baseUrl: 'https://nas.example.net/v1', imageInput: 'unsupported' });
   assert.deepEqual({ ...custom, hasApiKey: undefined }, {
     enabled: true, provider: 'custom', displayName: 'vLLM on the NAS', baseUrl: 'https://nas.example.net/v1', model: 'some-model',
@@ -129,8 +133,8 @@ test('each preset saves its default or overridden base URL with the key it requi
   });
   assert.equal(service.requireUsableSettings('testing').label, 'vLLM on the NAS');
 
-  assert.throws(() => save({ provider: 'gemini' }), /Choose a supported AI provider/);
-  assert.throws(() => save({ provider: 'ollama', imageInput: 'maybe' }), /Image input must be/);
+  assert.throws(() => save({ provider: 'gemini' }), { code: 'UNSUPPORTED_AI_PROVIDER' });
+  assert.throws(() => save({ provider: 'ollama', imageInput: 'maybe' }), { code: 'INVALID_IMAGE_INPUT' });
 });
 
 test('a saved key belongs to its endpoint and is never sent to another one', () => {
@@ -175,12 +179,12 @@ test('the compatible adapter lists models with capabilities and authenticates on
 
     // Listing is optional: an endpoint without it reports a clear, recognizable error.
     stub.reply = () => ({ status: 404, body: '404 page not found' });
-    await assert.rejects(ollama.listModels(), error => error.listUnsupported === true && /does not support listing models/.test(error.message));
+    await assert.rejects(ollama.listModels(), error => error.listUnsupported === true && error.code === 'AI_MODEL_LIST_UNSUPPORTED');
     stub.reply = () => ({ body: { object: 'list' } });
-    await rejects(ollama.listModels(), 502, /invalid model list/);
+    await rejects(ollama.listModels(), 502, { code: 'AI_INVALID_MODEL_LIST', params: { provider: 'Ollama' } });
     stub.reply = () => ({ status: 401, body: { error: { message: 'Invalid token' } } });
-    await rejects(openRouter.listModels(), 502, /OpenRouter rejected the API key/);
-    await rejects(ollama.listModels(), 502, /Ollama requires an API key/);
+    await rejects(openRouter.listModels(), 502, { code: 'AI_PROVIDER_KEY_REJECTED', params: { provider: 'OpenRouter' } });
+    await rejects(ollama.listModels(), 502, { code: 'AI_PROVIDER_KEY_REQUIRED', params: { provider: 'Ollama' } });
   } finally {
     await stub.close();
   }
@@ -195,22 +199,22 @@ test('the connection test reports reachable, unlisted, and unreachable endpoints
   try {
     stub.reply = () => ({ body: { data: [{ id: 'llava:13b' }, { id: 'qwen2.5:7b' }] } });
     const connected = await service.testConnection({ provider: 'ollama', baseUrl: stub.baseUrl });
-    assert.equal(connected.message, 'Connected to Ollama. 2 models are available.');
+    assert.deepEqual(connected.notice, { code: 'AI_CONNECTED', params: { provider: 'Ollama', count: 2 } });
     assert.deepEqual(connected.models.map(model => model.id), ['llava:13b', 'qwen2.5:7b']);
 
     stub.reply = () => ({ status: 404, body: 'Not Found' });
     const unlisted = await service.testConnection({ provider: 'custom', displayName: 'My Gateway', baseUrl: stub.baseUrl });
-    assert.equal(unlisted.message, 'Connected to My Gateway, but it does not list its models. Enter the model ID manually.');
+    assert.deepEqual(unlisted.notice, { code: 'AI_CONNECTED_NO_MODEL_LIST', params: { provider: 'My Gateway' } });
     // A failed list keeps the provider usable with a manually entered model ID.
-    await rejects(service.listModels({ provider: 'custom', baseUrl: stub.baseUrl }), 502, /Enter the model ID manually/);
+    await rejects(service.listModels({ provider: 'custom', baseUrl: stub.baseUrl }), 502, 'AI_MODEL_LIST_UNSUPPORTED');
 
-    await rejects(service.testConnection({ provider: 'openrouter', baseUrl: stub.baseUrl }), 409, /Enter the OpenRouter API key first/);
-    await rejects(service.testConnection({ provider: 'custom', baseUrl: 'localhost:1234' }), 400, /http:\/\/ or https:\/\//);
+    await rejects(service.testConnection({ provider: 'openrouter', baseUrl: stub.baseUrl }), 409, { code: 'AI_API_KEY_REQUIRED', params: { provider: 'OpenRouter' } });
+    await rejects(service.testConnection({ provider: 'custom', baseUrl: 'localhost:1234' }), 400, 'BASE_URL_PROTOCOL');
   } finally {
     await stub.close();
   }
   // Nothing listens there any more, which is how a wrong host or a stopped server looks.
-  await rejects(service.testConnection({ provider: 'lmstudio', baseUrl: stub.baseUrl }), 502, /Could not reach LM Studio at .*"localhost" means that machine or container/);
+  await rejects(service.testConnection({ provider: 'lmstudio', baseUrl: stub.baseUrl }), 502, 'AI_PROVIDER_UNREACHABLE');
 });
 
 test('the compatible adapter generates structured data and normalizes provider failures', async () => {
@@ -254,21 +258,21 @@ test('the compatible adapter generates structured data and normalizes provider f
     assert.match(parts[1].image_url.url, /^data:image\/png;base64,/);
 
     stub.reply = () => ({ status: 400, body: { error: { message: 'Model does not support images. Please use a model that does.' } } });
-    await rejects(generate({ image: { buffer: pngBytes, mimeType: 'image/png' } }), 422, /^The selected model does not support image input\.$/);
+    await rejects(generate({ image: { buffer: pngBytes, mimeType: 'image/png' } }), 422, 'AI_IMAGE_UNSUPPORTED');
     stub.reply = () => ({ status: 404, body: { error: { message: 'model "missing:7b" not found, try pulling it first' } } });
-    await rejects(generate({ model: 'missing:7b' }), 502, /LM Studio does not know the model "missing:7b"/);
+    await rejects(generate({ model: 'missing:7b' }), 502, { code: 'AI_MODEL_NOT_FOUND', params: { provider: 'LM Studio', model: 'missing:7b' } });
     stub.reply = () => ({ status: 404, body: '404 page not found' });
-    await rejects(generate(), 502, /no compatible API at .* usually ends in \/v1/);
+    await rejects(generate(), 502, 'AI_PROVIDER_NO_API');
     stub.reply = () => ({ status: 429, body: { error: { message: 'slow down' } } });
-    await rejects(generate(), 503, /LM Studio rate limit reached/);
+    await rejects(generate(), 503, { code: 'AI_PROVIDER_RATE_LIMITED', params: { provider: 'LM Studio' } });
     stub.reply = () => ({ status: 500, body: { error: { message: 'CUDA out of memory' } } });
-    await rejects(generate(), 502, /^LM Studio could not answer the question \(HTTP 500\)\. Try again later\.$/);
+    await rejects(generate(), 502, { code: 'AI_PROVIDER_REQUEST_FAILED', params: { provider: 'LM Studio', status: 500 } });
     stub.reply = () => chat('I cannot help with that.');
-    await rejects(generate(), 502, /LM Studio returned an invalid structured response/);
+    await rejects(generate(), 502, 'AI_INVALID_RESPONSE');
     stub.reply = () => chat('');
-    await rejects(generate(), 502, /LM Studio returned no usable result/);
+    await rejects(generate(), 502, { code: 'AI_NO_RESULT', params: { provider: 'LM Studio' } });
     stub.reply = () => 'hang';
-    await rejects(new AiProviderHttp({ label: 'LM Studio', baseUrl: stub.baseUrl, apiKey: '' }).send('models', { timeoutMs: 100 }), 504, /did not answer in time/);
+    await rejects(new AiProviderHttp({ label: 'LM Studio', baseUrl: stub.baseUrl, apiKey: '' }).send('models', { timeoutMs: 100 }), 504, 'AI_PROVIDER_TIMEOUT');
   } finally {
     await stub.close();
   }
@@ -300,7 +304,7 @@ test('the OpenAI adapter keeps the Responses API, strict schema output, and the 
     assert.equal(sent.body.input[0].content[1].detail, 'original');
 
     stub.reply = () => ({ status: 404, body: { error: { message: 'The model `gpt-9` does not exist or you do not have access to it.', code: 'model_not_found' } } });
-    await rejects(provider.generateStructuredData({ model: 'gpt-9', instructions: '', input: '', schema: {}, task: 'answer' }), 502, /OpenAI does not know the model "gpt-9"/);
+    await rejects(provider.generateStructuredData({ model: 'gpt-9', instructions: '', input: '', schema: {}, task: 'answer' }), 502, { code: 'AI_MODEL_NOT_FOUND', params: { provider: 'OpenAI', model: 'gpt-9' } });
   } finally {
     await stub.close();
   }
@@ -350,9 +354,9 @@ test('AI Add Fields runs through the provider abstraction and keeps its own vali
 
   // The provider's answer is untrusted: a malformed document is rejected, never passed through.
   answer = { version: 1, fields: [{ name: 'Colour', type: 'select', options: ['Red'] }] };
-  await rejects(aiFieldService.generateForCategory(category.id, 'Old PC cards'), 502, /do not match the supported format/);
+  await rejects(aiFieldService.generateForCategory(category.id, 'Old PC cards'), 502, 'AI_INVALID_FIELDS');
   answer = 'plain text';
-  await rejects(aiFieldService.generateForCategory(category.id, 'Old PC cards'), 502, /do not match the supported format/);
+  await rejects(aiFieldService.generateForCategory(category.id, 'Old PC cards'), 502, 'AI_INVALID_FIELDS');
 });
 
 test('AI Add Item accepts text with any model and photos only with a model that can read them', async () => {
@@ -381,14 +385,14 @@ test('AI Add Item accepts text with any model and photos only with a model that 
   // A model known to be text-only is refused before anything reaches the provider.
   const textOnly = buildFeatures({ settings: { provider: 'openrouter', apiKey: 'sk-or' }, capabilities: { imageInput: false }, reply: () => draft(categoryId) });
   categoryId = textOnly.categoryService.create({ name: 'Audio Cards' }).id;
-  await rejects(textOnly.aiItemAnalysisService.analyze(photo, 'A card'), 422, /^The selected model does not support image input\.$/);
+  await rejects(textOnly.aiItemAnalysisService.analyze(photo, 'A card'), 422, 'AI_IMAGE_UNSUPPORTED');
   assert.equal(textOnly.calls.length, 0);
   assert.equal((await textOnly.aiItemAnalysisService.analyze(null, 'A card')).baseFields.name, 'Sound card');
 
   // The user's own setting wins over detection, in both directions.
   const declared = buildFeatures({ settings: { ...ollama, imageInput: 'unsupported' }, capabilities: { imageInput: true }, reply: () => draft(categoryId) });
   categoryId = declared.categoryService.create({ name: 'Audio Cards' }).id;
-  await rejects(declared.aiItemAnalysisService.analyze(photo, ''), 422, /does not support image input/);
+  await rejects(declared.aiItemAnalysisService.analyze(photo, ''), 422, 'AI_IMAGE_UNSUPPORTED');
   const forced = buildFeatures({ settings: { ...ollama, imageInput: 'supported' }, capabilities: { imageInput: false }, reply: () => draft(categoryId) });
   categoryId = forced.categoryService.create({ name: 'Audio Cards' }).id;
   await forced.aiItemAnalysisService.analyze(photo, '');
@@ -397,5 +401,5 @@ test('AI Add Item accepts text with any model and photos only with a model that 
   // An invalid structured answer is rejected by the existing draft validation.
   const invalid = buildFeatures({ settings: ollama, reply: () => ({ name: 'Just a name' }) });
   invalid.categoryService.create({ name: 'Audio Cards' });
-  await rejects(invalid.aiItemAnalysisService.analyze(null, 'A card'), 502, /invalid structured response/);
+  await rejects(invalid.aiItemAnalysisService.analyze(null, 'A card'), 502, 'AI_INVALID_RESPONSE');
 });

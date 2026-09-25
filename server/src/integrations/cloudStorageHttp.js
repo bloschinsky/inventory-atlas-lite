@@ -1,8 +1,11 @@
 import fs from 'node:fs/promises';
 import { httpError } from '../httpError.js';
 
-// A normalized provider failure: the message is safe to show, `code` lets callers react to it.
-export const cloudError = (message, status, code) => Object.assign(httpError(message, status), { code });
+/*
+  A normalized provider failure: `code` and `params` are what the API answers with, `reason` is the
+  internal classification callers react to (a refused token is retried once after a refresh).
+*/
+export const cloudError = (status, code, reason, params = {}) => Object.assign(httpError(status, code, params), { reason });
 
 // Short request timeout for API calls; an upload chunk may take much longer on a slow uplink.
 export const API_TIMEOUT_MS = 30_000;
@@ -44,10 +47,10 @@ export class CloudStorageHttp {
       response = await fetch(url, { method, headers, body, redirect: 'manual', signal: AbortSignal.timeout(timeoutMs) });
     } catch (error) {
       if (error.name === 'TimeoutError' || error.name === 'AbortError') {
-        throw cloudError(`${this.label} did not answer in time. Try again later.`, 504, 'timeout');
+        throw cloudError(504, 'CLOUD_TIMEOUT', 'timeout', { provider: this.label });
       }
       console.warn('Cloud storage provider unreachable', { provider: this.label, reason: error.cause?.code || error.message });
-      throw cloudError(`Could not reach ${this.label}. Check the server's internet connection and try again.`, 502, 'unavailable');
+      throw cloudError(502, 'CLOUD_UNREACHABLE', 'unavailable', { provider: this.label });
     }
     const text = await response.text().catch(() => '');
     let parsed = null;
@@ -67,22 +70,23 @@ export class CloudStorageHttp {
   failToken(response, task) {
     console.warn('Cloud storage OAuth error', { provider: this.label, status: response.status, task, error: response.body?.error });
     if (response.body?.error === 'invalid_grant') {
-      throw cloudError(`${this.label} access has expired or was revoked. Disconnect and connect ${this.label} again.`, 502, 'auth_revoked');
+      throw cloudError(502, 'CLOUD_ACCESS_REVOKED', 'auth_revoked', { provider: this.label });
     }
     if (response.body?.error === 'invalid_client' || response.body?.error === 'unauthorized_client') {
-      throw cloudError(`${this.label} rejected this server's app credentials. Check the configured client ID and secret.`, 502, 'not_configured');
+      throw cloudError(502, 'CLOUD_APP_REJECTED', 'not_configured', { provider: this.label });
     }
     this.fail(response, task);
   }
 
   // The failures that mean the same for every provider; adapters handle their own details first.
-  fail(response, task, code = 'provider_error') {
+  fail(response, task, reason = 'provider_error') {
     console.warn('Cloud storage provider error', { provider: this.label, status: response.status, task });
     const { status } = response;
-    if (status === 401) throw cloudError(`${this.label} rejected the stored access. Disconnect and connect ${this.label} again.`, 502, 'unauthorized');
-    if (status === 429) throw cloudError(`${this.label} rate limit reached. Try again later.`, 503, 'rate_limited');
-    if (status === 408 || status === 504) throw cloudError(`${this.label} did not answer in time. Try again later.`, 504, 'timeout');
-    if (status >= 500) throw cloudError(`${this.label} is unavailable right now (HTTP ${status}). Try again later.`, 502, 'unavailable');
-    throw cloudError(`${this.label} could not ${task} (HTTP ${status}).`, 502, code);
+    const provider = this.label;
+    if (status === 401) throw cloudError(502, 'CLOUD_ACCESS_REJECTED', 'unauthorized', { provider });
+    if (status === 429) throw cloudError(503, 'CLOUD_RATE_LIMITED', 'rate_limited', { provider });
+    if (status === 408 || status === 504) throw cloudError(504, 'CLOUD_TIMEOUT', 'timeout', { provider });
+    if (status >= 500) throw cloudError(502, 'CLOUD_PROVIDER_UNAVAILABLE', 'unavailable', { provider, status });
+    throw cloudError(502, 'CLOUD_REQUEST_FAILED', reason, { provider, status });
   }
 }

@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { IconBrandDropbox, IconBrandGoogleDrive } from '@tabler/icons-vue';
 import { api, jsonOptions } from '../api.js';
-import { formatDateTime } from '../i18n/index.js';
+import { formatDateTime, translateError, translateNotice } from '../i18n/index.js';
 import CloudAppCredentials from './CloudAppCredentials.vue';
 
 const route = useRoute();
@@ -81,12 +81,12 @@ async function connect(provider) {
 
 const backupNow = provider => act(`backup:${provider.id}`, async () => {
   const result = await api(`/api/cloud-backup/providers/${provider.id}/backup`, { method: 'POST' });
-  const cleanup = result.cleanup && !result.cleanup.ok ? ` ${t('cloud.cleanupFailed', { reason: result.cleanup.error })}` : '';
+  const cleanup = result.cleanup && !result.cleanup.ok ? ` ${t('cloud.cleanupFailed', { reason: translateError(result.cleanup.error) })}` : '';
   return t('cloud.uploaded', { provider: provider.label, file: result.file }) + cleanup;
 });
 
 const testConnection = provider => act(`test:${provider.id}`, async () =>
-  (await api(`/api/cloud-backup/providers/${provider.id}/test`, { method: 'POST' })).message);
+  translateNotice((await api(`/api/cloud-backup/providers/${provider.id}/test`, { method: 'POST' })).notice));
 
 const disconnect = provider => act(`disconnect:${provider.id}`, async () => {
   await api(`/api/cloud-backup/providers/${provider.id}`, { method: 'DELETE' });
@@ -116,7 +116,8 @@ onMounted(async () => {
   // The OAuth callback reports only the outcome; the reason for a failure comes from the server status.
   const outcome = route.query.cloud;
   if (outcome === 'connected') notice.value = t('cloud.connectedNotice', { provider: label(route.query.provider) });
-  if (outcome === 'error') error.value = status.value.connectError?.message || t('cloud.connectFailed');
+  const connectError = status.value.connectError?.error;
+  if (outcome === 'error') error.value = connectError ? translateError(connectError) : t('cloud.connectFailed');
   if (outcome) router.replace({ query: {} });
 });
 </script>
@@ -516,7 +517,7 @@ onMounted(async () => {
             class="col-sm-8"
             :class="{ 'text-danger': status.lastAttempt?.error }"
           >
-            {{ status.lastAttempt?.error || $t('common.none') }}
+            {{ status.lastAttempt?.error ? translateError(status.lastAttempt.error) : $t('common.none') }}
           </dd>
           <template v-if="status.lastAttempt?.cleanup">
             <dt class="col-sm-4">
@@ -528,7 +529,7 @@ onMounted(async () => {
             >
               {{ status.lastAttempt.cleanup.ok
                 ? $t('cloud.cleanupRemoved', status.lastAttempt.cleanup.deleted)
-                : $t('cloud.cleanupError', { reason: status.lastAttempt.cleanup.error }) }}
+                : $t('cloud.cleanupError', { reason: translateError(status.lastAttempt.cleanup.error) }) }}
             </dd>
           </template>
           <dt class="col-sm-4">
