@@ -138,22 +138,37 @@ separate fields, and they keep separate value suggestions.
 ### Read and filter the Dashboard
 
 1. Open **Dashboard**, the application's default landing page. Its four summary cards show the
-   total item count, the percentage and counts of items with and without photos, physical placement,
-   and items added during the rolling last 30 days.
-2. Use **Category** to limit those four cards and the **Condition breakdown** to one category. The
-   selection is stored in the page URL, so a reload or copied link preserves it. Press **Reset** to
-   return to **All categories**.
-3. **Items by category** always represents the complete inventory for context. The selected category
-   is highlighted; select a visible category bar to apply it as the filter. Only the six largest
-   categories are shown separately, with smaller groups combined under **Other**; an actively
-   selected smaller category remains visible.
-4. **Placement status** counts each item exactly once: first as **Inside a container**, otherwise as
+   total item count, a photo coverage gauge with the counts of items with and without photos, a
+   placement bar with its three counts, and the items added during the rolling last 30 days with a
+   small chart of each day. Hover or tap a chart for its tooltip; the important numbers are always
+   also shown as text.
+2. Use **Category** to limit every card except **Items by category** to one category. The selection
+   is stored in the page URL, so a reload or copied link preserves it. Press **Reset** to return to
+   **All categories**.
+3. **Items by category** is a treemap that always represents the complete inventory for context.
+   Click a category tile, or press one of the category buttons below the treemap (they also work with
+   the keyboard), to apply it as the filter; the selected category stays blue while the others turn
+   gray. Only the six largest categories are shown separately, with smaller groups combined under
+   **Other**, which cannot be selected; an actively selected smaller category remains visible.
+4. **Condition breakdown** is a donut chart of the filtered items, with the count of every condition
+   listed below it.
+5. **Placement status** counts each item exactly once: first as **Inside a container**, otherwise as
    **Direct location** when it has location text, or as **Unplaced**. It uses each item's own saved
    location, not the inherited one. Containers themselves remain normal inventory items.
-5. A category with no items displays a normal zero-data view. If loading fails, press **Retry**.
+6. **Field coverage** shows, for Photos, Placement, Condition, Purchase date, Purchase price, and
+   Serial number separately, how many of the filtered items have the field filled in, both as a radar
+   chart and as a list such as `82% (164 / 200)`. A purchase price counts only with both an amount
+   and a currency. There is no combined score.
+7. **Items by location** counts the filtered items by the location the Items list displays: an item
+   inside a container counts at the location of its outermost container. Locations that differ only
+   in capitalization or surrounding spaces are counted together. The seven largest locations are
+   shown, the rest under **Other**, and items without any location under **Unknown**.
+8. A category with no items displays a normal zero-data view. If loading fails, press **Retry**.
 
 The database records `created_at` with SQLite `CURRENT_TIMESTAMP`, which is UTC. The Dashboard uses
-SQLite's UTC clock and includes records whose timestamp is at or after 30 days before the request.
+the server's UTC clock and includes records whose timestamp is at or after 30 days before the
+request. Because that window starts partway through a day, its daily chart has 31 UTC days: the
+partial first day through today.
 
 ### Create and rename a category
 

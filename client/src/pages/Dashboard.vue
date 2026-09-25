@@ -3,8 +3,14 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { api } from '../api.js';
-import { formatNumber } from '../i18n/index.js';
+import { formatDate, formatNumber } from '../i18n/index.js';
+import { theme } from '../theme.js';
+import {
+  categoryTreemapOptions, conditionColors, conditionDonutOptions, fieldCoverageOptions, locationBarOptions,
+  photoCoverageOptions, placementOptions, recentActivityOptions, resolveChartTheme
+} from '../dashboardCharts.js';
 import PageHeader from '../components/PageHeader.vue';
+import DashboardChart from '../components/DashboardChart.vue';
 
 defineOptions({ name: 'InventoryDashboard' });
 
@@ -21,8 +27,6 @@ let controller;
 
 const categoryQuery = computed(() => typeof route.query.categoryId === 'string' ? route.query.categoryId : '');
 const scopeLabel = computed(() => data.value?.scope.categoryName || t('common.allCategories'));
-const categoryMaximum = computed(() => Math.max(0, ...(data.value?.categoryDistribution.map(entry => entry.count) || [])));
-const conditionMaximum = computed(() => Math.max(0, ...(data.value?.conditionDistribution.map(entry => entry.count) || [])));
 
 async function load() {
   const currentRequest = ++requestNumber;
@@ -54,12 +58,12 @@ function categoryChanged() {
 }
 
 function selectCategory(entry) {
-  if (entry.categoryId) applyCategory(entry.categoryId);
+  if (entry?.categoryId) applyCategory(entry.categoryId);
 }
 
 /*
   The server names its summary buckets in English; they are recognized by their keys and shown in the
-  active language. Category names and conditions are user data and stay as they were entered.
+  active language. Category names, conditions, and locations are user data and stay as entered.
 */
 const categoryLabel = entry => (entry.categoryId === null ? t('dashboard.other') : entry.label);
 function conditionLabel(entry) {
@@ -67,10 +71,95 @@ function conditionLabel(entry) {
   if (entry.key === 'not-specified' && entry.label === 'Not specified') return t('dashboard.notSpecified');
   return entry.label;
 }
-
-function barWidth(count, maximum) {
-  return maximum ? `${Math.max(4, (count / maximum) * 100)}%` : '0%';
+function locationLabel(entry) {
+  if (entry.key === '__other__') return t('dashboard.other');
+  if (entry.key === '__unknown__') return t('dashboard.unknown');
+  return entry.label;
 }
+
+// Resolved again whenever the color mode changes, so every chart is redrawn in the new palette.
+const colors = computed(() => theme.value && resolveChartTheme());
+
+const placementSegments = computed(() => [
+  { key: 'insideContainer', label: t('dashboard.insideContainer'), count: data.value.placement.insideContainer },
+  { key: 'directLocation', label: t('dashboard.directLocation'), count: data.value.placement.directLocation },
+  { key: 'unplaced', label: t('dashboard.unplaced'), count: data.value.placement.unplaced }
+]);
+const placementColors = computed(() => [colors.value.primary, colors.value.success, colors.value.neutral]);
+const conditionSwatches = computed(() => conditionColors(colors.value, data.value.conditionDistribution));
+// Zero-count tiles cannot be drawn, so an empty selected category is only offered as a button.
+const treemapEntries = computed(() => data.value.categoryDistribution.filter(entry => entry.count > 0));
+const fieldCoverage = computed(() => data.value.fieldCoverage.map(field => ({
+  ...field,
+  total: data.value.totalItems,
+  label: t(`dashboard.fields.${field.key}`)
+})));
+
+const charts = computed(() => {
+  if (!data.value) return null;
+  const current = data.value;
+  const format = formatNumber;
+  return {
+    photo: photoCoverageOptions({ colors: colors.value, percentage: current.photoCoverage.percentage, format }),
+    placement: placementOptions({ colors: colors.value, segments: placementSegments.value, format }),
+    recent: recentActivityOptions({
+      colors: colors.value, buckets: current.recentActivity, label: t('dashboard.itemsSeries'), formatDate, format
+    }),
+    categories: categoryTreemapOptions({
+      colors: colors.value,
+      entries: treemapEntries.value.map(entry => ({ ...entry, label: categoryLabel(entry) })),
+      label: t('dashboard.itemsSeries'),
+      format,
+      onSelect: selectCategory
+    }),
+    conditions: conditionDonutOptions({
+      colors: colors.value,
+      entries: current.conditionDistribution,
+      labels: current.conditionDistribution.map(conditionLabel),
+      total: current.totalItems,
+      totalLabel: t('dashboard.total'),
+      format
+    }),
+    fields: fieldCoverageOptions({
+      colors: colors.value,
+      fields: fieldCoverage.value,
+      labels: fieldCoverage.value.map(field => field.label),
+      seriesName: t('dashboard.fieldCoverage'),
+      format
+    }),
+    locations: locationBarOptions({
+      colors: colors.value,
+      entries: current.locationDistribution,
+      labels: current.locationDistribution.map(locationLabel),
+      seriesName: t('dashboard.itemsSeries'),
+      format
+    })
+  };
+});
+
+// Chart names carry the values too, so nothing is available only inside the drawing or a tooltip.
+const summary = entries => entries.map(([label, count]) => `${label}: ${formatNumber(count)}`).join(', ');
+const chartLabels = computed(() => {
+  if (!data.value) return null;
+  const current = data.value;
+  return {
+    photo: t('dashboard.chartPhotoCoverage', { percentage: formatNumber(current.photoCoverage.percentage) }),
+    placement: t('dashboard.chartPlacement', { summary: summary(placementSegments.value.map(segment => [segment.label, segment.count])) }),
+    recent: t('dashboard.chartRecentActivity', { n: formatNumber(current.addedLast30Days) }),
+    categories: t('dashboard.chartCategories', { summary: summary(current.categoryDistribution.map(entry => [categoryLabel(entry), entry.count])) }),
+    conditions: t('dashboard.chartConditions', { summary: summary(current.conditionDistribution.map(entry => [conditionLabel(entry), entry.count])) }),
+    fields: t('dashboard.chartFieldCoverage', {
+      summary: fieldCoverage.value.map(field => `${field.label}: ${fieldValue(field)}`).join(', ')
+    }),
+    locations: t('dashboard.chartLocations', { summary: summary(current.locationDistribution.map(entry => [locationLabel(entry), entry.count])) })
+  };
+});
+
+const fieldValue = field => t('dashboard.fieldCoverageValue', {
+  percentage: formatNumber(field.percentage),
+  count: formatNumber(field.count),
+  total: formatNumber(field.total)
+});
 
 watch(categoryQuery, value => {
   selectedCategory.value = value;
@@ -203,7 +292,7 @@ onBeforeUnmount(() => controller?.abort());
     >
       <div class="col-12 col-sm-6 col-xl-3">
         <section
-          class="card h-100"
+          class="card h-100 dashboard-card"
           aria-labelledby="total-items-title"
         >
           <div class="card-body">
@@ -224,7 +313,7 @@ onBeforeUnmount(() => controller?.abort());
       </div>
       <div class="col-12 col-sm-6 col-xl-3">
         <section
-          class="card h-100"
+          class="card h-100 dashboard-card"
           aria-labelledby="photo-coverage-title"
         >
           <div class="card-body">
@@ -234,18 +323,11 @@ onBeforeUnmount(() => controller?.abort());
             >
               {{ $t('dashboard.photoCoverage') }}
             </div>
-            <div class="h1 mb-2">
-              {{ data.photoCoverage.percentage }}%
-            </div>
-            <div
-              class="progress progress-sm mb-2"
-              aria-hidden="true"
-            >
-              <div
-                class="progress-bar bg-primary"
-                :style="{ width: `${data.photoCoverage.percentage}%` }"
-              />
-            </div>
+            <DashboardChart
+              class="dashboard-radial"
+              :options="charts.photo"
+              :label="chartLabels.photo"
+            />
             <div class="d-flex justify-content-between gap-2 small">
               <span>{{ $t('dashboard.withPhotos', { n: formatNumber(data.photoCoverage.withPhotos) }) }}</span>
               <span class="text-secondary">{{ $t('dashboard.withoutPhotos', { n: formatNumber(data.photoCoverage.withoutPhotos) }) }}</span>
@@ -255,7 +337,7 @@ onBeforeUnmount(() => controller?.abort());
       </div>
       <div class="col-12 col-sm-6 col-xl-3">
         <section
-          class="card h-100"
+          class="card h-100 dashboard-card"
           aria-labelledby="placement-title"
         >
           <div class="card-body">
@@ -265,24 +347,38 @@ onBeforeUnmount(() => controller?.abort());
             >
               {{ $t('dashboard.placement') }}
             </div>
-            <div class="dashboard-stat-row">
-              <span>{{ $t('dashboard.insideContainer') }}</span><strong>{{ formatNumber(data.placement.insideContainer) }}</strong>
+            <DashboardChart
+              v-if="data.totalItems"
+              class="dashboard-stacked mb-3"
+              :options="charts.placement"
+              :label="chartLabels.placement"
+            />
+            <div
+              v-else
+              class="text-secondary mb-3"
+            >
+              {{ $t('dashboard.noScopeData') }}
             </div>
-            <div class="dashboard-stat-row">
-              <span>{{ $t('dashboard.directLocation') }}</span><strong>{{ formatNumber(data.placement.directLocation) }}</strong>
-            </div>
-            <div class="dashboard-stat-row">
-              <span>{{ $t('dashboard.unplaced') }}</span><strong>{{ formatNumber(data.placement.unplaced) }}</strong>
+            <div
+              v-for="(segment, index) in placementSegments"
+              :key="segment.key"
+              class="dashboard-stat-row"
+            >
+              <span class="dashboard-legend-label"><span
+                class="dashboard-swatch"
+                :style="{ background: placementColors[index] }"
+                aria-hidden="true"
+              />{{ segment.label }}</span><strong>{{ formatNumber(segment.count) }}</strong>
             </div>
           </div>
         </section>
       </div>
       <div class="col-12 col-sm-6 col-xl-3">
         <section
-          class="card h-100"
+          class="card h-100 dashboard-card"
           aria-labelledby="recent-items-title"
         >
-          <div class="card-body">
+          <div class="card-body d-flex flex-column">
             <div
               id="recent-items-title"
               class="subheader"
@@ -292,21 +388,26 @@ onBeforeUnmount(() => controller?.abort());
             <div class="h1 mb-1">
               {{ formatNumber(data.addedLast30Days) }}
             </div>
-            <div class="text-secondary">
+            <div class="text-secondary mb-2">
               {{ $t('dashboard.rollingWindow') }}
             </div>
+            <DashboardChart
+              class="dashboard-sparkline mt-auto"
+              :options="charts.recent"
+              :label="chartLabels.recent"
+            />
           </div>
         </section>
       </div>
     </div>
 
     <div
-      class="row row-cards"
+      class="row row-cards mb-3"
       :class="{ 'dashboard-is-refreshing': refreshing }"
     >
-      <div class="col-12 col-lg-6">
+      <div class="col-12 col-lg-7">
         <section
-          class="card h-100"
+          class="card h-100 dashboard-card"
           aria-labelledby="category-distribution-title"
         >
           <div class="card-header d-block">
@@ -327,43 +428,48 @@ onBeforeUnmount(() => controller?.abort());
             >
               {{ $t('dashboard.noData') }}
             </div>
-            <div
-              v-for="entry in data.categoryDistribution"
-              :key="`${entry.categoryId}-${entry.label}`"
-              class="dashboard-distribution-row"
-            >
-              <button
-                v-if="entry.categoryId"
-                type="button"
-                class="dashboard-bar-button"
-                :class="{ 'dashboard-bar-selected': entry.selected }"
-                :aria-label="$t('dashboard.filterBy', { category: entry.label, n: entry.count }, entry.count)"
-                :aria-pressed="entry.selected"
-                @click="selectCategory(entry)"
-              >
-                <span class="dashboard-bar-label"><span>{{ entry.label }}</span><strong>{{ formatNumber(entry.count) }}</strong></span>
-                <span
-                  class="dashboard-bar-track"
-                  aria-hidden="true"
-                ><span :style="{ width: barWidth(entry.count, categoryMaximum) }" /></span>
-              </button>
+            <template v-else>
+              <DashboardChart
+                v-if="treemapEntries.length"
+                class="dashboard-treemap mb-3"
+                :options="charts.categories"
+                :label="chartLabels.categories"
+              />
               <div
-                v-else
-                class="dashboard-bar-button dashboard-bar-static"
+                class="dashboard-chips"
+                role="group"
+                :aria-label="$t('dashboard.filterCategories')"
               >
-                <span class="dashboard-bar-label"><span>{{ categoryLabel(entry) }}</span><strong>{{ formatNumber(entry.count) }}</strong></span>
-                <span
-                  class="dashboard-bar-track"
-                  aria-hidden="true"
-                ><span :style="{ width: barWidth(entry.count, categoryMaximum) }" /></span>
+                <template
+                  v-for="entry in data.categoryDistribution"
+                  :key="`${entry.categoryId}-${entry.label}`"
+                >
+                  <button
+                    v-if="entry.categoryId"
+                    type="button"
+                    class="btn btn-sm dashboard-chip"
+                    :class="entry.selected ? 'btn-primary' : 'btn-outline-secondary'"
+                    :aria-label="$t('dashboard.filterBy', { category: entry.label, n: entry.count }, entry.count)"
+                    :aria-pressed="entry.selected"
+                    @click="selectCategory(entry)"
+                  >
+                    <span class="text-truncate">{{ entry.label }}</span><strong>{{ formatNumber(entry.count) }}</strong>
+                  </button>
+                  <span
+                    v-else
+                    class="dashboard-chip dashboard-chip-static text-secondary"
+                  >
+                    <span class="text-truncate">{{ categoryLabel(entry) }}</span><strong>{{ formatNumber(entry.count) }}</strong>
+                  </span>
+                </template>
               </div>
-            </div>
+            </template>
           </div>
         </section>
       </div>
-      <div class="col-12 col-lg-6">
+      <div class="col-12 col-lg-5">
         <section
-          class="card h-100"
+          class="card h-100 dashboard-card"
           aria-labelledby="condition-distribution-title"
         >
           <div class="card-header">
@@ -381,19 +487,109 @@ onBeforeUnmount(() => controller?.abort());
             >
               {{ $t('dashboard.noConditionData') }}
             </div>
-            <div
-              v-for="entry in data.conditionDistribution"
-              :key="entry.key"
-              class="dashboard-distribution-row"
-            >
-              <div class="dashboard-bar-button dashboard-bar-static">
-                <span class="dashboard-bar-label"><span>{{ conditionLabel(entry) }}</span><strong>{{ formatNumber(entry.count) }}</strong></span>
-                <span
-                  class="dashboard-bar-track"
+            <template v-else>
+              <DashboardChart
+                class="dashboard-donut mb-3"
+                :options="charts.conditions"
+                :label="chartLabels.conditions"
+              />
+              <div
+                v-for="(entry, index) in data.conditionDistribution"
+                :key="entry.key"
+                class="dashboard-stat-row"
+              >
+                <span class="dashboard-legend-label"><span
+                  class="dashboard-swatch"
+                  :style="{ background: conditionSwatches[index] }"
                   aria-hidden="true"
-                ><span :style="{ width: barWidth(entry.count, conditionMaximum) }" /></span>
+                /><span class="text-truncate">{{ conditionLabel(entry) }}</span></span><strong>{{ formatNumber(entry.count) }}</strong>
+              </div>
+            </template>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <div
+      class="row row-cards"
+      :class="{ 'dashboard-is-refreshing': refreshing }"
+    >
+      <div class="col-12 col-lg-7">
+        <section
+          class="card h-100 dashboard-card"
+          aria-labelledby="field-coverage-title"
+        >
+          <div class="card-header d-block">
+            <h2
+              id="field-coverage-title"
+              class="card-title"
+            >
+              {{ $t('dashboard.fieldCoverage') }}
+            </h2>
+            <div class="text-secondary small">
+              {{ $t('dashboard.fieldCoverageText') }}
+            </div>
+          </div>
+          <div class="card-body">
+            <div
+              v-if="!data.totalItems"
+              class="text-secondary"
+            >
+              {{ $t('dashboard.noScopeData') }}
+            </div>
+            <div
+              v-else
+              class="row g-3 align-items-center"
+            >
+              <div class="col-12 col-md-7">
+                <DashboardChart
+                  class="dashboard-radar"
+                  :options="charts.fields"
+                  :label="chartLabels.fields"
+                />
+              </div>
+              <div class="col-12 col-md-5">
+                <div
+                  v-for="field in fieldCoverage"
+                  :key="field.key"
+                  class="dashboard-stat-row"
+                >
+                  <span>{{ field.label }}</span><strong>{{ fieldValue(field) }}</strong>
+                </div>
               </div>
             </div>
+          </div>
+        </section>
+      </div>
+      <div class="col-12 col-lg-5">
+        <section
+          class="card h-100 dashboard-card"
+          aria-labelledby="location-distribution-title"
+        >
+          <div class="card-header d-block">
+            <h2
+              id="location-distribution-title"
+              class="card-title"
+            >
+              {{ $t('dashboard.byLocation') }}
+            </h2>
+            <div class="text-secondary small">
+              {{ $t('dashboard.byLocationText') }}
+            </div>
+          </div>
+          <div class="card-body">
+            <div
+              v-if="!data.locationDistribution.length"
+              class="text-secondary"
+            >
+              {{ $t('dashboard.noScopeData') }}
+            </div>
+            <DashboardChart
+              v-else
+              class="dashboard-bars"
+              :options="charts.locations"
+              :label="chartLabels.locations"
+            />
           </div>
         </section>
       </div>

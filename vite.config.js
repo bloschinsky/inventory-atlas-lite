@@ -46,5 +46,7 @@ export default defineConfig({
     __VUE_I18N_LEGACY_API__: false,
     __INTLIFY_PROD_DEVTOOLS__: false
   },
+  // Tabler ships ApexCharts as a UMD bundle; pre-bundling gives the development server its ES module form.
+  optimizeDeps: { include: ['@tabler/core/dist/libs/apexcharts/dist/apexcharts.min.js'] },
   server: { host: '0.0.0.0', proxy: { '/api': `http://127.0.0.1:${apiPort}` } }
 });

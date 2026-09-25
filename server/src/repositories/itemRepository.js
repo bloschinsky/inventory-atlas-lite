@@ -3,7 +3,7 @@ import { containsLike, startsWithLike } from './sql.js';
 
 // Every item is walked down from its top-level container, so one pass labels the whole table with
 // the root that provides its effective location. Items inside a cycle are simply never reached.
-const ROOTS_CTE = `
+export const ROOTS_CTE = `
   WITH RECURSIVE roots(id, root_id) AS (
     SELECT id, id FROM items WHERE parent_item_id IS NULL
     UNION ALL SELECT i.id, r.root_id FROM items i JOIN roots r ON i.parent_item_id = r.id

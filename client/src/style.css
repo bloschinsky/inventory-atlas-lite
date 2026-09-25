@@ -97,14 +97,27 @@ body.app-menu-open { overflow: hidden; }
 .dashboard-filter { flex: 1 1 16rem; max-width: 28rem; min-width: 0; }
 .dashboard-refresh { display: inline-flex; align-items: center; gap: .5rem; min-height: 36px; }
 .dashboard-is-refreshing { opacity: .55; transition: opacity .15s ease; }
-.dashboard-stat-row, .dashboard-bar-label { display: flex; justify-content: space-between; gap: 1rem; }
+.dashboard-stat-row { display: flex; justify-content: space-between; gap: 1rem; }
+.dashboard-stat-row > strong { flex: none; }
 .dashboard-stat-row + .dashboard-stat-row { margin-top: .5rem; }
-.dashboard-distribution-row + .dashboard-distribution-row { margin-top: 1rem; }
-.dashboard-bar-button { display: block; width: 100%; padding: .25rem; color: var(--tblr-body-color); background: transparent; border: var(--tblr-border-width) solid transparent; border-radius: var(--tblr-border-radius); text-align: start; }
-button.dashboard-bar-button:hover, button.dashboard-bar-button:focus-visible, .dashboard-bar-selected { background: var(--tblr-active-bg, var(--tblr-bg-surface-secondary)); border-color: var(--tblr-primary); }
-.dashboard-bar-static { padding-inline: 0; }
-.dashboard-bar-track { display: block; height: .5rem; margin-top: .375rem; overflow: hidden; border-radius: var(--tblr-border-radius-pill); background: var(--tblr-bg-surface-secondary); }
-.dashboard-bar-track > span { display: block; height: 100%; border-radius: inherit; background: var(--tblr-primary); }
+.dashboard-legend-label { display: inline-flex; align-items: center; gap: .5rem; min-width: 0; }
+.dashboard-swatch { flex: none; width: .625rem; height: .625rem; border-radius: 2px; }
+/* A chart is redrawn for a new width only after the resize settles; until then the card clips it. */
+.dashboard-card { overflow: hidden; }
+/* Chart containers reserve their height before ApexCharts loads, so the cards never jump. */
+.dashboard-chart { min-width: 0; max-width: 100%; }
+.dashboard-radial { min-height: 170px; }
+.dashboard-stacked { min-height: 44px; }
+.dashboard-sparkline { min-height: 48px; }
+.dashboard-treemap { min-height: 260px; }
+.dashboard-donut { min-height: 240px; }
+.dashboard-radar { min-height: 280px; }
+/* Radar axis names may use the card padding on a narrow phone instead of being clipped. */
+.dashboard-radar .apexcharts-canvas, .dashboard-radar .apexcharts-svg { overflow: visible; }
+.dashboard-bars { min-height: 160px; }
+.dashboard-chips { display: flex; flex-wrap: wrap; gap: .5rem; }
+.dashboard-chip { display: inline-flex; gap: .5rem; max-width: 100%; min-width: 0; }
+.dashboard-chip-static { align-items: center; padding: .125rem .5rem; font-size: .75rem; }
 
 @media (max-width: 359.98px) {
   .dashboard-toolbar > .btn { flex: 1 1 auto; }

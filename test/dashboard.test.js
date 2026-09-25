@@ -55,6 +55,10 @@ test('dashboard aggregates, filters, normalizes, and truncates inventory data', 
     assert.deepEqual(empty.placement, { insideContainer: 0, directLocation: 0, unplaced: 0 });
     assert.deepEqual(empty.categoryDistribution, []);
     assert.deepEqual(empty.conditionDistribution, []);
+    assert.deepEqual(empty.locationDistribution, []);
+    assert.equal(empty.recentActivity.length, 31);
+    assert.ok(empty.recentActivity.every(bucket => bucket.count === 0));
+    assert.deepEqual(empty.fieldCoverage.map(field => field.percentage), [0, 0, 0, 0, 0, 0]);
 
     const categories = [];
     for (let index = 0; index < 8; index++) {
@@ -100,6 +104,16 @@ test('dashboard aggregates, filters, normalizes, and truncates inventory data', 
     assert.deepEqual(dashboard.placement, { insideContainer: 1, directLocation: 7, unplaced: 28 });
     assert.equal(Object.values(dashboard.placement).reduce((sum, count) => sum + count, 0), dashboard.totalItems);
     assert.equal(dashboard.addedLast30Days, 35);
+    assert.equal(dashboard.recentActivity.reduce((sum, bucket) => sum + bucket.count, 0), 35);
+    assert.deepEqual(dashboard.fieldCoverage.slice(0, 2), [
+      { key: 'photos', count: 1, percentage: 3 },
+      { key: 'placement', count: 8, percentage: 22 }
+    ]);
+    // The contained item inherits Shelf A from its container instead of its own Legacy location.
+    assert.deepEqual(dashboard.locationDistribution, [
+      { key: 'shelf a', label: 'Shelf A', count: 8 },
+      { key: '__unknown__', label: 'Unknown', count: 28 }
+    ]);
     assert.equal(dashboard.categoryDistribution.length, 7);
     assert.equal(dashboard.categoryDistribution.at(-1).label, 'Other');
     assert.equal(dashboard.categoryDistribution.at(-1).count, 3);
@@ -111,6 +125,8 @@ test('dashboard aggregates, filters, normalizes, and truncates inventory data', 
     assert.equal(filtered.categoryDistribution.find(row => row.categoryId === categories[7].id).selected, true);
     assert.equal(filtered.categoryDistribution.find(row => row.categoryId === categories[7].id).count, 1);
     assert.equal(filtered.conditionDistribution[0].label, 'Damaged');
+    assert.equal(filtered.recentActivity.reduce((sum, bucket) => sum + bucket.count, 0), filtered.addedLast30Days);
+    assert.deepEqual(filtered.locationDistribution, [{ key: '__unknown__', label: 'Unknown', count: 1 }]);
 
     const validEmpty = await get(`/api/dashboard?categoryId=${emptyCategory.id}`);
     assert.equal(validEmpty.totalItems, 0);

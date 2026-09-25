@@ -209,7 +209,32 @@
     "byCondition": "Condition breakdown",
     "noConditionData": "No condition data in this scope.",
     "other": "Other",
-    "notSpecified": "Not specified"
+    "notSpecified": "Not specified",
+    "unknown": "Unknown",
+    "total": "Total",
+    "itemsSeries": "Items",
+    "noScopeData": "No items in this scope.",
+    "filterCategories": "Filter the dashboard by category",
+    "fieldCoverage": "Field coverage",
+    "fieldCoverageText": "Share of items in this scope that have each field filled in",
+    "fieldCoverageValue": "{percentage}% ({count} / {total})",
+    "fields": {
+      "photos": "Photos",
+      "placement": "Placement",
+      "condition": "Condition",
+      "purchaseDate": "Purchase date",
+      "purchasePrice": "Purchase price",
+      "serialNumber": "Serial number"
+    },
+    "byLocation": "Items by location",
+    "byLocationText": "Effective location: items inside a container count at the location of the outermost container",
+    "chartPhotoCoverage": "Photo coverage chart: {percentage}% of items have photos",
+    "chartPlacement": "Placement chart. {summary}",
+    "chartRecentActivity": "Daily items added in the rolling 30-day window, {n} in total",
+    "chartCategories": "Treemap of items by category. {summary}",
+    "chartConditions": "Donut chart of items by condition. {summary}",
+    "chartFieldCoverage": "Radar chart of field coverage. {summary}",
+    "chartLocations": "Bar chart of items by location. {summary}"
   },
   "items": {
     "title": "Items",

@@ -25,6 +25,8 @@ item's own saved `location` is never modified and stays the value the form edits
 - When no container in the chain has location text, the location is displayed as the usual `—`.
 - The **Placement status** dashboard metrics are unchanged: they still classify items by their own
   saved location and their container link.
+- The dashboard **Items by location** chart counts items by this inherited location. It reuses the
+  list's `ROOTS_CTE` and root-or-own-location rule, so both show the same value.
 
 ## Implementation overview
 

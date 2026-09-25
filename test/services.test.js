@@ -420,6 +420,138 @@ test('the dashboard summarizes the inventory and its optional category scope', (
   failure(() => dashboardService.overview({ categoryId: '999' }), 404, 'CATEGORY_NOT_FOUND');
 });
 
+// A dashboard service on a fixed clock, so the rolling 30-day window can be asserted exactly.
+const buildDashboardAt = isoNow => {
+  const context = build();
+  context.dashboardService = new DashboardService({
+    dashboardRepository: new DashboardRepository(context.db),
+    categoryRepository: new CategoryRepository(context.db),
+    now: () => new Date(isoNow)
+  });
+  return context;
+};
+
+test('the dashboard reports daily activity for every UTC day of the rolling 30-day window', () => {
+  const { db, categoryService, itemService, dashboardService } = buildDashboardAt('2026-09-25T12:00:00Z');
+  const cameras = categoryService.create({ name: 'Cameras' });
+  const tools = categoryService.create({ name: 'Tools' });
+  const created = [
+    [cameras, '2026-08-26 11:59:59'], // just outside the window
+    [cameras, '2026-08-26 12:00:00'], // the inclusive boundary
+    [cameras, '2026-09-01 08:00:00'],
+    [tools, '2026-09-01 23:59:59'],
+    [cameras, '2026-09-25 11:00:00']
+  ];
+  for (const [index, [category, createdAt]] of created.entries()) {
+    const item = itemService.create({ name: `Item ${index}`, category_id: category.id });
+    db.prepare('UPDATE items SET created_at = ? WHERE id = ?').run(createdAt, item.id);
+  }
+
+  const overview = dashboardService.overview({});
+  assert.equal(overview.addedLast30Days, 4);
+  assert.equal(overview.recentActivity.length, 31);
+  assert.equal(overview.recentActivity[0].date, '2026-08-26');
+  assert.equal(overview.recentActivity.at(-1).date, '2026-09-25');
+  const dates = overview.recentActivity.map(bucket => bucket.date);
+  assert.deepEqual(dates, [...new Set(dates)].sort());
+  assert.deepEqual(overview.recentActivity.filter(bucket => bucket.count).map(bucket => [bucket.date, bucket.count]),
+    [['2026-08-26', 1], ['2026-09-01', 2], ['2026-09-25', 1]]);
+  assert.equal(overview.recentActivity.filter(bucket => bucket.count === 0).length, 28);
+  assert.equal(overview.recentActivity.reduce((sum, bucket) => sum + bucket.count, 0), overview.addedLast30Days);
+
+  const scoped = dashboardService.overview({ categoryId: String(tools.id) });
+  assert.equal(scoped.addedLast30Days, 1);
+  assert.equal(scoped.recentActivity.length, 31);
+  assert.equal(scoped.recentActivity.reduce((sum, bucket) => sum + bucket.count, 0), 1);
+});
+
+test('the dashboard reports the coverage of each useful field separately', () => {
+  const { db, categoryService, itemService, dashboardService } = build();
+  const cameras = categoryService.create({ name: 'Cameras' });
+  const empty = categoryService.create({ name: 'Empty' });
+  const box = itemService.create({ name: 'Box', category_id: cameras.id, location: 'Office', condition: 'Good' });
+  itemService.create({
+    name: 'Camera', category_id: cameras.id, parent_item_id: box.id, condition: ' ',
+    purchase_date: '2026-01-31', purchase_price: { amount: '100', currency: 'usd' }, serial_number: ' SN-1 '
+  });
+  itemService.create({ name: 'Lens', category_id: cameras.id, purchase_date: '2026-02-01' });
+  const loose = itemService.create({ name: 'Strap', category_id: cameras.id });
+  db.prepare("INSERT INTO item_photos (item_id, filename, mime_type, data) VALUES (?, 'a.png', 'image/png', x'00')").run(box.id);
+  db.prepare("INSERT INTO item_photos (item_id, filename, mime_type, data) VALUES (?, 'b.png', 'image/png', x'00')").run(box.id);
+  // Incomplete legacy values do not count: a date SQLite cannot read, and an amount without currency.
+  db.prepare("UPDATE items SET purchase_date = '2026-02-30', purchase_price_amount = '5' WHERE id = ?").run(loose.id);
+
+  const overview = dashboardService.overview({ categoryId: String(cameras.id) });
+  assert.deepEqual(overview.fieldCoverage, [
+    { key: 'photos', count: 1, percentage: 25 },
+    { key: 'placement', count: 2, percentage: 50 },
+    { key: 'condition', count: 1, percentage: 25 },
+    { key: 'purchaseDate', count: 2, percentage: 50 },
+    { key: 'purchasePrice', count: 1, percentage: 25 },
+    { key: 'serialNumber', count: 1, percentage: 25 }
+  ]);
+  assert.equal('score' in overview, false);
+
+  const none = dashboardService.overview({ categoryId: String(empty.id) });
+  assert.equal(none.totalItems, 0);
+  assert.deepEqual(none.fieldCoverage.map(field => [field.key, field.count, field.percentage]), [
+    ['photos', 0, 0], ['placement', 0, 0], ['condition', 0, 0], ['purchaseDate', 0, 0], ['purchasePrice', 0, 0], ['serialNumber', 0, 0]
+  ]);
+  assert.deepEqual(none.locationDistribution, []);
+  assert.equal(none.recentActivity.length, 31);
+});
+
+test('the dashboard groups items by their effective inherited location', () => {
+  const { categoryService, itemService, dashboardService } = build();
+  const gear = categoryService.create({ name: 'Gear' });
+  const other = categoryService.create({ name: 'Other gear' });
+  const cabinet = itemService.create({ name: 'Cabinet', category_id: gear.id, location: 'Office' });
+  const bag = itemService.create({ name: 'Bag', category_id: gear.id, location: 'Garage', parent_item_id: cabinet.id });
+  // The camera's own saved location never overrides the location it inherits from the cabinet.
+  itemService.create({ name: 'Camera', category_id: gear.id, location: 'Attic', parent_item_id: bag.id });
+  itemService.create({ name: 'Desk lamp', category_id: gear.id, location: '  office ' });
+  itemService.create({ name: 'Loose cable', category_id: gear.id });
+  const unplacedBox = itemService.create({ name: 'Unplaced box', category_id: gear.id });
+  itemService.create({ name: 'Charger', category_id: gear.id, location: 'Kitchen', parent_item_id: unplacedBox.id });
+  itemService.create({ name: 'Drill', category_id: other.id, location: 'Garage' });
+
+  const overview = dashboardService.overview({});
+  assert.deepEqual(overview.locationDistribution, [
+    { key: 'office', label: 'Office', count: 4 },
+    { key: 'garage', label: 'Garage', count: 1 },
+    { key: '__unknown__', label: 'Unknown', count: 3 }
+  ]);
+  assert.equal(overview.locationDistribution.reduce((sum, entry) => sum + entry.count, 0), overview.totalItems);
+  // Placement keeps classifying items by their own container link and saved location.
+  assert.deepEqual(overview.placement, { insideContainer: 3, directLocation: 3, unplaced: 2 });
+  assert.equal(Object.values(overview.placement).reduce((sum, count) => sum + count, 0), overview.totalItems);
+
+  const scoped = dashboardService.overview({ categoryId: String(other.id) });
+  assert.deepEqual(scoped.locationDistribution, [{ key: 'garage', label: 'Garage', count: 1 }]);
+  assert.deepEqual(scoped.categoryDistribution.map(row => [row.label, row.count, row.selected]),
+    [['Gear', 7, false], ['Other gear', 1, true]]);
+  assert.equal(itemService.get(bag.id).location, 'Garage');
+});
+
+test('the location distribution keeps seven leading locations and a stable order', () => {
+  const { categoryService, itemService, dashboardService } = build();
+  const category = categoryService.create({ name: 'Places' });
+  const counts = { Zeta: 3, alpha: 3, Beta: 3, Gamma: 2, Delta: 2, Epsilon: 2, Eta: 1, Theta: 1, Iota: 1 };
+  for (const [location, count] of Object.entries(counts)) {
+    for (let index = 0; index < count; index++) {
+      itemService.create({ name: `${location} ${index}`, category_id: category.id, location });
+    }
+  }
+  // The most frequent spelling names a case-insensitive group.
+  itemService.create({ name: 'Upper zeta', category_id: category.id, location: 'ZETA' });
+
+  const { locationDistribution } = dashboardService.overview({});
+  assert.deepEqual(locationDistribution.map(entry => [entry.label, entry.count]), [
+    ['Zeta', 4], ['alpha', 3], ['Beta', 3], ['Delta', 2], ['Epsilon', 2], ['Gamma', 2], ['Eta', 1], ['Other', 2]
+  ]);
+  assert.equal(locationDistribution.at(-1).key, '__other__');
+});
+
 test('the displayed location is inherited from the top-most container', () => {
   const { categoryService, itemService } = build();
   const category = categoryService.create({ name: 'Gear' });

@@ -1,5 +1,15 @@
 [
   {
+    "version": "0.36.0",
+    "date": "2026-09-25",
+    "changes": [
+      "The Dashboard now draws its metrics as charts: a photo coverage gauge, a placement bar, a daily chart of the last 30 days, a category treemap, and a condition donut, in both light and dark mode.",
+      "Click a category tile, or use the category buttons with the keyboard, to filter the Dashboard; every number is still shown as text too.",
+      "New Field coverage card shows how many items have photos, placement, condition, purchase date, purchase price, and serial number filled in, each on its own.",
+      "New Items by location card counts items by the location the Items list shows, so an item inside a box counts at the box's location."
+    ]
+  },
+  {
     "version": "0.35.0",
     "date": "2026-09-25",
     "changes": [

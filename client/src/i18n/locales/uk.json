@@ -209,7 +209,32 @@
     "byCondition": "Розподіл за станом",
     "noConditionData": "У цій вибірці немає даних про стан.",
     "other": "Інше",
-    "notSpecified": "Не вказано"
+    "notSpecified": "Не вказано",
+    "unknown": "Невідомо",
+    "total": "Усього",
+    "itemsSeries": "Предмети",
+    "noScopeData": "У цій вибірці немає предметів.",
+    "filterCategories": "Фільтрувати панель за категорією",
+    "fieldCoverage": "Заповненість полів",
+    "fieldCoverageText": "Частка предметів у цій вибірці, у яких заповнене кожне поле",
+    "fieldCoverageValue": "{percentage}% ({count} / {total})",
+    "fields": {
+      "photos": "Фото",
+      "placement": "Розміщення",
+      "condition": "Стан",
+      "purchaseDate": "Дата покупки",
+      "purchasePrice": "Ціна покупки",
+      "serialNumber": "Серійний номер"
+    },
+    "byLocation": "Предмети за місцем",
+    "byLocationText": "Фактичне місце: предмети в контейнері враховано за місцем найзовнішнього контейнера",
+    "chartPhotoCoverage": "Діаграма покриття фото: {percentage}% предметів мають фото",
+    "chartPlacement": "Діаграма розміщення. {summary}",
+    "chartRecentActivity": "Щоденна кількість доданих предметів за ковзні 30 днів, усього {n}",
+    "chartCategories": "Деревоподібна карта предметів за категоріями. {summary}",
+    "chartConditions": "Кільцева діаграма предметів за станом. {summary}",
+    "chartFieldCoverage": "Радарна діаграма заповненості полів. {summary}",
+    "chartLocations": "Стовпчикова діаграма предметів за місцем. {summary}"
   },
   "items": {
     "title": "Предмети",

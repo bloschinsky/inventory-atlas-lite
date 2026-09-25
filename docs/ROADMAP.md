@@ -21,12 +21,7 @@ Implemented behavior is documented separately in [`features/README.md`](features
    prefilled Add Item draft from an existing item without copying its identity, photos, or container.
    See [`TASK-DUPLICATE-ITEM.md`](issues/TASK-DUPLICATE-ITEM.md).
 
-4. **Dashboard charts and analytics** — Planned. Upgrades the existing Dashboard with Tabler and
-   ApexCharts visualizations while retaining its API, category scope, responsive behavior, and data
-   semantics. See
-   [`TASK-DASHBOARD-CHARTS-AND-ANALYTICS.md`](issues/TASK-DASHBOARD-CHARTS-AND-ANALYTICS.md).
-
-5. **Additional UI languages** — Planned; the English/Ukrainian localization foundation is complete.
+4. **Additional UI languages** — Planned; the English/Ukrainian localization foundation is complete.
    Adds Polish, German, Spanish, French, and Brazilian Portuguese with a central locale registry and
    automated translation-key completeness checks. See
    [`TASK-I18N-ADDITIONAL-LANGUAGES.md`](issues/TASK-I18N-ADDITIONAL-LANGUAGES.md).

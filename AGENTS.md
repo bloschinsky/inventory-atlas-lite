@@ -111,6 +111,9 @@ The project stays small and readable. Do not add:
 - `client/src/itemColumns.js` — Items view column labels, cell text formatting, and its preference storage key.
 - `client/src/useTablePreferences.js` — reusable browser-local table view state: visible columns, sort, reset, and reconciliation with the current columns.
 - `client/src/components/TableColumnPicker.vue` and `SortableHeader.vue` — reusable Columns menu and sortable table header cell.
+- `client/src/pages/Dashboard.vue` — the Dashboard: category scope, KPI cards, charts, and their text values.
+- `client/src/dashboardCharts.js` — on-demand loading of the ApexCharts copy bundled in `@tabler/core`, Tabler color resolution for the active mode, and the options of each Dashboard chart.
+- `client/src/components/DashboardChart.vue` — one ApexCharts instance: creation, in-place updates, and cleanup.
 - `client/src/pages/ItemDetails.vue` — item details, photos, and deletion.
 - `client/src/pages/ItemForm.vue` — item creation/editing, custom field values, and photo uploads.
 - `client/src/pages/PrintLabels.vue` — `/labels/print`: A4 QR label sheets for the selected items, their layout presets, and print styles.
