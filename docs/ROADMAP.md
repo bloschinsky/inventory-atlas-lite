@@ -18,6 +18,26 @@ Implemented behavior is documented separately in [`features/README.md`](features
    automated translation-key completeness checks. See
    [`TASK-I18N-ADDITIONAL-LANGUAGES.md`](issues/TASK-I18N-ADDITIONAL-LANGUAGES.md).
 
+3. **Bulk Replace Field Value** — Planned. Adds previewed, atomic exact-value replacement for
+   repeated text fields and text custom fields without changing unrelated partial matches. See
+   [`TASK-BULK-REPLACE-FIELD-VALUE.md`](issues/TASK-BULK-REPLACE-FIELD-VALUE.md).
+
+4. **Hierarchy, Phase 1: Storage Tree** — Planned. Adds a read-only, expandable storage tree based
+   on the existing containment relationships and effective-location behavior. See
+   [`TASK-HIERARCHY-PHASE-1-STORAGE-TREE.md`](issues/TASK-HIERARCHY-PHASE-1-STORAGE-TREE.md).
+
+5. **Hierarchy, Phase 2: Graph View** — Planned; blocked by Hierarchy, Phase 1. Adds an
+   interactive graph view to the shared hierarchy page without a second containment model. See
+   [`TASK-HIERARCHY-PHASE-2-GRAPH-VIEW.md`](issues/TASK-HIERARCHY-PHASE-2-GRAPH-VIEW.md).
+
+6. **Hierarchy, Phase 3: Drag & Drop** — Planned; blocked by Hierarchy, Phases 1 and 2. Adds safe
+   tree-based containment editing while preserving the existing server-side cycle protection. See
+   [`TASK-HIERARCHY-PHASE-3-DRAG-DROP.md`](issues/TASK-HIERARCHY-PHASE-3-DRAG-DROP.md).
+
+7. **What's New after update** — Planned. Adds a one-time version-aware modal using the same local
+   release-history data as About's Version History. See
+   [`TASK-WHATS-NEW-AFTER-UPDATE.md`](issues/TASK-WHATS-NEW-AFTER-UPDATE.md).
+
 ## Distribution
 
 1. **Windows desktop distribution via Electron** — Planned and unblocked by the completed
