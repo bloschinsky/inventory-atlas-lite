@@ -12,9 +12,13 @@ transaction.
 - Supported fields: **Condition**, **Location**, **Transferred To**, and every custom field of type
   `text`. Name, description, serial number, dates, prices, numbers, booleans, **Stored inside**, and
   **Category** are not offered.
-- A custom field is one concrete field of one category, listed as `Field (Category)`. Same-name fields
-  in other categories are never included, and the preview states the scope
-  (*Only the Brand field of the Cameras category*).
+- **Field** lists Condition, Location, Transferred To, and **Custom text field…**. The core fields
+  always apply to items of every category. **Custom text field…** reveals a **Category** select,
+  which lists only categories that have a text custom field, and a **Custom field** select with only
+  that category's text fields, starting at the first one; it stays disabled until a category is
+  chosen, and nothing can be previewed before a field is chosen. So one custom field of one category
+  is always selected explicitly: same-name fields in other categories are never included, and the
+  preview states the scope (*Only the Brand field of the Cameras category*).
 - **Current value** and **New value** use the shared autocomplete control and list the distinct saved
   values of the selected field with their usage counts (`Garage 17`), most used first, filtered by a
   case-insensitive substring of the typed text.
@@ -58,7 +62,8 @@ transaction.
   `BULK_REPLACE_TEXT_ONLY` for a non-text custom field, `BULK_REPLACE_SOURCE_REQUIRED`,
   `BULK_REPLACE_TARGET_REQUIRED`, `BULK_REPLACE_SAME_VALUE` when both values normalize to the same
   value, and the regular `TRANSFERRED_TO_TOO_LONG` limit for Transferred To.
-- Client: `client/src/components/BulkReplaceValue.vue` is the card on `DataBackup.vue`.
+- Client: `client/src/components/BulkReplaceValue.vue` is the card on `DataBackup.vue`; it builds the
+  category list and the per-category field list from `/api/items/bulk-replace/fields`.
   `FieldAutocomplete.vue` gained an optional `showCounts` prop for the usage-count badges.
 
 ## Verification
@@ -70,5 +75,5 @@ transaction.
   that writes nothing, re-evaluation on apply, rollback when a write fails, effective location
   inheritance after replacing a container's Location, and value discovery.
 - `test/e2e/bulk-replace.spec.js` covers the browser workflow: choosing a counted value, the preview
-  with its warning and affected items, confirmation, the saved and inherited results, the custom-field
-  scope, and the disabled action for a value no item has.
+  with its warning and affected items, confirmation, the saved and inherited results, the custom field
+  chosen through a category that offers only its own text fields, its scope, and the disabled action for a value no item has.

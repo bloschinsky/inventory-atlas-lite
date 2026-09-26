@@ -12,8 +12,10 @@ import FieldAutocomplete from './FieldAutocomplete.vue';
 const { t } = useI18n();
 
 const fields = ref({ core: [], custom: [] });
-// `core:<key>` or `custom:<field id>`.
+// `core:<key>`, or `custom` when a text custom field is chosen through its category.
 const selected = ref('core:location');
+const categoryId = ref('');
+const customFieldId = ref('');
 const from = ref('');
 const to = ref('');
 const preview = ref(null);
@@ -22,17 +24,28 @@ const applying = ref(false);
 const error = ref('');
 const done = ref('');
 
+// Only categories that have a text custom field are offered, and then only that category's fields.
+const categories = computed(() => [...new Map(fields.value.custom.map(custom => [custom.category_id, custom.category_name]))]
+  .map(([id, name]) => ({ id, name }))
+  .sort((a, b) => a.name.localeCompare(b.name)));
+const categoryFields = computed(() => fields.value.custom.filter(custom => custom.category_id === categoryId.value));
+
+// Null until a custom field is chosen; nothing can be previewed without a field.
 const field = computed(() => {
-  const [type, id] = selected.value.split(':');
-  return type === 'core' ? { type, key: id } : { type, fieldId: Number(id) };
+  if (selected.value === 'custom') return customFieldId.value ? { type: 'custom', fieldId: customFieldId.value } : null;
+  return { type: 'core', key: selected.value.slice('core:'.length) };
 });
-const valuesSource = computed(() => `/api/items/bulk-replace/values/${selected.value.replace(':', '/')}`);
+const valuesSource = computed(() => (field.value?.type === 'custom'
+  ? `/api/items/bulk-replace/values/custom/${field.value.fieldId}`
+  : `/api/items/bulk-replace/values/core/${field.value?.key ?? 'location'}`));
 const fieldLabel = target => (target.type === 'core'
   ? t(`items.fields.${target.key}`)
   : t('bulkReplace.customFieldOption', { field: target.name, category: target.category_name }));
 
+// A new category starts at its first field, so the chosen field is always visible in the form.
+watch(categoryId, () => { customFieldId.value = categoryFields.value[0]?.id ?? ''; });
 // A preview belongs to exactly the inputs it was made for.
-watch([selected, from, to], () => { preview.value = null; });
+watch([selected, customFieldId, from, to], () => { preview.value = null; });
 
 onMounted(async () => {
   try {
@@ -112,33 +125,77 @@ async function apply() {
             v-model="selected"
             class="form-select"
           >
-            <optgroup :label="$t('bulkReplace.coreFields')">
-              <option
-                v-for="key in fields.core"
-                :key="key"
-                :value="`core:${key}`"
-              >
-                {{ $t(`items.fields.${key}`) }}
-              </option>
-            </optgroup>
-            <optgroup
-              v-if="fields.custom.length"
-              :label="$t('bulkReplace.customFields')"
+            <option
+              v-for="key in fields.core"
+              :key="key"
+              :value="`core:${key}`"
             >
-              <option
-                v-for="custom in fields.custom"
-                :key="custom.id"
-                :value="`custom:${custom.id}`"
-              >
-                {{ $t('bulkReplace.customFieldOption', { field: custom.name, category: custom.category_name }) }}
-              </option>
-            </optgroup>
+              {{ $t(`items.fields.${key}`) }}
+            </option>
+            <option
+              v-if="fields.custom.length"
+              value="custom"
+            >
+              {{ $t('bulkReplace.customFieldChoice') }}
+            </option>
           </select>
           <div
             v-if="selected === 'core:location'"
             class="form-text"
           >
             {{ $t('bulkReplace.locationHelp') }}
+          </div>
+        </div>
+        <div
+          v-if="selected === 'custom'"
+          class="row"
+        >
+          <div class="col-md-6 mb-3">
+            <label
+              class="form-label"
+              for="bulk-replace-category"
+            >{{ $t('items.fields.category') }}</label>
+            <select
+              id="bulk-replace-category"
+              v-model="categoryId"
+              class="form-select"
+              required
+            >
+              <option
+                value=""
+                disabled
+              >
+                {{ $t('common.selectCategory') }}
+              </option>
+              <option
+                v-for="category in categories"
+                :key="category.id"
+                :value="category.id"
+              >
+                {{ category.name }}
+              </option>
+            </select>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label
+              class="form-label"
+              for="bulk-replace-custom-field"
+            >{{ $t('bulkReplace.customField') }}</label>
+            <select
+              id="bulk-replace-custom-field"
+              v-model="customFieldId"
+              class="form-select"
+              :disabled="!categoryId"
+              required
+            >
+              <option
+                v-for="custom in categoryFields"
+                :key="custom.id"
+                :value="custom.id"
+              >
+                {{ custom.name }}
+              </option>
+            </select>
           </div>
         </div>
         <div class="row">
@@ -152,6 +209,7 @@ async function apply() {
               input-id="bulk-replace-from"
               :source="valuesSource"
               show-counts
+              :disabled="!field"
               required
             />
           </div>
@@ -165,6 +223,7 @@ async function apply() {
               input-id="bulk-replace-to"
               :source="valuesSource"
               show-counts
+              :disabled="!field"
               required
             />
           </div>
@@ -172,7 +231,7 @@ async function apply() {
         <button
           class="btn btn-outline-primary"
           type="submit"
-          :disabled="loading || applying"
+          :disabled="!field || loading || applying"
         >
           {{ loading ? $t('bulkReplace.previewing') : $t('bulkReplace.preview') }}
         </button>

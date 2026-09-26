@@ -3,7 +3,11 @@ import { createCategory, createItem, unique } from './helpers.js';
 
 test('replaces one exact field value after a reviewed preview and confirmation', async ({ page, request }) => {
   const categoryName = unique('Workshop');
-  const category = await createCategory(request, categoryName, [{ name: 'Brand', type: 'text' }]);
+  const category = await createCategory(request, categoryName, [
+    { name: 'Brand', type: 'text' }, { name: 'Model', type: 'text' }, { name: 'Year', type: 'number' }
+  ]);
+  // Another category's text field must not be offered once this category is chosen.
+  const lenses = await createCategory(request, unique('Lenses'), [{ name: 'Mount', type: 'text' }]);
   const [brand] = await (await request.get(`/api/categories/${category.id}/fields`)).json();
   const from = unique('Garage');
   const to = unique('KP Garage');
@@ -54,8 +58,14 @@ test('replaces one exact field value after a reviewed preview and confirmation',
   expect(inside.location).toBeNull();
   expect(inside.effective_location).toBe(to);
 
-  // A custom field is chosen together with its category, and a value no item has cannot be applied.
-  await card.getByLabel('Field', { exact: true }).selectOption({ label: `Brand (${categoryName})` });
+  // A custom field is chosen through its category, which offers only its own text fields, and a
+  // value no item has cannot be applied.
+  await card.getByLabel('Field', { exact: true }).selectOption({ label: 'Custom text field…' });
+  const customField = card.getByLabel('Custom field', { exact: true });
+  await expect(customField).toBeDisabled();
+  await card.getByLabel('Category', { exact: true }).selectOption({ label: categoryName });
+  await expect(customField.getByRole('option')).toHaveText(['Brand', 'Model']);
+  await expect(customField).toHaveValue(String(brand.id));
   await card.getByLabel('Current value').fill('Nikon');
   await card.getByLabel('New value').fill('Canon');
   await card.getByRole('button', { name: 'Preview changes' }).click();
@@ -74,5 +84,5 @@ test('replaces one exact field value after a reviewed preview and confirmation',
   for (const item of [camera, box, drill, lamp, tent, speaker]) {
     expect((await request.delete(`/api/items/${item.id}`)).ok()).toBeTruthy();
   }
-  expect((await request.delete(`/api/categories/${category.id}`)).ok()).toBeTruthy();
+  for (const created of [category, lenses]) expect((await request.delete(`/api/categories/${created.id}`)).ok()).toBeTruthy();
 });

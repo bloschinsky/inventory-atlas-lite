@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.39.1",
+    "date": "2026-09-26",
+    "changes": [
+      "In Replace field value, a custom field is now chosen in two steps: pick Custom text field…, then a category, and only that category's text fields are listed."
+    ]
+  },
+  {
     "version": "0.39.0",
     "date": "2026-09-26",
     "changes": [

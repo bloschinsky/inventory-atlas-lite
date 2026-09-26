@@ -538,9 +538,10 @@ Use this to fix inconsistent naming without editing items one by one, for exampl
 location `Garage` to `KP Garage` everywhere.
 
 1. Open **Data / Backup** and find **Replace field value**.
-2. Choose the **Field**: **Condition**, **Location**, **Transferred To**, or one text custom field.
-   A custom field is listed with its category, for example `Brand (Cameras)`, and only that
-   category's field is changed; a field with the same name in another category is left alone.
+2. Choose the **Field**: **Condition**, **Location**, or **Transferred To** change that value on items
+   of every category. For a text custom field choose **Custom text field…**, then the **Category**;
+   **Custom field** then lists only that category's text fields and starts at the first one. Only
+   that one field is changed; a field with the same name in another category is left alone.
 3. Click into **Current value** to see the values saved for that field with how many items use each,
    and choose one or type it. Enter the replacement in **New value**; it offers the same values.
 4. Press **Preview changes**. Nothing is saved yet. The preview shows the field, both values, the
