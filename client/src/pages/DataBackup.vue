@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { api, jsonOptions } from '../api.js';
 import { formatFileSize } from '../i18n/index.js';
+import BulkReplaceValue from '../components/BulkReplaceValue.vue';
 import PageHeader from '../components/PageHeader.vue';
 import ResetDatabaseDialog from '../components/ResetDatabaseDialog.vue';
 
@@ -332,6 +333,8 @@ async function finishReset(result) {
         </template>
       </div>
     </section>
+
+    <BulkReplaceValue />
 
     <section class="card">
       <div class="card-header">

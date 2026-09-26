@@ -710,6 +710,34 @@
     "whereCopies": "Keep regular copies outside this server. Pre-restore safety backups are written to {restoreDir} next to the live database, and the ten most recent are kept. Pre-reset safety backups are written to {resetDir} and are never removed automatically.",
     "dangerZone": "Danger Zone"
   },
+  "bulkReplace": {
+    "title": "Replace field value",
+    "text": "Change one exact saved value of a field on every item that has it, for example to rename a location. Letter case and surrounding spaces are ignored when values are compared, but a value that only contains the text is never changed: replacing \"Garage\" leaves \"TP Garage\" as it is.",
+    "field": "Field",
+    "coreFields": "Item fields",
+    "customFields": "Custom text fields",
+    "customFieldOption": "{field} ({category})",
+    "from": "Current value",
+    "to": "New value",
+    "locationHelp": "Only each item's own saved location changes. Items stored inside a container keep following its location automatically.",
+    "preview": "Preview changes",
+    "previewing": "Checking…",
+    "previewTitle": "Preview",
+    "scope": "Scope",
+    "customScope": "Only the {field} field of the {category} category",
+    "affected": "{n} item will be changed. | {n} items will be changed.",
+    "existing": "\"{value}\" is already used by {n} item. | \"{value}\" is already used by {n} items.",
+    "additional": "{n} additional item will be changed to this value. | {n} additional items will be changed to this value.",
+    "none": "No items have this value, so nothing would be changed.",
+    "affectedItems": "Affected items",
+    "item": "Item",
+    "savedValue": "Saved value",
+    "shownOf": "Showing the first {shown} of {count} affected items.",
+    "apply": "Replace in {n} item | Replace in {n} items",
+    "applying": "Replacing…",
+    "done": "The value was replaced in {n} item. | The value was replaced in {n} items.",
+    "doneNone": "No item had this value any more, so nothing was changed."
+  },
   "reset": {
     "title": "Reset Inventory Database",
     "text": "Permanently remove all inventory items, photos, categories, custom fields, and item templates, and return Inventory Atlas Lite to a fresh database state.",
@@ -950,7 +978,12 @@
     "UPLOAD_UNEXPECTED_FILE": "The upload contains an unexpected file.",
     "TEMPLATE_CATEGORY_MISSING": "The category of this template no longer exists. Edit the template and choose a category before using it.",
     "TEMPLATE_NAME_REQUIRED": "Template name is required.",
-    "TEMPLATE_NOT_FOUND": "Template not found."
+    "TEMPLATE_NOT_FOUND": "Template not found.",
+    "BULK_REPLACE_UNSUPPORTED_FIELD": "This field does not support bulk replacement.",
+    "BULK_REPLACE_TEXT_ONLY": "Only text fields support bulk replacement, and \"{field}\" is not a text field.",
+    "BULK_REPLACE_SOURCE_REQUIRED": "Enter the current value to replace.",
+    "BULK_REPLACE_TARGET_REQUIRED": "Enter the new value.",
+    "BULK_REPLACE_SAME_VALUE": "The new value is the same as the current value."
   },
   "notices": {
     "AI_CONNECTED": "Connected to {provider}. {count} model is available. | Connected to {provider}. {count} models are available.",

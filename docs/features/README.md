@@ -16,6 +16,7 @@ document describes the current behaviour and its boundaries, not the original pl
 | [Item list columns and sorting](item-list-columns-and-sorting.md) | Choose the Items list columns, including merged same-name custom fields, sort the whole filtered list on the server from the table headers or a compact phone control, and search text custom values. |
 | [Item templates](item-templates.md) | Save user-defined presets of default item values, use one to prefill the regular Add Item form, start one from an existing item, and keep templates safe across deleted fields and categories. |
 | [Duplicate item](duplicate-item.md) | Open the regular Add Item form prefilled from an existing item and save an independent copy without its photos, container, or identity. |
+| [Bulk Replace Field Value](bulk-replace-field-value.md) | Replace one exact saved value of Condition, Location, Transferred To, or one text custom field on every matching item after a previewed confirmation, atomically and without partial matches. |
 | [Nested items](nested-items.md) | Store an item inside another item and browse its direct contents. |
 | [Effective location inheritance](effective-location-inheritance.md) | Display a contained item at the location of its outermost container while its own saved location stays editable. |
 | [Batch Add Fields](batch-add-fields.md) | Paste a field-definition document, review and edit the proposed fields, and create them in one atomic batch. |

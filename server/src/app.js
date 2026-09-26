@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { closeDatabase, databasePath, dataDir, db, openDatabase } from './db.js';
+import { BulkReplaceRepository } from './repositories/bulkReplaceRepository.js';
 import { CategoryRepository } from './repositories/categoryRepository.js';
 import { CustomFieldRepository } from './repositories/customFieldRepository.js';
 import { DashboardRepository } from './repositories/dashboardRepository.js';
@@ -30,6 +31,7 @@ import { AiItemAnalysisService } from './services/aiItemAnalysisService.js';
 import { AiProviderService } from './services/aiProviderService.js';
 import { AiSettingsService } from './services/aiSettingsService.js';
 import { BackupService } from './services/backupService.js';
+import { BulkReplaceService } from './services/bulkReplaceService.js';
 import { CategoryService } from './services/categoryService.js';
 import { CloudBackupService, defaultCloudBackupState } from './services/cloudBackupService.js';
 import { CloudAppSettingsService } from './services/cloudAppSettingsService.js';
@@ -75,6 +77,7 @@ export function createApp({ production = false } = {}) {
   const itemPhotoRepository = new ItemPhotoRepository(db);
   const itemTemplateRepository = new ItemTemplateRepository(db);
   const dashboardRepository = new DashboardRepository(db);
+  const bulkReplaceRepository = new BulkReplaceRepository(db);
 
   // Restore and reset both replace the active database, so they share one maintenance state.
   const maintenance = new DatabaseMaintenance({
@@ -114,6 +117,7 @@ export function createApp({ production = false } = {}) {
   const categoryService = new CategoryService(categoryRepository);
   const customFieldService = new CustomFieldService(customFieldRepository, categoryService);
   const itemService = new ItemService({ itemRepository, customFieldRepository, itemPhotoRepository, categoryRepository });
+  const bulkReplaceService = new BulkReplaceService({ bulkReplaceRepository });
   const itemTemplateService = new ItemTemplateService({ itemTemplateRepository, categoryRepository, customFieldRepository });
   const photoService = new PhotoService({ itemRepository, itemPhotoRepository });
   const dashboardService = new DashboardService({ dashboardRepository, categoryRepository });
@@ -161,7 +165,7 @@ export function createApp({ production = false } = {}) {
   app.use(createCategoryRoutes({ categoryService }));
   app.use(createDashboardRoutes({ dashboardService }));
   app.use(createFieldRoutes({ customFieldService, aiFieldService }));
-  app.use(createItemRoutes({ itemService }));
+  app.use(createItemRoutes({ itemService, bulkReplaceService }));
   app.use(createItemTemplateRoutes({ itemTemplateService }));
   app.use(createPhotoRoutes({ photoService, imageUpload }));
   app.use(createSystemRoutes({ maintenance, db, appVersion }));

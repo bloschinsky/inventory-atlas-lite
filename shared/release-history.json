@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.39.0",
+    "date": "2026-09-26",
+    "changes": [
+      "New Replace field value on the Data / Backup page changes one exact value of Condition, Location, Transferred To, or a text custom field on every item that has it, for example Garage to KP Garage.",
+      "A preview lists the affected items before anything is saved; only whole values match, ignoring letter case and surrounding spaces, so TP Garage is never touched.",
+      "Replacing a container's location keeps the items inside it following the new location automatically."
+    ]
+  },
+  {
     "version": "0.38.0",
     "date": "2026-09-26",
     "changes": [

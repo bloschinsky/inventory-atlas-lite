@@ -127,6 +127,7 @@ The project stays small and readable. Do not add:
 - `client/src/qrScan.js` — local QR decoding with the bundled `jsqr` and classification of the scanned text.
 - `client/src/pages/Categories.vue` — category and custom field management.
 - `client/src/pages/DataBackup.vue` — SQLite backup download, restore, and the Danger Zone.
+- `client/src/components/BulkReplaceValue.vue` — the Data page card that previews and applies the replacement of one exact field value on every matching item.
 - `client/src/components/ResetDatabaseDialog.vue` — impact review and confirmation of the inventory reset.
 - `client/src/components/CloudBackupSettings.vue` — the Settings card for Dropbox/Google Drive connections, Backup now, the schedule, retention, and status.
 - `client/src/components/CloudAppCredentials.vue` — the masked app key/client ID and secret form of one cloud storage provider.
@@ -144,7 +145,7 @@ The project stays small and readable. Do not add:
 - `server/src/index.js` — process entry point: port and production flag, the HTTP listener, and shutdown.
 - `server/src/app.js` — composition root: builds every repository, service, upload, and route table and assembles the Express app, including production static serving.
 - `server/src/routes/` — thin Express route tables; they parse the request, call one service, and shape the response.
-- `server/src/services/` — application and business logic, independent of Express request and response objects. `itemColumns.js` builds the Items column catalog and merges same-name, same-type custom fields.
+- `server/src/services/` — application and business logic, independent of Express request and response objects. `itemColumns.js` builds the Items column catalog and merges same-name, same-type custom fields; `bulkReplaceService.js` previews and applies exact-value replacement over the column whitelist of `repositories/bulkReplaceRepository.js`.
 - `server/src/repositories/` — all SQL and row mapping for the inventory tables.
 - `server/src/integrations/` — adapters for external or heavy dependencies: the AI providers (`openAiProvider.js`, `openAiCompatibleProvider.js`, and their shared `aiProviderHttp.js` transport), the GitHub release API, the local background-removal model, and the cloud storage providers (`dropboxStorageProvider.js`, `googleDriveStorageProvider.js`, and their shared `cloudStorageHttp.js` transport). AI features call `services/aiProviderService.js`, never an adapter directly; cloud backup reaches the storage adapters only through `services/cloudConnectionService.js`, and their OAuth app credentials come from `services/cloudAppSettingsService.js`.
 - `server/src/restore/` — restore and reset configuration, staged-upload sessions, the SQLite file checks, and `databaseMaintenance.js`: the shared maintenance lock, safety backup, atomic swap, and rollback used by the restore and reset services.
@@ -154,6 +155,7 @@ The project stays small and readable. Do not add:
 - `server/src/db.js` — database path, SQLite connection, PRAGMAs, current table/index schema, and the fresh-database initializer used by the reset.
 - `test/e2e.test.js` — end-to-end acceptance test for the API, persistence, photos, and backups.
 - `test/services.test.js` — service-level regression tests that run without HTTP against a temporary database.
+- `test/bulk-replace.test.js` — Bulk Replace Value matching, scope, validation, atomicity, and location inheritance at the service level.
 - `test/background-removal.test.js` — local cutout tests: stubbed model output for the composition
   rules, plus one full run of the real model over the regression photo when it is installed.
 - `test/i18n.test.js` — locale parity, message compilation, fallback, Ukrainian plurals, and locale-aware formatting.

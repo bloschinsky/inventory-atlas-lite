@@ -38,7 +38,8 @@ input: suggestions speed up typing, they do not restrict what can be saved.
   the same control also serves the [Transferred To field](transferred-to-field.md), and other input
   attributes such as `maxlength` are passed to the input. It loads on focus, debounces input by
   200 ms, discards stale responses through a request counter, hides a suggestion identical to the
-  current input, and closes on selection or when focus leaves the component.
+  current input, and closes on selection or when focus leaves the component. The optional
+  `showCounts` prop adds a usage-count badge to each suggestion; [Bulk Replace Field Value](bulk-replace-field-value.md) uses it.
 
 ## Verification
 

@@ -532,6 +532,34 @@ already contains; the server rejects such a move with an error message.
    `Tab` leaves the field without choosing anything.
 5. You can always type a completely new value. Once saved, it is suggested the next time.
 
+### Replace a field value on many items
+
+Use this to fix inconsistent naming without editing items one by one, for example to rename the
+location `Garage` to `KP Garage` everywhere.
+
+1. Open **Data / Backup** and find **Replace field value**.
+2. Choose the **Field**: **Condition**, **Location**, **Transferred To**, or one text custom field.
+   A custom field is listed with its category, for example `Brand (Cameras)`, and only that
+   category's field is changed; a field with the same name in another category is left alone.
+3. Click into **Current value** to see the values saved for that field with how many items use each,
+   and choose one or type it. Enter the replacement in **New value**; it offers the same values.
+4. Press **Preview changes**. Nothing is saved yet. The preview shows the field, both values, the
+   number of items that will change, and a table of those items with their category and saved value
+   (the first 100 when there are more). If the new value is already used, a note says by how many
+   items. If no item has the current value, the preview says so and the replace button stays
+   disabled.
+5. Press **Replace in N items** to apply it, or **Cancel**. Changing the field or either value hides
+   the preview, so it always matches what you confirm. The message afterwards reports how many items
+   were actually changed: items edited in the meantime are checked again when you confirm.
+
+Only whole values are replaced. Letter case and spaces at the start or end are ignored when values
+are compared, so `Garage`, ` garage `, and `GARAGE` all match `Garage`, but `TP Garage` and
+`Big Garage` never do. **Location** changes only the location saved on each item: items stored inside
+a container are not rewritten and keep showing the container's new location automatically. Name,
+description, serial number, dates, numbers, yes/no fields, **Stored inside**, and **Category** cannot
+be replaced this way; rename a category on **Categories & Fields**. There is no undo, so download a
+backup first when in doubt.
+
 ### Switch between light and dark mode
 
 1. Press the sun button for light mode or the moon button for dark mode. On phones and narrow
@@ -818,6 +846,8 @@ backup, and keep the copies on a different machine than the server.
   router port and do not put it behind a public reverse proxy.
 - Photos: JPEG, PNG, WebP, GIF, up to 10 files of 15 MB each per upload.
 - Search covers the item name, description, serial number, and Transferred To.
+- **Replace field value** replaces one exact value of one field at a time. There is no substring or
+  pattern replacement and no undo.
 - A category used by any item cannot be deleted, and an item containing other items cannot be
   deleted.
 - Deleting a custom field also deletes the values saved for it on every item of that category.

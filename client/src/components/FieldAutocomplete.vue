@@ -1,12 +1,15 @@
 <script setup>
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { api } from '../api.js';
+import { formatNumber } from '../i18n/index.js';
 
 // `source` is the suggestions endpoint; it answers `?search=&limit=` with `[{ value, usage_count }]`.
+// `showCounts` also shows how many items use each suggested value.
 const props = defineProps({
   modelValue: { type: String, default: '' },
   source: { type: String, required: true },
-  inputId: { type: String, required: true }
+  inputId: { type: String, required: true },
+  showCounts: { type: Boolean, default: false }
 });
 const emit = defineEmits(['update:modelValue']);
 // Attributes such as `maxlength` and `placeholder` belong on the input, not on the wrapper.
@@ -121,6 +124,10 @@ function onFocusOut(event) {
         @mousedown.prevent="select(suggestion)"
       >
         {{ suggestion.value }}
+        <span
+          v-if="showCounts"
+          class="badge bg-secondary-lt float-end ms-2"
+        >{{ formatNumber(suggestion.usage_count) }}</span>
       </li>
     </ul>
   </div>
