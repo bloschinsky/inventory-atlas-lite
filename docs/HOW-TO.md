@@ -523,6 +523,23 @@ transferred to the same person.
 Nesting can go several levels deep. An item cannot be placed inside itself or inside anything it
 already contains; the server rejects such a move with an error message.
 
+### Browse the storage hierarchy
+
+1. Open **Hierarchy** in the navigation. On a phone it is in the **☰** menu.
+2. The tree starts at **Inventory**. Under it are your top-level containers — items that are not
+   inside anything but hold something — followed by **Uncontained items**, one group for every
+   top-level item that holds nothing. The group shows how many items it has.
+3. Press the arrow in front of a row to open or close it. Rows show the photo, name, category,
+   displayed location, and how many items are directly inside. **Expand all** and **Collapse all**
+   open or close every branch at once.
+4. Click a name to open that item's page.
+5. Type into **Search hierarchy** to find items by name. Each match is shown inside its containers,
+   which open automatically, for example `Box A → Camera Bag → Nikon F80`. Clear the search to get
+   back to the branches you had open.
+
+The tree only shows what is stored where; to move an item, change **Stored inside** in its form.
+**Inventory** and **Uncontained items** are only views, not records.
+
 ### Use custom-field autocomplete
 
 1. In the item form, click into any **Text** custom field.
@@ -846,7 +863,9 @@ backup, and keep the copies on a different machine than the server.
 - Not intended for direct exposure to the Internet. Use a trusted LAN or a VPN; do not forward a
   router port and do not put it behind a public reverse proxy.
 - Photos: JPEG, PNG, WebP, GIF, up to 10 files of 15 MB each per upload.
-- Search covers the item name, description, serial number, and Transferred To.
+- Search covers the item name, description, serial number, and Transferred To. **Hierarchy** searches
+  item names only.
+- **Hierarchy** is read-only: items cannot be moved or dragged in the tree.
 - **Replace field value** replaces one exact value of one field at a time. There is no substring or
   pattern replacement and no undo.
 - A category used by any item cannot be deleted, and an item containing other items cannot be

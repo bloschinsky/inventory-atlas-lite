@@ -98,6 +98,28 @@ export class ItemRepository {
     `).all(id);
   }
 
+  /*
+    Every item with only what a hierarchy node shows, in one statement: the root that provides its
+    effective location, its direct child count, and its first photo come from grouped joins rather
+    than a query per item. Names order siblings, and the id keeps equal names stable.
+  */
+  listHierarchy() {
+    return this.db.prepare(`
+      ${ROOTS_CTE}
+      SELECT i.id, i.uuid, i.name, i.parent_item_id AS parent_id, i.location,
+        c.id AS category_id, c.name AS category_name,
+        root.id AS root_id, root.location AS root_location,
+        photo.thumbnail_id, COALESCE(kids.children_count, 0) AS children_count
+      FROM items i JOIN categories c ON c.id = i.category_id
+      LEFT JOIN roots ON roots.id = i.id
+      LEFT JOIN items root ON root.id = roots.root_id
+      LEFT JOIN (SELECT item_id, MIN(id) AS thumbnail_id FROM item_photos GROUP BY item_id) photo ON photo.item_id = i.id
+      LEFT JOIN (SELECT parent_item_id, COUNT(*) AS children_count FROM items
+        WHERE parent_item_id IS NOT NULL GROUP BY parent_item_id) kids ON kids.parent_item_id = i.id
+      ORDER BY i.name COLLATE NOCASE, i.id
+    `).all();
+  }
+
   listFieldValues(itemId, categoryId) {
     return this.db.prepare(`
       SELECT f.id, f.name, f.type, v.value FROM custom_fields f

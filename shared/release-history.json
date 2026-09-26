@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.40.0",
+    "date": "2026-09-26",
+    "changes": [
+      "New Hierarchy page shows your inventory as an expandable storage tree: top-level containers with everything inside them, at any depth, and one Uncontained items group for items that are not inside anything.",
+      "Search hierarchy finds items by name and shows each match inside its containers, opened automatically; Expand all and Collapse all open or close every branch.",
+      "Every row shows the photo, category, displayed location, and number of items inside, and its name opens the item. The tree is read-only; move items with Stored inside as before."
+    ]
+  },
+  {
     "version": "0.39.1",
     "date": "2026-09-26",
     "changes": [

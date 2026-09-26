@@ -8,6 +8,7 @@ import { capabilities, loadCapabilities } from './capabilities.js';
 import ItemsList from './pages/ItemsList.vue';
 import ItemDetails from './pages/ItemDetails.vue';
 import ItemForm from './pages/ItemForm.vue';
+import Hierarchy from './pages/Hierarchy.vue';
 import Categories from './pages/Categories.vue';
 import DataBackup from './pages/DataBackup.vue';
 import Dashboard from './pages/Dashboard.vue';
@@ -28,6 +29,7 @@ const router = createRouter({
     { path: '/items/new', component: ItemForm },
     { path: '/items/:id', component: ItemDetails },
     { path: '/items/:id/edit', component: ItemForm },
+    { path: '/hierarchy', component: Hierarchy },
     { path: '/templates', component: Templates },
     { path: '/templates/new', component: TemplateForm },
     { path: '/templates/:id/edit', component: TemplateForm },

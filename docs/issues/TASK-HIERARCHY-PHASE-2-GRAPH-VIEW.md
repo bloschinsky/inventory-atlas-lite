@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Type:** Feature / visualization
 **Phase:** 2 of 3
-**Blocked by:** `TASK-HIERARCHY-PHASE-1-STORAGE-TREE.md`
+**Blocked by:** None (Phase 1 is complete; see `docs/features/hierarchy.md`)
 **Related:** `TASK-HIERARCHY-PHASE-3-DRAG-DROP.md`
 
 ---

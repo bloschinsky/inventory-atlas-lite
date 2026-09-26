@@ -91,6 +91,19 @@ export class ItemService {
     };
   }
 
+  /*
+    The flat node list of the Hierarchy page. Each view derives its own structure from `parent_id`;
+    the response never nests items, and the location is the same inherited one the list shows.
+  */
+  hierarchy() {
+    return {
+      items: this.items.listHierarchy().map(({ location, root_id: rootId, root_location: rootLocation, ...node }) => ({
+        ...node,
+        effective_location: presentLocation(rootId ? rootLocation : location)
+      }))
+    };
+  }
+
   // An item may never be stored inside itself or inside anything it already contains.
   parentCandidates(query = {}) {
     const excludeId = Number.parseInt(query.excludeId) || null;

@@ -6,6 +6,7 @@ export const createItemRoutes = ({ itemService, bulkReplaceService }) => {
   router.get('/api/items', (req, res) => res.json(itemService.list(req.query)));
   // Registered before /api/items/:id so the literal paths are not read as item identifiers.
   router.get('/api/items/columns', (req, res) => res.json(itemService.columns()));
+  router.get('/api/items/hierarchy', (req, res) => res.json(itemService.hierarchy()));
   router.get('/api/items/parent-candidates', (req, res) => res.json(itemService.parentCandidates(req.query)));
   router.get('/api/items/transferred-to-suggestions', (req, res) => res.json(itemService.transferredToSuggestions(req.query)));
   router.get('/api/items/bulk-replace/fields', (req, res) => res.json(bulkReplaceService.fields()));

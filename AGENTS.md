@@ -115,6 +115,8 @@ The project stays small and readable. Do not add:
 - `client/src/pages/Dashboard.vue` — the Dashboard: category scope, KPI cards, charts, and their text values.
 - `client/src/dashboardCharts.js` — on-demand loading of the ApexCharts copy bundled in `@tabler/core`, Tabler color resolution for the active mode, and the options of each Dashboard chart.
 - `client/src/components/DashboardChart.vue` — one ApexCharts instance: creation, in-place updates, and cleanup.
+- `client/src/pages/Hierarchy.vue` — `/hierarchy`: loads the flat hierarchy nodes and owns the search; `client/src/components/HierarchyTree.vue` renders the read-only storage tree and its expansion state.
+- `client/src/hierarchyTree.js` — pure storage tree rules: the virtual Uncontained items group, name search with ancestor paths, and the visible rows.
 - `client/src/pages/ItemDetails.vue` — item details, photos, and deletion.
 - `client/src/pages/ItemForm.vue` — item creation/editing, custom field values, and photo uploads; it is prefilled from an item draft (the edited item, an AI draft, `?template=`, or `?duplicate=`).
 - `client/src/itemDraft.js` — item drafts: the shared form state of the item form and the template editor, and the drafts built from an item or a template.
@@ -155,6 +157,7 @@ The project stays small and readable. Do not add:
 - `server/src/db.js` — database path, SQLite connection, PRAGMAs, current table/index schema, and the fresh-database initializer used by the reset.
 - `test/e2e.test.js` — end-to-end acceptance test for the API, persistence, photos, and backups.
 - `test/services.test.js` — service-level regression tests that run without HTTP against a temporary database.
+- `test/hierarchy.test.js` — the hierarchy endpoint (shape, inherited location, one statement) and the client storage tree rules.
 - `test/bulk-replace.test.js` — Bulk Replace Value matching, scope, validation, atomicity, and location inheritance at the service level.
 - `test/background-removal.test.js` — local cutout tests: stubbed model output for the composition
   rules, plus one full run of the real model over the regression photo when it is installed.

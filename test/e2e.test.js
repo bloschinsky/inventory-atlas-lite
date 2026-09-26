@@ -324,6 +324,11 @@ test('item nesting keeps a valid hierarchy and survives restart and backup', asy
     await stopServer(server);
     server = await startServer(dataDir);
     assert.equal((await request(`/api/items/${lens.id}`)).parent.name, 'Box A');
+
+    // The Hierarchy page reads the same relationship as flat nodes from its own endpoint.
+    const { items: nodes } = await request('/api/items/hierarchy');
+    assert.deepEqual(nodes.map(item => [item.name, item.parent_id, item.children_count]),
+      [['Box A', null, 1], ['Helios 44-2', boxA.id, 0]]);
   } finally {
     if (server) await stopServer(server);
     await rm(dataDir, { recursive: true, force: true });

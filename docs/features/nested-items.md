@@ -59,5 +59,6 @@ separate container, room, or shelf entity.
 
 - Cycle protection is enforced on the server; the client filtering is only a convenience.
 - There is no drag-and-drop tree, no bulk move, and no recursively expanded tree on the items list.
+  The whole containment tree is browsed read-only on the [Hierarchy](hierarchy.md) page.
 - The items list cannot be filtered or sorted by container; it only displays the direct parent.
 - The SQLite backup contains the hierarchy automatically because it is a plain column on `items`.

@@ -5,7 +5,7 @@
 **Type:** Feature / hierarchy editing
 **Phase:** 3 of 3
 **Blocked by:**
-- `TASK-HIERARCHY-PHASE-1-STORAGE-TREE.md`
+- Phase 1 is complete; see `docs/features/hierarchy.md`
 - `TASK-HIERARCHY-PHASE-2-GRAPH-VIEW.md`
 
 ---

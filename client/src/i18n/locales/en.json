@@ -11,7 +11,8 @@
     "mainNavigation": "Main navigation",
     "openMenu": "Open navigation menu",
     "closeMenu": "Close navigation menu",
-    "templates": "Templates"
+    "templates": "Templates",
+    "hierarchy": "Hierarchy"
   },
   "theme": {
     "colorMode": "Color mode",
@@ -364,6 +365,23 @@
     "pickTitle": "Add item from template",
     "manage": "Manage templates",
     "saveAsTemplate": "Save as template"
+  },
+  "hierarchy": {
+    "title": "Hierarchy",
+    "intro": "Every item and what it is stored inside. Containers are listed first; items that are not inside anything are gathered under Uncontained items.",
+    "loading": "Loading hierarchy…",
+    "root": "Inventory",
+    "uncontained": "Uncontained items",
+    "expand": "Expand {name}",
+    "collapse": "Collapse {name}",
+    "expandAll": "Expand all",
+    "collapseAll": "Collapse all",
+    "search": "Search hierarchy",
+    "searchPlaceholder": "Search item names…",
+    "noMatches": "No matching items",
+    "noMatchesText": "No item name contains “{query}”.",
+    "emptyTitle": "No items yet",
+    "emptyText": "Add items and store them inside each other to build the storage tree."
   },
   "aiAddItem": {
     "title": "AI Add Item",
