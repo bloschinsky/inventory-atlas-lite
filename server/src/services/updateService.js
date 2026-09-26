@@ -1,6 +1,6 @@
 import { httpError } from '../httpError.js';
 import { ACTIVE_UPDATE_STATES } from '../update/updateStatusStore.js';
-import { compareVersions } from '../update/semver.js';
+import { compareVersions } from '../../../shared/semver.js';
 
 /*
   The application side of the update feature. It compares the running version with the latest stable

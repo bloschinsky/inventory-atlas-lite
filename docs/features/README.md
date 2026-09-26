@@ -34,6 +34,7 @@ document describes the current behaviour and its boundaries, not the original pl
 | [Self-update from About](self-update.md) | Check for a newer stable GitHub release from the About dialog and, on Proxmox/LXC, run the existing privileged updater from the interface. |
 | [About dialog and build metadata](about-dialog.md) | An accessible About modal showing the version, commit, and source date injected at build time. |
 | [Version History](version-history.md) | A bundled, offline release timeline opened from About, and the source of the published release notes. |
+| [What's New after update](whats-new-after-update.md) | A one-time dialog on the first launch after an update, listing every release since the version this browser last acknowledged from the same bundled history. |
 | [Playwright browser tests](playwright-e2e-tests.md) | Chromium end-to-end coverage of the main user workflows. |
 | [GitHub release pipeline](github-release-pipeline.md) | Validate stable tags and publish the Docker image plus legacy-compatible Proxmox assets. |
 

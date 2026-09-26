@@ -140,6 +140,9 @@ body.app-menu-open { overflow: hidden; }
 .app-version-history .steps-vertical .step-item { padding-bottom: 1.25rem; }
 .app-version-history .steps-vertical .step-item:last-child { padding-bottom: 0; }
 .app-version-history .steps .step-item ul { color: var(--tblr-secondary); }
+/* What's New lists the unseen releases with the same spacing and muted changes as the timeline. */
+.app-whats-new-release + .app-whats-new-release { margin-top: 1.25rem; }
+.app-whats-new-release ul { color: var(--tblr-secondary); }
 
 /* The generated QR code keeps its own white quiet zone, so it only needs a size and a rounded box. */
 .item-qr-code { display: block; width: 100%; max-width: 15rem; height: auto; margin-inline: auto; border-radius: var(--tblr-border-radius); }

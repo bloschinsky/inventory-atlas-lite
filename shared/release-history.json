@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.38.0",
+    "date": "2026-09-26",
+    "changes": [
+      "After an update, a What's New dialog lists the changes of every release since the version you last used, once per update.",
+      "Close it with Got it, the close button, Escape, or a click outside; View full changelog opens Version History from the About dialog."
+    ]
+  },
+  {
     "version": "0.37.1",
     "date": "2026-09-26",
     "changes": [

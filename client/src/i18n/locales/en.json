@@ -33,6 +33,13 @@
     "installed": "Installed",
     "empty": "No release history is available in this build."
   },
+  "whatsNew": {
+    "title": "What's New",
+    "close": "Close What's New",
+    "updatedTo": "{name} was updated to version {version}.",
+    "viewChangelog": "View full changelog",
+    "gotIt": "Got it"
+  },
   "update": {
     "check": "Check for updates",
     "checking": "Checking for updates...",

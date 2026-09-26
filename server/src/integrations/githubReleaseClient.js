@@ -1,5 +1,5 @@
 import { httpError } from '../httpError.js';
-import { parseVersion } from '../update/semver.js';
+import { parseVersion } from '../../../shared/semver.js';
 
 const API = 'https://api.github.com';
 const REQUEST_TIMEOUT_MS = 10 * 1000;

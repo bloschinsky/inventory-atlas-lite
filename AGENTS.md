@@ -105,6 +105,7 @@ The project stays small and readable. Do not add:
 - `client/src/i18n/core.js` — supported locales, vue-i18n options (English default and fallback, Ukrainian plural rule), and the `Intl` date, number, money, and file-size formatters.
 - `client/src/i18n/locales/` — `en.json` and `uk.json`, the interface messages grouped by feature.
 - `client/src/update.js` — shared state and polling of the update panel in the About dialog.
+- `client/src/whatsNew.js` — the last acknowledged version in browser storage and the unseen releases shown after an update; `client/src/components/WhatsNewDialog.vue` renders them.
 - `client/src/capabilities.js` — shared visibility state of optional features, loaded once from `/api/capabilities`.
 - `client/src/pages/ItemsList.vue` — item list, search, filtering, column choice, sorting, and pagination.
 - `client/src/components/ItemResults.vue` — the item table and phone cards, rendered from the visible column list.
@@ -137,6 +138,8 @@ The project stays small and readable. Do not add:
 - `shared/aiProviders.js` — AI provider presets (default base URLs, key requirements) and base-URL validation, shared by Settings and the server.
 - `shared/itemColumns.js` — Items view core columns, default sort, and the stable custom column key, shared by the client and the server.
 - `shared/itemQr.js` — canonical `ial:item:v1:<uuid>` QR payload with its encoder and strict decoder.
+- `shared/semver.js` — semantic version parsing and comparison, used by the updater and the What's New dialog.
+- `shared/releaseHistory.js` and `shared/release-history.json` — the single release history read by Version History, What's New, and the release notes.
 - `shared/appError.js` — `AppError` (stable code, parameters, HTTP status) thrown by the shared rules and the server, and its `{ code, params }` body.
 - `server/src/index.js` — process entry point: port and production flag, the HTTP listener, and shutdown.
 - `server/src/app.js` — composition root: builds every repository, service, upload, and route table and assembles the Express app, including production static serving.
@@ -146,7 +149,7 @@ The project stays small and readable. Do not add:
 - `server/src/integrations/` — adapters for external or heavy dependencies: the AI providers (`openAiProvider.js`, `openAiCompatibleProvider.js`, and their shared `aiProviderHttp.js` transport), the GitHub release API, the local background-removal model, and the cloud storage providers (`dropboxStorageProvider.js`, `googleDriveStorageProvider.js`, and their shared `cloudStorageHttp.js` transport). AI features call `services/aiProviderService.js`, never an adapter directly; cloud backup reaches the storage adapters only through `services/cloudConnectionService.js`, and their OAuth app credentials come from `services/cloudAppSettingsService.js`.
 - `server/src/restore/` — restore and reset configuration, staged-upload sessions, the SQLite file checks, and `databaseMaintenance.js`: the shared maintenance lock, safety backup, atomic swap, and rollback used by the restore and reset services.
 - `server/src/cloudBackup/` — cloud backup configuration, the owner-only JSON file store for its credentials and state, schedule rules, and the in-process scheduler timer.
-- `server/src/update/` — deployment capability, version comparison, the updater's status file, and the privileged update trigger.
+- `server/src/update/` — deployment capability, the updater's status file, and the privileged update trigger.
 - `server/src/http/` — transport middleware: uploads, the maintenance guard, and the central error handler that answers `{ error: { code, params } }`.
 - `server/src/db.js` — database path, SQLite connection, PRAGMAs, current table/index schema, and the fresh-database initializer used by the reset.
 - `test/e2e.test.js` — end-to-end acceptance test for the API, persistence, photos, and backups.

@@ -1,6 +1,6 @@
 /*
-  The little bit of semantic versioning the update check needs: parse a release tag and decide
-  whether one version is newer than another. A dependency would be a heavier answer than the
+  The little bit of semantic versioning the update check and the What's New dialog need: parse a
+  release tag and decide whether one version is newer than another. A dependency would be a heavier answer than the
   question, and the rules used here are the whole of the specification that applies to our tags.
 */
 const PATTERN = /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/;

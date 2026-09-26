@@ -3,6 +3,7 @@ import AboutDialog from './components/AboutDialog.vue';
 import AppMobileNav from './components/AppMobileNav.vue';
 import AppSidebar from './components/AppSidebar.vue';
 import VersionHistoryDialog from './components/VersionHistoryDialog.vue';
+import WhatsNewDialog from './components/WhatsNewDialog.vue';
 </script>
 
 <template>
@@ -22,4 +23,5 @@ import VersionHistoryDialog from './components/VersionHistoryDialog.vue';
   <!-- One dialog for the whole shell: both navigations open the same instance. -->
   <AboutDialog />
   <VersionHistoryDialog />
+  <WhatsNewDialog />
 </template>

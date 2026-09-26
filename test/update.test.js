@@ -10,7 +10,7 @@ import path from 'node:path';
 // without systemd, and without the working database in data/.
 process.env.DATA_DIR = await mkdtemp(path.join(os.tmpdir(), 'inventory-update-test-'));
 
-const { compareVersions, isNewerVersion, parseVersion } = await import('../server/src/update/semver.js');
+const { compareVersions, isNewerVersion, parseVersion } = await import('../shared/semver.js');
 const { resolveDeployment } = await import('../server/src/update/deployment.js');
 const { UpdateStatusStore } = await import('../server/src/update/updateStatusStore.js');
 const { SystemdUpdateTrigger } = await import('../server/src/update/updateTrigger.js');

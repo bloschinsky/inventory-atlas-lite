@@ -34,9 +34,6 @@ Implemented behavior is documented separately in [`features/README.md`](features
    tree-based containment editing while preserving the existing server-side cycle protection. See
    [`TASK-HIERARCHY-PHASE-3-DRAG-DROP.md`](issues/TASK-HIERARCHY-PHASE-3-DRAG-DROP.md).
 
-7. **What's New after update** — Planned. Adds a one-time version-aware modal using the same local
-   release-history data as About's Version History. See
-   [`TASK-WHATS-NEW-AFTER-UPDATE.md`](issues/TASK-WHATS-NEW-AFTER-UPDATE.md).
 
 ## Distribution
 

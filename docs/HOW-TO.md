@@ -554,7 +554,7 @@ already contains; the server rejects such a move with an error message.
 5. Only the interface is translated. Item, category, and field names, descriptions, locations, and
    every other value you entered are shown exactly as saved. Error messages, such as a refused
    deletion or an invalid backup file, follow the chosen language too; the release notes in
-   **Version History** stay in English.
+   **Version History** and **What's New** stay in English.
 
 ### Download a backup
 
@@ -691,6 +691,19 @@ installation.
 
 The history is part of the application, so it works without an internet connection. It lists the
 releases known when your installation was built; newer ones appear after you update.
+
+### What's New after an update
+
+The first time you open the application after it was updated, a **What's New** dialog says which
+version you now run and lists the changes of every release since the version you last used in this
+browser, newest first — skipped releases included.
+
+- Close it with **Got it**, the **×**, `Escape`, or a click outside it. Any of them marks the version
+  as seen, so the dialog does not come back until the next update.
+- **View full changelog** closes it and opens **Version History** over the About dialog.
+- A new installation, a new browser, or a browser that blocks site storage shows no dialog, and
+  neither does a downgrade to an older version. The seen version is remembered per browser, so each
+  browser or device shows the dialog once on its own.
 
 ### Check for a newer version and update
 

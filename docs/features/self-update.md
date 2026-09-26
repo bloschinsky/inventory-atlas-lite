@@ -151,7 +151,7 @@ checksum, back up SQLite, stop the service, swap the code, reinstall the units, 
 ## Implementation overview
 
 - `server/src/update/deployment.js` resolves `DEPLOYMENT_TYPE` and the self-update capability.
-- `server/src/update/semver.js` parses and compares versions; the project needs no dependency for it.
+- `shared/semver.js` parses and compares versions for the updater and the What's New dialog; the project needs no dependency for it.
 - `server/src/update/updateStatusStore.js` reads the updater's status file and trusts nothing in it
   that is not a known state.
 - `server/src/update/updateTrigger.js` is the whole privilege boundary: it checks that the path unit

@@ -3,6 +3,8 @@
   The About dialog and the release pipeline both read the file through this module, so an entry that
   is malformed or incomplete is dropped once here instead of being handled again by each reader.
 */
+import { compareVersions } from './semver.js';
+
 const VERSION_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -35,6 +37,10 @@ export function readReleaseHistory(data) {
     .filter(release => release && !seen.has(release.version) && seen.add(release.version))
     .sort(compareReleases);
 }
+
+// The releases newer than `seen` up to and including `current`, in the order of `releases`.
+export const releasesSince = (releases, seen, current) => releases.filter(release =>
+  compareVersions(release.version, seen) === 1 && compareVersions(release.version, current) <= 0);
 
 export const findRelease = (releases, version) => {
   const wanted = releaseVersion(version);

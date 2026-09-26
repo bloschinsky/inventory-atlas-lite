@@ -89,6 +89,9 @@ on the release page are maintained once.
 - `client/src/style.css` — the layer above Bootstrap's modal and the few timeline rules.
 - `scripts/release-notes.mjs` — the release notes of a tag, and a clear failure without an entry.
 
+The [What's New dialog](whats-new-after-update.md) reads the same entries through `releasesSince()`
+and opens this dialog from its **View full changelog** action.
+
 ## Verification
 
 - `npm run lint`, `npm test`, `npm run build`, and `npm run test:e2e` pass.
