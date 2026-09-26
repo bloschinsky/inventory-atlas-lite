@@ -381,7 +381,19 @@
     "noMatches": "No matching items",
     "noMatchesText": "No item name contains “{query}”.",
     "emptyTitle": "No items yet",
-    "emptyText": "Add items and store them inside each other to build the storage tree."
+    "emptyText": "Add items and store them inside each other to build the storage tree.",
+    "view": "View",
+    "views": {
+      "tree": "Tree",
+      "graph": "Graph"
+    },
+    "graphLabel": "Storage graph",
+    "graphControls": "Graph controls",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "fitView": "Fit to view",
+    "graphHint": "Drag to pan, scroll or pinch to zoom. Click a name or double-click an item to open it. The graph is read-only.",
+    "graphTooLarge": "Visible items: {count}. The graph draws at most {limit} at once — collapse some branches, search, or use the Tree view."
   },
   "aiAddItem": {
     "title": "AI Add Item",

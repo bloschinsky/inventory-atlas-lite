@@ -84,6 +84,79 @@ test('search reveals every match with its full container path', async ({ page, r
   await expect(page.getByRole('link', { name: lens.name, exact: true })).toBeHidden();
 });
 
+test('the graph view expands branches, highlights a search, and opens a nested item', async ({ page, request }) => {
+  const category = await createCategory(request, unique('Graph shelf'));
+  const [box, bag, camera] = await createChain(request, category.id, ['Graph Box', 'Graph Bag', 'Graph Camera']);
+  const lens = await createItem(request, { name: unique('Graph Lens'), category_id: category.id, parent_item_id: bag.id });
+  const loose = await createItem(request, { name: unique('Graph Mug'), category_id: category.id });
+  const writes = recordWrites(page);
+
+  await page.goto('/hierarchy');
+  await page.mouse.move(600, 400);
+  await expect(page.getByRole('radio', { name: 'Tree' })).toBeChecked();
+  await page.getByText('Graph', { exact: true }).click();
+  await expect(page).toHaveURL('/hierarchy?view=graph');
+  const graph = page.getByRole('region', { name: 'Storage graph' });
+  await expect(graph).toBeVisible();
+
+  // The virtual root, a top-level container, and the collapsed Uncontained items group are nodes.
+  await expect(graph.getByText('Inventory', { exact: true })).toBeVisible();
+  await expect(graph.getByRole('link', { name: box.name, exact: true })).toBeVisible();
+  await expect(graph.getByRole('button', { name: 'Expand Uncontained items' })).toBeVisible();
+  await expect(graph.getByRole('link', { name: loose.name, exact: true })).toHaveCount(0);
+  await expect(graph.getByRole('link', { name: bag.name, exact: true })).toHaveCount(0);
+
+  // Expanding draws the contents; collapsing removes them from the graph, and expanding restores them.
+  await graph.getByRole('button', { name: `Expand ${box.name}` }).click();
+  await graph.getByRole('button', { name: `Expand ${bag.name}` }).click();
+  await expect(graph.getByRole('link', { name: camera.name, exact: true })).toBeVisible();
+  await expect(graph.getByRole('link', { name: lens.name, exact: true })).toBeVisible();
+  await graph.getByRole('button', { name: `Collapse ${box.name}` }).click();
+  await expect(graph.getByRole('link', { name: bag.name, exact: true })).toHaveCount(0);
+  await expect(graph.getByRole('link', { name: camera.name, exact: true })).toHaveCount(0);
+  await graph.getByRole('button', { name: `Expand ${box.name}` }).click();
+  await expect(graph.getByRole('link', { name: camera.name, exact: true })).toBeVisible();
+  await graph.getByRole('button', { name: 'Expand Uncontained items' }).click();
+  await expect(graph.getByRole('link', { name: loose.name, exact: true })).toBeVisible();
+
+  // A search reveals the nested match inside its path and highlights only it.
+  await page.getByRole('button', { name: 'Collapse all' }).click();
+  await expect(graph.getByRole('link', { name: bag.name, exact: true })).toHaveCount(0);
+  await page.getByLabel('Search hierarchy').fill(lens.name);
+  await expect(graph.getByRole('link', { name: bag.name, exact: true })).toBeVisible();
+  await expect(graph.getByRole('link', { name: camera.name, exact: true })).toHaveCount(0);
+  await expect(graph.locator('.hierarchy-node-match')).toHaveCount(1);
+  await expect(graph.locator('.hierarchy-node-match')).toContainText(lens.name);
+
+  // The view controls work, and switching to the tree keeps the same opened path.
+  await page.getByRole('button', { name: 'Zoom out' }).click();
+  await page.getByRole('button', { name: 'Fit to view' }).click();
+  await page.getByText('Tree', { exact: true }).click();
+  await expect(page).toHaveURL('/hierarchy');
+  await expect(page.getByRole('listitem').filter({ has: page.getByRole('link', { name: lens.name, exact: true }) })).toBeVisible();
+  await page.getByText('Graph', { exact: true }).click();
+
+  await graph.getByRole('link', { name: lens.name, exact: true }).click();
+  await expect(page).toHaveURL(`/items/${lens.id}`);
+  await expect(page.getByRole('heading', { name: lens.name })).toBeVisible();
+  await page.goBack();
+  await expect(page.getByRole('radio', { name: 'Graph' })).toBeChecked();
+  expect(writes).toEqual([]);
+});
+
+test('a graph node is selected by a click and opens the item on a double-click', async ({ page, request }) => {
+  const category = await createCategory(request, unique('Graph dbl'));
+  const [box] = await createChain(request, category.id, ['Double Box', 'Double Inner']);
+
+  await page.goto('/hierarchy?view=graph');
+  await page.mouse.move(600, 400);
+  const node = page.locator('.vue-flow__node').filter({ has: page.getByRole('link', { name: box.name, exact: true }) });
+  await node.locator('.meta-text').click();
+  await expect(node).toHaveClass(/selected/);
+  await node.locator('.meta-text').dblclick();
+  await expect(page).toHaveURL(`/items/${box.id}`);
+});
+
 test.describe('narrow screens', () => {
   test.use({ viewport: phone });
 
@@ -100,5 +173,18 @@ test.describe('narrow screens', () => {
 
     await page.getByRole('link', { name: deepest.name, exact: true }).click();
     await expect(page.getByRole('heading', { name: deepest.name })).toBeVisible();
+  });
+
+  test('the graph stays usable on a phone without sideways page scrolling', async ({ page, request }) => {
+    const category = await createCategory(request, unique('Phone graph'));
+    const chain = await createChain(request, category.id, ['Phone Box', 'Phone Bag', 'Phone Camera']);
+
+    await page.goto('/hierarchy?view=graph');
+    await page.getByLabel('Search hierarchy').fill(chain.at(-1).name);
+    const graph = page.getByRole('region', { name: 'Storage graph' });
+    await expect(graph.getByRole('link', { name: chain.at(-1).name, exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Fit to view' })).toBeVisible();
+    const width = await page.locator('body').evaluate(body => body.ownerDocument.documentElement.scrollWidth);
+    expect(width).toBeLessThanOrEqual(phone.width);
   });
 });

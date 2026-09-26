@@ -1,10 +1,12 @@
 /*
-  The storage tree of the Hierarchy page, derived from the flat `GET /api/items/hierarchy` nodes.
-  The Inventory root and the Uncontained items group exist only here: top-level items that hold
-  something are the root branches, and every top-level leaf is gathered into the one group.
+  The storage tree of the Hierarchy page, derived from the flat `GET /api/items/hierarchy` nodes and
+  shared by the Tree and Graph views. The Inventory root and the Uncontained items group exist only
+  here: top-level items that hold something are the root branches, and every top-level leaf is
+  gathered into the one group.
 */
 
-// Key of the virtual group in expansion sets; item ids are numbers, so it can never collide.
+// Keys of the virtual root and group in expansion sets and rows; item ids are numbers, so they can never collide.
+export const ROOT = 'inventory';
 export const UNCONTAINED = 'uncontained';
 
 export function buildTree(items) {
@@ -77,23 +79,24 @@ export function expandableKeys(tree, visible = null) {
 }
 
 /*
-  The rows currently on screen, in order, with their depth. Only expanded branches are walked, so
-  collapsed descendants are never rendered. `visible` limits the rows to a search result.
+  The rows currently on screen, in order, with their depth and the key of the row they sit in (`ROOT`
+  for the root level). Only expanded branches are walked, so collapsed descendants are never
+  rendered. `visible` limits the rows to a search result.
 */
 export function visibleRows(tree, expanded, visible = null) {
   const rows = [];
   const shown = item => !visible || visible.has(item.id);
-  const walk = (item, depth) => {
+  const walk = (item, depth, parent) => {
     const items = childrenOf(tree, item.id).filter(shown);
-    rows.push({ key: item.id, type: 'item', item, depth, childCount: items.length, expanded: expanded.has(item.id) });
+    rows.push({ key: item.id, type: 'item', item, depth, parent, childCount: items.length, expanded: expanded.has(item.id) });
     if (!expanded.has(item.id)) return;
-    for (const child of items) walk(child, depth + 1);
+    for (const child of items) walk(child, depth + 1, item.id);
   };
-  for (const item of tree.containers.filter(shown)) walk(item, 0);
+  for (const item of tree.containers.filter(shown)) walk(item, 0, ROOT);
   const leaves = tree.uncontained.filter(shown);
   if (leaves.length) {
-    rows.push({ key: UNCONTAINED, type: 'group', depth: 0, childCount: leaves.length, expanded: expanded.has(UNCONTAINED) });
-    if (expanded.has(UNCONTAINED)) for (const item of leaves) walk(item, 1);
+    rows.push({ key: UNCONTAINED, type: 'group', depth: 0, parent: ROOT, childCount: leaves.length, expanded: expanded.has(UNCONTAINED) });
+    if (expanded.has(UNCONTAINED)) for (const item of leaves) walk(item, 1, UNCONTAINED);
   }
   return rows;
 }

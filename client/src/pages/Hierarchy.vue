@@ -1,17 +1,25 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, defineAsyncComponent, onMounted, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { api } from '../api.js';
 import { buildTree, searchTree } from '../hierarchyTree.js';
+import { useHierarchyExpansion } from '../useHierarchyExpansion.js';
 import PageHeader from '../components/PageHeader.vue';
 import HierarchyTree from '../components/HierarchyTree.vue';
 
+// The graph library is only downloaded once the Graph view is opened.
+const HierarchyGraph = defineAsyncComponent(() => import('../components/HierarchyGraph.vue'));
+
 /*
-  The containment hierarchy of `Stored inside`, loaded once as flat nodes. The page owns the data
-  and the search, so another view of the same nodes can later sit next to the tree.
+  The containment hierarchy of `Stored inside`, loaded once as flat nodes. The page owns the data,
+  the search, and the opened branches, which the Tree and Graph views both render. The chosen view
+  lives in the address (`?view=graph`), so Back from an item returns to it; Tree is the default.
 */
 defineOptions({ name: 'ItemHierarchy' });
 const { t } = useI18n();
+const route = useRoute();
+const router = useRouter();
 const items = ref([]);
 const loading = ref(true);
 const error = ref('');
@@ -19,6 +27,11 @@ const query = ref('');
 
 const tree = computed(() => buildTree(items.value));
 const search = computed(() => (query.value.trim() ? searchTree(tree.value, query.value) : null));
+const { rows, toggle, expandAll, collapseAll } = useHierarchyExpansion(tree, search);
+const view = computed({
+  get: () => (route.query.view === 'graph' ? 'graph' : 'tree'),
+  set: value => router.replace({ query: { ...route.query, view: value === 'graph' ? 'graph' : undefined } })
+});
 const subtitle = computed(() => (loading.value || error.value ? '' : t('items.count', items.value.length)));
 
 async function load() {
@@ -90,18 +103,43 @@ onMounted(load);
 
   <template v-else>
     <div class="card mb-3">
-      <div class="card-body">
-        <label
-          class="form-label"
-          for="hierarchy-search"
-        >{{ $t('hierarchy.search') }}</label>
-        <input
-          id="hierarchy-search"
-          v-model="query"
-          type="search"
-          class="form-control"
-          :placeholder="$t('hierarchy.searchPlaceholder')"
+      <div class="card-body d-flex flex-wrap align-items-end gap-3">
+        <div class="flex-grow-1">
+          <label
+            class="form-label"
+            for="hierarchy-search"
+          >{{ $t('hierarchy.search') }}</label>
+          <input
+            id="hierarchy-search"
+            v-model="query"
+            type="search"
+            class="form-control"
+            :placeholder="$t('hierarchy.searchPlaceholder')"
+          >
+        </div>
+        <div
+          class="btn-group"
+          role="group"
+          :aria-label="$t('hierarchy.view')"
         >
+          <template
+            v-for="option in ['tree', 'graph']"
+            :key="option"
+          >
+            <input
+              :id="`hierarchy-view-${option}`"
+              v-model="view"
+              type="radio"
+              class="btn-check"
+              name="hierarchy-view"
+              :value="option"
+            >
+            <label
+              class="btn"
+              :for="`hierarchy-view-${option}`"
+            >{{ $t(`hierarchy.views.${option}`) }}</label>
+          </template>
+        </div>
       </div>
     </div>
 
@@ -118,11 +156,21 @@ onMounted(load);
         </p>
       </div>
     </div>
-    <!-- Hidden rather than removed, so the opened branches survive a search without matches. -->
-    <HierarchyTree
-      v-show="!search || search.matches.size"
-      :tree="tree"
+    <HierarchyGraph
+      v-else-if="view === 'graph'"
+      :rows="rows"
       :search="search"
+      @toggle="toggle"
+      @expand-all="expandAll"
+      @collapse-all="collapseAll"
+    />
+    <HierarchyTree
+      v-else
+      :rows="rows"
+      :search="search"
+      @toggle="toggle"
+      @expand-all="expandAll"
+      @collapse-all="collapseAll"
     />
   </template>
 </template>

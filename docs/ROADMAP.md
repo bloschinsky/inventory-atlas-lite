@@ -18,12 +18,8 @@ Implemented behavior is documented separately in [`features/README.md`](features
    automated translation-key completeness checks. See
    [`TASK-I18N-ADDITIONAL-LANGUAGES.md`](issues/TASK-I18N-ADDITIONAL-LANGUAGES.md).
 
-3. **Hierarchy, Phase 2: Graph View** — Planned; the Phase 1 storage tree is complete. Adds an
-   interactive graph view to the shared hierarchy page without a second containment model. See
-   [`TASK-HIERARCHY-PHASE-2-GRAPH-VIEW.md`](issues/TASK-HIERARCHY-PHASE-2-GRAPH-VIEW.md).
-
-4. **Hierarchy, Phase 3: Drag & Drop** — Planned; blocked by Hierarchy, Phase 2. Adds safe
-   tree-based containment editing while preserving the existing server-side cycle protection. See
+3. **Hierarchy, Phase 3: Drag & Drop** — Planned; the Phase 1 tree and Phase 2 graph are complete.
+   Adds safe tree-based containment editing while preserving the existing server-side cycle protection. See
    [`TASK-HIERARCHY-PHASE-3-DRAG-DROP.md`](issues/TASK-HIERARCHY-PHASE-3-DRAG-DROP.md).
 
 

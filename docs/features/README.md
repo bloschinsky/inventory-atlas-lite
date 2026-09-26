@@ -18,7 +18,7 @@ document describes the current behaviour and its boundaries, not the original pl
 | [Duplicate item](duplicate-item.md) | Open the regular Add Item form prefilled from an existing item and save an independent copy without its photos, container, or identity. |
 | [Bulk Replace Field Value](bulk-replace-field-value.md) | Replace one exact saved value of Condition, Location, Transferred To, or one text custom field on every matching item after a previewed confirmation, atomically and without partial matches. |
 | [Nested items](nested-items.md) | Store an item inside another item and browse its direct contents. |
-| [Hierarchy (Storage Tree)](hierarchy.md) | Browse every item as a read-only expandable storage tree of containers and uncontained items, and search names with their full container path. |
+| [Hierarchy (Storage Tree and Graph)](hierarchy.md) | Browse every item as a read-only expandable storage tree or an interactive left-to-right graph of containers and uncontained items, and search names with their full container path. |
 | [Effective location inheritance](effective-location-inheritance.md) | Display a contained item at the location of its outermost container while its own saved location stays editable. |
 | [Batch Add Fields](batch-add-fields.md) | Paste a field-definition document, review and edit the proposed fields, and create them in one atomic batch. |
 | [Batch Add Items from JSON](batch-add-items.md) | Paste or generate a category-scoped item document, review and edit every proposed item, and create them in one atomic batch. |

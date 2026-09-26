@@ -4,9 +4,7 @@
 **Priority:** Medium
 **Type:** Feature / hierarchy editing
 **Phase:** 3 of 3
-**Blocked by:**
-- Phase 1 is complete; see `docs/features/hierarchy.md`
-- `TASK-HIERARCHY-PHASE-2-GRAPH-VIEW.md`
+**Blocked by:** None (Phases 1 and 2 are complete; see `docs/features/hierarchy.md`)
 
 ---
 

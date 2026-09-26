@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.41.0",
+    "date": "2026-09-26",
+    "changes": [
+      "Hierarchy now has a Graph view next to the Tree: the same containers and contents drawn as a left-to-right diagram from Inventory, with arrows from each container to what is inside it.",
+      "Pan, zoom, and Fit to view the graph; open and close branches on each node, or all at once, and the opened branches stay the same when you switch between Tree and Graph.",
+      "Search highlights matching items in the graph and zooms to them and their containers. Click a name or double-click a node to open the item. The graph is read-only, and Tree stays the default view."
+    ]
+  },
+  {
     "version": "0.40.1",
     "date": "2026-09-26",
     "changes": [

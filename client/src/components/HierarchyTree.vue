@@ -1,33 +1,17 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
 import { IconBox, IconChevronRight, IconInbox, IconPackage } from '@tabler/icons-vue';
-import { expandableKeys, visibleRows } from '../hierarchyTree.js';
 
 /*
-  The read-only Tree view of the Hierarchy page. Browsing and searching keep separate expansion
-  sets, so clearing a search returns to the branches the user had opened before it.
+  The read-only Tree view of the Hierarchy page: one flat list of the visible rows indented by depth.
+  The page owns the expansion, which the Graph view shares.
 */
-const props = defineProps({
-  tree: { type: Object, required: true },
+defineProps({
+  // The visibleRows() of the page's expansion.
+  rows: { type: Array, required: true },
   // The searchTree() result, or null while nothing is searched.
   search: { type: Object, default: null }
 });
-
-const browseExpanded = ref(new Set());
-const searchExpanded = ref(new Set());
-const expansion = () => (props.search ? searchExpanded : browseExpanded);
-const rows = computed(() => visibleRows(props.tree, expansion().value, props.search?.visible));
-
-watch(() => props.search, search => { searchExpanded.value = new Set(search?.expanded); });
-
-// Sets are replaced rather than mutated, so the computed rows always follow.
-function toggle(key) {
-  const next = new Set(expansion().value);
-  if (next.has(key)) next.delete(key); else next.add(key);
-  expansion().value = next;
-}
-const expandAll = () => { expansion().value = expandableKeys(props.tree, props.search?.visible); };
-const collapseAll = () => { expansion().value = new Set(); };
+defineEmits(['toggle', 'expand-all', 'collapse-all']);
 </script>
 
 <template>
@@ -40,14 +24,14 @@ const collapseAll = () => { expansion().value = new Set(); };
         <button
           type="button"
           class="btn btn-sm"
-          @click="expandAll"
+          @click="$emit('expand-all')"
         >
           {{ $t('hierarchy.expandAll') }}
         </button>
         <button
           type="button"
           class="btn btn-sm"
-          @click="collapseAll"
+          @click="$emit('collapse-all')"
         >
           {{ $t('hierarchy.collapseAll') }}
         </button>
@@ -71,7 +55,7 @@ const collapseAll = () => { expansion().value = new Set(); };
           :aria-label="$t(row.expanded ? 'hierarchy.collapse' : 'hierarchy.expand', {
             name: row.type === 'group' ? $t('hierarchy.uncontained') : row.item.name
           })"
-          @click="toggle(row.key)"
+          @click="$emit('toggle', row.key)"
         >
           <IconChevronRight
             :size="18"

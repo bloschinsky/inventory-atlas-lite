@@ -536,9 +536,20 @@ already contains; the server rejects such a move with an error message.
 5. Type into **Search hierarchy** to find items by name. Each match is shown inside its containers,
    which open automatically, for example `Box A → Camera Bag → Nikon F80`. Clear the search to get
    back to the branches you had open.
+6. Choose **Graph** next to the search to see the same hierarchy as a diagram that grows from
+   **Inventory** on the left to the contents on the right; **Tree** switches back. Containers have a
+   coloured left edge, and arrows point from a container to what is inside it.
+   - Drag the background to move around and scroll (or pinch on a touch screen) to zoom. The
+     buttons above the graph zoom in, zoom out, and **Fit to view**.
+   - Press **+** or **−** on a node to open or close it; **Expand all** and **Collapse all** work as
+     in the tree, and the branches you open stay open when you switch views.
+   - Click a name, or double-click a node, to open that item's page. **Back** returns to the graph.
+   - A search highlights the matching items and zooms to them and their containers.
+   - The graph draws at most 500 items at once. If more are open, it asks you to collapse some
+     branches, search, or use the tree instead.
 
-The tree only shows what is stored where; to move an item, change **Stored inside** in its form.
-**Inventory** and **Uncontained items** are only views, not records.
+The tree and graph only show what is stored where; to move an item, change **Stored inside** in its
+form. Nodes cannot be dragged. **Inventory** and **Uncontained items** are only views, not records.
 
 ### Use custom-field autocomplete
 
@@ -865,7 +876,9 @@ backup, and keep the copies on a different machine than the server.
 - Photos: JPEG, PNG, WebP, GIF, up to 10 files of 15 MB each per upload.
 - Search covers the item name, description, serial number, and Transferred To. **Hierarchy** searches
   item names only.
-- **Hierarchy** is read-only: items cannot be moved or dragged in the tree.
+- **Hierarchy** is read-only: items cannot be moved or dragged in the tree or the graph. The graph
+  draws at most 500 visible items at once and is easiest to use on a larger screen; the tree is the
+  default view.
 - **Replace field value** replaces one exact value of one field at a time. There is no substring or
   pattern replacement and no undo.
 - A category used by any item cannot be deleted, and an item containing other items cannot be

@@ -52,6 +52,20 @@ body.app-menu-open { overflow: hidden; }
   .hierarchy-row { padding-inline-start: calc(.25rem + min(var(--hierarchy-depth), 6) * .75rem); }
 }
 
+/* Hierarchy graph. The pane follows the viewport height instead of a fixed canvas size; nodes keep the
+   exact box of NODE_WIDTH x NODE_HEIGHT in hierarchyGraph.js, so the layout never overlaps them. */
+.hierarchy-graph { height: clamp(22rem, 65vh, 44rem); background: var(--tblr-bg-surface-secondary); }
+.hierarchy-graph .vue-flow__edge-path { stroke: var(--tblr-secondary); stroke-width: 1.5; }
+.hierarchy-graph .vue-flow__handle { opacity: 0; pointer-events: none; }
+.hierarchy-node { display: flex; align-items: center; gap: .5rem; box-sizing: border-box; width: 240px; height: 64px; padding: .5rem;
+  background: var(--tblr-bg-surface); border: var(--tblr-border-width) var(--tblr-border-style) var(--tblr-border-color);
+  border-radius: var(--tblr-border-radius); box-shadow: var(--tblr-shadow-card); }
+.hierarchy-node-text { flex: 1 1 auto; min-width: 0; line-height: 1.3; }
+.hierarchy-node-container { border-inline-start: 4px solid var(--tblr-primary); }
+.hierarchy-node-virtual { border-style: dashed; background: var(--tblr-bg-surface-tertiary); }
+.hierarchy-node-match { background: var(--tblr-yellow-lt); border-color: var(--tblr-yellow); }
+.vue-flow__node.selected .hierarchy-node { outline: 2px solid var(--tblr-primary); outline-offset: 2px; }
+
 /* Item cards on narrow screens */
 .item-card-link { color: var(--tblr-body-color); font-weight: 600; text-decoration: none; overflow-wrap: anywhere; }
 .item-card-link:hover { color: var(--tblr-primary); text-decoration: underline; }

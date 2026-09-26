@@ -1,6 +1,6 @@
 {
   "name": "simple-personal-inventory",
-  "version": "0.40.1",
+  "version": "0.41.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -20,6 +20,7 @@
   "dependencies": {
     "@tabler/core": "1.5.1",
     "@tabler/icons-vue": "3.46.0",
+    "@vue-flow/core": "1.48.2",
     "better-sqlite3": "^12.2.0",
     "express": "^5.1.0",
     "jsqr": "^1.4.0",
