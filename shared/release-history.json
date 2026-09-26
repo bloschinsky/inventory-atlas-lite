@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.40.1",
+    "date": "2026-09-26",
+    "changes": [
+      "Maintenance release that completes the publication of 0.40.0 and its Hierarchy page; the application itself is unchanged."
+    ]
+  },
+  {
     "version": "0.40.0",
     "date": "2026-09-26",
     "changes": [

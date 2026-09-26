@@ -9,8 +9,13 @@ import { detail } from './helpers.js';
 */
 const stubFiles = async request => (await request.get(`${cloudStubURL}/_stub/files`)).json();
 
-test.beforeEach(async ({ request }) => {
+/*
+  Settings also loads the AI model list whenever an earlier spec left an API key saved. That list is
+  answered here, so it never reaches a real provider and never adds its own alert to the page.
+*/
+test.beforeEach(async ({ page, request }) => {
   await request.post(`${cloudStubURL}/_stub/reset`);
+  await page.route('**/api/ai/models', route => route.fulfill({ json: { models: [] } }));
 });
 
 // Leaves every provider disconnected, and Google Drive unconfigured, for the next test.
@@ -132,7 +137,7 @@ test('reports a cancelled Google Drive connection and keeps it disconnected', as
   await page.mouse.move(600, 400);
   const drive = page.getByRole('article', { name: 'Google Drive' });
   await drive.getByRole('button', { name: 'Connect Google Drive' }).click();
-  await expect(page.getByRole('alert')).toHaveText('Google Drive access was not granted, so nothing was connected.');
+  await expect(page.getByRole('region', { name: 'Cloud Backup' }).getByRole('alert')).toHaveText('Google Drive access was not granted, so nothing was connected.');
   await expect(page).toHaveURL(/\/settings$/);
   await expect(drive.getByText('Not connected', { exact: true })).toBeVisible();
 });
