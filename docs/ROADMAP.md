@@ -18,15 +18,25 @@ Implemented behavior is documented separately in [`features/README.md`](features
    automated translation-key completeness checks. See
    [`TASK-I18N-ADDITIONAL-LANGUAGES.md`](issues/TASK-I18N-ADDITIONAL-LANGUAGES.md).
 
-3. **Hierarchy, Phase 3: Drag & Drop** — Planned; the Phase 1 tree and Phase 2 graph are complete.
-   Adds safe tree-based containment editing while preserving the existing server-side cycle protection. See
+3. **Hierarchy Location Grouping** — Planned; the Phase 1 tree and Phase 2 graph are complete.
+   Adds a virtual effective-location level to the shared hierarchy model and must complete before
+   drag-and-drop editing. See
+   [`TASK-HIERARCHY-LOCATION-GROUPING-BEFORE-PHASE-3.md`](issues/TASK-HIERARCHY-LOCATION-GROUPING-BEFORE-PHASE-3.md).
+
+4. **Hierarchy, Phase 3: Drag & Drop** — Planned; blocked by Hierarchy Location Grouping. Adds
+   safe tree-based containment editing while preserving the existing server-side cycle protection. See
    [`TASK-HIERARCHY-PHASE-3-DRAG-DROP.md`](issues/TASK-HIERARCHY-PHASE-3-DRAG-DROP.md).
 
-4. **Checklists, Phase 1: Core Checklists and Check Sessions** — Planned. Adds reusable packing
+5. **Hierarchy Category Grouping** — Planned; blocked by Hierarchy Location Grouping. Adds a
+   category-based Tree and Graph projection of the same inventory while keeping structural editing
+   limited to Location mode. See
+   [`TASK-HIERARCHY-CATEGORY-GROUPING.md`](issues/TASK-HIERARCHY-CATEGORY-GROUPING.md).
+
+6. **Checklists, Phase 1: Core Checklists and Check Sessions** — Planned. Adds reusable packing
    and verification checklists with independent, durable run history. See
    [`TASK-CHECKLISTS-PHASE-1-CORE.md`](issues/TASK-CHECKLISTS-PHASE-1-CORE.md).
 
-5. **Checklists, Phase 2: Inventory Verification and Container Audits** — Planned; blocked by
+7. **Checklists, Phase 2: Inventory Verification and Container Audits** — Planned; blocked by
    Checklists Phase 1. Adds completed-verification timestamps and container-content audit runs. See
    [`TASK-CHECKLISTS-PHASE-2-INVENTORY-VERIFICATION.md`](issues/TASK-CHECKLISTS-PHASE-2-INVENTORY-VERIFICATION.md).
 
