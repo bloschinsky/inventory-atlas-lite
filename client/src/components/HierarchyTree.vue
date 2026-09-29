@@ -1,5 +1,6 @@
 <script setup>
-import { IconBox, IconChevronRight, IconInbox, IconPackage } from '@tabler/icons-vue';
+import { IconBox, IconChevronRight, IconInbox, IconMapPin, IconMapPinOff, IconPackage } from '@tabler/icons-vue';
+import { rowName } from '../hierarchyTree.js';
 
 /*
   The read-only Tree view of the Hierarchy page: one flat list of the visible rows indented by depth.
@@ -45,6 +46,7 @@ defineEmits(['toggle', 'expand-all', 'collapse-all']);
         v-for="row in rows"
         :key="row.key"
         class="list-group-item hierarchy-row"
+        :class="{ 'hierarchy-row-location': row.type === 'location' }"
         :style="{ '--hierarchy-depth': row.depth }"
       >
         <button
@@ -52,9 +54,7 @@ defineEmits(['toggle', 'expand-all', 'collapse-all']);
           type="button"
           class="btn btn-ghost-secondary btn-icon btn-sm hierarchy-toggle"
           :aria-expanded="row.expanded"
-          :aria-label="$t(row.expanded ? 'hierarchy.collapse' : 'hierarchy.expand', {
-            name: row.type === 'group' ? $t('hierarchy.uncontained') : row.item.name
-          })"
+          :aria-label="$t(row.expanded ? 'hierarchy.collapse' : 'hierarchy.expand', { name: rowName(row, $t) })"
           @click="$emit('toggle', row.key)"
         >
           <IconChevronRight
@@ -68,7 +68,21 @@ defineEmits(['toggle', 'expand-all', 'collapse-all']);
           class="hierarchy-toggle"
           aria-hidden="true"
         />
-        <template v-if="row.type === 'group'">
+        <template v-if="row.type === 'location'">
+          <span
+            class="item-thumb hierarchy-thumb"
+            aria-hidden="true"
+          ><component
+            :is="row.location.name === null ? IconMapPinOff : IconMapPin"
+            :size="18"
+          /></span>
+          <span
+            class="hierarchy-label fw-bold"
+            :class="{ 'hierarchy-match': search?.matches.has(row.key) }"
+          >{{ rowName(row, $t) }}</span>
+          <span class="badge bg-azure-lt ms-auto">{{ $t('items.count', row.itemCount) }}</span>
+        </template>
+        <template v-else-if="row.type === 'group'">
           <span
             class="item-thumb hierarchy-thumb"
             aria-hidden="true"

@@ -3,8 +3,9 @@ import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { Handle, MarkerType, Position, VueFlow } from '@vue-flow/core';
 import '@vue-flow/core/dist/style.css';
-import { IconBox, IconFocusCentered, IconInbox, IconMinus, IconPackage, IconPlus, IconSitemap, IconZoomIn, IconZoomOut } from '@tabler/icons-vue';
+import { IconBox, IconFocusCentered, IconInbox, IconMapPin, IconMapPinOff, IconMinus, IconPackage, IconPlus, IconSitemap, IconZoomIn, IconZoomOut } from '@tabler/icons-vue';
 import { GRAPH_NODE_LIMIT, fitViewport, graphBounds, layoutGraph } from '../hierarchyGraph.js';
+import { rowName } from '../hierarchyTree.js';
 
 /*
   The read-only Graph view of the Hierarchy page. It draws the same visible rows as the Tree, laid out
@@ -31,7 +32,7 @@ const flowNodes = computed(() => layout.value.nodes.map(node => ({
   id: String(node.key), type: 'hierarchy', position: node.position, data: node, draggable: false, connectable: false
 })));
 const flowEdges = computed(() => layout.value.edges.map(edge => ({
-  id: `${edge.from}-${edge.to}`, source: String(edge.from), target: String(edge.to), type: 'smoothstep',
+  id: `edge:${edge.to}`, source: String(edge.from), target: String(edge.to), type: 'smoothstep',
   markerEnd: { type: MarkerType.ArrowClosed, color: 'var(--tblr-secondary)' }, selectable: false, focusable: false
 })));
 
@@ -191,7 +192,8 @@ const openItem = ({ node }) => { if (node.data.item) router.push(`/items/${node.
             :class="{
               'hierarchy-node-container': data.type === 'item' && data.item.children_count,
               'hierarchy-node-virtual': data.type !== 'item',
-              'hierarchy-node-match': data.type === 'item' && search?.matches.has(data.key)
+              'hierarchy-node-location': data.type === 'location',
+              'hierarchy-node-match': search?.matches.has(data.key)
             }"
           >
             <span
@@ -210,6 +212,11 @@ const openItem = ({ node }) => { if (node.data.item) router.push(`/items/${node.
               />
               <IconInbox
                 v-else-if="data.type === 'group'"
+                :size="18"
+              />
+              <component
+                :is="data.location.name === null ? IconMapPinOff : IconMapPin"
+                v-else-if="data.type === 'location'"
                 :size="18"
               />
               <component
@@ -232,6 +239,13 @@ const openItem = ({ node }) => { if (node.data.item) router.push(`/items/${node.
                   <template v-if="data.item.children_count">{{ $t('items.count', data.item.children_count) }} · </template>{{ data.item.category_name }}
                 </span>
               </template>
+              <template v-else-if="data.type === 'location'">
+                <span
+                  class="fw-bold d-block text-truncate"
+                  :title="rowName(data, $t)"
+                >{{ rowName(data, $t) }}</span>
+                <span class="meta-text d-block">{{ $t('items.count', data.itemCount) }}</span>
+              </template>
               <template v-else>
                 <span class="fw-medium d-block text-truncate">{{ $t(data.type === 'root' ? 'hierarchy.root' : 'hierarchy.uncontained') }}</span>
                 <span
@@ -245,9 +259,7 @@ const openItem = ({ node }) => { if (node.data.item) router.push(`/items/${node.
               type="button"
               class="btn btn-ghost-secondary btn-icon btn-sm nodrag nopan"
               :aria-expanded="data.expanded"
-              :aria-label="$t(data.expanded ? 'hierarchy.collapse' : 'hierarchy.expand', {
-                name: data.type === 'group' ? $t('hierarchy.uncontained') : data.item.name
-              })"
+              :aria-label="$t(data.expanded ? 'hierarchy.collapse' : 'hierarchy.expand', { name: rowName(data, $t) })"
               @click.stop="toggle(data.key)"
             >
               <component

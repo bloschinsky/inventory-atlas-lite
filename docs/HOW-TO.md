@@ -553,30 +553,40 @@ the new container. There is no undo, and **Move to…** cannot take items out to
 ### Browse the storage hierarchy
 
 1. Open **Hierarchy** in the navigation. On a phone it is in the **☰** menu.
-2. The tree starts at **Inventory**. Under it are your top-level containers — items that are not
-   inside anything but hold something — followed by **Uncontained items**, one group for every
-   top-level item that holds nothing. The group shows how many items it has.
-3. Press the arrow in front of a row to open or close it. Rows show the photo, name, category,
+2. The tree starts at **Inventory**. Under it are your locations, each with a pin and the number of
+   items stored there, followed by **No location** for everything without one. An item is listed
+   under its displayed location — the location of its outermost container — so a box and everything
+   inside it always stay together. Spellings that differ only in spaces or capitals, such as
+   `Garage` and `garage`, are one location; your saved text is not changed.
+3. Inside a location come its top-level containers — items that are not inside anything but hold
+   something — followed by that location's own **Uncontained items** group for every top-level item
+   there that holds nothing. The group shows how many items it has.
+4. Press the arrow in front of a row to open or close it. Item rows show the photo, name, category,
    displayed location, and how many items are directly inside. **Expand all** and **Collapse all**
-   open or close every branch at once.
-4. Click a name to open that item's page.
-5. Type into **Search hierarchy** to find items by name. Each match is shown inside its containers,
-   which open automatically, for example `Box A → Camera Bag → Nikon F80`. Clear the search to get
-   back to the branches you had open.
-6. Choose **Graph** next to the search to see the same hierarchy as a diagram that grows from
-   **Inventory** on the left to the contents on the right; **Tree** switches back. Containers have a
-   coloured left edge, and arrows point from a container to what is inside it.
+   open or close every location, group, and branch at once.
+5. Click an item name to open that item's page. Locations are only groups, not records.
+6. Type into **Search hierarchy** to find items or locations by name. Each matching item is shown
+   inside its location and containers, which open automatically, for example
+   `KP Garage → Box A → Camera Bag → Nikon F80`. A matching location opens to show its containers
+   and group. Clear the search to get back to the branches you had open.
+7. Choose **Graph** next to the search to see the same hierarchy as a diagram that grows from
+   **Inventory** on the left, through the locations, to the contents on the right; **Tree** switches
+   back. Locations have a blue border and a pin, containers a coloured left edge, and arrows point
+   from a location or container to what is inside it.
    - Drag the background to move around and scroll (or pinch on a touch screen) to zoom. The
      buttons above the graph zoom in, zoom out, and **Fit to view**.
    - Press **+** or **−** on a node to open or close it; **Expand all** and **Collapse all** work as
      in the tree, and the branches you open stay open when you switch views.
-   - Click a name, or double-click a node, to open that item's page. **Back** returns to the graph.
-   - A search highlights the matching items and zooms to them and their containers.
+   - Click a name, or double-click an item node, to open that item's page. **Back** returns to the
+     graph.
+   - A search highlights the matching items and locations and zooms to them and their containers.
    - The graph draws at most 500 items at once. If more are open, it asks you to collapse some
      branches, search, or use the tree instead.
 
 The tree and graph only show what is stored where; to move an item, change **Stored inside** in its
-form, or use **Move to…** on **Items** for several items at once. Nodes cannot be dragged. **Inventory** and **Uncontained items** are only views, not records.
+form, or use **Move to…** on **Items** for several items at once; to move something to another
+location, change the **Location** of the item or of its outermost container. Nodes cannot be dragged.
+**Inventory**, the locations, **No location**, and **Uncontained items** are only views, not records.
 
 ### Use custom-field autocomplete
 
@@ -918,7 +928,7 @@ backup, and keep the copies on a different machine than the server.
   router port and do not put it behind a public reverse proxy.
 - Photos: JPEG, PNG, WebP, GIF, up to 10 files of 15 MB each per upload.
 - Search covers the item name, description, serial number, and Transferred To. **Hierarchy** searches
-  item names only.
+  item and location names only.
 - **Hierarchy** is read-only: items cannot be moved or dragged in the tree or the graph. **Move to…**
   on **Items** only places items inside a container; it cannot move them to the top level and has no
   undo. The graph

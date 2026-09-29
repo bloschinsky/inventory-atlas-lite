@@ -116,7 +116,7 @@ The project stays small and readable. Do not add:
 - `client/src/dashboardCharts.js` — on-demand loading of the ApexCharts copy bundled in `@tabler/core`, Tabler color resolution for the active mode, and the options of each Dashboard chart.
 - `client/src/components/DashboardChart.vue` — one ApexCharts instance: creation, in-place updates, and cleanup.
 - `client/src/pages/Hierarchy.vue` — `/hierarchy`: loads the flat hierarchy nodes, owns the search and the Tree/Graph switch (`?view=graph`); `client/src/components/HierarchyTree.vue` renders the read-only storage tree, and `HierarchyGraph.vue` (loaded on demand) the read-only Vue Flow graph.
-- `client/src/hierarchyTree.js` — pure storage tree rules shared by both views: the virtual Inventory root and Uncontained items group, name search with ancestor paths, and the visible rows with their parent keys.
+- `client/src/hierarchyTree.js` — pure storage tree rules shared by both views: the virtual Inventory root, the Location nodes grouped by normalized effective location with their per-location Uncontained items groups and item counts, the stable virtual keys, item and location name search with ancestor paths, and the visible rows with their parent keys.
 - `client/src/useHierarchyExpansion.js` — the opened branches of the Hierarchy page (browse and search sets) shared by the Tree and Graph views.
 - `client/src/hierarchyGraph.js` — the library-independent Graph layout: deterministic left-to-right node positions, edges, the node limit, and view fitting.
 - `client/src/pages/ItemDetails.vue` — item details, photos, and deletion.

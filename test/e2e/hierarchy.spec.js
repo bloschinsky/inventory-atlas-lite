@@ -21,10 +21,18 @@ const recordWrites = page => {
   return writes;
 };
 
-test('expands a container in the tree and opens a nested item', async ({ page, request }) => {
+// The virtual Uncontained items group of one location, by the name its toggle is announced with.
+const groupName = location => `Uncontained items — ${location}`;
+const rowOf = (page, name) => page.getByRole('listitem').filter({ has: page.getByRole('link', { name, exact: true }) });
+
+test('groups the tree by location and opens a nested item', async ({ page, request }) => {
   const category = await createCategory(request, unique('Shelving'));
-  const [box, bag, camera] = await createChain(request, category.id, ['Box', 'Camera Bag', 'Camera']);
-  const loose = await createItem(request, { name: unique('Coffee mug'), category_id: category.id, location: unique('Kitchen') });
+  const location = unique('Tree Home');
+  const box = await createItem(request, { name: unique('Box'), category_id: category.id, location });
+  const [bag, camera] = await createChain(request, category.id, ['Camera Bag', 'Camera'], box);
+  // Another spelling of the same location joins the same Location node; a tie is named by code-point order.
+  const loose = await createItem(request, { name: unique('Coffee mug'), category_id: category.id, location: location.toUpperCase() });
+  const shown = [location, location.toUpperCase()].sort()[0];
   const writes = recordWrites(page);
 
   await page.goto('/dashboard');
@@ -34,61 +42,92 @@ test('expands a container in the tree and opens a nested item', async ({ page, r
   await expect(page.getByRole('heading', { name: 'Hierarchy', level: 1 })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Inventory' })).toBeVisible();
 
-  // A top-level container is a root branch; its contents appear only once it is expanded.
-  await expect(page.getByRole('link', { name: box.name, exact: true })).toBeVisible();
+  // The location is a virtual row that counts every item of its branches; its contents appear once it is expanded.
+  const locationRow = page.getByRole('listitem').filter({ has: page.getByRole('button', { name: `Expand ${shown}`, exact: true }) });
+  await expect(locationRow).toContainText('4 items');
+  await expect(locationRow.getByRole('link')).toHaveCount(0);
+  await expect(page.getByRole('link', { name: box.name, exact: true })).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Expand Uncontained items', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: `Expand ${shown}`, exact: true }).click();
+  await expect(page.getByRole('button', { name: `Collapse ${shown}`, exact: true })).toHaveAttribute('aria-expanded', 'true');
+
+  // A top-level container is a branch of its location.
   await expect(page.getByRole('link', { name: bag.name, exact: true })).toBeHidden();
   await page.getByRole('button', { name: `Expand ${box.name}` }).click();
   await expect(page.getByRole('button', { name: `Collapse ${box.name}` })).toHaveAttribute('aria-expanded', 'true');
   await page.getByRole('button', { name: `Expand ${bag.name}` }).click();
   await expect(page.getByRole('link', { name: camera.name, exact: true })).toBeVisible();
+  await expect(rowOf(page, camera.name)).toContainText(location);
 
-  // A top-level leaf waits in the virtual Uncontained items group with its own location.
+  // A top-level leaf waits in its own location's Uncontained items group.
   await expect(page.getByRole('link', { name: loose.name, exact: true })).toBeHidden();
-  await page.getByRole('button', { name: 'Expand Uncontained items' }).click();
-  const looseRow = page.getByRole('listitem').filter({ has: page.getByRole('link', { name: loose.name, exact: true }) });
-  await expect(looseRow).toContainText(loose.location);
+  await page.getByRole('button', { name: `Expand ${groupName(shown)}`, exact: true }).click();
+  await expect(rowOf(page, loose.name)).toContainText(loose.location);
 
   await page.getByRole('button', { name: 'Collapse all' }).click();
   await expect(page.getByRole('link', { name: camera.name, exact: true })).toBeHidden();
+  await expect(page.getByRole('link', { name: box.name, exact: true })).toBeHidden();
+  // Expand all opens the locations and their groups as well as the containers.
   await page.getByRole('button', { name: 'Expand all' }).click();
+  await expect(page.getByRole('button', { name: `Collapse ${shown}`, exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: loose.name, exact: true })).toBeVisible();
   await page.getByRole('link', { name: camera.name, exact: true }).click();
   await expect(page).toHaveURL(`/items/${camera.id}`);
   await expect(page.getByRole('heading', { name: camera.name })).toBeVisible();
   expect(writes).toEqual([]);
 });
 
-test('search reveals every match with its full container path', async ({ page, request }) => {
+test('search reveals every match with its location and full container path', async ({ page, request }) => {
   const category = await createCategory(request, unique('Archive'));
   const location = unique('KP Garage');
   const box = await createItem(request, { name: unique('Crate'), category_id: category.id, location });
-  const [bag, lens] = await createChain(request, category.id, ['Lens Bag', 'Nikkor lens'], box);
+  // A nested saved location never moves the item out of its container's location.
+  const bag = await createItem(request, { name: unique('Lens Bag'), category_id: category.id, parent_item_id: box.id, location: unique('Office') });
+  const [lens] = await createChain(request, category.id, ['Nikkor lens'], bag);
   const sibling = await createItem(request, { name: unique('Tapes'), category_id: category.id, parent_item_id: box.id });
+  const nowhere = await createItem(request, { name: unique('Unknown adapter'), category_id: category.id });
 
   await page.goto('/hierarchy');
   await page.mouse.move(600, 400);
   await page.getByLabel('Search hierarchy').fill(lens.name.toUpperCase());
 
-  // The match is shown inside its expanded ancestors, with the location inherited from the crate.
+  // The match is shown inside its expanded location and ancestors, with the location inherited from the crate.
+  await expect(page.getByRole('button', { name: `Collapse ${location}`, exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: box.name, exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: bag.name, exact: true })).toBeVisible();
-  const lensRow = page.getByRole('listitem').filter({ has: page.getByRole('link', { name: lens.name, exact: true }) });
-  await expect(lensRow).toContainText(location);
+  await expect(rowOf(page, lens.name)).toContainText(location);
   await expect(page.getByRole('link', { name: sibling.name, exact: true })).toBeHidden();
+  await expect(page.getByRole('button', { name: /^(Expand|Collapse) No location$/ })).toHaveCount(0);
+
+  // A matching location name reveals that location's branches, collapsed and highlighted.
+  await page.getByLabel('Search hierarchy').fill(location.toLowerCase());
+  await expect(page.locator('.hierarchy-row-location .hierarchy-match')).toHaveText(location);
+  await expect(page.getByRole('link', { name: box.name, exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: bag.name, exact: true })).toBeHidden();
+
+  // An item without a location is found under No location and its Uncontained items group.
+  await page.getByLabel('Search hierarchy').fill(nowhere.name);
+  await expect(page.getByRole('button', { name: 'Collapse No location', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: `Collapse ${groupName('No location')}`, exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: nowhere.name, exact: true })).toBeVisible();
 
   await page.getByLabel('Search hierarchy').fill(unique('No such item'));
   await expect(page.getByText('No matching items')).toBeVisible();
 
   // Clearing the search returns to the collapsed browsing state.
   await page.getByLabel('Search hierarchy').fill('');
-  await expect(page.getByRole('link', { name: box.name, exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: `Expand ${location}`, exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: box.name, exact: true })).toBeHidden();
   await expect(page.getByRole('link', { name: lens.name, exact: true })).toBeHidden();
 });
 
-test('the graph view expands branches, highlights a search, and opens a nested item', async ({ page, request }) => {
+test('the graph view groups by location, expands branches, highlights a search, and opens a nested item', async ({ page, request }) => {
   const category = await createCategory(request, unique('Graph shelf'));
-  const [box, bag, camera] = await createChain(request, category.id, ['Graph Box', 'Graph Bag', 'Graph Camera']);
+  const location = unique('Graph Home');
+  const box = await createItem(request, { name: unique('Graph Box'), category_id: category.id, location });
+  const [bag, camera] = await createChain(request, category.id, ['Graph Bag', 'Graph Camera'], box);
   const lens = await createItem(request, { name: unique('Graph Lens'), category_id: category.id, parent_item_id: bag.id });
-  const loose = await createItem(request, { name: unique('Graph Mug'), category_id: category.id });
+  const loose = await createItem(request, { name: unique('Graph Mug'), category_id: category.id, location });
   const writes = recordWrites(page);
 
   await page.goto('/hierarchy');
@@ -99,10 +138,13 @@ test('the graph view expands branches, highlights a search, and opens a nested i
   const graph = page.getByRole('region', { name: 'Storage graph' });
   await expect(graph).toBeVisible();
 
-  // The virtual root, a top-level container, and the collapsed Uncontained items group are nodes.
+  // The virtual root and the collapsed location are nodes; the location counts all five items.
   await expect(graph.getByText('Inventory', { exact: true })).toBeVisible();
+  await expect(graph.locator('.hierarchy-node-location').filter({ hasText: location })).toContainText('5 items');
+  await expect(graph.getByRole('link', { name: box.name, exact: true })).toHaveCount(0);
+  await graph.getByRole('button', { name: `Expand ${location}`, exact: true }).click();
   await expect(graph.getByRole('link', { name: box.name, exact: true })).toBeVisible();
-  await expect(graph.getByRole('button', { name: 'Expand Uncontained items' })).toBeVisible();
+  await expect(graph.getByRole('button', { name: `Expand ${groupName(location)}`, exact: true })).toBeVisible();
   await expect(graph.getByRole('link', { name: loose.name, exact: true })).toHaveCount(0);
   await expect(graph.getByRole('link', { name: bag.name, exact: true })).toHaveCount(0);
 
@@ -116,13 +158,21 @@ test('the graph view expands branches, highlights a search, and opens a nested i
   await expect(graph.getByRole('link', { name: camera.name, exact: true })).toHaveCount(0);
   await graph.getByRole('button', { name: `Expand ${box.name}` }).click();
   await expect(graph.getByRole('link', { name: camera.name, exact: true })).toBeVisible();
-  await graph.getByRole('button', { name: 'Expand Uncontained items' }).click();
+  await graph.getByRole('button', { name: `Expand ${groupName(location)}`, exact: true }).click();
   await expect(graph.getByRole('link', { name: loose.name, exact: true })).toBeVisible();
 
-  // A search reveals the nested match inside its path and highlights only it.
+  // The opened location and branches are the same in the Tree.
+  await page.getByText('Tree', { exact: true }).click();
+  await expect(page.getByRole('button', { name: `Collapse ${location}`, exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: camera.name, exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: loose.name, exact: true })).toBeVisible();
+  await page.getByText('Graph', { exact: true }).click();
+
+  // A search reveals the nested match inside its location and path and highlights only it.
   await page.getByRole('button', { name: 'Collapse all' }).click();
-  await expect(graph.getByRole('link', { name: bag.name, exact: true })).toHaveCount(0);
+  await expect(graph.getByRole('link', { name: box.name, exact: true })).toHaveCount(0);
   await page.getByLabel('Search hierarchy').fill(lens.name);
+  await expect(graph.getByRole('button', { name: `Collapse ${location}`, exact: true })).toBeVisible();
   await expect(graph.getByRole('link', { name: bag.name, exact: true })).toBeVisible();
   await expect(graph.getByRole('link', { name: camera.name, exact: true })).toHaveCount(0);
   await expect(graph.locator('.hierarchy-node-match')).toHaveCount(1);
@@ -133,7 +183,7 @@ test('the graph view expands branches, highlights a search, and opens a nested i
   await page.getByRole('button', { name: 'Fit to view' }).click();
   await page.getByText('Tree', { exact: true }).click();
   await expect(page).toHaveURL('/hierarchy');
-  await expect(page.getByRole('listitem').filter({ has: page.getByRole('link', { name: lens.name, exact: true }) })).toBeVisible();
+  await expect(rowOf(page, lens.name)).toBeVisible();
   await page.getByText('Graph', { exact: true }).click();
 
   await graph.getByRole('link', { name: lens.name, exact: true }).click();
@@ -146,10 +196,17 @@ test('the graph view expands branches, highlights a search, and opens a nested i
 
 test('a graph node is selected by a click and opens the item on a double-click', async ({ page, request }) => {
   const category = await createCategory(request, unique('Graph dbl'));
-  const [box] = await createChain(request, category.id, ['Double Box', 'Double Inner']);
+  const location = unique('Double shelf');
+  const box = await createItem(request, { name: unique('Double Box'), category_id: category.id, location });
+  await createChain(request, category.id, ['Double Inner'], box);
 
   await page.goto('/hierarchy?view=graph');
   await page.mouse.move(600, 400);
+  // A location node is not an item, so double-clicking it opens nothing.
+  const locationNode = page.locator('.vue-flow__node').filter({ has: page.locator('.hierarchy-node-location', { hasText: location }) });
+  await locationNode.locator('.meta-text').dblclick();
+  await expect(page).toHaveURL('/hierarchy?view=graph');
+  await page.getByRole('button', { name: `Expand ${location}`, exact: true }).click();
   const node = page.locator('.vue-flow__node').filter({ has: page.getByRole('link', { name: box.name, exact: true }) });
   await node.locator('.meta-text').click();
   await expect(node).toHaveClass(/selected/);

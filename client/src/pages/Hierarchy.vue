@@ -12,9 +12,9 @@ import HierarchyTree from '../components/HierarchyTree.vue';
 const HierarchyGraph = defineAsyncComponent(() => import('../components/HierarchyGraph.vue'));
 
 /*
-  The containment hierarchy of `Stored inside`, loaded once as flat nodes. The page owns the data,
-  the search, and the opened branches, which the Tree and Graph views both render. The chosen view
-  lives in the address (`?view=graph`), so Back from an item returns to it; Tree is the default.
+  The containment hierarchy of `Stored inside` grouped by effective location, loaded once as flat
+  nodes. The page owns the data, the search, and the opened branches, which the Tree and Graph views
+  both render. The chosen view lives in the address (`?view=graph`), so Back from an item returns to it; Tree is the default.
 */
 defineOptions({ name: 'ItemHierarchy' });
 const { t } = useI18n();

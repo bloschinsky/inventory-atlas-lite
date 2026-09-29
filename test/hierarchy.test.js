@@ -4,8 +4,8 @@ import { mkdtemp } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import Database from 'better-sqlite3';
-import { buildTree, expandableKeys, ROOT, searchTree, UNCONTAINED, visibleRows } from '../client/src/hierarchyTree.js';
-import { fitViewport, graphBounds, layoutGraph, NODE_HEIGHT, NODE_WIDTH } from '../client/src/hierarchyGraph.js';
+import { buildTree, expandableKeys, locationKey, ROOT, rowName, searchTree, uncontainedKey, visibleRows } from '../client/src/hierarchyTree.js';
+import { fitViewport, graphBounds, GRAPH_NODE_LIMIT, layoutGraph, NODE_HEIGHT, NODE_WIDTH } from '../client/src/hierarchyGraph.js';
 
 // The hierarchy endpoint and the client tree are exercised without HTTP against an in-memory database.
 process.env.DATA_DIR = await mkdtemp(path.join(os.tmpdir(), 'inventory-hierarchy-test-'));
@@ -34,10 +34,20 @@ const build = () => {
   return { db, itemService, add };
 };
 
-// Tree items in the shape of the endpoint, for the client tests that need no database.
-const node = (id, name, parentId = null) => ({ id, uuid: `u${id}`, name, parent_id: parentId, children_count: 0 });
-const names = rows => rows.map(row => (row.type === 'group' ? `[${UNCONTAINED}]` : row.item.name));
+/*
+  Tree items in the shape of the endpoint, for the client tests that need no database. Rows and graph
+  nodes are named for readable assertions: `@Home` is a Location, `@-` No location, `[uncontained]`
+  a location's Uncontained items group, and anything else an item.
+*/
+const node = (id, name, parentId = null, location = null) =>
+  ({ id, uuid: `u${id}`, name, parent_id: parentId, children_count: 0, effective_location: location });
+const GROUP = '[uncontained]';
+const nameOf = row => (row.type === 'root' ? '[root]' : row.type === 'location' ? `@${row.location.name ?? '-'}`
+  : row.type === 'group' ? GROUP : row.item.name);
+const names = rows => rows.map(nameOf);
 const depths = rows => rows.map(row => row.depth);
+const NONE = locationKey('');
+const NONE_GROUP = uncontainedKey('');
 
 test('the hierarchy endpoint returns lightweight flat nodes with inherited locations', () => {
   const { db, itemService, add } = build();
@@ -72,7 +82,7 @@ test('the hierarchy endpoint reads everything in one statement and writes nothin
   const { db, itemService, add } = build();
   let parent = null;
   for (let depth = 0; depth < 30; depth += 1) parent = add(`Level ${depth}`, parent);
-  for (let index = 0; index < 20; index += 1) add(`Loose ${index}`);
+  for (let index = 0; index < 20; index += 1) add(`Loose ${index}`, null, `Room ${index % 4}`);
   const before = db.prepare('SELECT id, parent_item_id, location, updated_at FROM items ORDER BY id').all();
 
   const prepare = db.prepare.bind(db);
@@ -84,150 +94,256 @@ test('the hierarchy endpoint reads everything in one statement and writes nothin
   assert.equal(items.length, 50);
   assert.equal(statements.length, 1);
   assert.match(statements[0].trim(), /^WITH RECURSIVE/);
+  // Grouping by location is a client projection of that one response; it needs no further request.
+  assert.deepEqual(buildTree(items).locations.map(location => location.itemCount), [5, 5, 5, 5, 30]);
   assert.deepEqual(db.prepare('SELECT id, parent_item_id, location, updated_at FROM items ORDER BY id').all(), before);
+});
+
+test('real endpoint data groups each branch by its top-level location and keeps saved locations', () => {
+  const { db, itemService, add } = build();
+  const box = add('Box A', null, 'KP Garage');
+  const bag = add('Camera Bag', box, 'Home');
+  add('Nikon F80', bag, 'Office');
+  const battery = add('Car battery', null, 'kp garage');
+  const adapter = add('Unknown adapter');
+  // The item form trims locations; older rows may still hold spaced or blank text.
+  db.prepare("UPDATE items SET location = ' kp garage ' WHERE id = ?").run(battery.id);
+  db.prepare("UPDATE items SET location = '   ' WHERE id = ?").run(adapter.id);
+  const saved = db.prepare('SELECT id, location FROM items ORDER BY id').all();
+
+  const tree = buildTree(itemService.hierarchy().items);
+  const all = visibleRows(tree, expandableKeys(tree));
+  assert.deepEqual(names(all), ['@KP Garage', 'Box A', 'Camera Bag', 'Nikon F80', GROUP, 'Car battery', '@-', GROUP, 'Unknown adapter']);
+  assert.deepEqual(tree.locations.map(location => location.itemCount), [4, 1]);
+  // The saved locations of the nested items and of the spaced spelling stay exactly as entered.
+  assert.deepEqual(db.prepare('SELECT id, location FROM items ORDER BY id').all(), saved);
+  assert.deepEqual(saved.map(row => row.location), ['KP Garage', 'Home', 'Office', ' kp garage ', '   ']);
 });
 
 test('an empty inventory builds an empty tree', () => {
   const tree = buildTree([]);
+  assert.deepEqual(tree.locations, []);
   assert.deepEqual(visibleRows(tree, new Set()), []);
   assert.deepEqual(expandableKeys(tree), new Set());
 });
 
-test('top-level leaves share one virtual Uncontained items group', () => {
-  const single = buildTree([node(1, 'Keyboard')]);
-  assert.deepEqual(names(visibleRows(single, new Set())), [`[${UNCONTAINED}]`]);
-  assert.equal(visibleRows(single, new Set())[0].childCount, 1);
-
-  const tree = buildTree([node(1, 'Book'), node(2, 'Coffee mug'), node(3, 'Keyboard')]);
-  const collapsed = visibleRows(tree, new Set());
-  assert.deepEqual(names(collapsed), [`[${UNCONTAINED}]`]);
-  assert.equal(collapsed[0].childCount, 3);
-  const open = visibleRows(tree, new Set([UNCONTAINED]));
-  assert.deepEqual(names(open), [`[${UNCONTAINED}]`, 'Book', 'Coffee mug', 'Keyboard']);
-  assert.deepEqual(depths(open), [0, 1, 1, 1]);
-  // The group is only a view: none of its rows carries anything but real item nodes.
-  assert.ok(open.slice(1).every(row => row.type === 'item'));
-});
-
-test('top-level containers are root branches and nesting renders at every depth', () => {
-  const items = [node(1, 'Box A'), node(2, 'Camera Bag', 1), node(3, 'Nikon F80', 2), node(4, 'Nikon 50mm', 2),
-    node(5, 'VHS tapes', 1), node(6, 'Box B'), node(7, 'ThinkPad T460s', 6), node(8, 'Keyboard')];
+test('named locations are virtual nodes with their own containers and Uncontained items', () => {
+  const items = [node(1, 'Box A', null, 'Home'), node(2, 'Camera', 1, 'Home'), node(3, 'Keyboard', null, 'Home'),
+    node(4, 'Book', null, 'Home'), node(5, 'Box B', null, 'KP Garage'), node(6, 'Cables', 5, 'KP Garage'),
+    node(7, 'Car battery', null, 'KP Garage'), node(8, 'Unknown adapter'), node(9, 'Atlas', null, 'Attic')];
   const tree = buildTree(items);
-  assert.deepEqual(names(visibleRows(tree, new Set())), ['Box A', 'Box B', `[${UNCONTAINED}]`]);
+
+  // Named locations by name, then No location; nothing but locations sits at the root level.
+  const collapsed = visibleRows(tree, new Set());
+  assert.deepEqual(names(collapsed), ['@Attic', '@Home', '@KP Garage', '@-']);
+  assert.ok(collapsed.every(row => row.type === 'location' && row.parent === ROOT && row.depth === 0));
+  assert.deepEqual(collapsed.map(row => row.key), ['location:attic', 'location:home', 'location:kp garage', NONE]);
 
   const all = visibleRows(tree, expandableKeys(tree));
-  assert.deepEqual(names(all), ['Box A', 'Camera Bag', 'Nikon F80', 'Nikon 50mm', 'VHS tapes', 'Box B',
-    'ThinkPad T460s', `[${UNCONTAINED}]`, 'Keyboard']);
-  assert.deepEqual(depths(all), [0, 1, 2, 2, 1, 0, 1, 0, 1]);
-  // A collapsed branch keeps its descendants out of the rows entirely.
-  assert.deepEqual(names(visibleRows(tree, new Set([1]))), ['Box A', 'Camera Bag', 'VHS tapes', 'Box B', `[${UNCONTAINED}]`]);
-
-  const deep = Array.from({ length: 200 }, (_, index) => node(index + 1, `Level ${index}`, index || null));
-  const deepRows = visibleRows(buildTree(deep), expandableKeys(buildTree(deep)));
-  assert.equal(deepRows.length, 200);
-  assert.equal(deepRows.at(-1).depth, 199);
+  assert.deepEqual(names(all), ['@Attic', GROUP, 'Atlas', '@Home', 'Box A', 'Camera', GROUP, 'Keyboard', 'Book',
+    '@KP Garage', 'Box B', 'Cables', GROUP, 'Car battery', '@-', GROUP, 'Unknown adapter']);
+  assert.deepEqual(depths(all.slice(3, 9)), [0, 1, 2, 1, 2, 2]);
+  // Every group belongs to one location, under its own key; there is no global group any more.
+  const groups = all.filter(row => row.type === 'group');
+  assert.deepEqual(groups.map(row => row.key), ['uncontained:attic', 'uncontained:home', 'uncontained:kp garage', NONE_GROUP]);
+  assert.deepEqual(groups.map(row => row.parent), ['location:attic', 'location:home', 'location:kp garage', NONE]);
+  assert.ok(!all.some(row => row.key === 'uncontained'));
+  // A location with only containers has no group, and a location row counts its direct children.
+  assert.deepEqual(names(visibleRows(buildTree([node(1, 'Box', null, 'Loft'), node(2, 'Lamp', 1, 'Loft')]), new Set(['location:loft']))),
+    ['@Loft', 'Box']);
+  assert.equal(all.find(row => row.key === 'location:home').childCount, 2);
 });
 
-test('search keeps the ancestor path of every match and expands only that path', () => {
-  const items = [node(1, 'Box A'), node(2, 'Camera Bag', 1), node(3, 'Nikon F80', 2), node(4, 'Strap', 3),
-    node(5, 'VHS tapes', 1), node(6, 'Box B'), node(7, 'Lens cloth', 6), node(8, 'Nikon manual')];
+test('location text is normalized for grouping without touching the items', () => {
+  const items = [node(1, 'Drill', null, 'GARAGE'), node(2, 'Saw', null, ' garage '), node(3, 'Hammer', null, 'Garage'),
+    node(4, 'Nails', null, 'garage'), node(5, 'Mug', null, '   '), node(6, 'Pen', null, ''), node(7, 'Cup')];
+  const copy = structuredClone(items);
+  const tree = buildTree(items);
+
+  assert.deepEqual(tree.locations.map(location => [location.key, location.name, location.itemCount]),
+    [['location:garage', 'garage', 4], [NONE, null, 3]]);
+  const garage = visibleRows(tree, new Set(['location:garage', 'uncontained:garage']));
+  assert.deepEqual(names(garage).slice(0, 6), ['@garage', GROUP, 'Drill', 'Saw', 'Hammer', 'Nails']);
+  // Grouping never rewrites item data, including the spelling of the saved location.
+  assert.deepEqual(items, copy);
+
+  // The display name is the most used spelling, and a tie takes the first in code-point order.
+  const named = spellings => buildTree(spellings.map((location, index) => node(index + 1, `Item ${index}`, null, location))).locations[0].name;
+  assert.equal(named(['garage', ' Garage', 'Garage ']), 'Garage');
+  assert.equal(named(['garage', 'Garage']), 'Garage');
+  assert.equal(named(['Garage', 'garage']), 'Garage');
+});
+
+test('a branch stays whole under the location of its top-level item', () => {
+  // The server sends the root location for nested items, but even a differing value never splits a branch.
+  const items = [node(1, 'Box A', null, 'KP Garage'), node(2, 'Camera Bag', 1, 'Home'), node(3, 'Nikon F80', 2, 'Office'),
+    node(4, 'Strap', 3, null), node(5, 'Tripod', null, 'Office')];
+  const tree = buildTree(items);
+  const all = visibleRows(tree, expandableKeys(tree));
+  assert.deepEqual(names(all), ['@KP Garage', 'Box A', 'Camera Bag', 'Nikon F80', 'Strap', '@Office', GROUP, 'Tripod']);
+  assert.deepEqual(depths(all), [0, 1, 2, 3, 4, 0, 1, 2]);
+  // Counts include every descendant and no virtual node.
+  assert.deepEqual(tree.locations.map(location => [location.name, location.itemCount]), [['KP Garage', 4], ['Office', 1]]);
+  assert.equal(all[0].itemCount, 4);
+  assert.equal(tree.locationOf.get(4).key, 'location:kp garage');
+
+  const deep = Array.from({ length: 200 }, (_, index) => node(index + 1, `Level ${index}`, index || null, 'Cellar'));
+  const deepTree = buildTree(deep);
+  const deepRows = visibleRows(deepTree, expandableKeys(deepTree));
+  assert.equal(deepRows.length, 201);
+  assert.equal(deepRows.at(-1).depth, 200);
+  assert.equal(deepRows[0].itemCount, 200);
+  // A collapsed branch keeps its descendants out of the rows entirely.
+  assert.deepEqual(names(visibleRows(deepTree, new Set(['location:cellar']))), ['@Cellar', 'Level 0']);
+});
+
+test('rows are announced by their item, location, or location group name', () => {
+  const t = (key, params) => (key === 'hierarchy.noLocation' ? 'No location' : `Uncontained items — ${params.location}`);
+  const tree = buildTree([node(1, 'Box', null, ' Home '), node(2, 'Mug'), node(3, 'Lid', 1)]);
+  const rows = visibleRows(tree, expandableKeys(tree));
+  assert.deepEqual(rows.map(row => rowName(row, t)),
+    ['Home', 'Box', 'Lid', 'No location', 'Uncontained items — No location', 'Mug']);
+});
+
+test('search keeps the location and ancestor path of every match and expands only that path', () => {
+  const items = [node(1, 'Box A', null, 'KP Garage'), node(2, 'Camera Bag', 1), node(3, 'Nikon F80', 2), node(4, 'Strap', 3),
+    node(5, 'VHS tapes', 1), node(6, 'Box B', null, 'Home'), node(7, 'Lens cloth', 6), node(8, 'Nikon manual')];
   const tree = buildTree(items);
 
   const nikon = searchTree(tree, '  NIKON ');
   assert.deepEqual([...nikon.matches].sort(), [3, 8]);
-  assert.deepEqual(nikon.expanded, new Set([2, 1, UNCONTAINED]));
+  assert.deepEqual(nikon.expanded, new Set([2, 1, 'location:kp garage', NONE, NONE_GROUP]));
   const rows = visibleRows(tree, nikon.expanded, nikon.visible);
-  assert.deepEqual(names(rows), ['Box A', 'Camera Bag', 'Nikon F80', `[${UNCONTAINED}]`, 'Nikon manual']);
+  assert.deepEqual(names(rows), ['@KP Garage', 'Box A', 'Camera Bag', 'Nikon F80', '@-', GROUP, 'Nikon manual']);
   // The match's own contents stay reachable, collapsed until opened.
-  assert.equal(rows[2].childCount, 1);
-  assert.deepEqual(names(visibleRows(tree, new Set([...nikon.expanded, 3]), nikon.visible)).slice(0, 4),
-    ['Box A', 'Camera Bag', 'Nikon F80', 'Strap']);
-  assert.deepEqual(expandableKeys(tree, nikon.visible), new Set([1, 2, 3, UNCONTAINED]));
+  assert.equal(rows[3].childCount, 1);
+  assert.deepEqual(names(visibleRows(tree, new Set([...nikon.expanded, 3]), nikon.visible)).slice(0, 5),
+    ['@KP Garage', 'Box A', 'Camera Bag', 'Nikon F80', 'Strap']);
+  assert.deepEqual(expandableKeys(tree, nikon.visible), new Set(['location:kp garage', NONE, NONE_GROUP, 1, 2, 3]));
+  // A location row keeps counting all of its items while a search narrows its branches.
+  assert.equal(rows[0].itemCount, 5);
 
   const none = searchTree(tree, 'tripod');
   assert.equal(none.matches.size, 0);
   assert.deepEqual(visibleRows(tree, none.expanded, none.visible), []);
 });
 
+test('search matches location names and reveals the matching location branch', () => {
+  const items = [node(1, 'Tool Box', null, 'KP Garage'), node(2, 'Wrench', 1), node(3, 'Car battery', null, ' kp garage'),
+    node(4, 'Garage door remote', null, 'Home'), node(5, 'Book', null, 'Home')];
+  const tree = buildTree(items);
+
+  const garage = searchTree(tree, 'GARAGE');
+  assert.deepEqual(garage.matches, new Set([4, 'location:kp garage']));
+  const rows = visibleRows(tree, garage.expanded, garage.visible);
+  // The location opens one level with all of its contents available; the other match keeps its path.
+  assert.deepEqual(names(rows), ['@Home', GROUP, 'Garage door remote', '@KP Garage', 'Tool Box', GROUP]);
+  assert.equal(rows.find(row => row.key === 'uncontained:kp garage').childCount, 1);
+  assert.deepEqual(names(visibleRows(tree, expandableKeys(tree, garage.visible), garage.visible)),
+    ['@Home', GROUP, 'Garage door remote', '@KP Garage', 'Tool Box', 'Wrench', GROUP, 'Car battery']);
+  // The No location label is interface text, not data, so it is never matched.
+  assert.equal(searchTree(buildTree([node(1, 'Mug')]), 'location').matches.size, 0);
+});
+
 // Graph view: the same rows laid out as nodes and parent -> child edges, named for readable assertions.
 const graphOf = (tree, expanded, visible = null) => layoutGraph(visibleRows(tree, expanded, visible));
-const label = (tree, key) => (key === ROOT ? '[root]' : key === UNCONTAINED ? `[${UNCONTAINED}]` : tree.byId.get(key).name);
-const edgeNames = (tree, graph) => graph.edges.map(edge => `${label(tree, edge.from)} -> ${label(tree, edge.to)}`);
-const nodeNames = (tree, graph) => graph.nodes.map(node => label(tree, node.key));
-const sample = () => buildTree([node(1, 'Box A'), node(2, 'Camera Bag', 1), node(3, 'Nikon F80', 2), node(4, 'Nikon 50mm', 2),
-  node(5, 'Cables', 1), node(6, 'Box B'), node(7, 'ThinkPad T460s', 6), node(8, 'Keyboard'), node(9, 'Coffee mug')]);
+const nodeNames = graph => graph.nodes.map(nameOf);
+const edgeNames = graph => {
+  const byKey = new Map(graph.nodes.map(n => [n.key, nameOf(n)]));
+  return graph.edges.map(edge => `${byKey.get(edge.from)} -> ${byKey.get(edge.to)}`);
+};
+const sample = () => buildTree([node(1, 'Box A', null, 'Home'), node(2, 'Camera Bag', 1), node(3, 'Nikon F80', 2), node(4, 'Nikon 50mm', 2),
+  node(5, 'Cables', 1), node(6, 'Box B', null, 'KP Garage'), node(7, 'ThinkPad T460s', 6), node(8, 'Keyboard', null, 'Home'),
+  node(9, 'Coffee mug')]);
+const HOME = 'location:home';
 
-test('the graph draws the root branches and the uncontained group under the virtual root', () => {
+test('the graph draws the location nodes under the virtual root', () => {
   assert.deepEqual(layoutGraph([]).nodes.map(n => n.key), [ROOT]);
   const tree = sample();
   const collapsed = graphOf(tree, new Set());
-  assert.deepEqual(nodeNames(tree, collapsed), ['[root]', 'Box A', 'Box B', `[${UNCONTAINED}]`]);
-  assert.deepEqual(edgeNames(tree, collapsed), ['[root] -> Box A', '[root] -> Box B', `[root] -> [${UNCONTAINED}]`]);
+  assert.deepEqual(nodeNames(collapsed), ['[root]', '@Home', '@KP Garage', '@-']);
+  assert.deepEqual(edgeNames(collapsed), ['[root] -> @Home', '[root] -> @KP Garage', '[root] -> @-']);
   assert.equal(collapsed.nodes[0].type, 'root');
-  assert.equal(collapsed.nodes.at(-1).childCount, 2);
+  assert.deepEqual(collapsed.nodes.slice(1).map(n => [n.type, n.itemCount, n.childCount]), [['location', 6, 2], ['location', 2, 1], ['location', 1, 1]]);
 });
 
-test('graph edges follow parent_id at every level and are the same data as the tree', () => {
+test('graph edges follow the locations and parent_id at every level and are the same data as the tree', () => {
   const tree = sample();
   const all = graphOf(tree, expandableKeys(tree));
-  assert.deepEqual(edgeNames(tree, all), ['[root] -> Box A', 'Box A -> Camera Bag', 'Camera Bag -> Nikon F80', 'Camera Bag -> Nikon 50mm',
-    'Box A -> Cables', '[root] -> Box B', 'Box B -> ThinkPad T460s', `[root] -> [${UNCONTAINED}]`,
-    `[${UNCONTAINED}] -> Keyboard`, `[${UNCONTAINED}] -> Coffee mug`]);
+  assert.deepEqual(edgeNames(all), ['[root] -> @Home', '@Home -> Box A', 'Box A -> Camera Bag', 'Camera Bag -> Nikon F80',
+    'Camera Bag -> Nikon 50mm', 'Box A -> Cables', `@Home -> ${GROUP}`, `${GROUP} -> Keyboard`, '[root] -> @KP Garage',
+    '@KP Garage -> Box B', 'Box B -> ThinkPad T460s', '[root] -> @-', `@- -> ${GROUP}`, `${GROUP} -> Coffee mug`]);
   for (const edge of all.edges) {
     const child = tree.byId.get(edge.to);
-    if (child && edge.from !== UNCONTAINED) assert.equal(child.parent_id, edge.from === ROOT ? null : edge.from);
+    if (typeof edge.from === 'number') assert.equal(child.parent_id, edge.from);
+    else if (child) assert.equal(child.parent_id, null);
   }
+  // Every node has exactly one incoming edge, so the edge target alone identifies an edge.
+  assert.equal(new Set(all.edges.map(edge => edge.to)).size, all.edges.length);
   // Left to right: each child sits one column after its parent, and each parent midway along its children.
   const at = new Map(all.nodes.map(n => [n.key, n.position]));
   for (const edge of all.edges) assert.ok(at.get(edge.to).x > at.get(edge.from).x);
   assert.equal(at.get(2).y, (at.get(3).y + at.get(4).y) / 2);
+  assert.equal(at.get(HOME).y, (at.get(1).y + at.get('uncontained:home').y) / 2);
 });
 
 test('collapsing a graph branch removes its descendants and expanding restores them', () => {
   const tree = sample();
-  const open = graphOf(tree, new Set([1, 2]));
-  assert.deepEqual(nodeNames(tree, open), ['[root]', 'Box A', 'Camera Bag', 'Nikon F80', 'Nikon 50mm', 'Cables', 'Box B', `[${UNCONTAINED}]`]);
-  const closed = graphOf(tree, new Set([2]));
-  assert.deepEqual(nodeNames(tree, closed), ['[root]', 'Box A', 'Box B', `[${UNCONTAINED}]`]);
+  const open = graphOf(tree, new Set([HOME, 1, 2]));
+  assert.deepEqual(nodeNames(open), ['[root]', '@Home', 'Box A', 'Camera Bag', 'Nikon F80', 'Nikon 50mm', 'Cables', GROUP, '@KP Garage', '@-']);
+  const closed = graphOf(tree, new Set([HOME, 2]));
+  assert.deepEqual(nodeNames(closed), ['[root]', '@Home', 'Box A', GROUP, '@KP Garage', '@-']);
   assert.equal(closed.edges.length, closed.nodes.length - 1);
+  // Collapsing a location hides its whole branch, whatever is opened inside it.
+  assert.deepEqual(nodeNames(graphOf(tree, new Set([1, 2]))), ['[root]', '@Home', '@KP Garage', '@-']);
   // The layout is recomputed without the gap the hidden branch took, and is the same every time.
   assert.ok(closed.nodes.at(-1).position.y < open.nodes.at(-1).position.y);
-  assert.deepEqual(graphOf(tree, new Set([1, 2])), open);
+  assert.deepEqual(graphOf(tree, new Set([HOME, 1, 2])), open);
 });
 
 test('graph nodes never overlap, however the branches are opened', () => {
   const tree = sample();
-  for (const expanded of [new Set(), new Set([1]), expandableKeys(tree), new Set([UNCONTAINED, 6])]) {
+  for (const expanded of [new Set(), new Set([HOME, 1]), expandableKeys(tree), new Set([NONE, NONE_GROUP, 'location:kp garage', 6])]) {
     const { nodes } = graphOf(tree, expanded);
     for (const a of nodes) {
       for (const b of nodes) {
         if (a === b) continue;
         const apart = Math.abs(a.position.x - b.position.x) >= NODE_WIDTH || Math.abs(a.position.y - b.position.y) >= NODE_HEIGHT;
-        assert.ok(apart, `${label(tree, a.key)} overlaps ${label(tree, b.key)}`);
+        assert.ok(apart, `${nameOf(a)} overlaps ${nameOf(b)}`);
       }
     }
   }
 });
 
-test('a graph search reveals the nested match with its path and fits around it', () => {
+test('a graph search reveals the nested match with its location and path and fits around it', () => {
   const tree = sample();
   const nikon = searchTree(tree, 'f80');
   const graph = graphOf(tree, nikon.expanded, nikon.visible);
-  assert.deepEqual(nodeNames(tree, graph), ['[root]', 'Box A', 'Camera Bag', 'Nikon F80']);
+  assert.deepEqual(nodeNames(graph), ['[root]', '@Home', 'Box A', 'Camera Bag', 'Nikon F80']);
   const bounds = graphBounds(graph.nodes, nikon.matches);
   assert.deepEqual(bounds, { ...graph.nodes.at(-1).position, width: NODE_WIDTH, height: NODE_HEIGHT });
+  // A matching location is a graph node as well, so a location search fits around it.
+  const garage = searchTree(tree, 'garage');
+  const garageGraph = graphOf(tree, garage.expanded, garage.visible);
+  assert.deepEqual(nodeNames(garageGraph), ['[root]', '@KP Garage', 'Box B']);
+  assert.ok(graphBounds(garageGraph.nodes, garage.matches));
   // One node is centred at no more than 100%; a huge area is shown from its start at the minimum zoom.
   assert.deepEqual(fitViewport({ x: 0, y: 0, width: 240, height: 64 }, 1000, 500, 0.1), { x: 380, y: 218, zoom: 1 });
   const huge = fitViewport({ x: 0, y: 0, width: 100000, height: 100000 }, 1000, 500, 0.1);
   assert.deepEqual(huge, { x: 50, y: 25, zoom: 0.1 });
 });
 
-test('a large collapsed inventory draws only the visible nodes', () => {
-  const items = Array.from({ length: 2000 }, (_, index) => node(index + 1, `Loose ${index}`));
-  items.push(node(3000, 'Crate'), ...Array.from({ length: 500 }, (_, index) => node(3001 + index, `Packed ${index}`, 3000)));
+test('a large collapsed inventory draws only the visible nodes and the node limit still applies', () => {
+  const items = Array.from({ length: 2000 }, (_, index) => node(index + 1, `Loose ${index}`, null, `Room ${index % 2}`));
+  items.push(node(3000, 'Crate', null, 'Room 0'), ...Array.from({ length: 500 }, (_, index) => node(3001 + index, `Packed ${index}`, 3000)));
   const tree = buildTree(items);
   const graph = graphOf(tree, new Set());
-  assert.deepEqual(nodeNames(tree, graph), ['[root]', 'Crate', `[${UNCONTAINED}]`]);
-  assert.equal(graph.nodes.at(-1).childCount, 2000);
-  assert.equal(graphOf(tree, new Set([3000])).nodes.length, 503);
+  assert.deepEqual(nodeNames(graph), ['[root]', '@Room 0', '@Room 1']);
+  assert.deepEqual(graph.nodes.slice(1).map(n => n.itemCount), [1501, 1000]);
+  assert.deepEqual(nodeNames(graphOf(tree, new Set(['location:room 0']))), ['[root]', '@Room 0', 'Crate', GROUP, '@Room 1']);
+  // Opening a large branch exceeds the limit the Graph view checks before drawing (rows + the root).
+  const rows = visibleRows(tree, new Set(['location:room 0', 3000]));
+  assert.equal(rows.length, 504);
+  assert.ok(rows.length + 1 > GRAPH_NODE_LIMIT);
+  assert.ok(visibleRows(tree, new Set(['location:room 0'])).length + 1 <= GRAPH_NODE_LIMIT);
 });

@@ -66,9 +66,10 @@ test('moves a selected container and its selected content while preserving their
   await expect(detail(page, 'Stored inside')).toHaveText(boxA.name);
   await expect(detail(page, 'Location')).toContainText(home);
 
-  // The Hierarchy tree shows Box B > Box A > Camera after its normal load.
+  // The Hierarchy tree shows Box B > Box A > Camera under Box B's location after its normal load.
   await page.goto('/hierarchy');
   await page.mouse.move(600, 400);
+  await page.getByRole('button', { name: `Expand ${home}`, exact: true }).click();
   await page.getByRole('button', { name: `Expand ${boxB.name}` }).click();
   await page.getByRole('button', { name: `Expand ${boxA.name}` }).click();
   await expect(page.getByRole('link', { name: camera.name, exact: true })).toBeVisible();

@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.44.0",
+    "date": "2026-09-29",
+    "changes": [
+      "Hierarchy now groups everything by location first: Inventory, then each location with the number of items stored there, then its containers and its own Uncontained items. Items without a location are gathered under No location.",
+      "A box and everything inside it always stay together under the box's location, and spellings that differ only in spaces or capitals, such as Garage and garage, count as one location without changing your saved text.",
+      "Search hierarchy also finds locations by name, and every match is shown inside its location. The Graph view shows the same location level."
+    ]
+  },
+  {
     "version": "0.43.0",
     "date": "2026-09-29",
     "changes": [
