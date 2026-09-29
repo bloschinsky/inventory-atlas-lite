@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.45.0",
+    "date": "2026-09-29",
+    "changes": [
+      "Hierarchy has a new Group by switch: besides Location, choose Category to see what you own of each kind. It works in both the Tree and the Graph, and Back from an item returns to the same choice.",
+      "Under a category, an item stays inside its container only when both are in the same category, such as a PC and its parts; anything else is listed straight under its category with its location and container shown beside it, so nothing appears twice.",
+      "Search hierarchy also finds category names in this grouping, and each grouping remembers the branches you opened in it."
+    ]
+  },
+  {
     "version": "0.44.1",
     "date": "2026-09-29",
     "changes": [

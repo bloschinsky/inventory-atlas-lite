@@ -115,9 +115,9 @@ The project stays small and readable. Do not add:
 - `client/src/pages/Dashboard.vue` — the Dashboard: category scope, KPI cards, charts, and their text values.
 - `client/src/dashboardCharts.js` — on-demand loading of the ApexCharts copy bundled in `@tabler/core`, Tabler color resolution for the active mode, and the options of each Dashboard chart.
 - `client/src/components/DashboardChart.vue` — one ApexCharts instance: creation, in-place updates, and cleanup.
-- `client/src/pages/Hierarchy.vue` — `/hierarchy`: loads the flat hierarchy nodes, owns the search and the Tree/Graph switch (`?view=graph`); `client/src/components/HierarchyTree.vue` renders the read-only storage tree, and `HierarchyGraph.vue` (loaded on demand) the read-only Vue Flow graph.
-- `client/src/hierarchyTree.js` — pure storage tree rules shared by both views: the virtual Inventory root, the Location nodes grouped by normalized effective location with their per-location Uncontained items groups and item counts, the stable virtual keys, item and location name search with ancestor paths, and the visible rows with their parent keys.
-- `client/src/useHierarchyExpansion.js` — the opened branches of the Hierarchy page (browse and search sets) shared by the Tree and Graph views.
+- `client/src/pages/Hierarchy.vue` — `/hierarchy`: loads the flat hierarchy nodes, owns the search and the independent Group by (`?group=category`) and View (`?view=graph`) switches; `client/src/components/HierarchyTree.vue` renders the read-only tree, and `HierarchyGraph.vue` (loaded on demand) the read-only Vue Flow graph, both from the same normalized rows.
+- `client/src/hierarchyTree.js` — pure hierarchy rules shared by both views: one normalized projection built by `buildLocationTree()` (Location nodes grouped by normalized effective location with their per-location Uncontained items groups) or `buildCategoryTree()` (Category nodes keeping only direct same-category nesting), item counts, the stable virtual keys, item and group name search with ancestor paths, and the visible rows with their parent keys and item metadata.
+- `client/src/useHierarchyExpansion.js` — the opened branches of the Hierarchy page (one browse set per grouping and a search set) shared by the Tree and Graph views.
 - `client/src/hierarchyGraph.js` — the library-independent Graph layout: deterministic left-to-right node positions, edges, the node limit, and view fitting.
 - `client/src/pages/ItemDetails.vue` — item details, photos, and deletion.
 - `client/src/pages/ItemForm.vue` — item creation/editing, custom field values, and photo uploads; it is prefilled from an item draft (the edited item, an AI draft, `?template=`, or `?duplicate=`).
@@ -162,7 +162,7 @@ The project stays small and readable. Do not add:
 - `test/e2e.test.js` — end-to-end acceptance test for the API, persistence, photos, and backups.
 - `test/services.test.js` — service-level regression tests that run without HTTP against a temporary database.
 - `test/serverProcess.js` — starts and stops the real server for the API tests on a free port chosen by the operating system (`PORT=0`), reading the bound port from its listening line.
-- `test/hierarchy.test.js` — the hierarchy endpoint (shape, inherited location, one statement), the client storage tree rules, and the Graph layout.
+- `test/hierarchy.test.js` — the hierarchy endpoint (shape, inherited location, one statement), the Location and Category projection rules, per-grouping expansion, and the Graph layout.
 - `test/bulk-replace.test.js` — Bulk Replace Value matching, scope, validation, atomicity, and location inheritance at the service level.
 - `test/bulk-move.test.js` — Bulk Move selection roots, preserved nesting, cycle rejection, atomicity, unchanged roots, and untouched item data at the service level.
 - `test/database-metadata.test.js` — database metadata creation, migration, repair, rename validation, and the `last_updated_at` write triggers.

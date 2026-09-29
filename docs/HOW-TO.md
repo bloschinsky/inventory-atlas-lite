@@ -582,11 +582,28 @@ the new container. There is no undo, and **Move to…** cannot take items out to
    - A search highlights the matching items and locations and zooms to them and their containers.
    - The graph draws at most 500 items at once. If more are open, it asks you to collapse some
      branches, search, or use the tree instead.
+8. Choose **Category** under **Group by** to see what you own of each kind instead of where it is;
+   **Location** switches back. **Group by** and **View** are separate, so both **Tree** and **Graph**
+   work with either grouping, and **Back** from an item returns to the same combination.
+   - Under **Inventory** is every category with items, with a tag icon and the number of items in
+     it, wherever they are stored.
+   - An item stays under its container only when both are in the same category, for example a PC
+     with its motherboard, or a camera with a lens of the same category. Anything whose direct
+     container is in another category is listed straight under its own category, so a camera in a
+     storage box appears under Photography and the box under its own category — never both, and
+     never with the box inside Photography. An item inside a bag inside a camera is not shown under
+     the camera either, because the bag is in between.
+   - Item rows show the displayed location and, when the container is not the row above, *Stored
+     inside: &lt;container&gt;*. The item count of a row counts only the same-category items under it.
+   - **Search hierarchy** finds item and category names here; a match opens its category and its
+     same-category containers. There are no **Uncontained items** groups in this grouping.
+   - Each grouping remembers the branches you opened in it while the page stays open.
 
 The tree and graph only show what is stored where; to move an item, change **Stored inside** in its
 form, or use **Move to…** on **Items** for several items at once; to move something to another
-location, change the **Location** of the item or of its outermost container. Nodes cannot be dragged.
-**Inventory**, the locations, **No location**, and **Uncontained items** are only views, not records.
+location, change the **Location** of the item or of its outermost container; to change a category,
+edit the item. Nodes cannot be dragged. **Inventory**, the locations, the categories, **No
+location**, and **Uncontained items** are only views, not records.
 
 ### Use custom-field autocomplete
 
@@ -928,7 +945,7 @@ backup, and keep the copies on a different machine than the server.
   router port and do not put it behind a public reverse proxy.
 - Photos: JPEG, PNG, WebP, GIF, up to 10 files of 15 MB each per upload.
 - Search covers the item name, description, serial number, and Transferred To. **Hierarchy** searches
-  item and location names only.
+  item names and location or category names only, depending on **Group by**.
 - **Hierarchy** is read-only: items cannot be moved or dragged in the tree or the graph. **Move to…**
   on **Items** only places items inside a container; it cannot move them to the top level and has no
   undo. The graph

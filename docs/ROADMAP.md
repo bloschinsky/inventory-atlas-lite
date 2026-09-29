@@ -22,18 +22,14 @@ Implemented behavior is documented separately in [`features/README.md`](features
    [Hierarchy location grouping](features/hierarchy.md). Adds safe Location-aware tree editing:
    drops onto items change containment, drops onto locations change placement, and the existing
    server-side cycle protection stays authoritative. See
-   [`TASK-HIERARCHY-PHASE-3-DRAG-DROP.md`](issues/TASK-HIERARCHY-PHASE-3-DRAG-DROP.md).
+   [`TASK-HIERARCHY-PHASE-3-DRAG-DROP.md`](issues/TASK-HIERARCHY-PHASE-3-DRAG-DROP.md). Category
+   grouping stays read-only.
 
-4. **Hierarchy Category Grouping** — Planned and unblocked by the completed
-   [Hierarchy location grouping](features/hierarchy.md). Adds a category-based Tree and Graph
-   projection of the same inventory while keeping structural editing limited to Location mode. See
-   [`TASK-HIERARCHY-CATEGORY-GROUPING.md`](issues/TASK-HIERARCHY-CATEGORY-GROUPING.md).
-
-5. **Checklists, Phase 1: Core Checklists and Check Sessions** — Planned. Adds reusable packing
+4. **Checklists, Phase 1: Core Checklists and Check Sessions** — Planned. Adds reusable packing
    and verification checklists with independent, durable run history. See
    [`TASK-CHECKLISTS-PHASE-1-CORE.md`](issues/TASK-CHECKLISTS-PHASE-1-CORE.md).
 
-6. **Checklists, Phase 2: Inventory Verification and Container Audits** — Planned; blocked by
+5. **Checklists, Phase 2: Inventory Verification and Container Audits** — Planned; blocked by
    Checklists Phase 1. Adds completed-verification timestamps and container-content audit runs. See
    [`TASK-CHECKLISTS-PHASE-2-INVENTORY-VERIFICATION.md`](issues/TASK-CHECKLISTS-PHASE-2-INVENTORY-VERIFICATION.md).
 

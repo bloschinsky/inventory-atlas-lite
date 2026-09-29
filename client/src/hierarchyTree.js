@@ -1,20 +1,29 @@
 /*
-  The storage tree of the Hierarchy page, derived from the flat `GET /api/items/hierarchy` nodes and
-  shared by the Tree and Graph views. The Inventory root, the Location nodes, and their Uncontained
-  items groups exist only here. Every top-level branch is grouped under the effective location the
-  server sent for its top-level item, so a branch is never split by the saved locations inside it.
-  Within a location, top-level items that hold something are branches, and every top-level leaf is
-  gathered into that location's Uncontained items group.
+  The two projections of the Hierarchy page, derived from the flat `GET /api/items/hierarchy` nodes
+  and shared by the Tree and Graph views. Both build the same normalized tree — virtual groups under
+  the Inventory root, their root items, and the item links kept by the projection — so search,
+  expansion, and the visible rows never know which grouping they show.
+
+  Location: the storage hierarchy. Every `parent_id` link is kept, and every top-level branch is
+  grouped under the effective location the server sent for its top-level item, so a branch is never
+  split by the saved locations inside it. Within a location, top-level items that hold something are
+  branches, and every top-level leaf is gathered into that location's Uncontained items group.
+
+  Category: the classification hierarchy. An item stays under its direct parent only when both belong
+  to the same category; otherwise it is a root item of its category. Intermediate parents of another
+  category are never skipped, so no relation is invented, and every item appears exactly once.
 */
 
 /*
   Keys of the virtual nodes in expansion sets and rows. Item ids are numbers, so a string key can
   never collide with one. A location key holds its normalized location, which is never empty for a
-  named location, so `location:` and `uncontained:` alone are the reserved keys of No location.
+  named location, so `location:` and `uncontained:` alone are the reserved keys of No location. A
+  category key holds the category id, never its name.
 */
 export const ROOT = 'inventory';
 export const locationKey = normalized => `location:${normalized}`;
 export const uncontainedKey = normalized => `uncontained:${normalized}`;
+export const categoryKey = id => `category:${id}`;
 
 // Surrounding spaces and letter case never split one location; an empty result means no location.
 export const normalizeLocation = value => (value ?? '').trim().toLowerCase();
@@ -29,56 +38,76 @@ function displayName(spellings) {
   return best;
 }
 
-export function buildTree(items) {
+/*
+  The normalized tree of one projection. `linked(parent, item)` tells whether the projection keeps an
+  item under its direct parent; every other item is a root of the group `groupOf(root)` describes,
+  `{ id, ...fields }` with a stable id. A group with a `leavesKey` gathers its leaf roots into that
+  virtual group. `groupOf` records the group of every item reachable from a root.
+*/
+function project(mode, items, linked, groupFor) {
   const byId = new Map(items.map(item => [item.id, item]));
   const children = new Map();
+  const parentOf = new Map();
   for (const item of items) {
-    if (item.parent_id === null) continue;
-    if (!children.has(item.parent_id)) children.set(item.parent_id, []);
-    children.get(item.parent_id).push(item);
+    const parent = byId.get(item.parent_id);
+    if (!parent || !linked(parent, item)) continue;
+    parentOf.set(item.id, parent.id);
+    if (!children.has(parent.id)) children.set(parent.id, []);
+    children.get(parent.id).push(item);
   }
 
   const groups = new Map();
-  // The location of every item reachable from a top-level item: the one of its top-level branch.
-  const locationOf = new Map();
+  const groupOf = new Map();
   for (const item of items) {
-    if (item.parent_id !== null) continue;
-    const normalized = normalizeLocation(item.effective_location);
-    if (!groups.has(normalized)) {
-      groups.set(normalized, {
-        key: locationKey(normalized), uncontainedKey: uncontainedKey(normalized), name: null,
-        spellings: new Map(), containers: [], uncontained: [], itemCount: 0
-      });
-    }
-    const location = groups.get(normalized);
-    if (normalized) {
-      const spelling = item.effective_location.trim();
-      location.spellings.set(spelling, (location.spellings.get(spelling) || 0) + 1);
-    }
-    (children.has(item.id) ? location.containers : location.uncontained).push(item);
+    if (parentOf.has(item.id)) continue;
+    const { id, ...fields } = groupFor(item);
+    if (!groups.has(id)) groups.set(id, { leavesKey: null, ...fields, branches: [], leaves: [], itemCount: 0 });
+    const group = groups.get(id);
+    (group.leavesKey && !children.has(item.id) ? group.leaves : group.branches).push(item);
     for (const stack = [item]; stack.length;) {
       const next = stack.pop();
-      locationOf.set(next.id, location);
-      location.itemCount += 1;
+      groupOf.set(next.id, group);
+      group.itemCount += 1;
       stack.push(...(children.get(next.id) || []));
     }
   }
+  return { mode, byId, children, parentOf, groupOf, groups: [...groups.values()] };
+}
 
+export function buildLocationTree(items) {
+  const tree = project('location', items, () => true, item => {
+    const normalized = normalizeLocation(item.effective_location);
+    return { id: normalized, type: 'location', key: locationKey(normalized), leavesKey: uncontainedKey(normalized) };
+  });
+  for (const group of tree.groups) {
+    const spellings = new Map();
+    for (const item of [...group.branches, ...group.leaves]) {
+      const spelling = item.effective_location?.trim();
+      if (spelling) spellings.set(spelling, (spellings.get(spelling) || 0) + 1);
+    }
+    group.name = displayName(spellings);
+  }
   // Named locations by name, then No location last.
-  const locations = [...groups.values()].map(({ spellings, ...location }) => ({ ...location, name: displayName(spellings) }));
-  locations.sort((a, b) => (a.name === null) - (b.name === null) || (a.name ?? '').localeCompare(b.name ?? '') || (a.key < b.key ? -1 : 1));
-  return { byId, children, locations, locationOf };
+  tree.groups.sort((a, b) => (a.name === null) - (b.name === null) || (a.name ?? '').localeCompare(b.name ?? '') || (a.key < b.key ? -1 : 1));
+  return tree;
+}
+
+export function buildCategoryTree(items) {
+  const tree = project('category', items, (parent, item) => parent.category_id === item.category_id,
+    item => ({ id: item.category_id, type: 'category', key: categoryKey(item.category_id), name: item.category_name }));
+  tree.groups.sort((a, b) => a.name.localeCompare(b.name) || (a.key < b.key ? -1 : 1));
+  return tree;
 }
 
 const childrenOf = (tree, id) => tree.children.get(id) || [];
 const fold = text => text.toLocaleLowerCase();
 
-// Walks up the parent chain; the visited set stops a damaged cyclic chain from looping.
+// Walks up the projection's parent links; the visited set stops a damaged cyclic chain from looping.
 function addAncestors(tree, item, into) {
   const seen = new Set([item.id]);
-  for (let parent = tree.byId.get(item.parent_id); parent && !seen.has(parent.id); parent = tree.byId.get(parent.parent_id)) {
-    seen.add(parent.id);
-    into.add(parent.id);
+  for (let id = tree.parentOf.get(item.id); id !== undefined && !seen.has(id); id = tree.parentOf.get(id)) {
+    seen.add(id);
+    into.add(id);
   }
 }
 
@@ -91,10 +120,11 @@ function addDescendants(tree, id, into) {
 }
 
 /*
-  Items and named locations whose name contains the query, ignoring case. A matching item stays
-  visible with its whole path from its location, so it is never shown without its context, and with
-  its contents, which stay collapsed until opened. Only the path down to each match is expanded. A
-  matching location is opened one level, with all of its contents available.
+  Items and named groups (locations or categories) whose name contains the query, ignoring case. A
+  matching item stays visible with its whole path from its group in this projection, so it is never
+  shown without its context, and with its contents, which stay collapsed until opened. Only the path
+  down to each match is expanded. A matching group is opened one level, with all of its contents
+  available.
 */
 export function searchTree(tree, query) {
   const text = fold(query.trim());
@@ -103,21 +133,21 @@ export function searchTree(tree, query) {
   const expanded = new Set();
   if (!text) return { matches, visible, expanded };
   for (const item of tree.byId.values()) {
-    const location = tree.locationOf.get(item.id);
-    // An item of a damaged cycle is reachable from no location and never shown.
-    if (!location || !fold(item.name).includes(text)) continue;
+    const group = tree.groupOf.get(item.id);
+    // An item of a damaged cycle is reachable from no group and never shown.
+    if (!group || !fold(item.name).includes(text)) continue;
     matches.add(item.id);
     visible.add(item.id);
     addAncestors(tree, item, expanded);
     addDescendants(tree, item.id, visible);
-    expanded.add(location.key);
-    if (item.parent_id === null && !tree.children.has(item.id)) expanded.add(location.uncontainedKey);
+    expanded.add(group.key);
+    if (group.leavesKey && !tree.parentOf.has(item.id) && !tree.children.has(item.id)) expanded.add(group.leavesKey);
   }
-  for (const location of tree.locations) {
-    if (location.name === null || !fold(location.name).includes(text)) continue;
-    matches.add(location.key);
-    expanded.add(location.key);
-    for (const item of [...location.containers, ...location.uncontained]) {
+  for (const group of tree.groups) {
+    if (group.name === null || !fold(group.name).includes(text)) continue;
+    matches.add(group.key);
+    expanded.add(group.key);
+    for (const item of [...group.branches, ...group.leaves]) {
       visible.add(item.id);
       addDescendants(tree, item.id, visible);
     }
@@ -126,19 +156,19 @@ export function searchTree(tree, query) {
   return { matches, visible, expanded };
 }
 
-// The top-level branches of a location that `visible` (a search result, or null for all) keeps.
-function shownRoots(location, visible) {
+// The root items of a group that `visible` (a search result, or null for all) keeps.
+function shownRoots(group, visible) {
   const shown = item => !visible || visible.has(item.id);
-  return { containers: location.containers.filter(shown), leaves: location.uncontained.filter(shown) };
+  return { branches: group.branches.filter(shown), leaves: group.leaves.filter(shown) };
 }
 
-// Every key "Expand all" opens: each location, its group, and each container, limited to the visible ones.
+// Every key "Expand all" opens: each group, its Uncontained items, and each item with contents, limited to the visible ones.
 export function expandableKeys(tree, visible = null) {
   const keys = new Set();
-  for (const location of tree.locations) {
-    const { containers, leaves } = shownRoots(location, visible);
-    if (containers.length || leaves.length) keys.add(location.key);
-    if (leaves.length) keys.add(location.uncontainedKey);
+  for (const group of tree.groups) {
+    const { branches, leaves } = shownRoots(group, visible);
+    if (branches.length || leaves.length) keys.add(group.key);
+    if (leaves.length) keys.add(group.leavesKey);
   }
   for (const [id, items] of tree.children) {
     if ((!visible || visible.has(id)) && items.some(item => !visible || visible.has(item.id))) keys.add(id);
@@ -148,32 +178,39 @@ export function expandableKeys(tree, visible = null) {
 
 /*
   The rows currently on screen, in order, with their depth and the key of the row they sit in (`ROOT`
-  for the location level). Only expanded branches are walked, so collapsed descendants are never
-  rendered. `visible` limits the rows to a search result. Location and group rows carry their
-  location; a location row also carries the number of real items in all of its branches.
+  for the group level). Only expanded branches are walked, so collapsed descendants are never
+  rendered. `visible` limits the rows to a search result. Every row carries its group; a group row
+  (`location` or `category`) also carries the number of real items in all of its branches. An item row
+  counts its contents in this projection, and names its direct physical container as `storedIn` when
+  the projection does not show it as the item's parent.
 */
 export function visibleRows(tree, expanded, visible = null) {
   const rows = [];
   const shown = item => !visible || visible.has(item.id);
-  const walk = (item, depth, parent) => {
-    const items = childrenOf(tree, item.id).filter(shown);
-    rows.push({ key: item.id, type: 'item', item, depth, parent, childCount: items.length, expanded: expanded.has(item.id) });
-    if (!expanded.has(item.id)) return;
-    for (const child of items) walk(child, depth + 1, item.id);
-  };
-  for (const location of tree.locations) {
-    const { containers, leaves } = shownRoots(location, visible);
-    if (!containers.length && !leaves.length) continue;
+  const walk = (item, group, depth, parent) => {
+    const contents = childrenOf(tree, item.id);
+    const items = contents.filter(shown);
+    const storedIn = item.parent_id !== null && item.parent_id !== parent ? tree.byId.get(item.parent_id) ?? null : null;
     rows.push({
-      key: location.key, type: 'location', location, depth: 0, parent: ROOT,
-      childCount: containers.length + (leaves.length ? 1 : 0), itemCount: location.itemCount, expanded: expanded.has(location.key)
+      key: item.id, type: 'item', item, group, depth, parent, childCount: items.length,
+      contentCount: contents.length, storedIn, expanded: expanded.has(item.id)
     });
-    if (!expanded.has(location.key)) continue;
-    for (const item of containers) walk(item, 1, location.key);
+    if (!expanded.has(item.id)) return;
+    for (const child of items) walk(child, group, depth + 1, item.id);
+  };
+  for (const group of tree.groups) {
+    const { branches, leaves } = shownRoots(group, visible);
+    if (!branches.length && !leaves.length) continue;
+    rows.push({
+      key: group.key, type: group.type, group, depth: 0, parent: ROOT,
+      childCount: branches.length + (leaves.length ? 1 : 0), itemCount: group.itemCount, expanded: expanded.has(group.key)
+    });
+    if (!expanded.has(group.key)) continue;
+    for (const item of branches) walk(item, group, 1, group.key);
     if (!leaves.length) continue;
-    const group = location.uncontainedKey;
-    rows.push({ key: group, type: 'group', location, depth: 1, parent: location.key, childCount: leaves.length, expanded: expanded.has(group) });
-    if (expanded.has(group)) for (const item of leaves) walk(item, 2, group);
+    const key = group.leavesKey;
+    rows.push({ key, type: 'uncontained', group, depth: 1, parent: group.key, childCount: leaves.length, expanded: expanded.has(key) });
+    if (expanded.has(key)) for (const item of leaves) walk(item, group, 2, key);
   }
   return rows;
 }
@@ -181,6 +218,16 @@ export function visibleRows(tree, expanded, visible = null) {
 // The name a row is announced by, for its expand/collapse button; `t` is the vue-i18n translate function.
 export function rowName(row, t) {
   if (row.type === 'item') return row.item.name;
-  const location = row.location.name ?? t('hierarchy.noLocation');
-  return row.type === 'location' ? location : t('hierarchy.uncontainedIn', { location });
+  const name = row.group.name ?? t('hierarchy.noLocation');
+  return row.type === 'uncontained' ? t('hierarchy.uncontainedIn', { location: name }) : name;
+}
+
+/*
+  The secondary line of an item row: the category (redundant under a category, so left out there), the
+  effective location, and the physical container the projection does not already show as the parent.
+*/
+export function itemMeta(row, t) {
+  const { item, group, storedIn } = row;
+  return [group.type === 'category' ? null : item.category_name, item.effective_location,
+    storedIn ? t('hierarchy.storedIn', { name: storedIn.name }) : null].filter(Boolean).join(' · ');
 }

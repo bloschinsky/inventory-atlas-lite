@@ -48,9 +48,10 @@ body.app-menu-open { overflow: hidden; }
 .hierarchy-thumb { --app-thumb-size: 32px; color: var(--tblr-secondary); }
 .hierarchy-label { min-width: 0; overflow-wrap: anywhere; }
 .hierarchy-match { background: var(--tblr-yellow-lt); border-radius: var(--tblr-border-radius-sm); }
-/* Location rows are virtual grouping rows, never item records, so they get their own tint and pin. */
-.hierarchy-row-location { background: var(--tblr-bg-surface-secondary); }
+/* Location and category rows are virtual grouping rows, never item records, so they get their own tint and icon. */
+.hierarchy-row-location, .hierarchy-row-category { background: var(--tblr-bg-surface-secondary); }
 .hierarchy-row-location .hierarchy-thumb, .hierarchy-node-location .hierarchy-thumb { color: var(--tblr-azure); }
+.hierarchy-row-category .hierarchy-thumb, .hierarchy-node-category .hierarchy-thumb { color: var(--tblr-purple); }
 @media (max-width: 575.98px) {
   .hierarchy-row { padding-inline-start: calc(.25rem + min(var(--hierarchy-depth), 6) * .75rem); }
 }
@@ -67,6 +68,7 @@ body.app-menu-open { overflow: hidden; }
 .hierarchy-node-container { border-inline-start: 4px solid var(--tblr-primary); }
 .hierarchy-node-virtual { border-style: dashed; background: var(--tblr-bg-surface-tertiary); }
 .hierarchy-node-location { border-style: solid; border-color: var(--tblr-azure); border-inline-start: 4px solid var(--tblr-azure); }
+.hierarchy-node-category { border-style: solid; border-color: var(--tblr-purple); border-inline-start: 4px solid var(--tblr-purple); }
 .hierarchy-node-match { background: var(--tblr-yellow-lt); border-color: var(--tblr-yellow); }
 .vue-flow__node.selected .hierarchy-node { outline: 2px solid var(--tblr-primary); outline-offset: 2px; }
 

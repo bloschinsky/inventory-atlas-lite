@@ -3,20 +3,23 @@ import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { Handle, MarkerType, Position, VueFlow } from '@vue-flow/core';
 import '@vue-flow/core/dist/style.css';
-import { IconBox, IconFocusCentered, IconInbox, IconMapPin, IconMapPinOff, IconMinus, IconPackage, IconPlus, IconSitemap, IconZoomIn, IconZoomOut } from '@tabler/icons-vue';
+import { IconBox, IconFocusCentered, IconInbox, IconMapPin, IconMapPinOff, IconMinus, IconPackage, IconPlus, IconSitemap, IconTags, IconZoomIn, IconZoomOut } from '@tabler/icons-vue';
 import { GRAPH_NODE_LIMIT, fitViewport, graphBounds, layoutGraph } from '../hierarchyGraph.js';
-import { rowName } from '../hierarchyTree.js';
+import { itemMeta, rowName } from '../hierarchyTree.js';
 
 /*
   The read-only Graph view of the Hierarchy page. It draws the same visible rows as the Tree, laid out
-  by layoutGraph(); Vue Flow only supplies pan, zoom, and selection. Nodes cannot be dragged or
-  connected, and nothing here writes: containment changes only through Stored inside.
+  by layoutGraph(), whichever grouping they project; Vue Flow only supplies pan, zoom, and selection.
+  Nodes cannot be dragged or connected, and nothing here writes: containment changes only through
+  Stored inside, and a category only through the item form.
 */
 const props = defineProps({
   // The visibleRows() of the page's expansion.
   rows: { type: Array, required: true },
   // The searchTree() result, or null while nothing is searched.
-  search: { type: Object, default: null }
+  search: { type: Object, default: null },
+  // The grouping the rows project, which names the graph pane.
+  mode: { type: String, required: true }
 });
 const emit = defineEmits(['toggle', 'expand-all', 'collapse-all']);
 const router = useRouter();
@@ -165,7 +168,7 @@ const openItem = ({ node }) => { if (node.data.item) router.push(`/items/${node.
       ref="pane"
       class="hierarchy-graph"
       role="region"
-      :aria-label="$t('hierarchy.graphLabel')"
+      :aria-label="$t(`hierarchy.graphLabel.${mode}`)"
     >
       <VueFlow
         :nodes="flowNodes"
@@ -190,9 +193,10 @@ const openItem = ({ node }) => { if (node.data.item) router.push(`/items/${node.
           <div
             class="hierarchy-node"
             :class="{
-              'hierarchy-node-container': data.type === 'item' && data.item.children_count,
+              'hierarchy-node-container': data.type === 'item' && data.contentCount,
               'hierarchy-node-virtual': data.type !== 'item',
               'hierarchy-node-location': data.type === 'location',
+              'hierarchy-node-category': data.type === 'category',
               'hierarchy-node-match': search?.matches.has(data.key)
             }"
           >
@@ -211,16 +215,20 @@ const openItem = ({ node }) => { if (node.data.item) router.push(`/items/${node.
                 :size="18"
               />
               <IconInbox
-                v-else-if="data.type === 'group'"
+                v-else-if="data.type === 'uncontained'"
+                :size="18"
+              />
+              <IconTags
+                v-else-if="data.type === 'category'"
                 :size="18"
               />
               <component
-                :is="data.location.name === null ? IconMapPinOff : IconMapPin"
+                :is="data.group.name === null ? IconMapPinOff : IconMapPin"
                 v-else-if="data.type === 'location'"
                 :size="18"
               />
               <component
-                :is="data.item.children_count ? IconBox : IconPackage"
+                :is="data.contentCount ? IconBox : IconPackage"
                 v-else
                 :size="18"
               />
@@ -234,12 +242,12 @@ const openItem = ({ node }) => { if (node.data.item) router.push(`/items/${node.
                 >{{ data.item.name }}</RouterLink>
                 <span
                   class="meta-text d-block text-truncate"
-                  :title="[data.item.category_name, data.item.effective_location].filter(Boolean).join(' · ')"
+                  :title="itemMeta(data, $t)"
                 >
-                  <template v-if="data.item.children_count">{{ $t('items.count', data.item.children_count) }} · </template>{{ data.item.category_name }}
+                  {{ [data.contentCount ? $t('items.count', data.contentCount) : '', itemMeta(data, $t)].filter(Boolean).join(' · ') }}
                 </span>
               </template>
-              <template v-else-if="data.type === 'location'">
+              <template v-else-if="data.type === 'location' || data.type === 'category'">
                 <span
                   class="fw-bold d-block text-truncate"
                   :title="rowName(data, $t)"
@@ -249,7 +257,7 @@ const openItem = ({ node }) => { if (node.data.item) router.push(`/items/${node.
               <template v-else>
                 <span class="fw-medium d-block text-truncate">{{ $t(data.type === 'root' ? 'hierarchy.root' : 'hierarchy.uncontained') }}</span>
                 <span
-                  v-if="data.type === 'group'"
+                  v-if="data.type === 'uncontained'"
                   class="meta-text d-block"
                 >{{ $t('items.count', data.childCount) }}</span>
               </template>

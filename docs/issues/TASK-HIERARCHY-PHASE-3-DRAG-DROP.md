@@ -4,8 +4,8 @@
 **Priority:** Medium
 **Type:** Feature / hierarchy editing
 **Phase:** 3 of 3
-**Blocked by:** None. Phases 1 and 2 and Hierarchy Location Grouping are complete; see
-`docs/features/hierarchy.md`.
+**Blocked by:** None. Phases 1 and 2, Hierarchy Location Grouping, and Hierarchy Category Grouping
+are complete; see `docs/features/hierarchy.md`.
 
 ---
 
@@ -38,11 +38,13 @@ It builds on:
 
 - the Phase 1 Tree view and flat `GET /api/items/hierarchy` endpoint;
 - the Phase 2 shared Tree/Graph frontend model;
-- the Location grouping model in `client/src/hierarchyTree.js`: virtual Location nodes grouped by the
+- the Location projection (`buildLocationTree()`) in `client/src/hierarchyTree.js`: virtual Location nodes grouped by the
   normalized effective location of each top-level branch, the reserved No location node, one virtual
   `Uncontained items` group per Location, and the stable string keys `inventory`,
   `location:<normalized>`, and `uncontained:<normalized>` (No location uses `location:` and
   `uncontained:`);
+- the read-only Category projection (`buildCategoryTree()`, `?group=category`) in the same module,
+  with its `category:<id>` keys; see *Category grouping stays read-only* below;
 - the existing containment rule `ItemService.assertCanContain`, shared by the item form and Bulk Move.
 
 Do not create a second hierarchy mutation system, and do not duplicate the Location grouping rules in
@@ -208,6 +210,26 @@ Acceptable Phase 3 result:
 - Graph remains navigation/read-only for structure, and regroups after a move made elsewhere.
 
 Document the decision. Do not compromise Tree UX just to force identical interaction into Graph.
+
+---
+
+## Category grouping stays read-only
+
+Structural drag & drop belongs to the Location/storage projection only (**Group by: Location**, the
+default). The Category projection (**Group by: Category**) shows the same items by `category_id` and
+keeps only direct same-category parents, so its nesting is not the storage hierarchy and a drop there
+has no unambiguous meaning.
+
+- Category mode remains read-only in Phase 3, in both Tree and Graph: no drag sources, no drop
+  targets, and no placement actions, unless a separate future task explicitly defines
+  category-editing semantics.
+- Dragging onto a Category node must never be interpreted as `parent_item_id` or as a location. A
+  `category:<id>` key, like every other virtual key, is never sent as an item id.
+- Do not silently implement category reassignment through hierarchy drag & drop; a category changes
+  only in the item form.
+- After a structural change performed in Location mode, the Category projection must reflect it on
+  its next render (it is rebuilt from the same re-fetched hierarchy nodes), including its
+  same-category nesting, its counts, and its *Stored inside* metadata.
 
 ---
 
@@ -430,7 +452,9 @@ Add automated coverage for at least:
 13. unknown source or target item rejection;
 14. a failed move keeping the original UI structure;
 15. Item Details reflecting the new `Stored inside` and `Location`;
-16. existing Edit Item parent and location editing, and Bulk Move, still working.
+16. existing Edit Item parent and location editing, and Bulk Move, still working;
+17. Category grouping offering no drag source, drop target, or placement action, and showing the new
+    structure after a move made in Location grouping.
 
 Add E2E drag/drop coverage for at least one valid **Store inside**, one valid **Move to location**, and
 one rejected cycle attempt.
@@ -484,7 +508,8 @@ Document:
     Details, and Graph remain consistent after a move.
 11. Effective Location updates through existing inheritance only.
 12. A non-drag placement fallback supporting both concepts exists for accessibility/mobile use.
-13. Tests, docs, lint, and E2E pass.
+13. Category grouping stays read-only and never turns a drop into a category or parent change.
+14. Tests, docs, lint, and E2E pass.
 
 ---
 
@@ -501,4 +526,5 @@ Do not add in Phase 3:
 - manual graph edge creation;
 - saved free-form graph coordinates;
 - new container database entity;
-- undo/redo history.
+- undo/redo history;
+- any editing in Category grouping, including drag-to-recategorize.

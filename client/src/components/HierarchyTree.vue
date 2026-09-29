@@ -1,10 +1,11 @@
 <script setup>
-import { IconBox, IconChevronRight, IconInbox, IconMapPin, IconMapPinOff, IconPackage } from '@tabler/icons-vue';
-import { rowName } from '../hierarchyTree.js';
+import { IconBox, IconChevronRight, IconInbox, IconMapPin, IconMapPinOff, IconPackage, IconTags } from '@tabler/icons-vue';
+import { itemMeta, rowName } from '../hierarchyTree.js';
 
 /*
   The read-only Tree view of the Hierarchy page: one flat list of the visible rows indented by depth.
-  The page owns the expansion, which the Graph view shares.
+  The page owns the projection and the expansion, which the Graph view shares; the rows are the same
+  for both groupings, so nothing here knows the Location or Category rules.
 */
 defineProps({
   // The visibleRows() of the page's expansion.
@@ -46,7 +47,7 @@ defineEmits(['toggle', 'expand-all', 'collapse-all']);
         v-for="row in rows"
         :key="row.key"
         class="list-group-item hierarchy-row"
-        :class="{ 'hierarchy-row-location': row.type === 'location' }"
+        :class="{ 'hierarchy-row-location': row.type === 'location', 'hierarchy-row-category': row.type === 'category' }"
         :style="{ '--hierarchy-depth': row.depth }"
       >
         <button
@@ -68,12 +69,12 @@ defineEmits(['toggle', 'expand-all', 'collapse-all']);
           class="hierarchy-toggle"
           aria-hidden="true"
         />
-        <template v-if="row.type === 'location'">
+        <template v-if="row.type === 'location' || row.type === 'category'">
           <span
             class="item-thumb hierarchy-thumb"
             aria-hidden="true"
           ><component
-            :is="row.location.name === null ? IconMapPinOff : IconMapPin"
+            :is="row.type === 'category' ? IconTags : row.group.name === null ? IconMapPinOff : IconMapPin"
             :size="18"
           /></span>
           <span
@@ -82,7 +83,7 @@ defineEmits(['toggle', 'expand-all', 'collapse-all']);
           >{{ rowName(row, $t) }}</span>
           <span class="badge bg-azure-lt ms-auto">{{ $t('items.count', row.itemCount) }}</span>
         </template>
-        <template v-else-if="row.type === 'group'">
+        <template v-else-if="row.type === 'uncontained'">
           <span
             class="item-thumb hierarchy-thumb"
             aria-hidden="true"
@@ -99,7 +100,7 @@ defineEmits(['toggle', 'expand-all', 'collapse-all']);
               loading="lazy"
             >
             <component
-              :is="row.item.children_count ? IconBox : IconPackage"
+              :is="row.contentCount ? IconBox : IconPackage"
               v-else
               :size="18"
               aria-hidden="true"
@@ -111,14 +112,12 @@ defineEmits(['toggle', 'expand-all', 'collapse-all']);
               class="item-card-link"
               :class="{ 'hierarchy-match': search?.matches.has(row.item.id) }"
             >{{ row.item.name }}</RouterLink>
-            <span class="meta-text d-block">
-              {{ row.item.category_name }}<template v-if="row.item.effective_location"> · {{ row.item.effective_location }}</template>
-            </span>
+            <span class="meta-text d-block">{{ itemMeta(row, $t) }}</span>
           </span>
           <span
-            v-if="row.item.children_count"
+            v-if="row.contentCount"
             class="badge bg-secondary-lt ms-auto"
-          >{{ $t('items.count', row.item.children_count) }}</span>
+          >{{ $t('items.count', row.contentCount) }}</span>
         </template>
       </li>
     </ul>

@@ -214,6 +214,79 @@ test('a graph node is selected by a click and opens the item on a double-click',
   await expect(page).toHaveURL(`/items/${box.id}`);
 });
 
+test('groups by category in the tree and the graph and keeps the location grouping intact', async ({ page, request }) => {
+  const containers = await createCategory(request, unique('Crates'));
+  const photography = await createCategory(request, unique('Photography'));
+  const location = unique('Category Garage');
+  // Box [Crates] > Camera [Photography] > Lens [Photography]: the box stays out of Photography.
+  const box = await createItem(request, { name: unique('Category Box'), category_id: containers.id, location });
+  const [camera, lens] = await createChain(request, photography.id, ['Category Camera', 'Category Lens'], box);
+  const writes = recordWrites(page);
+
+  await page.goto('/hierarchy');
+  await page.mouse.move(600, 400);
+  await expect(page.getByRole('radio', { name: 'Location' })).toBeChecked();
+  await page.getByText('Category', { exact: true }).click();
+  await expect(page).toHaveURL('/hierarchy?group=category');
+  await expect(page.getByRole('radio', { name: 'Tree' })).toBeChecked();
+
+  // A category is a virtual row counting its items; the cross-category box is not one of them.
+  const categoryRow = page.getByRole('listitem').filter({ has: page.getByRole('button', { name: `Expand ${photography.name}`, exact: true }) });
+  await expect(categoryRow).toContainText('2 items');
+  await expect(categoryRow.getByRole('link')).toHaveCount(0);
+  await page.getByRole('button', { name: `Expand ${photography.name}`, exact: true }).click();
+  await expect(rowOf(page, camera.name)).toContainText(`${location} · Stored inside: ${box.name}`);
+  await expect(page.getByRole('link', { name: box.name, exact: true })).toBeHidden();
+  await expect(page.getByRole('link', { name: lens.name, exact: true })).toBeHidden();
+  await page.getByRole('button', { name: `Expand ${camera.name}` }).click();
+  await expect(page.getByRole('link', { name: lens.name, exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Expand Uncontained items', exact: true })).toHaveCount(0);
+
+  // The box is only under its own category.
+  await page.getByRole('button', { name: `Expand ${containers.name}`, exact: true }).click();
+  await expect(page.getByRole('link', { name: box.name, exact: true })).toHaveCount(1);
+  await expect(rowOf(page, box.name)).not.toContainText('item');
+
+  // Back from an item returns to the category grouping.
+  await page.getByRole('link', { name: lens.name, exact: true }).click();
+  await expect(page).toHaveURL(`/items/${lens.id}`);
+  await page.goBack();
+  await expect(page).toHaveURL('/hierarchy?group=category');
+  await expect(page.getByRole('radio', { name: 'Category' })).toBeChecked();
+
+  // The graph draws the same category projection.
+  await page.mouse.move(600, 400);
+  await page.getByText('Graph', { exact: true }).click();
+  await expect(page).toHaveURL('/hierarchy?group=category&view=graph');
+  const graph = page.getByRole('region', { name: 'Category graph' });
+  await expect(graph.locator('.hierarchy-node-category').filter({ hasText: photography.name })).toContainText('2 items');
+  await page.getByRole('button', { name: 'Collapse all' }).click();
+  await expect(graph.getByRole('link', { name: camera.name, exact: true })).toHaveCount(0);
+  await page.getByLabel('Search hierarchy').fill(lens.name);
+  await expect(graph.getByRole('link', { name: camera.name, exact: true })).toBeVisible();
+  await expect(graph.getByRole('link', { name: box.name, exact: true })).toHaveCount(0);
+  await expect(graph.locator('.hierarchy-node-match')).toHaveCount(1);
+  await expect(graph.locator('.hierarchy-node-match')).toContainText(lens.name);
+
+  // Location still shows the physical path, with the box as the lens's ancestor.
+  await page.getByText('Location', { exact: true }).click();
+  await expect(page).toHaveURL('/hierarchy?view=graph');
+  await expect(page.getByRole('region', { name: 'Storage graph' }).getByRole('link', { name: box.name, exact: true })).toBeVisible();
+  await page.getByText('Tree', { exact: true }).click();
+  await expect(page).toHaveURL('/hierarchy');
+  for (const item of [box, camera, lens]) await expect(page.getByRole('link', { name: item.name, exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: `Collapse ${location}`, exact: true })).toBeVisible();
+  expect(writes).toEqual([]);
+});
+
+test('an unknown grouping or view in the address falls back to Location and Tree', async ({ page, request }) => {
+  const category = await createCategory(request, unique('Fallback'));
+  await createItem(request, { name: unique('Fallback item'), category_id: category.id });
+  await page.goto('/hierarchy?group=tags&view=3d');
+  await expect(page.getByRole('radio', { name: 'Location' })).toBeChecked();
+  await expect(page.getByRole('radio', { name: 'Tree' })).toBeChecked();
+});
+
 test.describe('narrow screens', () => {
   test.use({ viewport: phone });
 

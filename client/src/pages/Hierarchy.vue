@@ -3,7 +3,7 @@ import { computed, defineAsyncComponent, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { api } from '../api.js';
-import { buildTree, searchTree } from '../hierarchyTree.js';
+import { buildCategoryTree, buildLocationTree, searchTree } from '../hierarchyTree.js';
 import { useHierarchyExpansion } from '../useHierarchyExpansion.js';
 import PageHeader from '../components/PageHeader.vue';
 import HierarchyTree from '../components/HierarchyTree.vue';
@@ -12,9 +12,11 @@ import HierarchyTree from '../components/HierarchyTree.vue';
 const HierarchyGraph = defineAsyncComponent(() => import('../components/HierarchyGraph.vue'));
 
 /*
-  The containment hierarchy of `Stored inside` grouped by effective location, loaded once as flat
-  nodes. The page owns the data, the search, and the opened branches, which the Tree and Graph views
-  both render. The chosen view lives in the address (`?view=graph`), so Back from an item returns to it; Tree is the default.
+  The hierarchy of every item, loaded once as flat nodes and projected either by location (the storage
+  tree of `Stored inside`) or by category. The page owns the data, the grouping, the search, and the
+  opened branches, which the Tree and Graph views both render. The grouping and the view are two
+  independent choices kept in the address (`?group=category`, `?view=graph`), so Back from an item
+  returns to them; Location and Tree are the defaults, and unknown values fall back to them.
 */
 defineOptions({ name: 'ItemHierarchy' });
 const { t } = useI18n();
@@ -25,13 +27,27 @@ const loading = ref(true);
 const error = ref('');
 const query = ref('');
 
-const tree = computed(() => buildTree(items.value));
+const GROUPS = ['location', 'category'];
+const VIEWS = ['tree', 'graph'];
+// A choice in the address; the default is left out of it.
+const choice = (name, options) => computed({
+  get: () => (options.includes(route.query[name]) ? route.query[name] : options[0]),
+  set: value => router.replace({ query: { ...route.query, [name]: value === options[0] ? undefined : value } })
+});
+const group = choice('group', GROUPS);
+const view = choice('view', VIEWS);
+/*
+  The two independent switches: what the hierarchy means, and how it is drawn. Inside this plain
+  array the template does not unwrap `model`, so it stays the address-backed ref.
+*/
+const controls = [
+  { name: 'group', label: 'hierarchy.groupBy', options: GROUPS, model: group, text: 'hierarchy.groups' },
+  { name: 'view', label: 'hierarchy.view', options: VIEWS, model: view, text: 'hierarchy.views' }
+];
+
+const tree = computed(() => (group.value === 'category' ? buildCategoryTree : buildLocationTree)(items.value));
 const search = computed(() => (query.value.trim() ? searchTree(tree.value, query.value) : null));
 const { rows, toggle, expandAll, collapseAll } = useHierarchyExpansion(tree, search);
-const view = computed({
-  get: () => (route.query.view === 'graph' ? 'graph' : 'tree'),
-  set: value => router.replace({ query: { ...route.query, view: value === 'graph' ? 'graph' : undefined } })
-});
 const subtitle = computed(() => (loading.value || error.value ? '' : t('items.count', items.value.length)));
 
 async function load() {
@@ -48,7 +64,7 @@ onMounted(load);
   />
 
   <p class="text-secondary">
-    {{ $t('hierarchy.intro') }}
+    {{ $t(`hierarchy.intro.${group}`) }}
   </p>
 
   <div
@@ -114,31 +130,43 @@ onMounted(load);
             v-model="query"
             type="search"
             class="form-control"
-            :placeholder="$t('hierarchy.searchPlaceholder')"
+            :placeholder="$t(`hierarchy.searchPlaceholder.${group}`)"
           >
         </div>
         <div
-          class="btn-group"
-          role="group"
-          :aria-label="$t('hierarchy.view')"
+          v-for="control in controls"
+          :key="control.name"
         >
-          <template
-            v-for="option in ['tree', 'graph']"
-            :key="option"
+          <div
+            :id="`hierarchy-${control.name}-label`"
+            class="form-label"
           >
-            <input
-              :id="`hierarchy-view-${option}`"
-              v-model="view"
-              type="radio"
-              class="btn-check"
-              name="hierarchy-view"
-              :value="option"
+            {{ $t(control.label) }}
+          </div>
+          <div
+            class="btn-group"
+            role="group"
+            :aria-labelledby="`hierarchy-${control.name}-label`"
+          >
+            <template
+              v-for="option in control.options"
+              :key="option"
             >
-            <label
-              class="btn"
-              :for="`hierarchy-view-${option}`"
-            >{{ $t(`hierarchy.views.${option}`) }}</label>
-          </template>
+              <input
+                :id="`hierarchy-${control.name}-${option}`"
+                type="radio"
+                class="btn-check"
+                :name="`hierarchy-${control.name}`"
+                :value="option"
+                :checked="control.model.value === option"
+                @change="control.model.value = option"
+              >
+              <label
+                class="btn"
+                :for="`hierarchy-${control.name}-${option}`"
+              >{{ $t(`${control.text}.${option}`) }}</label>
+            </template>
+          </div>
         </div>
       </div>
     </div>
@@ -152,7 +180,7 @@ onMounted(load);
           {{ $t('hierarchy.noMatches') }}
         </p>
         <p class="empty-subtitle text-secondary">
-          {{ $t('hierarchy.noMatchesText', { query: query.trim() }) }}
+          {{ $t(`hierarchy.noMatchesText.${group}`, { query: query.trim() }) }}
         </p>
       </div>
     </div>
@@ -160,6 +188,7 @@ onMounted(load);
       v-else-if="view === 'graph'"
       :rows="rows"
       :search="search"
+      :mode="group"
       @toggle="toggle"
       @expand-all="expandAll"
       @collapse-all="collapseAll"
