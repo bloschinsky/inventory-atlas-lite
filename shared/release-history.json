@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.43.0",
+    "date": "2026-09-29",
+    "changes": [
+      "Items has a new Move to… action: select several items and put them all inside one container at once, with a searchable destination picker that only offers valid containers.",
+      "Selecting a box together with things inside it keeps that structure: only the outermost selected items go into the destination, and the dialog says so. The move is all or nothing, and saved locations and other details stay unchanged.",
+      "On a phone, Select all items on this page now selects every card on the current page."
+    ]
+  },
+  {
     "version": "0.42.0",
     "date": "2026-09-29",
     "changes": [

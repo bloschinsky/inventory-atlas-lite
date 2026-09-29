@@ -80,13 +80,57 @@ export class ItemRepository {
     `).get({ id });
   }
 
-  listDescendantIds(id) {
+  /*
+    The hierarchy walks of the containment rules. The ids travel as one JSON parameter, so a large
+    selection never runs into SQLite's bound-parameter limit, and UNION (not UNION ALL) ends every
+    walk even over a damaged row that forms a cycle.
+  */
+  // The given items and everything stored in them, at any depth.
+  listSubtreeIds(ids) {
     return this.db.prepare(`
       WITH RECURSIVE tree(id) AS (
-        SELECT id FROM items WHERE parent_item_id = @id
-        UNION ALL SELECT i.id FROM items i JOIN tree t ON i.parent_item_id = t.id
+        SELECT id FROM items WHERE id IN (SELECT value FROM json_each(?))
+        UNION SELECT i.id FROM items i JOIN tree t ON i.parent_item_id = t.id
       ) SELECT id FROM tree
+    `).all(JSON.stringify(ids)).map(row => row.id);
+  }
+
+  // The item itself and every container above it.
+  listAncestorIds(id) {
+    return this.db.prepare(`
+      WITH RECURSIVE chain(id) AS (
+        SELECT @id UNION SELECT i.parent_item_id FROM items i JOIN chain ON i.id = chain.id
+        WHERE i.parent_item_id IS NOT NULL
+      ) SELECT id FROM chain
     `).all({ id }).map(row => row.id);
+  }
+
+  // One row per (item, container above it) pair of the given items.
+  listAncestorLinks(ids) {
+    return this.db.prepare(`
+      WITH RECURSIVE chain(item_id, ancestor_id) AS (
+        SELECT id, parent_item_id FROM items
+        WHERE id IN (SELECT value FROM json_each(?)) AND parent_item_id IS NOT NULL
+        UNION SELECT chain.item_id, i.parent_item_id FROM chain JOIN items i ON i.id = chain.ancestor_id
+        WHERE i.parent_item_id IS NOT NULL
+      ) SELECT item_id, ancestor_id FROM chain
+    `).all(JSON.stringify(ids));
+  }
+
+  // Items named by numeric id or by UUID, as the API accepts either.
+  findRefs({ ids, uuids }) {
+    return this.db.prepare(`
+      SELECT id, uuid, name, parent_item_id FROM items
+      WHERE id IN (SELECT value FROM json_each(?)) OR uuid IN (SELECT value FROM json_each(?))
+    `).all(JSON.stringify(ids), JSON.stringify(uuids));
+  }
+
+  // Only the hierarchy link changes; every other column, and every descendant row, stays as it is.
+  setParent(ids, parentId) {
+    return this.db.prepare(`
+      UPDATE items SET parent_item_id = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id IN (SELECT value FROM json_each(?))
+    `).run(parentId, JSON.stringify(ids)).changes;
   }
 
   listChildren(id) {
@@ -198,12 +242,17 @@ export class ItemRepository {
       where.push("i.name LIKE @search ESCAPE '\\'");
       params.search = containsLike(search);
     }
-    if (excludedIds.length) where.push(`i.id NOT IN (${excludedIds.join(',')})`);
+    if (excludedIds.length) {
+      where.push('i.id NOT IN (SELECT value FROM json_each(@excludedIds))');
+      params.excludedIds = JSON.stringify(excludedIds);
+    }
     const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
+    // The direct container tells apart candidates that share a name.
     return this.db.prepare(`
-      SELECT i.id, i.uuid, i.name, c.name AS category_name FROM items i
-      JOIN categories c ON c.id = i.category_id ${clause}
-      ORDER BY i.name COLLATE NOCASE LIMIT 20
+      SELECT i.id, i.uuid, i.name, c.name AS category_name, parent.name AS parent_name FROM items i
+      JOIN categories c ON c.id = i.category_id
+      LEFT JOIN items parent ON parent.id = i.parent_item_id ${clause}
+      ORDER BY i.name COLLATE NOCASE, i.id LIMIT 20
     `).all(params);
   }
 

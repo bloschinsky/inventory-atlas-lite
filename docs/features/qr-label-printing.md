@@ -13,12 +13,14 @@ nothing is rendered on the server.
 
 - Every table row and every mobile card on **Items** starts with a **Select <item name>** checkbox.
   The table header has **Select all items on this page**, which is indeterminate while the page is
-  partly selected and never touches selections on other pages.
+  partly selected and never touches selections on other pages. On phones, where there is no table
+  header, the bar offers the same page-only **Select all items on this page** button.
 - A bar between the filters and the results shows `N selected`, **Clear selection** while anything
-  is selected, and **Print Labels**, which is disabled at zero.
+  is selected, **Move to…** (see [Nested items](nested-items.md#bulk-move)), and **Print Labels**;
+  both actions are disabled at zero.
 - The selection is kept by UUID across paging, search, category filter, sorting, and visits to item
-  pages, and after returning from the print view. Only **Clear selection** or a page reload empties
-  it. **View** and **Edit** behave as before.
+  pages, and after returning from the print view. Only **Clear selection**, a successful bulk move,
+  or a page reload empties it. **View** and **Edit** behave as before.
 - **Print Label** in the item's **QR Code** modal opens the same print view with only that item.
 
 ### Print view (`/labels/print`)

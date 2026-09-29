@@ -415,7 +415,7 @@ web, create categories or fields, or make a second AI request.
    each card has its own checkbox.
 2. The selection is kept while you page, search, filter, sort, or open an item and come back. The
    bar above the results shows how many items are selected; **Clear selection** empties it. A page
-   reload also clears it.
+   reload or a completed **Move to…** also clears it.
 3. Press **Print Labels**. It is disabled while nothing is selected.
 4. The print view shows the number of selected items and a preview of every A4 page exactly as it
    will print. Choose a **Layout**:
@@ -523,6 +523,33 @@ transferred to the same person.
 Nesting can go several levels deep. An item cannot be placed inside itself or inside anything it
 already contains; the server rejects such a move with an error message.
 
+### Move several items into a container at once
+
+1. Open **Items** and tick the items to move, as for label printing: the checkbox in front of each
+   row or card, or the table header checkbox for the whole page. On a phone, **Select all items on
+   this page** in the bar above the cards does the same. The selection is kept while you page,
+   search, and filter.
+2. Press **Move to…** in that bar. It is disabled while nothing is selected.
+3. In **Move selected items**, type part of the destination's name under **Destination**. Each result
+   shows its category and, when it is inside something, the container it is in. Items that are
+   selected or stored inside the selection are never offered.
+4. Choose the destination. The dialog asks *Move the selected items into "…"?*; press **Move**.
+5. The list reloads with the new **Stored inside** and inherited **Location**, and a message says how
+   many selected items are now inside the destination. The selection is cleared.
+
+If you select a container together with things inside it, the structure is kept: only the outermost
+selected items go into the destination, and everything else stays in its selected container. For
+example, selecting `Box A` and the `Camera` inside it and moving them to `Box B` gives
+`Box B → Box A → Camera`. The dialog says how many top-level selected groups will be moved whenever
+that differs from the number of selected items.
+
+The move is all or nothing. If a selected item was deleted in the meantime, or the destination is now
+inside the selection, an error appears in the dialog, nothing is moved, and the selection stays so you
+can pick another destination. Items that are already directly inside the destination stay as they
+are. Saved locations and all other item details are never changed; the displayed location follows
+the new container. There is no undo, and **Move to…** cannot take items out to the top level — use
+**Stored inside** → **Clear** in the item form for that.
+
 ### Browse the storage hierarchy
 
 1. Open **Hierarchy** in the navigation. On a phone it is in the **☰** menu.
@@ -549,7 +576,7 @@ already contains; the server rejects such a move with an error message.
      branches, search, or use the tree instead.
 
 The tree and graph only show what is stored where; to move an item, change **Stored inside** in its
-form. Nodes cannot be dragged. **Inventory** and **Uncontained items** are only views, not records.
+form, or use **Move to…** on **Items** for several items at once. Nodes cannot be dragged. **Inventory** and **Uncontained items** are only views, not records.
 
 ### Use custom-field autocomplete
 
@@ -892,7 +919,9 @@ backup, and keep the copies on a different machine than the server.
 - Photos: JPEG, PNG, WebP, GIF, up to 10 files of 15 MB each per upload.
 - Search covers the item name, description, serial number, and Transferred To. **Hierarchy** searches
   item names only.
-- **Hierarchy** is read-only: items cannot be moved or dragged in the tree or the graph. The graph
+- **Hierarchy** is read-only: items cannot be moved or dragged in the tree or the graph. **Move to…**
+  on **Items** only places items inside a container; it cannot move them to the top level and has no
+  undo. The graph
   draws at most 500 visible items at once and is easiest to use on a larger screen; the tree is the
   default view.
 - **Replace field value** replaces one exact value of one field at a time. There is no substring or

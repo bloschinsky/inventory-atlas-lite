@@ -22,15 +22,11 @@ Implemented behavior is documented separately in [`features/README.md`](features
    Adds safe tree-based containment editing while preserving the existing server-side cycle protection. See
    [`TASK-HIERARCHY-PHASE-3-DRAG-DROP.md`](issues/TASK-HIERARCHY-PHASE-3-DRAG-DROP.md).
 
-4. **Bulk Move Items to Container** — Planned. Adds a safe multi-item containment action that
-   preserves selected subtrees and uses the existing parent and cycle-validation model. See
-   [`TASK-BULK-MOVE-ITEMS-TO-CONTAINER.md`](issues/TASK-BULK-MOVE-ITEMS-TO-CONTAINER.md).
-
-5. **Checklists, Phase 1: Core Checklists and Check Sessions** — Planned. Adds reusable packing
+4. **Checklists, Phase 1: Core Checklists and Check Sessions** — Planned. Adds reusable packing
    and verification checklists with independent, durable run history. See
    [`TASK-CHECKLISTS-PHASE-1-CORE.md`](issues/TASK-CHECKLISTS-PHASE-1-CORE.md).
 
-6. **Checklists, Phase 2: Inventory Verification and Container Audits** — Planned; blocked by
+5. **Checklists, Phase 2: Inventory Verification and Container Audits** — Planned; blocked by
    Checklists Phase 1. Adds completed-verification timestamps and container-content audit runs. See
    [`TASK-CHECKLISTS-PHASE-2-INVENTORY-VERIFICATION.md`](issues/TASK-CHECKLISTS-PHASE-2-INVENTORY-VERIFICATION.md).
 

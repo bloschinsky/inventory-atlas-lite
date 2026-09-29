@@ -140,7 +140,13 @@ test('shows loading, errors with retry, and ignores an older filter response', a
   const slowCategory = await createCategory(request, unique('Slow category'));
   const fastCategory = await createCategory(request, unique('Fast category'));
   await createItem(request, { name: unique('Slow item'), category_id: slowCategory.id });
-  await createItem(request, { name: unique('Fast item'), category_id: fastCategory.id });
+  // The chart only lists the six largest categories of the shared test database, so the category
+  // clicked below gets more items than any category other specs have created.
+  const { categoryDistribution } = await (await request.get('/api/dashboard')).json();
+  const largest = Math.max(0, ...categoryDistribution.filter(row => row.categoryId).map(row => row.count));
+  for (let index = 0; index <= largest; index++) {
+    await createItem(request, { name: unique('Fast item'), category_id: fastCategory.id });
+  }
 
   let releaseInitial;
   const initialPaused = new Promise(resolve => { releaseInitial = resolve; });

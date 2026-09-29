@@ -109,7 +109,7 @@ export class ItemService {
     const excludeId = Number.parseInt(query.excludeId) || null;
     return this.items.listParentCandidates({
       search: String(query.search || '').trim(),
-      excludedIds: excludeId ? [excludeId, ...this.items.listDescendantIds(excludeId)] : []
+      excludedIds: excludeId ? this.items.listSubtreeIds([excludeId]) : []
     });
   }
 
@@ -157,11 +157,88 @@ export class ItemService {
     if (raw === null || raw === undefined || raw === '') return null;
     const parentId = Number.parseInt(raw);
     if (!Number.isInteger(parentId) || !this.items.findRef(parentId)) throw httpError(400, 'PARENT_ITEM_NOT_FOUND');
-    if (itemId && parentId === itemId) throw httpError(400, 'ITEM_CANNOT_CONTAIN_ITSELF');
-    if (itemId && this.items.listDescendantIds(itemId).includes(parentId)) {
-      throw httpError(400, 'ITEM_PARENT_CYCLE');
-    }
+    if (itemId) this.assertCanContain(parentId, [itemId]);
     return parentId;
+  }
+
+  /*
+    The one containment rule of every move, single or bulk: the moved items may go inside `parentId`
+    only when it is none of them and none of them is a container above it, which would make the
+    destination part of what is being moved.
+  */
+  assertCanContain(parentId, movedIds) {
+    if (movedIds.includes(parentId)) throw httpError(400, 'ITEM_CANNOT_CONTAIN_ITSELF');
+    const above = new Set(this.items.listAncestorIds(parentId));
+    if (movedIds.some(id => above.has(id))) throw httpError(400, 'ITEM_PARENT_CYCLE');
+  }
+
+  /*
+    The distinct items a bulk request names, by numeric id or UUID. Every one must still exist, so
+    a stale selection is refused as a whole instead of being moved in part.
+  */
+  resolveSelection(itemIds) {
+    if (!Array.isArray(itemIds) || !itemIds.length) throw httpError(400, 'BULK_MOVE_NO_ITEMS');
+    const keys = itemIds.map(key => (typeof key === 'string' ? key.trim().toLowerCase() : key));
+    const ids = keys.filter(key => Number.isInteger(key) || /^\d+$/.test(key)).map(Number);
+    const uuids = keys.filter(key => typeof key === 'string' && !/^\d+$/.test(key));
+    if (ids.length + uuids.length !== keys.length) throw httpError(400, 'BULK_MOVE_INVALID_ITEMS');
+    const rows = this.items.findRefs({ ids, uuids });
+    const found = new Set(rows.flatMap(row => [row.id, row.uuid]));
+    const missing = new Set([...ids, ...uuids].filter(key => !found.has(key))).size;
+    if (missing) throw httpError(404, 'BULK_MOVE_ITEMS_NOT_FOUND', { count: missing });
+    return rows;
+  }
+
+  // The selected items without a selected container above them. Moving these carries every other
+  // selected item along inside its own subtree, so the internal structure is preserved.
+  selectionRoots(selected) {
+    const selectedIds = new Set(selected.map(item => item.id));
+    const nested = new Set(this.items.listAncestorLinks([...selectedIds])
+      .filter(link => selectedIds.has(link.ancestor_id)).map(link => link.item_id));
+    return selected.filter(item => !nested.has(item.id));
+  }
+
+  // What the Move dialog shows: how the selection reduces to roots, and the destinations that remain
+  // valid for all of them. It never writes; the move checks everything again when it runs.
+  bulkMovePreview(body) {
+    const selected = this.resolveSelection(body?.item_ids);
+    const roots = this.selectionRoots(selected);
+    return {
+      selected_count: selected.length,
+      root_count: roots.length,
+      candidates: this.items.listParentCandidates({
+        search: String(body.search || '').trim(),
+        excludedIds: this.items.listSubtreeIds(roots.map(root => root.id))
+      })
+    };
+  }
+
+  /*
+    Moves the selection roots inside one destination in a single transaction, reading the hierarchy
+    as it is now rather than as the browser last saw it. Any refusal leaves every item where it was.
+    Roots already inside the destination are reported as unchanged and not written.
+  */
+  bulkMove(body) {
+    return this.items.transaction(() => {
+      const selected = this.resolveSelection(body?.item_ids);
+      const raw = body.parent_item_id;
+      if (raw === null || raw === undefined || raw === '') throw httpError(400, 'BULK_MOVE_PARENT_REQUIRED');
+      const parentId = Number.parseInt(raw);
+      const parent = Number.isInteger(parentId) ? this.items.findRef(parentId) : null;
+      if (!parent) throw httpError(400, 'PARENT_ITEM_NOT_FOUND');
+      const roots = this.selectionRoots(selected);
+      this.assertCanContain(parent.id, roots.map(root => root.id));
+      const moved = roots.filter(root => root.parent_item_id !== parent.id).map(root => root.id);
+      if (moved.length) this.items.setParent(moved, parent.id);
+      return {
+        selected_count: selected.length,
+        root_count: roots.length,
+        moved_count: moved.length,
+        unchanged_count: roots.length - moved.length,
+        parent,
+        moved_root_ids: moved
+      };
+    });
   }
 
   // Shared attribute rules of create and update. The field values are returned separately because

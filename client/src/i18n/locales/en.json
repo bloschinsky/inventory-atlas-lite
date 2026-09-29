@@ -285,7 +285,24 @@
     },
     "addOptions": "More ways to add an item",
     "addBlank": "Blank item",
-    "addFromTemplate": "From template…"
+    "addFromTemplate": "From template…",
+    "bulkMove": {
+      "action": "Move to…",
+      "title": "Move selected items",
+      "selectedCount": "{n} selected item | {n} selected items",
+      "rootsSummary": "{n} top-level selected group will be moved. | {n} top-level selected groups will be moved.",
+      "nestedStay": "Nested selected items stay inside their selected parent containers, so the existing nested structure is preserved.",
+      "destination": "Destination",
+      "searchPlaceholder": "Search items…",
+      "loading": "Loading destinations…",
+      "noCandidates": "No matching item can hold the selected items.",
+      "candidateIn": "in {name}",
+      "confirm": "Move the selected items into \"{name}\"?",
+      "move": "Move",
+      "moving": "Moving…",
+      "done": "{n} selected item is now inside {name}. | {n} selected items are now inside {name}.",
+      "unchanged": "Nothing changed: the selected items are already inside {name}."
+    }
   },
   "tableView": {
     "columns": "Columns",
@@ -1029,7 +1046,11 @@
     "BULK_REPLACE_TEXT_ONLY": "Only text fields support bulk replacement, and \"{field}\" is not a text field.",
     "BULK_REPLACE_SOURCE_REQUIRED": "Enter the current value to replace.",
     "BULK_REPLACE_TARGET_REQUIRED": "Enter the new value.",
-    "BULK_REPLACE_SAME_VALUE": "The new value is the same as the current value."
+    "BULK_REPLACE_SAME_VALUE": "The new value is the same as the current value.",
+    "BULK_MOVE_NO_ITEMS": "Select at least one item to move.",
+    "BULK_MOVE_INVALID_ITEMS": "The selection contains an invalid item reference.",
+    "BULK_MOVE_ITEMS_NOT_FOUND": "{count} selected item no longer exists. Clear the selection and select the items again. | {count} selected items no longer exist. Clear the selection and select the items again.",
+    "BULK_MOVE_PARENT_REQUIRED": "Choose a destination item."
   },
   "notices": {
     "AI_CONNECTED": "Connected to {provider}. {count} model is available. | Connected to {provider}. {count} models are available.",

@@ -335,6 +335,40 @@ test('item nesting keeps a valid hierarchy and survives restart and backup', asy
   }
 });
 
+test('bulk move previews and moves selection roots through the API as one operation', async () => {
+  const dataDir = await mkdtemp(path.join(os.tmpdir(), 'inventory-bulk-move-test-'));
+  let server;
+  try {
+    server = await startServer(dataDir);
+    const category = await request('/api/categories', json('POST', { name: 'Storage' }));
+    const create = (name, parent) => request('/api/items', json('POST', { name, category_id: category.id, parent_item_id: parent?.id }));
+    const boxA = await create('Box A');
+    const camera = await create('Camera', boxA);
+    const boxB = await create('Box B');
+
+    const preview = await request('/api/items/bulk-parent/preview', json('POST', { item_ids: [boxA.uuid, camera.uuid] }));
+    assert.deepEqual([preview.selected_count, preview.root_count], [2, 1]);
+    assert.deepEqual(preview.candidates.map(item => item.name), ['Box B']);
+
+    // A rejected move names a stable code and changes nothing.
+    const refused = await fetch(`${base}/api/items/bulk-parent`, json('PATCH', { item_ids: [boxA.uuid, camera.uuid], parent_item_id: camera.id }));
+    assert.equal(refused.status, 400);
+    assert.deepEqual(await refused.json(), { error: { code: 'ITEM_PARENT_CYCLE', params: {} } });
+    assert.equal((await request(`/api/items/${boxA.id}`)).parent_item_id, null);
+
+    const moved = await request('/api/items/bulk-parent', json('PATCH', { item_ids: [boxA.uuid, camera.uuid], parent_item_id: boxB.id }));
+    assert.deepEqual(moved, {
+      selected_count: 2, root_count: 1, moved_count: 1, unchanged_count: 0,
+      parent: { id: boxB.id, uuid: boxB.uuid, name: 'Box B' }, moved_root_ids: [boxA.id]
+    });
+    assert.equal((await request(`/api/items/${boxA.id}`)).parent.name, 'Box B');
+    assert.equal((await request(`/api/items/${camera.id}`)).parent.name, 'Box A');
+  } finally {
+    if (server) await stopServer(server);
+    await rm(dataDir, { recursive: true, force: true });
+  }
+});
+
 test('text field suggestions reuse existing values of the same field only', async () => {
   const dataDir = await mkdtemp(path.join(os.tmpdir(), 'inventory-suggestions-test-'));
   let server;

@@ -5,14 +5,15 @@ import { useI18n } from 'vue-i18n';
 import { api } from '../api.js';
 import { capabilities } from '../capabilities.js';
 import { CORE_ITEM_COLUMNS, DEFAULT_ITEM_SORT, ITEMS_VIEW_STORAGE_KEY, labelColumns } from '../itemColumns.js';
-import { labelSelection, printLabelsRoute } from '../labelSelection.js';
+import { labelSelection, printLabelsRoute, toggleLabelSelection } from '../labelSelection.js';
 import { useTablePreferences } from '../useTablePreferences.js';
 import AddItemMenu from '../components/AddItemMenu.vue';
 import BatchAddItemsDialog from '../components/BatchAddItemsDialog.vue';
+import BulkMoveDialog from '../components/BulkMoveDialog.vue';
 import ItemResults from '../components/ItemResults.vue';
 import PageHeader from '../components/PageHeader.vue';
 import TableColumnPicker from '../components/TableColumnPicker.vue';
-import { IconArrowDown, IconArrowUp, IconJson, IconPrinter, IconSparkles } from '@tabler/icons-vue';
+import { IconArrowDown, IconArrowUp, IconFolderSymlink, IconJson, IconPrinter, IconSparkles } from '@tabler/icons-vue';
 
 const router = useRouter();
 const { t } = useI18n();
@@ -23,6 +24,9 @@ const loading = ref(true);
 const error = ref('');
 const notice = ref('');
 const batchOpen = ref(false);
+const moveOpen = ref(false);
+const moveButton = ref(null);
+const noticeBox = ref(null);
 const filters = reactive({ search: '', categoryId: '', page: 1 });
 let timer;
 let ready = false;
@@ -61,6 +65,20 @@ function resetView() {
 }
 const selectedLabel = computed(() => t('items.selected', labelSelection.size));
 const printLabels = () => router.push(printLabelsRoute(labelSelection));
+// The phone cards have no header checkbox, so the same page-only selection is offered as a button.
+const selectPage = () => result.value.items.forEach(item => toggleLabelSelection(item.uuid, true));
+function closeMove() {
+  moveOpen.value = false;
+  nextTick(() => moveButton.value?.focus());
+}
+// The list is loaded again, so Stored inside and the inherited locations show the new containers.
+async function moved({ selected_count: count, moved_count: movedCount, parent }) {
+  moveOpen.value = false;
+  labelSelection.clear();
+  notice.value = movedCount ? t('items.bulkMove.done', { n: count, name: parent.name }, count) : t('items.bulkMove.unchanged', { name: parent.name });
+  await load();
+  noticeBox.value?.focus();
+}
 // The new items are shown by switching the list to their category; the list reloads through its watcher.
 function batchCreated({ items, category }) {
   batchOpen.value = false;
@@ -216,8 +234,29 @@ onMounted(async () => {
       {{ $t('items.clearSelection') }}
     </button>
     <button
+      v-if="result.items.length"
+      type="button"
+      class="btn btn-sm btn-link px-1 d-lg-none"
+      @click="selectPage"
+    >
+      {{ $t('items.selectPage') }}
+    </button>
+    <button
+      ref="moveButton"
       type="button"
       class="btn btn-sm ms-auto"
+      :disabled="!labelSelection.size"
+      @click="notice = ''; moveOpen = true"
+    >
+      <IconFolderSymlink
+        :size="18"
+        aria-hidden="true"
+      />
+      {{ $t('items.bulkMove.action') }}
+    </button>
+    <button
+      type="button"
+      class="btn btn-sm"
       :disabled="!labelSelection.size"
       @click="printLabels"
     >
@@ -238,8 +277,10 @@ onMounted(async () => {
   </div>
   <div
     v-if="notice"
+    ref="noticeBox"
     class="alert alert-success alert-dismissible"
     role="status"
+    tabindex="-1"
   >
     {{ notice }}<button
       type="button"
@@ -338,6 +379,12 @@ onMounted(async () => {
       </li>
     </ul>
   </nav>
+  <BulkMoveDialog
+    v-if="moveOpen"
+    :uuids="[...labelSelection]"
+    @close="closeMove"
+    @moved="moved"
+  />
   <BatchAddItemsDialog
     v-if="batchOpen"
     :categories="categories"

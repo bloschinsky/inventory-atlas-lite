@@ -23,6 +23,9 @@ export const createItemRoutes = ({ itemService, bulkReplaceService }) => {
   // Preview never writes; the replacement itself finds its matches again when it runs.
   router.post('/api/items/bulk-replace/preview', (req, res) => res.json(bulkReplaceService.preview(req.body)));
   router.post('/api/items/bulk-replace', (req, res) => res.json(bulkReplaceService.apply(req.body)));
+  // The bulk move takes the whole selection in the body; its preview is a POST for the same reason.
+  router.post('/api/items/bulk-parent/preview', (req, res) => res.json(itemService.bulkMovePreview(req.body)));
+  router.patch('/api/items/bulk-parent', (req, res) => res.json(itemService.bulkMove(req.body)));
   router.post('/api/items', (req, res) => res.status(201).json(itemService.create(req.body)));
   router.put('/api/items/:id', (req, res) => res.json(itemService.update(req.params.id, req.body)));
   router.delete('/api/items/:id', (req, res) => {

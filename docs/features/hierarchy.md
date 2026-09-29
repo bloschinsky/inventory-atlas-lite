@@ -126,8 +126,11 @@ data and the same client model.
 ## Notes and limitations
 
 - Only item names are searched; the broader **Items** search is not used.
-- Items are not moved, reordered, or edited from either view; use **Stored inside** in the item form.
-  Drag & drop editing is planned as Phase 3.
+- Items are not moved, reordered, or edited from either view; use **Stored inside** in the item form,
+  or **Move to…** on the **Items** list for several items at once (see
+  [Nested items](nested-items.md#bulk-move)). Both views read the result on their next load, and a
+  bulk move keeps selected subtrees intact, so descendants stay below the same moved roots and search
+  paths follow the new containers. Drag & drop editing is planned as Phase 3.
 - Graph node positions are computed, never saved, and there is no minimap.
 - The graph draws at most 500 visible nodes at once; wide or fully expanded inventories are better
   read in the Tree, which has no limit.

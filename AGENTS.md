@@ -126,7 +126,8 @@ The project stays small and readable. Do not add:
 - `client/src/pages/Templates.vue` and `TemplateForm.vue` — the item template list and the template editor (also started from an item through `?fromItem=`).
 - `client/src/components/AddItemMenu.vue` and `TemplatePickerDialog.vue` — the Items page Add item split button and its template picker.
 - `client/src/pages/PrintLabels.vue` — `/labels/print`: A4 QR label sheets for the selected items, their layout presets, and print styles.
-- `client/src/labelSelection.js` — item selection for label printing, shared by the Items list, the QR modal, and the print view.
+- `client/src/labelSelection.js` — the Items list selection used by label printing and Bulk Move, shared by the Items list, the QR modal, and the print view.
+- `client/src/components/BulkMoveDialog.vue` — the Items list **Move to…** dialog: destination search, the selection-root summary, confirmation, and the bulk move.
 - `client/src/pages/ScanQr.vue` — `/scan`: live camera and image QR scanning that opens the matching item.
 - `client/src/qrScan.js` — local QR decoding with the bundled `jsqr` and classification of the scanned text.
 - `client/src/pages/Categories.vue` — category and custom field management.
@@ -150,7 +151,7 @@ The project stays small and readable. Do not add:
 - `server/src/index.js` — process entry point: port and production flag, the HTTP listener, and shutdown.
 - `server/src/app.js` — composition root: builds every repository, service, upload, and route table and assembles the Express app, including production static serving.
 - `server/src/routes/` — thin Express route tables; they parse the request, call one service, and shape the response.
-- `server/src/services/` — application and business logic, independent of Express request and response objects. `itemColumns.js` builds the Items column catalog and merges same-name, same-type custom fields; `bulkReplaceService.js` previews and applies exact-value replacement over the column whitelist of `repositories/bulkReplaceRepository.js`; `databaseMetadataService.js` exposes the database identity and renames it through `repositories/databaseMetadataRepository.js`.
+- `server/src/services/` — application and business logic, independent of Express request and response objects. `itemColumns.js` builds the Items column catalog and merges same-name, same-type custom fields; `bulkReplaceService.js` previews and applies exact-value replacement over the column whitelist of `repositories/bulkReplaceRepository.js`; `databaseMetadataService.js` exposes the database identity and renames it through `repositories/databaseMetadataRepository.js`; `itemService.js` owns the containment rule (`assertCanContain`) shared by the item form and Bulk Move, which reduces a selection to its roots before moving it.
 - `server/src/repositories/` — all SQL and row mapping for the inventory tables.
 - `server/src/integrations/` — adapters for external or heavy dependencies: the AI providers (`openAiProvider.js`, `openAiCompatibleProvider.js`, and their shared `aiProviderHttp.js` transport), the GitHub release API, the local background-removal model, and the cloud storage providers (`dropboxStorageProvider.js`, `googleDriveStorageProvider.js`, and their shared `cloudStorageHttp.js` transport). AI features call `services/aiProviderService.js`, never an adapter directly; cloud backup reaches the storage adapters only through `services/cloudConnectionService.js`, and their OAuth app credentials come from `services/cloudAppSettingsService.js`.
 - `server/src/restore/` — restore and reset configuration, staged-upload sessions, the SQLite file checks, and `databaseMaintenance.js`: the shared maintenance lock, safety backup, atomic swap, and rollback used by the restore and reset services.
@@ -162,6 +163,7 @@ The project stays small and readable. Do not add:
 - `test/services.test.js` — service-level regression tests that run without HTTP against a temporary database.
 - `test/hierarchy.test.js` — the hierarchy endpoint (shape, inherited location, one statement), the client storage tree rules, and the Graph layout.
 - `test/bulk-replace.test.js` — Bulk Replace Value matching, scope, validation, atomicity, and location inheritance at the service level.
+- `test/bulk-move.test.js` — Bulk Move selection roots, preserved nesting, cycle rejection, atomicity, unchanged roots, and untouched item data at the service level.
 - `test/database-metadata.test.js` — database metadata creation, migration, repair, rename validation, and the `last_updated_at` write triggers.
 - `test/background-removal.test.js` — local cutout tests: stubbed model output for the composition
   rules, plus one full run of the real model over the regression photo when it is installed.
