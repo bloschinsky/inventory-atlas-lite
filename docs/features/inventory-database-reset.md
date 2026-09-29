@@ -70,11 +70,13 @@ restore. In order:
 4. a candidate database is created next to the active one by `createFreshDatabase()` in
    `server/src/db.js`, which runs the same `applySchema()` a fresh installation runs. It is checked
    with `integrity_check`, the `CURRENT_SCHEMA` shape, the current `user_version`, and a row count of
-   every table, so tables added in later versions are covered automatically;
+   every table, so tables added in later versions are covered automatically. The only row a fresh
+   database has is its [database metadata](database-metadata.md): a new UUID and the default name;
 5. the connection is checkpointed and closed, stale sidecar files are removed, the candidate is
    renamed over the active file, and the directory entry is synced where the platform allows it;
 6. the database is reopened with the normal pragmas and verified again: integrity, schema,
-   `foreign_key_check`, `PRAGMA foreign_keys = 1`, current `user_version`, and every table empty.
+   `foreign_key_check`, `PRAGMA foreign_keys = 1`, current `user_version`, and every table empty
+   apart from the single metadata row.
 
 If step 5 or 6 fails, the safety backup is copied back, reopened, and verified, and the request
 answers `500` stating that the previous inventory was recovered. If that recovery fails too, writes

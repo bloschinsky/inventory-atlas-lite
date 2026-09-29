@@ -613,6 +613,21 @@ backup first when in doubt.
    deletion or an invalid backup file, follow the chosen language too; the release notes in
    **Version History** and **What's New** stay in English.
 
+### Name the database
+
+1. Open **Settings**. The **Database** card shows the **Database name** (`Inventory Atlas` until you
+   change it) and when the inventory was **Last updated**.
+2. Type a name such as `Home Inventory` or `Garage` and press **Save name**. The card reports
+   `Database name saved.` A name cannot be empty, longer than 100 characters, or contain line breaks.
+3. **Last updated** moves whenever something in the inventory is saved: items, photos, categories,
+   custom fields, templates, imports, and bulk replacements. Browsing, searching, and opening pages do
+   not change it.
+4. **Technical details** shows when the database was **Created**, its **Database UUID**, and its
+   **Schema version**. These are managed by the application and cannot be edited.
+
+The name and these details are stored inside the database file, so a backup carries them and a
+restore brings them back. A reset starts a new database with a new UUID and the default name.
+
 ### Download a backup
 
 1. Open **Data / Backup**.
@@ -822,8 +837,9 @@ Garage
 
 **Data / Backup → Download backup** writes a consistent snapshot of the database using SQLite's
 backup API, so it is safe to download while the application is running. The file contains everything:
-items, categories, custom fields, values, nesting, and the original photo bytes. There are no
-separate image files to back up.
+items, categories, custom fields, values, nesting, templates, the original photo bytes, and the
+database name and identity shown under **Settings → Database**. There are no separate image files to
+back up.
 
 Where the live database sits depends on the installation:
 

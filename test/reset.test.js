@@ -188,6 +188,7 @@ test('a reset swaps in a fresh current-schema database and keeps settings and ba
     const activePath = path.join(dataDir, 'inventory.sqlite');
     // Every inventory table holds data, so the reset is proven against all of them.
     for (const [table, count] of Object.entries(inspect(activePath, rowCounts))) assert.ok(count > 0, `${table} was not seeded`);
+    const previousMetadata = await request('/api/database/metadata', json('PUT', { name: 'Garage' }));
 
     const { body: prepared } = await prepareReset();
     const applied = await applyReset(prepared.resetToken);
@@ -197,13 +198,20 @@ test('a reset swaps in a fresh current-schema database and keeps settings and ba
     assert.match(applied.body.safetyBackup, /^pre-reset-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}Z(-[0-9a-f]{4})?\.sqlite$/);
     assert.ok(!JSON.stringify(applied.body).includes(dataDir));
 
-    // The active database is exactly the fresh schema, stamped with the current version, and empty.
+    // The active database is exactly the fresh schema, stamped with the current version, and empty
+    // except for the metadata row of its new identity.
     inspect(activePath, connection => {
       assert.deepEqual(schema(connection), freshSchema);
       assert.equal(connection.pragma('integrity_check', { simple: true }), 'ok');
-      assert.equal(Number(connection.pragma('user_version', { simple: true })), 2);
-      assert.ok(Object.values(rowCounts(connection)).every(count => count === 0));
+      assert.equal(Number(connection.pragma('user_version', { simple: true })), 3);
+      const { database_metadata: metadataRows, ...inventoryCounts } = rowCounts(connection);
+      assert.equal(metadataRows, 1);
+      assert.ok(Object.values(inventoryCounts).every(count => count === 0));
     });
+    // A reset starts a new database, so it gets a new identity and the default name.
+    const metadata = await request('/api/database/metadata');
+    assert.notEqual(metadata.database_uuid, previousMetadata.database_uuid);
+    assert.equal(metadata.name, 'Inventory Atlas');
     assert.deepEqual(await itemNames(), []);
     assert.deepEqual(await request('/api/categories'), []);
     const health = await request('/api/health');
@@ -218,8 +226,11 @@ test('a reset swaps in a fresh current-schema database and keeps settings and ba
     inspect(backupPath, connection => {
       assert.equal(connection.pragma('integrity_check', { simple: true }), 'ok');
       assert.deepEqual(rowCounts(connection), {
-        categories: 1, custom_fields: 1, item_field_values: 1, item_photos: 1, item_template_field_values: 1, item_templates: 1, items: 2
+        categories: 1, custom_fields: 1, database_metadata: 1, item_field_values: 1, item_photos: 1,
+        item_template_field_values: 1, item_templates: 1, items: 2
       });
+      // The pre-reset backup keeps the identity of the database it preserves.
+      assert.equal(connection.prepare('SELECT database_uuid FROM database_metadata').get().database_uuid, previousMetadata.database_uuid);
     });
     assert.equal(await readFile(path.join(dataDir, 'ai-settings.json'), 'utf8'), settings);
     assert.equal(await readFile(path.join(dataDir, 'pre-restore-backups', 'pre-restore-2026-01-01T00-00-00Z.sqlite'), 'utf8'), 'earlier restore');

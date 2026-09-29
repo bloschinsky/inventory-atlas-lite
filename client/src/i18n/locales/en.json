@@ -559,6 +559,18 @@
       "language": "Language",
       "languageHelp": "Applies immediately and is remembered in this browser only. Your inventory data is never translated."
     },
+    "database": {
+      "title": "Database",
+      "name": "Database name",
+      "nameHelp": "Stored inside the database file, so it travels with its backups.",
+      "saveName": "Save name",
+      "saved": "Database name saved.",
+      "lastUpdated": "Last updated",
+      "technicalDetails": "Technical details",
+      "created": "Created",
+      "uuid": "Database UUID",
+      "schemaVersion": "Schema version"
+    },
     "ai": {
       "title": "AI",
       "saved": "AI settings saved.",
@@ -868,6 +880,10 @@
     "CLOUD_UPLOAD_NOT_CONFIRMED": "{provider} did not confirm the upload.",
     "CLOUD_UPLOAD_NOT_STARTED": "{provider} did not start the upload.",
     "DATABASE_MAINTENANCE": "The database is being restored or reset. Try again in a moment.",
+    "DATABASE_METADATA_MISSING": "The database information record is missing. Restart the application to recreate it.",
+    "DATABASE_NAME_INVALID": "Database name cannot contain control characters.",
+    "DATABASE_NAME_REQUIRED": "Database name is required.",
+    "DATABASE_NAME_TOO_LONG": "Database name must be {max} characters or fewer.",
     "DATABASE_OPERATION_RUNNING": "Another database restore or reset is already running. Try again in a moment.",
     "DATABASE_RECOVERY_REQUIRED": "The application is in a failed database recovery state and needs manual recovery.",
     "DESCRIPTION_TOO_LONG": "The description must be {max} characters or fewer.",

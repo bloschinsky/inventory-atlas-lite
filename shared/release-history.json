@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.42.0",
+    "date": "2026-09-29",
+    "changes": [
+      "Settings has a new Database card: give your inventory database a name such as Home Inventory or Garage, and see when its data was last updated.",
+      "Each database now keeps its own identity, name, creation date, and schema version inside the file, so a backup carries them and a restore brings them back. Existing databases get them automatically on the first start."
+    ]
+  },
+  {
     "version": "0.41.0",
     "date": "2026-09-26",
     "changes": [

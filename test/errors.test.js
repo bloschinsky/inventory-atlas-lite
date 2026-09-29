@@ -23,7 +23,7 @@ const sourceFiles = directory => fs.readdirSync(directory, { recursive: true })
 
 // Upper-case string literals in the backend and shared code that are not error or notice codes.
 const NOT_CODES = new Set([
-  'ASC', 'DESC', 'DELETE', 'GET', 'PATCH', 'POST', 'PUT', 'S256', 'TEXT', 'UAH', 'UTC', 'WEBP', 'RIFF', 'RESTORE',
+  'ASC', 'DESC', 'DELETE', 'GET', 'INSERT', 'PATCH', 'POST', 'PUT', 'S256', 'TEXT', 'UAH', 'UPDATE', 'UTC', 'WEBP', 'RIFF', 'RESTORE',
   'ENOENT', 'SIGINT', 'SIGTERM', 'SQLITE_CONSTRAINT_UNIQUE', 'LIMIT_FILE_COUNT', 'LIMIT_FILE_SIZE', 'LIMIT_UNEXPECTED_FILE',
   'DROPBOX_APP_KEY', 'DROPBOX_APP_SECRET', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'CLOUD_BACKUP_REDIRECT_URI',
   'CLOUD_BACKUP_TEST_ENDPOINT'

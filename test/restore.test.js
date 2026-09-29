@@ -91,7 +91,9 @@ test('a downloaded backup is validated, summarized, and fully restored over newe
   try {
     server = await startServer(dataDir);
     const { category, brand, lens, template } = await seedInventory();
+    const backedUpMetadata = await request('/api/database/metadata', json('PUT', { name: 'Garage' }));
     const backup = await downloadBackup();
+    await request('/api/database/metadata', json('PUT', { name: 'Renamed after the backup' }));
 
     // Everything created after the backup must be gone once it is restored.
     await request('/api/items', json('POST', { name: 'Temporary item', category_id: category.id }));
@@ -102,7 +104,7 @@ test('a downloaded backup is validated, summarized, and fully restored over newe
     const validated = await uploadBackup(backup);
     assert.equal(validated.status, 200);
     assert.deepEqual(validated.body.summary, {
-      categories: 1, items: 2, fields: 1, fieldValues: 1, photos: 1, templates: 1, schemaVersion: 2, migratedFrom: null
+      categories: 1, items: 2, fields: 1, fieldValues: 1, photos: 1, templates: 1, schemaVersion: 3, migratedFrom: null
     });
     assert.equal(validated.body.filename, 'inventory-2026-09-17.sqlite');
     assert.equal(validated.body.size_bytes, backup.length);
@@ -130,6 +132,8 @@ test('a downloaded backup is validated, summarized, and fully restored over newe
     const restoredTemplate = await request(`/api/item-templates/${template.id}`);
     assert.equal(restoredTemplate.item_name, 'Helios');
     assert.deepEqual(restoredTemplate.field_values, { [brand.id]: 'KMZ' });
+    // The database identity is part of the file: UUID, name, and both timestamps come back unchanged.
+    assert.deepEqual(await request('/api/database/metadata'), backedUpMetadata);
 
     // The safety backup is a self-contained, valid database of the replaced state.
     assert.deepEqual(safetyBackups(dataDir), [result.safety_backup]);
@@ -163,6 +167,7 @@ test('a downloaded backup is validated, summarized, and fully restored over newe
     server = await startServer(dataDir);
     assert.deepEqual(await itemNames(), ['Box A', 'Helios 44-2']);
     assert.equal((await request(`/api/items/${lens.uuid}`)).photos.length, 1);
+    assert.deepEqual(await request('/api/database/metadata'), backedUpMetadata);
   } finally {
     if (server) await stopServer(server);
     await rm(dataDir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });
@@ -278,7 +283,7 @@ test('a backup from before schema versioning is migrated on the staged copy and 
     assert.equal(validated.status, 200);
     assert.equal(validated.body.summary.items, 1);
     assert.equal(validated.body.summary.migratedFrom, 0);
-    assert.equal(validated.body.summary.schemaVersion, 2);
+    assert.equal(validated.body.summary.schemaVersion, 3);
 
     // The uploaded source file on disk is untouched by validation.
     const source = new Database(legacyPath, { readonly: true });
@@ -289,6 +294,11 @@ test('a backup from before schema versioning is migrated on the staged copy and 
     const applied = await applyRestore(validated.body.restore_token);
     assert.equal(applied.status, 200);
     assert.deepEqual(await itemNames(), ['Zenit E']);
+    // The legacy backup had no metadata, so the migration gave it an identity of its own.
+    const metadata = await request('/api/database/metadata');
+    assert.match(metadata.database_uuid, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    assert.equal(metadata.name, 'Inventory Atlas');
+    assert.equal(metadata.schema_version, 3);
     // The restored database carries the current schema, so current features keep working.
     const restored = await request('/api/items', json('POST', {
       name: 'Added after restore', category_id: 1, serial_number: 'SN-1'

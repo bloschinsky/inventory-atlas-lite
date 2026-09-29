@@ -45,8 +45,10 @@ backup become the active database. It is not a merge, an import, or a selective 
   closed connection. Statements and transactions in the repositories are therefore built when
   they are used, never at module load.
 - `applySchema()` creates the tables, runs the additive column migrations, and stamps
-  `PRAGMA user_version` with `SCHEMA_VERSION` (currently `2`; version 2 added the item template
-  tables). Databases written before this feature report `0` and are upgraded in place; a version 1
+  `PRAGMA user_version` with `SCHEMA_VERSION` (currently `3`; version 2 added the item template
+  tables, version 3 the [database metadata](database-metadata.md) table, whose UUID, name, and
+  timestamps a restore brings back unchanged). It runs as one transaction. Databases written before
+  this feature report `0` and are upgraded in place; a version 1
   backup gains the empty template tables on its staged copy. `CORE_SCHEMA` is the shape every version of the application
   has had and is used to recognize a backup; `CURRENT_SCHEMA` is what the running application needs.
 

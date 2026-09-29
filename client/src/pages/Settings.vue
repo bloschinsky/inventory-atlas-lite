@@ -5,6 +5,7 @@ import { api, jsonOptions } from '../api.js';
 import { setAiCapabilities } from '../capabilities.js';
 import { SUPPORTED_LOCALES, setLocale, translateNotice } from '../i18n/index.js';
 import CloudBackupSettings from '../components/CloudBackupSettings.vue';
+import DatabaseSettings from '../components/DatabaseSettings.vue';
 import PageHeader from '../components/PageHeader.vue';
 import { AI_PROVIDERS, aiProvider, isLocalNetworkHost } from '../../../shared/aiProviders.js';
 
@@ -184,6 +185,7 @@ onMounted(async () => {
         </div>
       </div>
     </section>
+    <DatabaseSettings />
     <div
       v-if="error"
       class="alert alert-danger"

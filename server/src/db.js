@@ -1,4 +1,5 @@
 import Database from 'better-sqlite3';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -13,9 +14,24 @@ export const databasePath = path.join(dataDir, 'inventory.sqlite');
   Schema version stored in PRAGMA user_version. Databases created before restore existed report 0;
   applySchema() upgrades them in place. Restore refuses a backup that reports a higher number,
   because it was written by a newer release whose schema this one cannot read.
-  Version 2 added the item template tables.
+  Version 2 added the item template tables; version 3 added the database_metadata table.
+  user_version stays the source of truth: database_metadata.schema_version mirrors it and is written
+  in the same transaction, so the two never disagree.
 */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
+
+export const DEFAULT_DATABASE_NAME = 'Inventory Atlas';
+
+/*
+  Every write to one of these tables advances database_metadata.last_updated_at through a trigger.
+  The trigger runs inside the writing statement's transaction, so a failed or rolled-back write never
+  moves the timestamp, and no service has to remember to do it. A new inventory table joins this list.
+*/
+export const TRACKED_TABLES = ['categories', 'custom_fields', 'items', 'item_field_values', 'item_photos',
+  'item_templates', 'item_template_field_values'];
+
+// ISO 8601 in UTC with milliseconds, so two writes in the same second still order correctly.
+const SQL_NOW = "strftime('%Y-%m-%dT%H:%M:%fZ', 'now')";
 
 // Tables and columns that every Inventory Atlas Lite database has ever had. Restore validation uses
 // them to recognize one of our backups before deciding whether it only needs the usual migrations.
@@ -37,12 +53,55 @@ export const CURRENT_SCHEMA = {
   item_photos: [...CORE_SCHEMA.item_photos, 'created_at'],
   item_templates: ['id', 'name', 'category_id', 'item_name', 'description', 'condition', 'location', 'purchase_date',
     'purchase_price_amount', 'purchase_price_currency', 'serial_number', 'transferred_to', 'created_at', 'updated_at'],
-  item_template_field_values: ['id', 'template_id', 'field_id', 'value']
+  item_template_field_values: ['id', 'template_id', 'field_id', 'value'],
+  database_metadata: ['id', 'database_uuid', 'name', 'created_at', 'last_updated_at', 'schema_version']
 };
 
-// Creates missing tables, runs the additive migrations, and stamps the current schema version.
-// It is idempotent, so it is safe on the live database and on a staged restore candidate alike.
-export const applySchema = connection => {
+/*
+  Brings the single metadata row up to date. A database without one (created before metadata existed)
+  gets a new identity dated from its own records; a damaged row keeps every value that is still usable
+  and only has the blank ones filled in. The UUID is never replaced once it is set.
+*/
+const ensureMetadata = connection => {
+  const row = connection.prepare('SELECT * FROM database_metadata WHERE id = 1').get();
+  if (!row) {
+    const { earliest, latest } = connection.prepare(`
+      SELECT
+        strftime('%Y-%m-%dT%H:%M:%fZ', MIN(created)) AS earliest,
+        strftime('%Y-%m-%dT%H:%M:%fZ', MAX(updated)) AS latest
+      FROM (
+        SELECT created_at AS created, updated_at AS updated FROM categories
+        UNION ALL SELECT created_at, updated_at FROM custom_fields
+        UNION ALL SELECT created_at, updated_at FROM items
+        UNION ALL SELECT created_at, created_at FROM item_photos
+        UNION ALL SELECT created_at, updated_at FROM item_templates
+      )
+    `).get();
+    connection.prepare(`
+      INSERT INTO database_metadata (id, database_uuid, name, created_at, last_updated_at, schema_version)
+      VALUES (1, ?, ?, COALESCE(?, ${SQL_NOW}), COALESCE(?, ?, ${SQL_NOW}), ?)
+    `).run(crypto.randomUUID(), DEFAULT_DATABASE_NAME, earliest, latest, earliest, SCHEMA_VERSION);
+    return;
+  }
+  connection.prepare(`
+    UPDATE database_metadata SET
+      database_uuid = CASE WHEN TRIM(database_uuid) = '' THEN @uuid ELSE database_uuid END,
+      name = CASE WHEN TRIM(name) = '' THEN @name ELSE name END,
+      created_at = CASE WHEN TRIM(created_at) = '' THEN ${SQL_NOW} ELSE created_at END,
+      last_updated_at = CASE WHEN TRIM(last_updated_at) = '' THEN COALESCE(NULLIF(TRIM(created_at), ''), ${SQL_NOW})
+        ELSE last_updated_at END,
+      schema_version = @version
+    WHERE id = 1 AND (TRIM(database_uuid) = '' OR TRIM(name) = '' OR TRIM(created_at) = ''
+      OR TRIM(last_updated_at) = '' OR schema_version IS NOT @version)
+  `).run({ uuid: crypto.randomUUID(), name: DEFAULT_DATABASE_NAME, version: SCHEMA_VERSION });
+};
+
+/*
+  Creates missing tables, runs the additive migrations, and stamps the current schema version.
+  It is idempotent, so it is safe on the live database and on a staged restore candidate alike, and it
+  runs as one transaction: a failed migration leaves the database exactly as it was.
+*/
+export const applySchema = connection => connection.transaction(() => {
   connection.exec(`
     CREATE TABLE IF NOT EXISTS categories (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -118,6 +177,15 @@ export const applySchema = connection => {
       value TEXT NOT NULL,
       UNIQUE(template_id, field_id)
     );
+    -- Exactly one row describes the database itself; the CHECK keeps it that way.
+    CREATE TABLE IF NOT EXISTS database_metadata (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      database_uuid TEXT NOT NULL,
+      name TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      last_updated_at TEXT NOT NULL,
+      schema_version INTEGER NOT NULL
+    );
     CREATE INDEX IF NOT EXISTS idx_items_category ON items(category_id);
     CREATE INDEX IF NOT EXISTS idx_items_name ON items(name COLLATE NOCASE);
     CREATE INDEX IF NOT EXISTS idx_photos_item ON item_photos(item_id);
@@ -138,10 +206,19 @@ export const applySchema = connection => {
     if (!itemColumns.has(name)) connection.exec(`ALTER TABLE items ADD COLUMN ${name} ${definition}`);
   }
   connection.exec('CREATE INDEX IF NOT EXISTS idx_items_parent ON items(parent_item_id)');
+  for (const table of TRACKED_TABLES) {
+    for (const event of ['INSERT', 'UPDATE', 'DELETE']) {
+      connection.exec(`
+        CREATE TRIGGER IF NOT EXISTS ${table}_${event.toLowerCase()}_touches_metadata AFTER ${event} ON ${table}
+        BEGIN UPDATE database_metadata SET last_updated_at = ${SQL_NOW} WHERE id = 1; END
+      `);
+    }
+  }
+  ensureMetadata(connection);
   if (Number(connection.pragma('user_version', { simple: true })) !== SCHEMA_VERSION) {
     connection.pragma(`user_version = ${SCHEMA_VERSION}`);
   }
-};
+})();
 
 // Writes a brand-new database file the way a fresh installation starts: an empty file brought to the
 // current schema by applySchema(), so a reset always matches whatever the current schema is.

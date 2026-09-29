@@ -36,11 +36,8 @@ Implemented behavior is documented separately in [`features/README.md`](features
 
 ## Data management
 
-1. **Database metadata** — Planned. Adds an internal SQLite identity, name, timestamps, and schema
-   version for safer diagnostics, backup handling, and future database management. See
-   [`TASK-DATABASE-METADATA.md`](issues/TASK-DATABASE-METADATA.md).
-
-2. **Multiple database profiles** — Planned; blocked by Database metadata. Adds managed SQLite
+1. **Multiple database profiles** — Planned and unblocked by the completed
+   [database metadata](features/database-metadata.md). Adds managed SQLite
    profiles with one safely switchable active database per running application. See
    [`TASK-MULTIPLE-DATABASE-PROFILES-SINGLE-ACTIVE.md`](issues/TASK-MULTIPLE-DATABASE-PROFILES-SINGLE-ACTIVE.md).
 

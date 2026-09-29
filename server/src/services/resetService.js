@@ -9,15 +9,18 @@ import { RESET_CONFIRMATION_PHRASE } from '../restore/restoreConfig.js';
 
 const hashToken = token => crypto.createHash('sha256').update(token).digest();
 
-// A reset database is the current schema with no rows at all. Every table is checked, so tables added
-// by future versions are covered without changing this code.
+// A reset database is the current schema with no inventory rows at all, only the metadata row of its new
+// identity. Every table is checked, so tables added by future versions are covered without changing this code.
 const assertEmptyCurrentSchema = connection => {
   if (Number(connection.pragma('user_version', { simple: true })) !== SCHEMA_VERSION) {
     throw new Error('The reset database does not carry the current schema version.');
   }
   const tables = connection.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'").all();
   for (const { name } of tables) {
-    if (connection.prepare(`SELECT COUNT(*) AS count FROM "${name}"`).get().count) throw new Error(`Table ${name} is not empty.`);
+    const expected = name === 'database_metadata' ? 1 : 0;
+    if (connection.prepare(`SELECT COUNT(*) AS count FROM "${name}"`).get().count !== expected) {
+      throw new Error(`Table ${name} does not hold the rows of a fresh database.`);
+    }
   }
 };
 
