@@ -6,7 +6,8 @@ const isProduction = process.env.NODE_ENV === 'production' || process.argv.inclu
 
 const { app, staging, cloudBackupScheduler } = createApp({ production: isProduction });
 
-const server = app.listen(port, '0.0.0.0', () => console.log(`Inventory server listening on http://0.0.0.0:${port}`));
+// The logged port is the bound one, so PORT=0 (any free port, used by the tests) reports the real port.
+const server = app.listen(port, '0.0.0.0', () => console.log(`Inventory server listening on http://0.0.0.0:${server.address().port}`));
 
 const shutdown = () => {
   staging.clearAll();

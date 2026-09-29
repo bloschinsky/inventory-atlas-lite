@@ -1,6 +1,5 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import { mkdtemp } from 'node:fs/promises';
@@ -9,6 +8,7 @@ import os from 'node:os';
 import path from 'node:path';
 import Database from 'better-sqlite3';
 import { startCloudProviderStub } from './e2e/cloudProviderStub.js';
+import { startServer as startServerProcess, stopServer } from './serverProcess.js';
 
 /*
   Cloud backup without any real Dropbox or Google account: the adapters talk to a local stub of both
@@ -484,24 +484,7 @@ test('Google Drive adapter lists and deletes only inside its own backup folder',
 
 // --- API ------------------------------------------------------------------------------------
 
-let port = 36000 + Math.floor(Math.random() * 1000);
-
-async function startServer(dataDir, environment) {
-  port += 1;
-  const base = `http://127.0.0.1:${port}`;
-  const child = spawn(process.execPath, ['server/src/index.js'], {
-    cwd: process.cwd(), env: { ...process.env, PORT: String(port), DATA_DIR: dataDir, ...environment }, stdio: 'ignore'
-  });
-  for (let attempt = 0; attempt < 100; attempt++) {
-    if (child.exitCode !== null) throw new Error('Server exited before becoming ready.');
-    try { if ((await fetch(`${base}/api/cloud-backup`)).ok) return { child, base }; } catch { /* still starting */ }
-    await new Promise(resolve => setTimeout(resolve, 50));
-  }
-  child.kill();
-  throw new Error('Server did not become ready.');
-}
-
-const stopServer = child => new Promise(resolve => { if (child.exitCode !== null) return resolve(); child.once('exit', resolve); child.kill('SIGTERM'); });
+const startServer = (dataDir, environment) => startServerProcess(dataDir, { environment });
 
 test('the cloud backup API connects, backs up, keeps secrets on the server, and disconnects', async () => {
   const dataDir = await mkdtemp(path.join(process.env.DATA_DIR, 'api-'));

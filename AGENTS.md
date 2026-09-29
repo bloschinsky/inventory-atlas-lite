@@ -161,6 +161,7 @@ The project stays small and readable. Do not add:
 - `server/src/db.js` — database path, SQLite connection, PRAGMAs, current table/index schema, the database metadata row and its write triggers, and the fresh-database initializer used by the reset.
 - `test/e2e.test.js` — end-to-end acceptance test for the API, persistence, photos, and backups.
 - `test/services.test.js` — service-level regression tests that run without HTTP against a temporary database.
+- `test/serverProcess.js` — starts and stops the real server for the API tests on a free port chosen by the operating system (`PORT=0`), reading the bound port from its listening line.
 - `test/hierarchy.test.js` — the hierarchy endpoint (shape, inherited location, one statement), the client storage tree rules, and the Graph layout.
 - `test/bulk-replace.test.js` — Bulk Replace Value matching, scope, validation, atomicity, and location inheritance at the service level.
 - `test/bulk-move.test.js` — Bulk Move selection roots, preserved nesting, cycle rejection, atomicity, unchanged roots, and untouched item data at the service level.

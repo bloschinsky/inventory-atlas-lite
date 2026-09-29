@@ -1,35 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
 import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import Database from 'better-sqlite3';
 
-let nextPort = 35000 + Math.floor(Math.random() * 1000);
-
-async function startServer(dataDir) {
-  const port = nextPort++;
-  const base = `http://127.0.0.1:${port}`;
-  const child = spawn(process.execPath, ['server/src/index.js'], {
-    cwd: process.cwd(), env: { ...process.env, PORT: String(port), DATA_DIR: dataDir }, stdio: 'ignore'
-  });
-  for (let attempt = 0; attempt < 50; attempt++) {
-    if (child.exitCode !== null) throw new Error('Server exited before becoming ready.');
-    try { if ((await fetch(`${base}/api/health`)).ok) return { child, base }; } catch {
-      // Startup is asynchronous; keep polling within the short readiness deadline.
-    }
-    await new Promise(resolve => setTimeout(resolve, 50));
-  }
-  child.kill();
-  throw new Error('Server did not become ready.');
-}
-
-async function stopServer(child) {
-  if (child.exitCode !== null) return;
-  child.kill('SIGTERM');
-  await new Promise(resolve => child.once('exit', resolve));
-}
+import { startServer, stopServer } from './serverProcess.js';
 
 const json = (method, body) => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 

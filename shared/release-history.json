@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.44.1",
+    "date": "2026-09-29",
+    "changes": [
+      "Release checks are more reliable: the automatic server tests no longer fail when another process happens to use the port they picked. The application itself is unchanged."
+    ]
+  },
+  {
     "version": "0.44.0",
     "date": "2026-09-29",
     "changes": [
