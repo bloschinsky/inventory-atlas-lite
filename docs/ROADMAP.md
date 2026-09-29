@@ -1,7 +1,7 @@
 # Roadmap overview
 
 This overview lists the active feature work planned for Inventory Atlas Lite. It is current as of
-2026-09-26. Each linked task file is the authoritative specification for scope, acceptance criteria,
+2026-09-29. Each linked task file is the authoritative specification for scope, acceptance criteria,
 and verification.
 
 Implemented behavior is documented separately in [`features/README.md`](features/README.md).
@@ -21,6 +21,28 @@ Implemented behavior is documented separately in [`features/README.md`](features
 3. **Hierarchy, Phase 3: Drag & Drop** — Planned; the Phase 1 tree and Phase 2 graph are complete.
    Adds safe tree-based containment editing while preserving the existing server-side cycle protection. See
    [`TASK-HIERARCHY-PHASE-3-DRAG-DROP.md`](issues/TASK-HIERARCHY-PHASE-3-DRAG-DROP.md).
+
+4. **Bulk Move Items to Container** — Planned. Adds a safe multi-item containment action that
+   preserves selected subtrees and uses the existing parent and cycle-validation model. See
+   [`TASK-BULK-MOVE-ITEMS-TO-CONTAINER.md`](issues/TASK-BULK-MOVE-ITEMS-TO-CONTAINER.md).
+
+5. **Checklists, Phase 1: Core Checklists and Check Sessions** — Planned. Adds reusable packing
+   and verification checklists with independent, durable run history. See
+   [`TASK-CHECKLISTS-PHASE-1-CORE.md`](issues/TASK-CHECKLISTS-PHASE-1-CORE.md).
+
+6. **Checklists, Phase 2: Inventory Verification and Container Audits** — Planned; blocked by
+   Checklists Phase 1. Adds completed-verification timestamps and container-content audit runs. See
+   [`TASK-CHECKLISTS-PHASE-2-INVENTORY-VERIFICATION.md`](issues/TASK-CHECKLISTS-PHASE-2-INVENTORY-VERIFICATION.md).
+
+## Data management
+
+1. **Database metadata** — Planned. Adds an internal SQLite identity, name, timestamps, and schema
+   version for safer diagnostics, backup handling, and future database management. See
+   [`TASK-DATABASE-METADATA.md`](issues/TASK-DATABASE-METADATA.md).
+
+2. **Multiple database profiles** — Planned; blocked by Database metadata. Adds managed SQLite
+   profiles with one safely switchable active database per running application. See
+   [`TASK-MULTIPLE-DATABASE-PROFILES-SINGLE-ACTIVE.md`](issues/TASK-MULTIPLE-DATABASE-PROFILES-SINGLE-ACTIVE.md).
 
 
 ## Distribution
