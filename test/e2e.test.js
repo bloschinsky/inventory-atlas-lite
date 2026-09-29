@@ -930,3 +930,60 @@ test('item templates are managed through their own API and kept over a restart a
     await rm(dataDir, { recursive: true, force: true });
   }
 });
+
+test('checklists and their runs are served by their own API and kept over a restart and in backups', async () => {
+  const dataDir = await mkdtemp(path.join(os.tmpdir(), 'inventory-checklists-test-'));
+  let server;
+  try {
+    server = await startServer(dataDir);
+    const category = await request('/api/categories', json('POST', { name: 'Film gear' }));
+    const camera = await request('/api/items', json('POST', { name: 'Nikon F100', category_id: category.id }));
+    const meter = await request('/api/items', json('POST', { name: 'Light meter', category_id: category.id }));
+    const checklist = await request('/api/checklists', json('POST', {
+      name: 'Film Trip Kit', mode: 'packing', items: [{ item_id: meter.id }, { item_id: camera.id }]
+    }));
+    assert.deepEqual(checklist.items.map(entry => entry.name), ['Light meter', 'Nikon F100']);
+    assert.equal(await failedStatus('/api/checklists', json('POST', { name: 'Kit', mode: 'packing', items: [{ item_id: camera.id }, { item_id: camera.id }] })), 400);
+    assert.equal(await failedStatus('/api/checklists/999'), 404);
+
+    const run = await request(`/api/checklists/${checklist.id}/runs`, { method: 'POST' });
+    assert.deepEqual(run.counts, { total: 2, confirmed: 0, missing: 0, pending: 2, checked: 0 });
+    await request(`/api/checklist-runs/${run.id}/items/${run.items[0].id}`, json('PATCH', { status: 'confirmed' }));
+    const completed = await request(`/api/checklist-runs/${run.id}/complete`, { method: 'POST' });
+    assert.equal(completed.status, 'completed');
+    assert.equal(await failedStatus(`/api/checklist-runs/${run.id}/items/${run.items[1].id}`, json('PATCH', { status: 'missing' })), 409);
+
+    // Checklists never appear among items, and deleting a checklisted item is not blocked.
+    assert.equal((await request('/api/items')).pagination.total, 2);
+    await request(`/api/items/${meter.id}`, { method: 'DELETE' });
+
+    const backupResponse = await fetch(`${base}/api/backup`);
+    assert.ok(backupResponse.ok);
+    const backupPath = path.join(dataDir, 'checklists-backup.sqlite');
+    await writeFile(backupPath, Buffer.from(await backupResponse.arrayBuffer()));
+    const backup = new Database(backupPath, { readonly: true });
+    assert.deepEqual(backup.prepare('SELECT name, mode FROM checklists').all(), [{ name: 'Film Trip Kit', mode: 'packing' }]);
+    assert.deepEqual(backup.prepare('SELECT item_id, item_name_snapshot FROM checklist_items ORDER BY sort_order').all(),
+      [{ item_id: null, item_name_snapshot: 'Light meter' }, { item_id: camera.id, item_name_snapshot: 'Nikon F100' }]);
+    assert.deepEqual(backup.prepare('SELECT item_name_snapshot, status FROM checklist_run_items ORDER BY position').all(),
+      [{ item_name_snapshot: 'Light meter', status: 'confirmed' }, { item_name_snapshot: 'Nikon F100', status: 'pending' }]);
+    backup.close();
+
+    await stopServer(server);
+    server = await startServer(dataDir);
+    const listed = await request('/api/checklists');
+    assert.deepEqual(listed.map(entry => [entry.name, entry.item_count, entry.last_run.status]), [['Film Trip Kit', 2, 'completed']]);
+    assert.deepEqual((await request(`/api/checklists/${checklist.id}`)).items.map(entry => [entry.name, entry.deleted]),
+      [['Light meter', true], ['Nikon F100', false]]);
+    assert.deepEqual((await request(`/api/checklist-runs/${run.id}`)).items.map(item => [item.name, item.status]),
+      [['Light meter', 'confirmed'], ['Nikon F100', 'pending']]);
+
+    await request(`/api/checklists/${checklist.id}`, { method: 'DELETE' });
+    assert.deepEqual(await request('/api/checklists'), []);
+    assert.deepEqual((await request('/api/checklist-runs')).map(entry => [entry.id, entry.checklist_id, entry.checklist_name]),
+      [[run.id, null, 'Film Trip Kit']]);
+  } finally {
+    if (server) await stopServer(server);
+    await rm(dataDir, { recursive: true, force: true });
+  }
+});

@@ -46,7 +46,7 @@ test('resets the inventory from the Danger Zone after reviewing the impact and c
 
   const dialog = page.getByRole('dialog', { name: 'Reset Inventory Database' });
   await expect(dialog.getByRole('list', { name: 'Data that will be removed' }).getByRole('listitem')).toHaveText([
-    '3 items', '2 categories', '3 custom fields', '2 custom field values', '2 photos', '1 item template'
+    '3 items', '2 categories', '3 custom fields', '2 custom field values', '2 photos', '1 item template', '0 checklists', '0 checklist runs'
   ]);
 
   // The destructive button needs both the acknowledgement and the exact phrase.

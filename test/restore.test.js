@@ -80,7 +80,12 @@ async function seedInventory() {
   const template = await request('/api/item-templates', json('POST', {
     name: 'Lens preset', category_id: category.id, item_name: 'Helios', field_values: { [brand.id]: 'KMZ' }
   }));
-  return { category, brand, box, lens, template };
+  const checklist = await request('/api/checklists', json('POST', {
+    name: 'Lens kit', mode: 'packing', items: [{ item_id: lens.id }, { item_id: box.id }]
+  }));
+  const run = await request(`/api/checklists/${checklist.id}/runs`, { method: 'POST' });
+  await request(`/api/checklist-runs/${run.id}/items/${run.items[0].id}`, json('PATCH', { status: 'confirmed', note: 'In the bag' }));
+  return { category, brand, box, lens, template, checklist, run };
 }
 
 const itemNames = async () => (await request('/api/items?pageSize=100')).items.map(item => item.name).sort();
@@ -90,7 +95,7 @@ test('a downloaded backup is validated, summarized, and fully restored over newe
   let server;
   try {
     server = await startServer(dataDir);
-    const { category, brand, lens, template } = await seedInventory();
+    const { category, brand, lens, template, checklist, run } = await seedInventory();
     const backedUpMetadata = await request('/api/database/metadata', json('PUT', { name: 'Garage' }));
     const backup = await downloadBackup();
     await request('/api/database/metadata', json('PUT', { name: 'Renamed after the backup' }));
@@ -100,11 +105,14 @@ test('a downloaded backup is validated, summarized, and fully restored over newe
     assert.deepEqual(await itemNames(), ['Box A', 'Helios 44-2', 'Temporary item']);
     await request('/api/item-templates', json('POST', { name: 'Temporary preset', category_id: category.id }));
     await request(`/api/item-templates/${template.id}`, json('PUT', { name: 'Renamed preset', category_id: category.id }));
+    await request(`/api/checklist-runs/${run.id}/items/${run.items[1].id}`, json('PATCH', { status: 'missing' }));
+    await request(`/api/checklist-runs/${run.id}/complete`, { method: 'POST' });
+    await request(`/api/checklists/${checklist.id}`, json('PUT', { name: 'Renamed kit', mode: 'verification', items: [] }));
 
     const validated = await uploadBackup(backup);
     assert.equal(validated.status, 200);
     assert.deepEqual(validated.body.summary, {
-      categories: 1, items: 2, fields: 1, fieldValues: 1, photos: 1, templates: 1, schemaVersion: 3, migratedFrom: null
+      categories: 1, items: 2, fields: 1, fieldValues: 1, photos: 1, templates: 1, checklists: 1, checklistRuns: 1, schemaVersion: 4, migratedFrom: null
     });
     assert.equal(validated.body.filename, 'inventory-2026-09-17.sqlite');
     assert.equal(validated.body.size_bytes, backup.length);
@@ -132,6 +140,15 @@ test('a downloaded backup is validated, summarized, and fully restored over newe
     const restoredTemplate = await request(`/api/item-templates/${template.id}`);
     assert.equal(restoredTemplate.item_name, 'Helios');
     assert.deepEqual(restoredTemplate.field_values, { [brand.id]: 'KMZ' });
+    // Checklist definitions, membership, run history, and run item states come back as backed up.
+    const restoredChecklist = await request(`/api/checklists/${checklist.id}`);
+    assert.deepEqual([restoredChecklist.name, restoredChecklist.mode], ['Lens kit', 'packing']);
+    assert.deepEqual(restoredChecklist.items.map(entry => entry.name), ['Helios 44-2', 'Box A']);
+    const restoredRun = await request(`/api/checklist-runs/${run.id}`);
+    assert.equal(restoredRun.status, 'in_progress');
+    assert.deepEqual(restoredRun.items.map(item => [item.name, item.status, item.note]),
+      [['Helios 44-2', 'confirmed', 'In the bag'], ['Box A', 'pending', null]]);
+    assert.equal((await request(`/api/checklists/${checklist.id}/runs`)).length, 1);
     // The database identity is part of the file: UUID, name, and both timestamps come back unchanged.
     assert.deepEqual(await request('/api/database/metadata'), backedUpMetadata);
 
@@ -283,7 +300,7 @@ test('a backup from before schema versioning is migrated on the staged copy and 
     assert.equal(validated.status, 200);
     assert.equal(validated.body.summary.items, 1);
     assert.equal(validated.body.summary.migratedFrom, 0);
-    assert.equal(validated.body.summary.schemaVersion, 3);
+    assert.equal(validated.body.summary.schemaVersion, 4);
 
     // The uploaded source file on disk is untouched by validation.
     const source = new Database(legacyPath, { readonly: true });
@@ -298,7 +315,7 @@ test('a backup from before schema versioning is migrated on the staged copy and 
     const metadata = await request('/api/database/metadata');
     assert.match(metadata.database_uuid, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
     assert.equal(metadata.name, 'Inventory Atlas');
-    assert.equal(metadata.schema_version, 3);
+    assert.equal(metadata.schema_version, 4);
     // The restored database carries the current schema, so current features keep working.
     const restored = await request('/api/items', json('POST', {
       name: 'Added after restore', category_id: 1, serial_number: 'SN-1'

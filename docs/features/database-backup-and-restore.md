@@ -23,7 +23,7 @@ backup become the active database. It is not a merge, an import, or a selective 
   contents rather than the name.
 - **Validate backup** uploads the file and reports a summary: file name and size, a compatibility
   line including the schema version, and the number of categories, items, custom fields, saved
-  values, photos, and item templates. Nothing has changed at this point.
+  values, photos, item templates, checklists, and checklist runs. Nothing has changed at this point.
 - The result is followed by a red warning stating that all current data is replaced, that anything
   created after the backup disappears, that a pre-restore safety backup is written first, and that
   the application briefly refuses changes.
@@ -45,9 +45,9 @@ backup become the active database. It is not a merge, an import, or a selective 
   closed connection. Statements and transactions in the repositories are therefore built when
   they are used, never at module load.
 - `applySchema()` creates the tables, runs the additive column migrations, and stamps
-  `PRAGMA user_version` with `SCHEMA_VERSION` (currently `3`; version 2 added the item template
+  `PRAGMA user_version` with `SCHEMA_VERSION` (currently `4`; version 2 added the item template
   tables, version 3 the [database metadata](database-metadata.md) table, whose UUID, name, and
-  timestamps a restore brings back unchanged). It runs as one transaction. Databases written before
+  timestamps a restore brings back unchanged, and version 4 the [checklist](checklists.md) tables). It runs as one transaction. Databases written before
   this feature report `0` and are upgraded in place; a version 1
   backup gains the empty template tables on its staged copy. `CORE_SCHEMA` is the shape every version of the application
   has had and is used to recognize a backup; `CURRENT_SCHEMA` is what the running application needs.

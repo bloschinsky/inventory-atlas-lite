@@ -278,6 +278,18 @@ async function finishReset(result) {
             <dd class="col-7 col-md-8">
               {{ validation.summary.templates }}
             </dd>
+            <dt class="col-5 col-md-4">
+              {{ $t('checklists.title') }}
+            </dt>
+            <dd class="col-7 col-md-8">
+              {{ validation.summary.checklists }}
+            </dd>
+            <dt class="col-5 col-md-4">
+              {{ $t('backup.checklistRuns') }}
+            </dt>
+            <dd class="col-7 col-md-8">
+              {{ validation.summary.checklistRuns }}
+            </dd>
           </dl>
 
           <div

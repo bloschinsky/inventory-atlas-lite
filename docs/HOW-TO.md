@@ -118,6 +118,8 @@ saved.
 | **QR code** | A code generated from the item's UUID, shown on request from the item page and printed on labels. It identifies the record and contains no address of your server. **Scan QR** reads it back and opens the item. |
 | **Photo** | An image stored inside the database together with the item. |
 | **Template** | A reusable preset of default values for new items of one category. Using it prefills the **Add item** form; it is never an item itself and the items created from it stay independent. |
+| **Checklist** | A reusable list of existing items, such as `Film Trip Kit`, in **Packing** or **Verification** mode. It only references items; it never copies them into a second inventory. |
+| **Checklist run** | One use of a checklist, with its own copy of the item list and a Pending, Packed/Present, or Missing state per item. Every start is a new run, so earlier results stay in the history. |
 | **Backup** | A downloadable copy of the whole SQLite database, photos included. |
 | **Restore** | Replacing the whole inventory with the contents of such a backup file. |
 
@@ -311,6 +313,55 @@ the template editor and the prefilled item form show `Some template fields no lo
 ignored.` If the template's category is deleted, the template stays in the list marked **Category
 missing** and its **Use** button is disabled. Press **Edit**, choose a category, and save to repair
 it; another category is never chosen for you.
+
+### Pack or verify items with a checklist
+
+A checklist is a reusable list of items you already have in the inventory, such as a `Film Trip Kit`
+you pack before every trip or a `Camera shelf` whose contents you check now and then. The checklist
+itself holds no ticks: each time you start it, the application creates a separate **run** with its own
+copy of the item list, so every earlier result stays readable in the history.
+
+1. Open **Checklists** in the navigation and press **Add checklist**.
+2. Enter a **Name** and, if you like, a **Description**. Choose the **Mode**: **Packing** (*What do I
+   need to take or pack?*) or **Verification** (*Are the expected items physically present?*).
+3. Under **Add inventory items**, search by name, description, or serial number. Every result shows
+   its category, location, and container, so items with similar names can be told apart. Press **Add**
+   on each item you need; the form stays open, and an item that is already in the list shows
+   **Added** and cannot be added twice. Items cannot be created from here.
+4. Under **Checklist items**, the arrows move an entry up or down and **×** removes it. The order you
+   set is the order of every run; nothing is sorted for you.
+5. Press **Save checklist**. The checklist page shows the description, the mode, the expected items,
+   and the **Run history**.
+
+To use the checklist, press **Start** — on the checklist page or on its card under **Checklists**. A
+run opens with every item **Pending**. For each item press **Packed** (or **Present** in a
+Verification checklist) or **Missing**; press **Pending** to undo a mistake. You can add a short note
+to any item, for example `Left at home`. Every change is saved at once, so you can reload the page or
+come back later: an unfinished run is offered as **Continue run** on its checklist page. The top of
+the run shows the progress, such as `5 / 6 checked` with the number of packed or present, missing,
+and pending items; a missing item counts as checked, but not as packed or present. The link icon of
+an item opens its item page.
+
+Press **Complete checklist** when you are done. If some items are still pending, the application asks
+`3 items are still pending. Complete this run anyway?` first. A completed run is read-only history.
+**Run again** — on the completed run or on the checklist page — always starts a new run with every
+item pending again; the earlier run is never reset. The **Run history** on the checklist page lists
+every run with its start time, status, and the packed or present, missing, and pending counts; open a
+run to see exactly what was checked.
+
+Editing a checklist changes only future runs. Runs that already exist keep the checklist name, mode,
+and item names they started with, even if you later rename an item. Moving an item to another
+location or container never changes the checklists it belongs to.
+
+Deleting an inventory item is never blocked by a checklist. The checklist then shows the entry as
+**Deleted item** under its last known name; remove it or add a replacement when you next edit the
+checklist. Deleted items are skipped when a run starts, and runs that already contain the item keep
+it under its name.
+
+**Delete** on a checklist, after a confirmation, removes the checklist and its item list but keeps
+its runs. They are listed under **Runs of deleted checklists** on the **Checklists** page and stay
+readable. Checklists and runs are part of the SQLite database, so backups, restores, cloud backups,
+and the inventory reset include them.
 
 ### Add several items at once from JSON
 
@@ -747,7 +798,7 @@ was created disappears from the active database. It is not a merge or an import.
    not the file name.
 3. Press **Validate backup**. The file is uploaded and checked on the server. Nothing has changed yet.
 4. Read the **Validation result**: the file name and size, the compatibility line, and how many
-   categories, items, custom fields, values, photos, and templates the backup contains. If these numbers do not
+   categories, items, custom fields, values, photos, templates, checklists, and checklist runs the backup contains. If these numbers do not
    match the backup you expect, stop here and select another file.
 5. Read the red warning. Before the replacement the application writes a **pre-restore safety
    backup** of the current database on the server, and during the final swap it refuses changes for
@@ -766,14 +817,14 @@ cannot overlap the final swap.
 ### Reset the inventory database
 
 Resetting **permanently removes the whole inventory** — every item, photo, category, custom field,
-saved value, and item template — and leaves an empty database, as on a fresh installation. Application settings,
+saved value, item template, checklist, and checklist run — and leaves an empty database, as on a fresh installation. Application settings,
 such as the AI settings and the API key, and all existing backups are kept.
 
 1. Download a backup first if you might want the data again.
 2. Open **Data / Backup** and scroll to the red **Danger Zone** at the bottom of the page.
 3. Press **Reset Inventory Database**. The dialog asks the server for the current numbers and lists
-   how many items, categories, custom fields, custom field values, photos, and item templates will be
-   removed.
+   how many items, categories, custom fields, custom field values, photos, item templates, checklists,
+   and checklist runs will be removed.
    Nothing has changed yet; **Cancel** closes the dialog.
 4. Tick **I understand that all inventory data will be permanently removed.**
 5. Type `RESET INVENTORY` exactly, in capitals. **Reset Database** stays disabled until both the
@@ -891,7 +942,8 @@ Garage
 
 **Data / Backup → Download backup** writes a consistent snapshot of the database using SQLite's
 backup API, so it is safe to download while the application is running. The file contains everything:
-items, categories, custom fields, values, nesting, templates, the original photo bytes, and the
+items, categories, custom fields, values, nesting, templates, checklists with their run history, the
+original photo bytes, and the
 database name and identity shown under **Settings → Database**. There are no separate image files to
 back up.
 
@@ -955,6 +1007,9 @@ backup, and keep the copies on a different machine than the server.
   pattern replacement and no undo.
 - A category used by any item cannot be deleted, and an item containing other items cannot be
   deleted.
+- Checklists (Phase 1) only reference existing items: there are no free-text entries, no QR or
+  barcode scanning inside a run, no reminders or schedules, and checking an item never changes its
+  location, container, or any other item data. A completed run cannot be edited or deleted.
 - Deleting a custom field also deletes the values saved for it on every item of that category.
 - Custom field types cannot be changed after creation, and categories cannot be merged. The batch
   editor only creates new fields; it never renames or retypes existing ones.

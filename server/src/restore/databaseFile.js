@@ -73,7 +73,9 @@ export const summarize = connection => ({
   fields: connection.prepare('SELECT COUNT(*) AS count FROM custom_fields').get().count,
   fieldValues: connection.prepare('SELECT COUNT(*) AS count FROM item_field_values').get().count,
   photos: connection.prepare('SELECT COUNT(*) AS count FROM item_photos').get().count,
-  templates: connection.prepare('SELECT COUNT(*) AS count FROM item_templates').get().count
+  templates: connection.prepare('SELECT COUNT(*) AS count FROM item_templates').get().count,
+  checklists: connection.prepare('SELECT COUNT(*) AS count FROM checklists').get().count,
+  checklistRuns: connection.prepare('SELECT COUNT(*) AS count FROM checklist_runs').get().count
 });
 
 /*

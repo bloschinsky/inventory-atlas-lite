@@ -12,7 +12,8 @@
     "openMenu": "Open navigation menu",
     "closeMenu": "Close navigation menu",
     "templates": "Templates",
-    "hierarchy": "Hierarchy"
+    "hierarchy": "Hierarchy",
+    "checklists": "Checklists"
   },
   "theme": {
     "colorMode": "Color mode",
@@ -383,6 +384,98 @@
     "manage": "Manage templates",
     "saveAsTemplate": "Save as template"
   },
+  "checklists": {
+    "title": "Checklists",
+    "count": "{n} checklist | {n} checklists",
+    "intro": "A checklist is a reusable list of inventory items. Every start creates a separate run, so earlier results stay in the history.",
+    "add": "Add checklist",
+    "editTitle": "Edit checklist",
+    "save": "Save checklist",
+    "name": "Name",
+    "description": "Description",
+    "mode": "Mode",
+    "modes": {
+      "packing": "Packing",
+      "verification": "Verification"
+    },
+    "modeHelp": {
+      "packing": "What do I need to take or pack?",
+      "verification": "Are the expected items physically present?"
+    },
+    "items": "Items",
+    "expectedItems": "Expected items",
+    "lastRun": "Last run",
+    "lastResult": "Last result",
+    "neverRun": "Never run",
+    "open": "Open",
+    "start": "Start",
+    "runAgain": "Run again",
+    "continueRun": "Continue run",
+    "openNamed": "Open {name}",
+    "startNamed": "Start {name}",
+    "editNamed": "Edit {name}",
+    "deleteNamed": "Delete {name}",
+    "confirmDelete": "Delete the checklist “{name}”? Its run history is kept and stays readable.",
+    "loading": "Loading checklists…",
+    "emptyTitle": "No checklists yet",
+    "emptyText": "Create a checklist for a kit you pack often or for a shelf you want to verify.",
+    "noItems": "This checklist has no items yet.",
+    "deletedItem": "Deleted item",
+    "deletedItemHelp": "Deleted from the inventory. Remove it or add a replacement.",
+    "deletedSkipped": "Deleted items are skipped when a run starts.",
+    "picker": {
+      "search": "Add inventory items",
+      "placeholder": "Search items by name, description, or serial number…",
+      "addNamed": "Add {name}",
+      "added": "Added",
+      "noResults": "No matching items.",
+      "empty": "No items yet. Search above and add the inventory items this checklist expects.",
+      "moveUp": "Move {name} up",
+      "moveDown": "Move {name} down",
+      "removeNamed": "Remove {name}",
+      "selected": "Checklist items"
+    },
+    "history": "Run history",
+    "noRuns": "This checklist has not been run yet.",
+    "deletedHistory": "Runs of deleted checklists",
+    "started": "Started",
+    "completedAt": "Completed",
+    "status": "Status",
+    "result": "Result",
+    "runStatus": {
+      "in_progress": "In progress",
+      "completed": "Completed"
+    },
+    "states": {
+      "pending": "Pending",
+      "packed": "Packed",
+      "present": "Present",
+      "missing": "Missing"
+    },
+    "countLabel": "{label}: {count}",
+    "progress": "{checked} / {total} checked",
+    "run": {
+      "startedAt": "Started {date}",
+      "completedAt": "Completed {date}",
+      "loading": "Loading run…",
+      "complete": "Complete checklist",
+      "completing": "Completing…",
+      "confirmPending": "{n} item is still pending.\nComplete this run anyway? | {n} items are still pending.\nComplete this run anyway?",
+      "completedNotice": "This run is completed. It is kept as read-only history.",
+      "checklistDeleted": "The checklist of this run was deleted; the run is kept as history.",
+      "backToChecklist": "Back to checklist",
+      "allChecklists": "All checklists",
+      "markAs": "Mark {name} as {state}",
+      "stateOf": "State of {name}",
+      "note": "Note",
+      "noteText": "Note: {note}",
+      "noteNamed": "Note for {name}",
+      "notePlaceholder": "Optional note",
+      "openItem": "Open item",
+      "openItemNamed": "Open item {name}",
+      "itemDeleted": "Deleted from inventory"
+    }
+  },
   "hierarchy": {
     "title": "Hierarchy",
     "intro": {
@@ -584,7 +677,9 @@
     "fields": "{n} custom field | {n} custom fields",
     "fieldValues": "{n} custom field value | {n} custom field values",
     "photos": "{n} photo | {n} photos",
-    "templates": "{n} item template | {n} item templates"
+    "templates": "{n} item template | {n} item templates",
+    "checklists": "{n} checklist | {n} checklists",
+    "checklistRuns": "{n} checklist run | {n} checklist runs"
   },
   "settings": {
     "title": "Settings",
@@ -753,7 +848,7 @@
     "title": "Data / Backup",
     "subtitle": "Keep your own copies of the inventory database, and restore one when you need it.",
     "sqlite": "SQLite backup",
-    "downloadText": "Download a consistent snapshot containing all items, categories, custom fields, photos, and item templates.",
+    "downloadText": "Download a consistent snapshot containing all items, categories, custom fields, photos, item templates, and checklists with their run history.",
     "download": "Download backup",
     "cloudHint": "To upload the same snapshot to Dropbox or Google Drive, now or on a schedule, use {link}.",
     "cloudLink": "Cloud Backup in Settings",
@@ -787,7 +882,8 @@
     "whereTitle": "Where the data lives",
     "whereLive": "The live database is stored in {file}, or in the directory set through {variable}. Photos are inside the same file, so the snapshot is the whole inventory.",
     "whereCopies": "Keep regular copies outside this server. Pre-restore safety backups are written to {restoreDir} next to the live database, and the ten most recent are kept. Pre-reset safety backups are written to {resetDir} and are never removed automatically.",
-    "dangerZone": "Danger Zone"
+    "dangerZone": "Danger Zone",
+    "checklistRuns": "Checklist runs"
   },
   "bulkReplace": {
     "title": "Replace field value",
@@ -1070,7 +1166,20 @@
     "BULK_MOVE_NO_ITEMS": "Select at least one item to move.",
     "BULK_MOVE_INVALID_ITEMS": "The selection contains an invalid item reference.",
     "BULK_MOVE_ITEMS_NOT_FOUND": "{count} selected item no longer exists. Clear the selection and select the items again. | {count} selected items no longer exist. Clear the selection and select the items again.",
-    "BULK_MOVE_PARENT_REQUIRED": "Choose a destination item."
+    "BULK_MOVE_PARENT_REQUIRED": "Choose a destination item.",
+    "CHECKLIST_HAS_NO_ITEMS": "This checklist has no inventory items to check. Add items before starting it.",
+    "CHECKLIST_ITEM_DUPLICATE": "“{name}” is already in this checklist.",
+    "CHECKLIST_ITEMS_INVALID": "The checklist items are not valid. Reload the page and try again.",
+    "CHECKLIST_ITEMS_NOT_FOUND": "{count} selected item no longer exists. Remove it and try again. | {count} selected items no longer exist. Remove them and try again.",
+    "CHECKLIST_MODE_INVALID": "Choose Packing or Verification as the checklist mode.",
+    "CHECKLIST_NAME_REQUIRED": "Checklist name is required.",
+    "CHECKLIST_NOT_FOUND": "Checklist not found.",
+    "CHECKLIST_NOTE_INVALID": "The note must be text.",
+    "CHECKLIST_NOTE_TOO_LONG": "The note can be at most {max} characters long.",
+    "CHECKLIST_RUN_COMPLETED": "This run is completed and can no longer be changed.",
+    "CHECKLIST_RUN_ITEM_NOT_FOUND": "This item is not part of the run.",
+    "CHECKLIST_RUN_NOT_FOUND": "Checklist run not found.",
+    "CHECKLIST_RUN_STATUS_INVALID": "Unknown checklist item state."
   },
   "notices": {
     "AI_CONNECTED": "Connected to {provider}. {count} model is available. | Connected to {provider}. {count} models are available.",

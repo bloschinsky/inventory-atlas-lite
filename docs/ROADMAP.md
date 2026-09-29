@@ -25,12 +25,9 @@ Implemented behavior is documented separately in [`features/README.md`](features
    [`TASK-HIERARCHY-PHASE-3-DRAG-DROP.md`](issues/TASK-HIERARCHY-PHASE-3-DRAG-DROP.md). Category
    grouping stays read-only.
 
-4. **Checklists, Phase 1: Core Checklists and Check Sessions** — Planned. Adds reusable packing
-   and verification checklists with independent, durable run history. See
-   [`TASK-CHECKLISTS-PHASE-1-CORE.md`](issues/TASK-CHECKLISTS-PHASE-1-CORE.md).
-
-5. **Checklists, Phase 2: Inventory Verification and Container Audits** — Planned; blocked by
-   Checklists Phase 1. Adds completed-verification timestamps and container-content audit runs. See
+4. **Checklists, Phase 2: Inventory Verification and Container Audits** — Planned and unblocked by
+   the completed [Checklists Phase 1](features/checklists.md). Adds completed-verification
+   timestamps and container-content audit runs. See
    [`TASK-CHECKLISTS-PHASE-2-INVENTORY-VERIFICATION.md`](issues/TASK-CHECKLISTS-PHASE-2-INVENTORY-VERIFICATION.md).
 
 ## Data management

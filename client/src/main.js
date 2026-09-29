@@ -18,6 +18,10 @@ import ScanQr from './pages/ScanQr.vue';
 import PrintLabels from './pages/PrintLabels.vue';
 import Templates from './pages/Templates.vue';
 import TemplateForm from './pages/TemplateForm.vue';
+import Checklists from './pages/Checklists.vue';
+import ChecklistDetails from './pages/ChecklistDetails.vue';
+import ChecklistForm from './pages/ChecklistForm.vue';
+import ChecklistRun from './pages/ChecklistRun.vue';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -33,6 +37,11 @@ const router = createRouter({
     { path: '/templates', component: Templates },
     { path: '/templates/new', component: TemplateForm },
     { path: '/templates/:id/edit', component: TemplateForm },
+    { path: '/checklists', component: Checklists },
+    { path: '/checklists/new', component: ChecklistForm },
+    { path: '/checklists/runs/:runId', component: ChecklistRun },
+    { path: '/checklists/:id', component: ChecklistDetails },
+    { path: '/checklists/:id/edit', component: ChecklistForm },
     { path: '/scan', component: ScanQr },
     { path: '/labels/print', component: PrintLabels },
     { path: '/categories', component: Categories },

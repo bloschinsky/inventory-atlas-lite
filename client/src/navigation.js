@@ -1,4 +1,4 @@
-import { IconDashboard, IconDatabase, IconHierarchy2, IconPackages, IconQrcode, IconSettings, IconTags, IconTemplate } from '@tabler/icons-vue';
+import { IconChecklist, IconDashboard, IconDatabase, IconHierarchy2, IconPackages, IconQrcode, IconSettings, IconTags, IconTemplate } from '@tabler/icons-vue';
 
 // Single source of truth for the desktop sidebar and the mobile offcanvas menu; labels are translation keys.
 export const navigationLinks = [
@@ -6,6 +6,7 @@ export const navigationLinks = [
   { to: '/items', label: 'nav.items', prefixes: ['/items'], icon: IconPackages },
   { to: '/hierarchy', label: 'nav.hierarchy', prefixes: [], icon: IconHierarchy2 },
   { to: '/templates', label: 'nav.templates', prefixes: ['/templates'], icon: IconTemplate },
+  { to: '/checklists', label: 'nav.checklists', prefixes: ['/checklists'], icon: IconChecklist },
   { to: '/scan', label: 'nav.scanQr', prefixes: [], icon: IconQrcode },
   { to: '/categories', label: 'nav.categories', prefixes: [], icon: IconTags },
   { to: '/data', label: 'nav.data', prefixes: [], icon: IconDatabase },

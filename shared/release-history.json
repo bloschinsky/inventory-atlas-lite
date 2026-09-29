@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.46.0",
+    "date": "2026-09-29",
+    "changes": [
+      "New Checklists page: make reusable Packing or Verification checklists from items you already have, in the order you choose, and use them whenever you pack a kit or check a shelf.",
+      "Every start is a separate run: mark each item Packed or Present, Missing, or back to Pending, add a short note, and see the progress at a glance. Changes are saved at once, and the page works well on a phone.",
+      "Completed runs stay in the history exactly as they were, even after you edit the checklist, rename or delete an item, or delete the checklist itself. Run again always starts a fresh run."
+    ]
+  },
+  {
     "version": "0.45.0",
     "date": "2026-09-29",
     "changes": [

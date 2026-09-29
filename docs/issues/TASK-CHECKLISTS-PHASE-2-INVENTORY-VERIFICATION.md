@@ -4,7 +4,7 @@
 **Priority:** High
 **Type:** Feature / inventory verification
 **Phase:** 2 of 2
-**Blocked by:** `TASK-CHECKLISTS-PHASE-1-CORE.md`
+**Blocked by:** None (Phase 1 is complete; see `docs/features/checklists.md`)
 
 ---
 
@@ -46,7 +46,7 @@ Completing the audit updates `Last verified` only for items actually confirmed a
 
 ## Dependency
 
-Do not start this task until Phase 1 is complete.
+Phase 1 is complete and documented in `docs/features/checklists.md`.
 
 Phase 2 must reuse:
 

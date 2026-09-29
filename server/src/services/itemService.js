@@ -12,7 +12,7 @@ const itemResponse = item => {
   return { ...rest, purchase_price: amount === null ? null : { amount, currency } };
 };
 
-const presentLocation = value => (value && value.trim() ? value : null);
+export const presentLocation = value => (value && value.trim() ? value : null);
 
 // A nested item is displayed at the location of the top-most container that holds it, while its own
 // saved location stays untouched in the database. `root` is that container, or the item itself.

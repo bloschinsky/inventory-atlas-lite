@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { closeDatabase, databasePath, dataDir, db, openDatabase } from './db.js';
 import { BulkReplaceRepository } from './repositories/bulkReplaceRepository.js';
 import { CategoryRepository } from './repositories/categoryRepository.js';
+import { ChecklistRepository } from './repositories/checklistRepository.js';
+import { ChecklistRunRepository } from './repositories/checklistRunRepository.js';
 import { CustomFieldRepository } from './repositories/customFieldRepository.js';
 import { DashboardRepository } from './repositories/dashboardRepository.js';
 import { DatabaseMetadataRepository } from './repositories/databaseMetadataRepository.js';
@@ -34,6 +36,8 @@ import { AiSettingsService } from './services/aiSettingsService.js';
 import { BackupService } from './services/backupService.js';
 import { BulkReplaceService } from './services/bulkReplaceService.js';
 import { CategoryService } from './services/categoryService.js';
+import { ChecklistRunService } from './services/checklistRunService.js';
+import { ChecklistService } from './services/checklistService.js';
 import { CloudBackupService, defaultCloudBackupState } from './services/cloudBackupService.js';
 import { CloudAppSettingsService } from './services/cloudAppSettingsService.js';
 import { CloudConnectionService } from './services/cloudConnectionService.js';
@@ -53,6 +57,7 @@ import { createAiRoutes } from './routes/aiRoutes.js';
 import { createBackupRoutes } from './routes/backupRoutes.js';
 import { createCapabilityRoutes } from './routes/capabilityRoutes.js';
 import { createCategoryRoutes } from './routes/categoryRoutes.js';
+import { createChecklistRoutes } from './routes/checklistRoutes.js';
 import { createCloudBackupRoutes } from './routes/cloudBackupRoutes.js';
 import { createDashboardRoutes } from './routes/dashboardRoutes.js';
 import { createDatabaseMetadataRoutes } from './routes/databaseMetadataRoutes.js';
@@ -81,6 +86,8 @@ export function createApp({ production = false } = {}) {
   const itemTemplateRepository = new ItemTemplateRepository(db);
   const dashboardRepository = new DashboardRepository(db);
   const bulkReplaceRepository = new BulkReplaceRepository(db);
+  const checklistRepository = new ChecklistRepository(db);
+  const checklistRunRepository = new ChecklistRunRepository(db);
 
   // Restore and reset both replace the active database, so they share one maintenance state.
   const maintenance = new DatabaseMaintenance({
@@ -123,6 +130,8 @@ export function createApp({ production = false } = {}) {
   const bulkReplaceService = new BulkReplaceService({ bulkReplaceRepository });
   const databaseMetadataService = new DatabaseMetadataService({ databaseMetadataRepository: new DatabaseMetadataRepository(db) });
   const itemTemplateService = new ItemTemplateService({ itemTemplateRepository, categoryRepository, customFieldRepository });
+  const checklistService = new ChecklistService({ checklistRepository, checklistRunRepository, itemRepository });
+  const checklistRunService = new ChecklistRunService({ checklistRepository, checklistRunRepository });
   const photoService = new PhotoService({ itemRepository, itemPhotoRepository });
   const dashboardService = new DashboardService({ dashboardRepository, categoryRepository });
   const imageService = new ImageService({ removeBackground });
@@ -172,6 +181,7 @@ export function createApp({ production = false } = {}) {
   app.use(createFieldRoutes({ customFieldService, aiFieldService }));
   app.use(createItemRoutes({ itemService, bulkReplaceService }));
   app.use(createItemTemplateRoutes({ itemTemplateService }));
+  app.use(createChecklistRoutes({ checklistService, checklistRunService }));
   app.use(createPhotoRoutes({ photoService, imageUpload }));
   app.use(createSystemRoutes({ maintenance, db, appVersion }));
   app.use(createUpdateRoutes({ updateService }));

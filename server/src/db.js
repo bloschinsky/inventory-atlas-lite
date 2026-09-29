@@ -14,11 +14,12 @@ export const databasePath = path.join(dataDir, 'inventory.sqlite');
   Schema version stored in PRAGMA user_version. Databases created before restore existed report 0;
   applySchema() upgrades them in place. Restore refuses a backup that reports a higher number,
   because it was written by a newer release whose schema this one cannot read.
-  Version 2 added the item template tables; version 3 added the database_metadata table.
+  Version 2 added the item template tables; version 3 added the database_metadata table; version 4
+  added the checklist tables.
   user_version stays the source of truth: database_metadata.schema_version mirrors it and is written
   in the same transaction, so the two never disagree.
 */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export const DEFAULT_DATABASE_NAME = 'Inventory Atlas';
 
@@ -28,7 +29,7 @@ export const DEFAULT_DATABASE_NAME = 'Inventory Atlas';
   moves the timestamp, and no service has to remember to do it. A new inventory table joins this list.
 */
 export const TRACKED_TABLES = ['categories', 'custom_fields', 'items', 'item_field_values', 'item_photos',
-  'item_templates', 'item_template_field_values'];
+  'item_templates', 'item_template_field_values', 'checklists', 'checklist_items', 'checklist_runs', 'checklist_run_items'];
 
 // ISO 8601 in UTC with milliseconds, so two writes in the same second still order correctly.
 const SQL_NOW = "strftime('%Y-%m-%dT%H:%M:%fZ', 'now')";
@@ -54,7 +55,11 @@ export const CURRENT_SCHEMA = {
   item_templates: ['id', 'name', 'category_id', 'item_name', 'description', 'condition', 'location', 'purchase_date',
     'purchase_price_amount', 'purchase_price_currency', 'serial_number', 'transferred_to', 'created_at', 'updated_at'],
   item_template_field_values: ['id', 'template_id', 'field_id', 'value'],
-  database_metadata: ['id', 'database_uuid', 'name', 'created_at', 'last_updated_at', 'schema_version']
+  database_metadata: ['id', 'database_uuid', 'name', 'created_at', 'last_updated_at', 'schema_version'],
+  checklists: ['id', 'name', 'description', 'mode', 'created_at', 'updated_at'],
+  checklist_items: ['id', 'checklist_id', 'item_id', 'item_name_snapshot', 'sort_order', 'created_at'],
+  checklist_runs: ['id', 'checklist_id', 'checklist_name_snapshot', 'mode', 'status', 'started_at', 'completed_at', 'created_at'],
+  checklist_run_items: ['id', 'run_id', 'item_id', 'item_name_snapshot', 'position', 'status', 'checked_at', 'note']
 };
 
 /*
@@ -186,10 +191,56 @@ export const applySchema = connection => connection.transaction(() => {
       last_updated_at TEXT NOT NULL,
       schema_version INTEGER NOT NULL
     );
+    -- A checklist is a reusable list of references to items; its state lives only in its runs.
+    CREATE TABLE IF NOT EXISTS checklists (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      description TEXT,
+      mode TEXT NOT NULL CHECK(mode IN ('packing', 'verification')),
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    -- Deleting an item never fails because of a checklist: the entry keeps its name snapshot and
+    -- loses only its link, so the checklist can show it as deleted.
+    CREATE TABLE IF NOT EXISTS checklist_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      checklist_id INTEGER NOT NULL REFERENCES checklists(id) ON DELETE CASCADE,
+      item_id INTEGER REFERENCES items(id) ON DELETE SET NULL,
+      item_name_snapshot TEXT NOT NULL,
+      sort_order INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    -- A run is history: it outlives its checklist, and its snapshots keep it readable on its own.
+    CREATE TABLE IF NOT EXISTS checklist_runs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      checklist_id INTEGER REFERENCES checklists(id) ON DELETE SET NULL,
+      checklist_name_snapshot TEXT NOT NULL,
+      mode TEXT NOT NULL CHECK(mode IN ('packing', 'verification')),
+      status TEXT NOT NULL DEFAULT 'in_progress' CHECK(status IN ('in_progress', 'completed')),
+      started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      completed_at TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS checklist_run_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      run_id INTEGER NOT NULL REFERENCES checklist_runs(id) ON DELETE CASCADE,
+      item_id INTEGER REFERENCES items(id) ON DELETE SET NULL,
+      item_name_snapshot TEXT NOT NULL,
+      position INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'confirmed', 'missing')),
+      checked_at TEXT,
+      note TEXT
+    );
     CREATE INDEX IF NOT EXISTS idx_items_category ON items(category_id);
     CREATE INDEX IF NOT EXISTS idx_items_name ON items(name COLLATE NOCASE);
     CREATE INDEX IF NOT EXISTS idx_photos_item ON item_photos(item_id);
     CREATE INDEX IF NOT EXISTS idx_field_values_field ON item_field_values(field_id, value);
+    -- One live reference per item and checklist; deleted entries (NULL) never collide.
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_checklist_items_item ON checklist_items(checklist_id, item_id);
+    CREATE INDEX IF NOT EXISTS idx_checklist_items_linked ON checklist_items(item_id);
+    CREATE INDEX IF NOT EXISTS idx_checklist_runs_checklist ON checklist_runs(checklist_id);
+    CREATE INDEX IF NOT EXISTS idx_checklist_run_items_run ON checklist_run_items(run_id, position);
+    CREATE INDEX IF NOT EXISTS idx_checklist_run_items_linked ON checklist_run_items(item_id);
   `);
 
   // Additive migrations keep existing inventories usable without rebuilding their database.
