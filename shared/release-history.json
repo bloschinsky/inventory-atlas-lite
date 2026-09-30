@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.46.1",
+    "date": "2026-09-30",
+    "changes": [
+      "Release checks are more reliable: the backup restore and inventory reset tests no longer fail when another process happens to use the port they picked. The application itself is unchanged."
+    ]
+  },
+  {
     "version": "0.46.0",
     "date": "2026-09-29",
     "changes": [

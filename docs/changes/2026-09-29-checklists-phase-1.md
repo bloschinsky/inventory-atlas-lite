@@ -48,10 +48,9 @@
   backup contents, and persistence over a restart; `test/restore.test.js` and `test/reset.test.js`
   now seed checklist data and verify it through restore, the summaries, and the reset.
 - `npm run build` — passed.
-- `npm run test:e2e` — 111 passed; the 7 `whats-new.spec.js` tests failed in that run only because
-  the uncommitted working copy still sat on the `v0.45.0` tag, so the build reported 0.45.0. Rerun
-  with `APP_VERSION=v0.46.0`, the What's New, Version History, and About specs passed (21 of 21). The
-  new `test/e2e/checklists.spec.js` (3 tests) covers create → add → reorder → start → mark
+- `npm run test:e2e` — 118 passed on the tagged `v0.46.0` commit. (Before committing, the 7
+  `whats-new.spec.js` tests failed only because Vite takes the version from the `v0.45.0` tag on
+  `HEAD` while the bump is uncommitted.) The new `test/e2e/checklists.spec.js` (3 tests) covers create → add → reorder → start → mark
   packed/missing → correct → note → reload → pending confirmation → complete → history → run again
   with the old run unchanged, Verification labels, deleted items and deleted checklists, and a
   phone-width run without horizontal scrolling. `test/e2e/reset.spec.js` expects the two new counts.
