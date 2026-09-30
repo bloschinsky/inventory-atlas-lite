@@ -150,6 +150,8 @@ export class ItemService {
     item.photos = this.photos.listMetadata(item.id);
     item.parent = item.parent_item_id ? this.items.findRef(item.parent_item_id) : null;
     item.children = this.items.listChildren(item.id);
+    // What a nested audit of this container would check: every item below it, not the item itself.
+    item.descendant_count = item.children.length ? this.items.listSubtreeIds([item.id]).filter(id => id !== item.id).length : 0;
     return this.present(item);
   }
 

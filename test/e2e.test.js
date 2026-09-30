@@ -982,6 +982,28 @@ test('checklists and their runs are served by their own API and kept over a rest
     assert.deepEqual(await request('/api/checklists'), []);
     assert.deepEqual((await request('/api/checklist-runs')).map(entry => [entry.id, entry.checklist_id, entry.checklist_name]),
       [[run.id, null, 'Film Trip Kit']]);
+
+    // Audit contents: a verification run of a container that records Last verified when it completes.
+    const box = await request('/api/items', json('POST', { name: 'Box B4', category_id: category.id }));
+    await request(`/api/items/${camera.id}`, json('PUT', { name: 'Nikon F100', category_id: category.id, parent_item_id: box.id }));
+    assert.equal((await request(`/api/items/${box.id}`)).descendant_count, 1);
+    assert.equal(await failedStatus(`/api/items/${box.id}/audits`, json('POST', { scope: 'all' })), 400);
+    assert.equal(await failedStatus(`/api/items/${camera.id}/audits`, json('POST', {})), 409);
+    const audit = await request(`/api/items/${box.uuid}/audits`, json('POST', { scope: 'nested' }));
+    assert.deepEqual([audit.source, audit.container_name, audit.audit_scope, audit.items.map(item => item.name)],
+      ['container_audit', 'Box B4', 'nested', ['Nikon F100']]);
+    await request(`/api/checklist-runs/${audit.id}/inventory-items/${camera.uuid}`, json('PATCH', { status: 'confirmed' }));
+    assert.equal((await request(`/api/items/${camera.id}`)).last_verified_at, null);
+    await request(`/api/checklist-runs/${audit.id}/complete`, { method: 'POST' });
+    const verifiedAt = (await request(`/api/items/${camera.id}`)).last_verified_at;
+    assert.match(verifiedAt, /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
+    assert.deepEqual((await request(`/api/items/${box.id}/audits`)).map(entry => [entry.id, entry.counts.confirmed]), [[audit.id, 1]]);
+    assert.deepEqual(await request('/api/checklists'), []);
+
+    await stopServer(server);
+    server = await startServer(dataDir);
+    assert.equal((await request(`/api/items/${camera.id}`)).last_verified_at, verifiedAt);
+    assert.equal((await request(`/api/checklist-runs/${audit.id}`)).container_name, 'Box B4');
   } finally {
     if (server) await stopServer(server);
     await rm(dataDir, { recursive: true, force: true });

@@ -8,12 +8,14 @@ import { modeKey, stateBadge, stateKey } from '../checklists.js';
 import PageHeader from '../components/PageHeader.vue';
 import ChecklistRunHistory from '../components/ChecklistRunHistory.vue';
 
-// Reusable checklists with their latest result, and the history left behind by deleted checklists.
+// Reusable checklists with their latest result, the history left behind by deleted checklists, and
+// the container audits, which are runs without a reusable checklist.
 defineOptions({ name: 'ChecklistList' });
 const { t } = useI18n();
 const router = useRouter();
 const checklists = ref([]);
 const orphanRuns = ref([]);
+const auditRuns = ref([]);
 const loading = ref(true);
 const starting = ref(null);
 const error = ref('');
@@ -25,7 +27,8 @@ async function load() {
   try {
     const [list, runs] = await Promise.all([api('/api/checklists'), api('/api/checklist-runs')]);
     checklists.value = list;
-    orphanRuns.value = runs.filter(run => run.checklist_id === null);
+    orphanRuns.value = runs.filter(run => run.source === 'checklist' && run.checklist_id === null);
+    auditRuns.value = runs.filter(run => run.source === 'container_audit');
   } catch (e) { error.value = e.message; } finally { loading.value = false; }
 }
 
@@ -193,6 +196,25 @@ onMounted(load);
       </article>
     </div>
   </div>
+
+  <section
+    v-if="auditRuns.length"
+    class="card mt-3"
+    aria-labelledby="audit-history"
+  >
+    <div class="card-header">
+      <h2
+        id="audit-history"
+        class="card-title"
+      >
+        {{ $t('checklists.audit.history') }}
+      </h2>
+    </div>
+    <ChecklistRunHistory
+      :runs="auditRuns"
+      show-name
+    />
+  </section>
 
   <section
     v-if="orphanRuns.length"

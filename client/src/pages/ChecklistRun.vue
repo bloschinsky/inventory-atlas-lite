@@ -6,7 +6,7 @@ import { IconExternalLink } from '@tabler/icons-vue';
 import { api, jsonOptions } from '../api.js';
 import { formatDateTime } from '../i18n/index.js';
 import { MAX_RUN_ITEM_NOTE } from '../../../shared/checklists.js';
-import { modeKey, stateBadge, stateKey } from '../checklists.js';
+import { modeKey, runTitle, stateBadge, stateKey } from '../checklists.js';
 import PageHeader from '../components/PageHeader.vue';
 import ItemThumbnail from '../components/ItemThumbnail.vue';
 
@@ -27,7 +27,14 @@ const error = ref('');
 // The quick actions in the order they are most often needed: found, not found, undo.
 const actions = ['confirmed', 'missing', 'pending'];
 const open = computed(() => run.value?.status === 'in_progress');
-const subtitle = computed(() => run.value && `${t(modeKey(run.value.mode))} · ${t('checklists.run.startedAt', { date: formatDateTime(run.value.started_at) })}`);
+const audit = computed(() => run.value?.source === 'container_audit');
+// A checklist run can be repeated while its checklist exists, an audit while its container does.
+const canRunAgain = computed(() => !open.value && Boolean(audit.value ? run.value.container_id : run.value.checklist_id));
+const subtitle = computed(() => run.value && [
+  t(modeKey(run.value.mode)),
+  ...(run.value.audit_scope ? [t(`checklists.audit.scopes.${run.value.audit_scope}`)] : []),
+  t('checklists.run.startedAt', { date: formatDateTime(run.value.started_at) })
+].join(' · '));
 const percent = status => (run.value.counts.total ? (run.value.counts[status] / run.value.counts.total) * 100 : 0);
 
 function show(next) {
@@ -64,11 +71,14 @@ async function complete() {
   try { show(await api(`/api/checklist-runs/${run.value.id}/complete`, { method: 'POST' })); } catch (e) { error.value = e.message; } finally { completing.value = false; }
 }
 
-// Running again always creates a new run; this one stays exactly as it is.
+// Running again always creates a new run; this one stays exactly as it is. An audit is taken again
+// from what the container holds now, with the same scope.
 async function runAgain() {
   starting.value = true; error.value = '';
   try {
-    const next = await api(`/api/checklists/${run.value.checklist_id}/runs`, { method: 'POST' });
+    const next = audit.value
+      ? await api(`/api/items/${run.value.container_id}/audits`, jsonOptions('POST', { scope: run.value.audit_scope }))
+      : await api(`/api/checklists/${run.value.checklist_id}/runs`, { method: 'POST' });
     router.push(`/checklists/runs/${next.id}`);
   } catch (e) { error.value = e.message; } finally { starting.value = false; }
 }
@@ -98,12 +108,19 @@ watch(() => route.params.runId, runId => { if (runId) load(); }, { immediate: tr
   </div>
   <template v-if="run">
     <PageHeader
-      :title="run.checklist_name"
+      :title="runTitle(t, run)"
       :subtitle="subtitle"
     >
       <template #actions>
         <RouterLink
-          v-if="run.checklist_id"
+          v-if="audit && run.container_id"
+          :to="`/items/${run.container_id}`"
+          class="btn"
+        >
+          {{ $t('checklists.audit.backToContainer') }}
+        </RouterLink>
+        <RouterLink
+          v-else-if="run.checklist_id"
           :to="`/checklists/${run.checklist_id}`"
           class="btn"
         >
@@ -117,7 +134,7 @@ watch(() => route.params.runId, runId => { if (runId) load(); }, { immediate: tr
           {{ $t('checklists.run.allChecklists') }}
         </RouterLink>
         <button
-          v-if="!open && run.checklist_id"
+          v-if="canRunAgain"
           type="button"
           class="btn btn-primary"
           :disabled="starting"
@@ -129,11 +146,11 @@ watch(() => route.params.runId, runId => { if (runId) load(); }, { immediate: tr
     </PageHeader>
 
     <div
-      v-if="!run.checklist_id"
+      v-if="audit ? !run.container_id : !run.checklist_id"
       class="alert alert-warning"
       role="status"
     >
-      {{ $t('checklists.run.checklistDeleted') }}
+      {{ $t(audit ? 'checklists.audit.containerDeleted' : 'checklists.run.checklistDeleted') }}
     </div>
     <div
       v-if="!open"

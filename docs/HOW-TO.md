@@ -120,6 +120,8 @@ saved.
 | **Template** | A reusable preset of default values for new items of one category. Using it prefills the **Add item** form; it is never an item itself and the items created from it stay independent. |
 | **Checklist** | A reusable list of existing items, such as `Film Trip Kit`, in **Packing** or **Verification** mode. It only references items; it never copies them into a second inventory. |
 | **Checklist run** | One use of a checklist, with its own copy of the item list and a Pending, Packed/Present, or Missing state per item. Every start is a new run, so earlier results stay in the history. |
+| **Container audit** | A Verification run started with **Audit contents** from an item that holds other items. It checks what the container held when the audit started and is kept as history, not as a reusable checklist. |
+| **Last verified** | When the item was last confirmed **Present** in a completed Verification run or container audit. It is set only by completing such a run, never by editing, moving, or packing, and shows **Never** until then. |
 | **Backup** | A downloadable copy of the whole SQLite database, photos included. |
 | **Restore** | Replacing the whole inventory with the contents of such a backup file. |
 
@@ -362,6 +364,34 @@ it under its name.
 its runs. They are listed under **Runs of deleted checklists** on the **Checklists** page and stay
 readable. Checklists and runs are part of the SQLite database, so backups, restores, cloud backups,
 and the inventory reset include them.
+
+Completing a **Verification** run sets **Last verified** on every item marked **Present** to the time
+it was marked; the item page shows it in its **Details** card, or **Never**. Missing and Pending items
+keep their earlier value, a Present mark taken back before completion leaves no trace, and an item
+always keeps its newest verification. **Packing** runs never change **Last verified**. There is no
+button to set it by hand, and it cannot be edited in the item form.
+
+### Audit the contents of a container
+
+1. Open an item that holds other items, such as `Box B4`. Its **Storage** card lists them under
+   **Contents**.
+2. Press **Audit contents**. The dialog shows how many items will be checked. When something inside
+   holds further items, choose the **Scope**: **Direct contents** (the default: only the items stored
+   directly in this one) or **All nested contents** (everything inside, at any depth). The container
+   itself is never part of its audit.
+3. Press **Start audit**. The run page opens as **Audit: Box B4**, with every item **Pending**. Mark
+   each item **Present** or **Missing** and press **Complete checklist**, exactly as in any run.
+
+The audit's list is fixed when it starts: moving an item into or out of the box afterwards does not
+change it. Completing it sets **Last verified** on the Present items. It never moves an item, takes a
+Missing item out of the box, or changes any location; open a Missing item's page from the run if you
+want to update it yourself.
+
+The container's page then lists its **Recent audits** with the date, status, and present, missing,
+and pending counts; open one to see the whole run, or press **Run again** there to audit the box
+again with the same scope. Audits do not add checklists to the **Checklists** page: they are listed
+together under **Audit history** there. Renaming the container later keeps the old name in its
+audits, and deleting the container keeps its audits readable.
 
 ### Add several items at once from JSON
 
@@ -1007,9 +1037,10 @@ backup, and keep the copies on a different machine than the server.
   pattern replacement and no undo.
 - A category used by any item cannot be deleted, and an item containing other items cannot be
   deleted.
-- Checklists (Phase 1) only reference existing items: there are no free-text entries, no QR or
-  barcode scanning inside a run, no reminders or schedules, and checking an item never changes its
-  location, container, or any other item data. A completed run cannot be edited or deleted.
+- Checklists only reference existing items: there are no free-text entries, no QR or barcode
+  scanning inside a run, no reminders or schedules, and checking an item or auditing a container never
+  changes its location, container, or any other item data except **Last verified**. A completed run
+  cannot be edited or deleted; run it again instead.
 - Deleting a custom field also deletes the values saved for it on every item of that category.
 - Custom field types cannot be changed after creation, and categories cannot be merged. The batch
   editor only creates new fields; it never renames or retypes existing ones.

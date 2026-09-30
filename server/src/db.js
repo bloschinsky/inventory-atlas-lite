@@ -15,11 +15,12 @@ export const databasePath = path.join(dataDir, 'inventory.sqlite');
   applySchema() upgrades them in place. Restore refuses a backup that reports a higher number,
   because it was written by a newer release whose schema this one cannot read.
   Version 2 added the item template tables; version 3 added the database_metadata table; version 4
-  added the checklist tables.
+  added the checklist tables; version 5 added items.last_verified_at and the container audit columns of
+  checklist_runs.
   user_version stays the source of truth: database_metadata.schema_version mirrors it and is written
   in the same transaction, so the two never disagree.
 */
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 export const DEFAULT_DATABASE_NAME = 'Inventory Atlas';
 
@@ -49,7 +50,7 @@ export const CURRENT_SCHEMA = {
   ...CORE_SCHEMA,
   categories: [...CORE_SCHEMA.categories, 'created_at', 'updated_at'],
   items: [...CORE_SCHEMA.items, 'purchase_date', 'purchase_price_amount', 'purchase_price_currency',
-    'serial_number', 'transferred_to', 'parent_item_id', 'created_at', 'updated_at'],
+    'serial_number', 'transferred_to', 'parent_item_id', 'last_verified_at', 'created_at', 'updated_at'],
   custom_fields: [...CORE_SCHEMA.custom_fields, 'created_at', 'updated_at'],
   item_photos: [...CORE_SCHEMA.item_photos, 'created_at'],
   item_templates: ['id', 'name', 'category_id', 'item_name', 'description', 'condition', 'location', 'purchase_date',
@@ -58,7 +59,8 @@ export const CURRENT_SCHEMA = {
   database_metadata: ['id', 'database_uuid', 'name', 'created_at', 'last_updated_at', 'schema_version'],
   checklists: ['id', 'name', 'description', 'mode', 'created_at', 'updated_at'],
   checklist_items: ['id', 'checklist_id', 'item_id', 'item_name_snapshot', 'sort_order', 'created_at'],
-  checklist_runs: ['id', 'checklist_id', 'checklist_name_snapshot', 'mode', 'status', 'started_at', 'completed_at', 'created_at'],
+  checklist_runs: ['id', 'checklist_id', 'checklist_name_snapshot', 'mode', 'status', 'started_at', 'completed_at', 'created_at',
+    'source', 'source_container_item_id', 'source_container_name_snapshot', 'audit_scope'],
   checklist_run_items: ['id', 'run_id', 'item_id', 'item_name_snapshot', 'position', 'status', 'checked_at', 'note']
 };
 
@@ -128,6 +130,7 @@ export const applySchema = connection => connection.transaction(() => {
       serial_number TEXT,
       transferred_to TEXT,
       parent_item_id INTEGER REFERENCES items(id) ON DELETE RESTRICT,
+      last_verified_at TEXT,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
@@ -210,7 +213,9 @@ export const applySchema = connection => connection.transaction(() => {
       sort_order INTEGER NOT NULL,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
-    -- A run is history: it outlives its checklist, and its snapshots keep it readable on its own.
+    -- A run is history: it outlives its checklist, and its snapshots keep it readable on its own. A
+    -- container audit has no checklist at all: its source is the container, kept as a name snapshot
+    -- and a link that a deleted container sets to NULL.
     CREATE TABLE IF NOT EXISTS checklist_runs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       checklist_id INTEGER REFERENCES checklists(id) ON DELETE SET NULL,
@@ -219,7 +224,11 @@ export const applySchema = connection => connection.transaction(() => {
       status TEXT NOT NULL DEFAULT 'in_progress' CHECK(status IN ('in_progress', 'completed')),
       started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       completed_at TEXT,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      source TEXT NOT NULL DEFAULT 'checklist' CHECK(source IN ('checklist', 'container_audit')),
+      source_container_item_id INTEGER REFERENCES items(id) ON DELETE SET NULL,
+      source_container_name_snapshot TEXT,
+      audit_scope TEXT CHECK(audit_scope IN ('direct', 'nested'))
     );
     CREATE TABLE IF NOT EXISTS checklist_run_items (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -251,12 +260,24 @@ export const applySchema = connection => connection.transaction(() => {
     ['purchase_price_amount', 'TEXT'],
     ['purchase_price_currency', 'TEXT'],
     ['serial_number', 'TEXT'],
-    ['transferred_to', 'TEXT']
+    ['transferred_to', 'TEXT'],
+    ['last_verified_at', 'TEXT']
   ];
   for (const [name, definition] of missingItemColumns) {
     if (!itemColumns.has(name)) connection.exec(`ALTER TABLE items ADD COLUMN ${name} ${definition}`);
   }
   connection.exec('CREATE INDEX IF NOT EXISTS idx_items_parent ON items(parent_item_id)');
+  const runColumns = new Set(connection.prepare('PRAGMA table_info(checklist_runs)').all().map(column => column.name));
+  const missingRunColumns = [
+    ['source', "TEXT NOT NULL DEFAULT 'checklist' CHECK(source IN ('checklist', 'container_audit'))"],
+    ['source_container_item_id', 'INTEGER REFERENCES items(id) ON DELETE SET NULL'],
+    ['source_container_name_snapshot', 'TEXT'],
+    ['audit_scope', "TEXT CHECK(audit_scope IN ('direct', 'nested'))"]
+  ];
+  for (const [name, definition] of missingRunColumns) {
+    if (!runColumns.has(name)) connection.exec(`ALTER TABLE checklist_runs ADD COLUMN ${name} ${definition}`);
+  }
+  connection.exec('CREATE INDEX IF NOT EXISTS idx_checklist_runs_container ON checklist_runs(source_container_item_id)');
   for (const table of TRACKED_TABLES) {
     for (const event of ['INSERT', 'UPDATE', 'DELETE']) {
       connection.exec(`

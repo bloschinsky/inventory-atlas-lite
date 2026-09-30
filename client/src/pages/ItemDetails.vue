@@ -4,18 +4,27 @@ import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { api } from '../api.js';
 import { formatDate, formatDateTime, formatMoney } from '../i18n/index.js';
+import AuditContentsDialog from '../components/AuditContentsDialog.vue';
+import ChecklistRunHistory from '../components/ChecklistRunHistory.vue';
 import ItemPhotoViewer from '../components/ItemPhotoViewer.vue';
 import ItemQrDialog from '../components/ItemQrDialog.vue';
 import ItemThumbnail from '../components/ItemThumbnail.vue';
 
 const route = useRoute(); const router = useRouter(); const { t } = useI18n();
-const item = ref(null); const error = ref(''); const qrOpen = ref(false);
+const item = ref(null); const error = ref(''); const qrOpen = ref(false); const auditOpen = ref(false);
+// The container's audits, newest first; the page keeps only the most recent ones compact.
+const audits = ref([]);
+const RECENT_AUDITS = 5;
 // Custom field values are user data: only the yes/no of a boolean belongs to the interface.
 const displayValue = field => field.type === 'boolean' ? t(field.value === '1' ? 'common.yes' : 'common.no') : (field.value || '—');
 // An item with neither a container nor contents would only produce an empty storage card.
 const hasStorage = computed(() => Boolean(item.value?.parent || item.value?.children.length));
 
-async function load() { try { item.value = await api(`/api/items/${route.params.id}`); } catch (e) { error.value = e.message; } }
+async function load() {
+  try {
+    [item.value, audits.value] = await Promise.all([api(`/api/items/${route.params.id}`), api(`/api/items/${route.params.id}/audits`)]);
+  } catch (e) { error.value = e.message; }
+}
 async function remove() {
   if (!confirm(t('itemDetails.confirmDelete', { name: item.value.name }))) return;
   try { await api(`/api/items/${item.value.id}`, { method: 'DELETE' }); router.push('/items'); } catch (e) { error.value = e.message; }
@@ -25,7 +34,7 @@ async function removePhoto(id) {
   try { await api(`/api/photos/${id}`, { method: 'DELETE' }); await load(); } catch (e) { error.value = e.message; }
 }
 // The same component serves every /items/:id, so parent and contents links must reload it.
-watch(() => route.params.id, () => { qrOpen.value = false; load(); });
+watch(() => route.params.id, () => { qrOpen.value = false; auditOpen.value = false; load(); });
 onMounted(load);
 </script>
 
@@ -150,6 +159,13 @@ onMounted(load);
                   {{ $t('items.inheritedLocation') }}
                 </span>
               </dd>
+              <!-- Written only by a completed verification run, never edited in the item form. -->
+              <dt class="col-sm-4">
+                {{ $t('itemDetails.lastVerified') }}
+              </dt>
+              <dd class="col-sm-8">
+                {{ formatDateTime(item.last_verified_at) || $t('itemDetails.neverVerified') }}
+              </dd>
               <template v-if="item.purchase_date">
                 <dt class="col-sm-4">
                   {{ $t('items.fields.purchaseDate') }}
@@ -245,6 +261,15 @@ onMounted(load);
               <h3 class="card-title">
                 {{ $t('itemDetails.contents') }}
               </h3>
+              <div class="card-actions">
+                <button
+                  type="button"
+                  class="btn btn-sm"
+                  @click="auditOpen = true"
+                >
+                  {{ $t('checklists.audit.action') }}
+                </button>
+              </div>
             </div>
             <ul class="list-group list-group-flush">
               <li
@@ -272,6 +297,31 @@ onMounted(load);
               </li>
             </ul>
           </template>
+        </section>
+
+        <!-- Shown whenever audits exist, even after the container was emptied, so their history stays reachable. -->
+        <section
+          v-if="audits.length"
+          class="card"
+          aria-labelledby="recent-audits"
+        >
+          <div class="card-header">
+            <h2
+              id="recent-audits"
+              class="card-title"
+            >
+              {{ $t('checklists.audit.recent') }}
+            </h2>
+            <div
+              v-if="audits.length > RECENT_AUDITS"
+              class="card-actions"
+            >
+              <RouterLink to="/checklists">
+                {{ $t('checklists.audit.allHistory') }}
+              </RouterLink>
+            </div>
+          </div>
+          <ChecklistRunHistory :runs="audits.slice(0, RECENT_AUDITS)" />
         </section>
 
         <section class="card">
@@ -310,6 +360,11 @@ onMounted(load);
       v-if="qrOpen"
       :item="item"
       @close="qrOpen = false"
+    />
+    <AuditContentsDialog
+      v-if="auditOpen"
+      :item="item"
+      @close="auditOpen = false"
     />
   </template>
 </template>

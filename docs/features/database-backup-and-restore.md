@@ -45,9 +45,9 @@ backup become the active database. It is not a merge, an import, or a selective 
   closed connection. Statements and transactions in the repositories are therefore built when
   they are used, never at module load.
 - `applySchema()` creates the tables, runs the additive column migrations, and stamps
-  `PRAGMA user_version` with `SCHEMA_VERSION` (currently `4`; version 2 added the item template
+  `PRAGMA user_version` with `SCHEMA_VERSION` (currently `5`; version 2 added the item template
   tables, version 3 the [database metadata](database-metadata.md) table, whose UUID, name, and
-  timestamps a restore brings back unchanged, and version 4 the [checklist](checklists.md) tables). It runs as one transaction. Databases written before
+  timestamps a restore brings back unchanged, version 4 the [checklist](checklists.md) tables, and version 5 `items.last_verified_at` with the container audit columns of `checklist_runs`). It runs as one transaction. Databases written before
   this feature report `0` and are upgraded in place; a version 1
   backup gains the empty template tables on its staged copy. `CORE_SCHEMA` is the shape every version of the application
   has had and is used to recognize a backup; `CURRENT_SCHEMA` is what the running application needs.

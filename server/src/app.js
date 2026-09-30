@@ -131,7 +131,7 @@ export function createApp({ production = false } = {}) {
   const databaseMetadataService = new DatabaseMetadataService({ databaseMetadataRepository: new DatabaseMetadataRepository(db) });
   const itemTemplateService = new ItemTemplateService({ itemTemplateRepository, categoryRepository, customFieldRepository });
   const checklistService = new ChecklistService({ checklistRepository, checklistRunRepository, itemRepository });
-  const checklistRunService = new ChecklistRunService({ checklistRepository, checklistRunRepository });
+  const checklistRunService = new ChecklistRunService({ checklistRepository, checklistRunRepository, itemRepository });
   const photoService = new PhotoService({ itemRepository, itemPhotoRepository });
   const dashboardService = new DashboardService({ dashboardRepository, categoryRepository });
   const imageService = new ImageService({ removeBackground });

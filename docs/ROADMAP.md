@@ -1,7 +1,7 @@
 # Roadmap overview
 
 This overview lists the active feature work planned for Inventory Atlas Lite. It is current as of
-2026-09-29. Each linked task file is the authoritative specification for scope, acceptance criteria,
+2026-09-30. Each linked task file is the authoritative specification for scope, acceptance criteria,
 and verification.
 
 Implemented behavior is documented separately in [`features/README.md`](features/README.md).
@@ -24,11 +24,6 @@ Implemented behavior is documented separately in [`features/README.md`](features
    server-side cycle protection stays authoritative. See
    [`TASK-HIERARCHY-PHASE-3-DRAG-DROP.md`](issues/TASK-HIERARCHY-PHASE-3-DRAG-DROP.md). Category
    grouping stays read-only.
-
-4. **Checklists, Phase 2: Inventory Verification and Container Audits** — Planned and unblocked by
-   the completed [Checklists Phase 1](features/checklists.md). Adds completed-verification
-   timestamps and container-content audit runs. See
-   [`TASK-CHECKLISTS-PHASE-2-INVENTORY-VERIFICATION.md`](issues/TASK-CHECKLISTS-PHASE-2-INVENTORY-VERIFICATION.md).
 
 ## Data management
 

@@ -189,7 +189,7 @@ test('a reset swaps in a fresh current-schema database and keeps settings and ba
     inspect(activePath, connection => {
       assert.deepEqual(schema(connection), freshSchema);
       assert.equal(connection.pragma('integrity_check', { simple: true }), 'ok');
-      assert.equal(Number(connection.pragma('user_version', { simple: true })), 4);
+      assert.equal(Number(connection.pragma('user_version', { simple: true })), 5);
       const { database_metadata: metadataRows, ...inventoryCounts } = rowCounts(connection);
       assert.equal(metadataRows, 1);
       assert.ok(Object.values(inventoryCounts).every(count => count === 0));

@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.47.0",
+    "date": "2026-09-30",
+    "changes": [
+      "New Audit contents on any item that holds other items: check a box against what it should contain, either the items directly inside it or everything nested at any depth, without building a checklist first.",
+      "Every item now shows when it was Last verified. It is set only when a Verification run or an audit is completed and the item was marked Present; packing, editing, or moving an item never changes it.",
+      "Audits are kept as history: the box lists its recent audits, the Checklists page gathers them under Audit history, and they stay readable after the box is renamed or deleted. An audit never moves items or changes locations."
+    ]
+  },
+  {
     "version": "0.46.1",
     "date": "2026-09-30",
     "changes": [

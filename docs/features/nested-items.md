@@ -13,6 +13,11 @@ separate container, room, or shelf entity.
 - The selector never offers the edited item itself or anything already stored inside it.
 - **Item details** shows `Stored inside` with a link to the parent, and a **Contents** section
   listing the direct children with their thumbnails and links.
+- **Audit contents** in that **Contents** section starts a Verification run of the container's direct
+  contents or, when the contents are nested deeper, optionally of all nested contents, collected on the
+  server from the current hierarchy. The run is a snapshot, the container keeps a compact **Recent
+  audits** list, and completing an audit never changes `parent_item_id`, `location`, or the effective
+  location of any item. See [Checklists](checklists.md#container-audits).
 - The **Items** list shows the direct container in a `Stored inside` column that links to it, and as
   a `Stored inside:` line on phone cards, while that column is chosen (it is by default). Only the
   direct parent is shown; the list is not a tree.
@@ -22,7 +27,7 @@ separate container, room, or shelf entity.
   location of its outermost container; its own saved `Location` is untouched and still editable. See
   [Effective location inheritance](effective-location-inheritance.md).
 - An item that still contains other items cannot be deleted; its contents must be moved or deleted
-  first.
+  first. Its audits never block deletion; they stay readable under the container's name snapshot.
 - Changing the parent never affects the category, custom field values, or photos.
 
 ### Bulk move

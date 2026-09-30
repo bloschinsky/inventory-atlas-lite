@@ -21,7 +21,15 @@ export const createChecklistRoutes = ({ checklistService, checklistRunService })
   router.patch('/api/checklist-runs/:runId/items/:runItemId', (req, res) => {
     res.json(checklistRunService.updateItem(req.params.runId, req.params.runItemId, req.body));
   });
+  // The same change addressed by the inventory item's id or UUID instead of the run item.
+  router.patch('/api/checklist-runs/:runId/inventory-items/:itemId', (req, res) => {
+    res.json(checklistRunService.updateInventoryItem(req.params.runId, req.params.itemId, req.body));
+  });
   router.post('/api/checklist-runs/:runId/complete', (req, res) => res.json(checklistRunService.complete(req.params.runId)));
+
+  // Audit contents: a verification run copied on the server from what the item contains now.
+  router.post('/api/items/:id/audits', (req, res) => res.status(201).json(checklistRunService.startAudit(req.params.id, req.body)));
+  router.get('/api/items/:id/audits', (req, res) => res.json(checklistRunService.listForContainer(req.params.id)));
 
   return router;
 };

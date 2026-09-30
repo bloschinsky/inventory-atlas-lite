@@ -7,6 +7,11 @@ export const stateKey = (mode, status) => {
   return mode === 'packing' ? 'checklists.states.packed' : 'checklists.states.present';
 };
 
+// A container audit is named after the container as it was called when the audit began.
+export const runTitle = (t, run) => (run.source === 'container_audit'
+  ? t('checklists.audit.runTitle', { name: run.container_name })
+  : run.checklist_name);
+
 // Tabler badge colors of each state; the state is always written out as well, never shown by color alone.
 export const stateBadge = {
   pending: 'bg-secondary-lt',

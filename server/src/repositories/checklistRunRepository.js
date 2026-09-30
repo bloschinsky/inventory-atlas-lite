@@ -1,7 +1,8 @@
 // Checklist runs and their per-item states. A run only ever reads its own snapshot rows, so editing or
 // deleting the checklist it came from never changes it.
 const SUMMARY = `
-  SELECT r.id, r.checklist_id, r.checklist_name_snapshot, r.mode, r.status, r.started_at, r.completed_at,
+  SELECT r.id, r.checklist_id, r.checklist_name_snapshot, r.mode, r.status, r.started_at, r.completed_at, r.source,
+    r.source_container_item_id, r.source_container_name_snapshot, r.audit_scope,
     COUNT(ri.id) AS total,
     COALESCE(SUM(ri.status = 'confirmed'), 0) AS confirmed,
     COALESCE(SUM(ri.status = 'missing'), 0) AS missing,
@@ -19,6 +20,15 @@ export class ChecklistRunRepository {
       .run(checklistId, name, mode).lastInsertRowid;
   }
 
+  // A container audit is a verification run with no checklist; the container's name is its snapshot.
+  insertAudit({ container, scope }) {
+    return this.db.prepare(`
+      INSERT INTO checklist_runs (checklist_id, checklist_name_snapshot, mode, source, source_container_item_id,
+        source_container_name_snapshot, audit_scope)
+      VALUES (NULL, @name, 'verification', 'container_audit', @id, @name, @scope)
+    `).run({ id: container.id, name: container.name, scope }).lastInsertRowid;
+  }
+
   // The run's own copy of the checklist as it is now: every entry still linked to an item, in order,
   // under the item's current name. Returns how many entries were copied.
   copyEntries(runId, checklistId) {
@@ -27,6 +37,26 @@ export class ChecklistRunRepository {
       SELECT ?, i.id, i.name, ROW_NUMBER() OVER (ORDER BY ci.sort_order, ci.id) - 1
       FROM checklist_items ci JOIN items i ON i.id = ci.item_id WHERE ci.checklist_id = ?
     `).run(runId, checklistId).changes;
+  }
+
+  /*
+    The run's own copy of what the container holds now: its direct children, or every descendant for
+    a nested audit, never the container itself. Each descendant follows its own container, siblings in
+    name order. An item is copied once even over a damaged row that forms a cycle, and the depth guard
+    ends such a walk. Returns how many items were copied.
+  */
+  copyContainerContents(runId, containerId, nested) {
+    return this.db.prepare(`
+      WITH RECURSIVE contents(id, name, depth, sort_path) AS (
+        SELECT id, name, 1, lower(name) || char(1) || printf('%010d', id) FROM items WHERE parent_item_id = @containerId
+        UNION ALL SELECT i.id, i.name, c.depth + 1, c.sort_path || char(2) || lower(i.name) || char(1) || printf('%010d', i.id)
+        FROM items i JOIN contents c ON i.parent_item_id = c.id WHERE @nested AND c.depth < 100
+      ), unique_contents AS (
+        SELECT id, name, MIN(sort_path) AS sort_path FROM contents WHERE id != @containerId GROUP BY id
+      )
+      INSERT INTO checklist_run_items (run_id, item_id, item_name_snapshot, position)
+      SELECT @runId, id, name, ROW_NUMBER() OVER (ORDER BY sort_path) - 1 FROM unique_contents
+    `).run({ runId, containerId, nested: nested ? 1 : 0 }).changes;
   }
 
   findById(id) {
@@ -47,6 +77,11 @@ export class ChecklistRunRepository {
     return this.db.prepare('SELECT * FROM checklist_run_items WHERE run_id = ? AND id = ?').get(runId, runItemId);
   }
 
+  // The run item of an inventory item, so a check can be addressed by the item's identity alone.
+  findItemByInventoryItem(runId, itemId) {
+    return this.db.prepare('SELECT * FROM checklist_run_items WHERE run_id = ? AND item_id = ? ORDER BY id LIMIT 1').get(runId, itemId);
+  }
+
   // Every explicit check stamps the time again; returning to pending clears it.
   setItemStatus(runItemId, status) {
     this.db.prepare(`
@@ -64,10 +99,31 @@ export class ChecklistRunRepository {
     this.db.prepare("UPDATE checklist_runs SET status = 'completed', completed_at = CURRENT_TIMESTAMP WHERE id = ?").run(id);
   }
 
+  /*
+    Stamps last_verified_at on every item the run confirmed present, with the time it was marked. An
+    item keeps a newer verification it already has, so completing an older run never moves it back.
+    Missing, pending, and deleted items (no link) are never touched, and no other column of the item is.
+  */
+  recordVerifiedItems(runId) {
+    this.db.prepare(`
+      UPDATE items SET last_verified_at = verified.checked_at
+      FROM (
+        SELECT item_id, MAX(COALESCE(checked_at, CURRENT_TIMESTAMP)) AS checked_at FROM checklist_run_items
+        WHERE run_id = ? AND status = 'confirmed' AND item_id IS NOT NULL GROUP BY item_id
+      ) verified
+      WHERE items.id = verified.item_id AND (items.last_verified_at IS NULL OR items.last_verified_at < verified.checked_at)
+    `).run(runId);
+  }
+
   // Newest first, with the state counts of each run from one grouped statement.
-  listSummaries({ checklistId } = {}) {
-    if (checklistId === undefined) return this.db.prepare(`${SUMMARY} GROUP BY r.id ORDER BY r.id DESC`).all();
-    return this.db.prepare(`${SUMMARY} WHERE r.checklist_id = ? GROUP BY r.id ORDER BY r.id DESC`).all(checklistId);
+  listSummaries({ checklistId, containerId } = {}) {
+    if (checklistId !== undefined) {
+      return this.db.prepare(`${SUMMARY} WHERE r.checklist_id = ? GROUP BY r.id ORDER BY r.id DESC`).all(checklistId);
+    }
+    if (containerId !== undefined) {
+      return this.db.prepare(`${SUMMARY} WHERE r.source_container_item_id = ? GROUP BY r.id ORDER BY r.id DESC`).all(containerId);
+    }
+    return this.db.prepare(`${SUMMARY} GROUP BY r.id ORDER BY r.id DESC`).all();
   }
 
   // The most recent run of every checklist that still exists.

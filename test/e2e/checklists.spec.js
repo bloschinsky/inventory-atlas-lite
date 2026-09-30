@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { createCategory, createItem, unique } from './helpers.js';
+import { createCategory, createItem, detail, unique } from './helpers.js';
 
 const phone = { width: 390, height: 844 };
 const pageWidth = page => page.locator('body').evaluate(body => body.ownerDocument.documentElement.scrollWidth);
@@ -146,6 +146,58 @@ test('verification runs say Present, deleted items stay visible, and deleted che
   await orphaned.getByRole('row').filter({ hasText: checklist.name }).getByRole('link').click();
   await expect(page.getByRole('heading', { name: checklist.name, level: 1 })).toBeVisible();
   await expect(page.getByText('The checklist of this run was deleted; the run is kept as history.')).toBeVisible();
+});
+
+test('audits a container and records Last verified only for Present items', async ({ page, request }) => {
+  const category = await createCategory(request, unique('Audit gear'));
+  const box = await createItem(request, { name: unique('Box B4'), category_id: category.id, location: 'Garage' });
+  const inside = name => createItem(request, { name: `${box.name} ${name}`, category_id: category.id, parent_item_id: box.id });
+  const [camera, lens, pouch] = [await inside('Camera'), await inside('Lens'), await inside('Pouch')];
+  const cable = await createItem(request, { name: `${box.name} Cable`, category_id: category.id, parent_item_id: pouch.id });
+
+  await page.goto(`/items/${camera.id}`);
+  await page.mouse.move(600, 400);
+  await expect(detail(page, 'Last verified')).toHaveText('Never');
+
+  await page.goto(`/items/${box.id}`);
+  await page.mouse.move(600, 400);
+  await page.getByRole('button', { name: 'Audit contents' }).click();
+  const dialog = page.getByRole('dialog', { name: `Audit ${box.name}` });
+  // Direct contents is preselected; the nested scope adds the cable inside the pouch.
+  await expect(dialog.getByLabel('Direct contents')).toBeChecked();
+  await expect(dialog.getByText('3 items will be checked.')).toBeVisible();
+  await dialog.getByLabel('All nested contents').check();
+  await expect(dialog.getByText('4 items will be checked.')).toBeVisible();
+  await dialog.getByRole('button', { name: 'Start audit' }).click();
+
+  await expect(page).toHaveURL(/\/checklists\/runs\/\d+$/);
+  await expect(page.getByRole('heading', { name: `Audit: ${box.name}`, level: 1 })).toBeVisible();
+  await expect(page.getByText('Verification · All nested contents')).toBeVisible();
+  await expect(page.getByText('0 / 4 checked')).toBeVisible();
+  for (const item of [camera, pouch, cable]) await page.getByRole('button', { name: `Mark ${item.name} as Present` }).click();
+  await page.getByRole('button', { name: `Mark ${lens.name} as Missing` }).click();
+  await expect(page.getByText('4 / 4 checked')).toBeVisible();
+  await page.getByRole('button', { name: 'Complete checklist' }).click();
+  await expect(page.getByText(/This run is completed/)).toBeVisible();
+
+  await page.getByRole('link', { name: 'Back to container' }).click();
+  await expect(page.getByRole('heading', { name: box.name, level: 1 })).toBeVisible();
+  const recent = page.getByRole('region', { name: 'Recent audits' });
+  await expect(recent.getByText('Completed')).toBeVisible();
+  await expect(recent.getByText('Present: 3')).toBeVisible();
+  await expect(recent.getByText('Missing: 1')).toBeVisible();
+
+  // Present items show the localized verification time; a Missing item stays never verified.
+  await page.goto(`/items/${camera.id}`);
+  await expect(detail(page, 'Last verified')).toHaveText(/^[A-Z][a-z]{2} \d{1,2}, \d{4}, \d{1,2}:\d{2}\s[AP]M$/);
+  await page.goto(`/items/${lens.id}`);
+  await expect(detail(page, 'Last verified')).toHaveText('Never');
+
+  // The audit is history, not a reusable checklist.
+  await page.goto('/checklists');
+  await page.mouse.move(600, 400);
+  await expect(page.getByRole('region', { name: 'Audit history' }).getByText(`Audit: ${box.name} · All nested contents`)).toBeVisible();
+  await expect(page.getByRole('article', { name: new RegExp(box.name) })).toHaveCount(0);
 });
 
 test.describe('narrow screens', () => {

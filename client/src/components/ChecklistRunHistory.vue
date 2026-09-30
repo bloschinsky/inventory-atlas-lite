@@ -1,11 +1,14 @@
 <script setup>
+import { useI18n } from 'vue-i18n';
 import { formatDateTime } from '../i18n/index.js';
-import { stateBadge, stateKey } from '../checklists.js';
+import { runTitle, stateBadge, stateKey } from '../checklists.js';
+
+const { t } = useI18n();
 
 // Run summaries, newest first. Each row opens the run with its captured snapshot and result.
 defineProps({
   runs: { type: Array, required: true },
-  // The runs of deleted checklists are told apart by the checklist name of their snapshot.
+  // The runs of deleted checklists and container audits are told apart by the name of their snapshot.
   showName: { type: Boolean, default: false }
 });
 </script>
@@ -33,7 +36,9 @@ defineProps({
               v-if="showName"
               class="meta-text text-break"
             >
-              {{ run.checklist_name }}
+              {{ runTitle(t, run) }}<template v-if="run.audit_scope">
+                · {{ $t(`checklists.audit.scopes.${run.audit_scope}`) }}
+              </template>
             </div>
           </td>
           <td>

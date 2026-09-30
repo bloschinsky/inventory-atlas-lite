@@ -3,10 +3,17 @@ import { nullableText, requiredText } from '../../../shared/itemValidation.js';
 import { CHECKLIST_MODES } from '../../../shared/checklists.js';
 import { presentLocation } from './itemService.js';
 
+/*
+  The snapshot identity of a run. A container audit also names its container: the link is live and
+  becomes null when the container is deleted, while the name stays the one it had when the audit began.
+*/
+export const presentRun = ({
+  checklist_name_snapshot: checklistName, source_container_item_id: containerId, source_container_name_snapshot: containerName, ...run
+}) => ({ ...run, checklist_name: checklistName, container_id: containerId, container_name: containerName });
+
 // The list and history rows of a run: its snapshot identity and the counts of its item states.
-export const presentRunSummary = ({ checklist_name_snapshot: checklistName, total, confirmed, missing, pending, ...run }) => ({
-  ...run,
-  checklist_name: checklistName,
+export const presentRunSummary = ({ total, confirmed, missing, pending, ...run }) => ({
+  ...presentRun(run),
   counts: { total, confirmed, missing, pending, checked: confirmed + missing }
 });
 

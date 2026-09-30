@@ -322,7 +322,9 @@
     "contents": "Contents",
     "record": "Record information",
     "confirmDelete": "Delete “{name}” and its photos?",
-    "duplicate": "Duplicate"
+    "duplicate": "Duplicate",
+    "lastVerified": "Last verified",
+    "neverVerified": "Never"
   },
   "itemForm": {
     "editTitle": "Edit item",
@@ -438,6 +440,25 @@
     "history": "Run history",
     "noRuns": "This checklist has not been run yet.",
     "deletedHistory": "Runs of deleted checklists",
+    "audit": {
+      "action": "Audit contents",
+      "dialogTitle": "Audit {name}",
+      "intro": "Starts a verification run of the items stored in this container now. The list is fixed when the audit starts, and completing it never moves an item.",
+      "scope": "Scope",
+      "scopes": {
+        "direct": "Direct contents",
+        "nested": "All nested contents"
+      },
+      "expected": "{n} item will be checked. | {n} items will be checked.",
+      "start": "Start audit",
+      "starting": "Starting…",
+      "runTitle": "Audit: {name}",
+      "recent": "Recent audits",
+      "history": "Audit history",
+      "allHistory": "All audits",
+      "backToContainer": "Back to container",
+      "containerDeleted": "The container of this audit was deleted; the audit is kept as history."
+    },
     "started": "Started",
     "completedAt": "Completed",
     "status": "Status",
@@ -1167,6 +1188,8 @@
     "BULK_MOVE_INVALID_ITEMS": "The selection contains an invalid item reference.",
     "BULK_MOVE_ITEMS_NOT_FOUND": "{count} selected item no longer exists. Clear the selection and select the items again. | {count} selected items no longer exist. Clear the selection and select the items again.",
     "BULK_MOVE_PARENT_REQUIRED": "Choose a destination item.",
+    "CHECKLIST_AUDIT_NO_CONTENTS": "This item has no contents to audit.",
+    "CHECKLIST_AUDIT_SCOPE_INVALID": "Choose Direct contents or All nested contents as the audit scope.",
     "CHECKLIST_HAS_NO_ITEMS": "This checklist has no inventory items to check. Add items before starting it.",
     "CHECKLIST_ITEM_DUPLICATE": "“{name}” is already in this checklist.",
     "CHECKLIST_ITEMS_INVALID": "The checklist items are not valid. Reload the page and try again.",
