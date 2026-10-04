@@ -67,7 +67,7 @@ test('creates, edits, uses, and deletes an item template without linking the ite
   await expect(detail(page, 'Location')).toHaveText('Attic');
   await expect(detail(page, 'Size')).toHaveText('40x24x21');
   await expect(detail(page, 'Sealed')).toHaveText('Yes');
-  await expect(detail(page, 'New')).toHaveText('Yes');
+  await expect(detail(page, 'New')).toHaveText('New');
   const itemUrl = page.url();
 
   // Deleting the template leaves the created item untouched.

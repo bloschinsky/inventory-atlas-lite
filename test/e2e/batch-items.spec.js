@@ -64,7 +64,7 @@ test('batch add from JSON previews, edits, and creates a category batch', async 
   await expect(page.getByRole('link', { name: spare, exact: true })).toHaveCount(0);
 
   await page.getByRole('link', { name: router, exact: true }).click();
-  await expect(detail(page, 'New')).toHaveText('Yes');
+  await expect(detail(page, 'New')).toHaveText('New');
   await expect(detail(page, 'Location')).toHaveText('Rack');
   await expect(detail(page, 'Purchase Price')).toHaveText('UAH 1,500.00');
   await expect(detail(page, 'Serial Number')).toHaveText('RT-77');

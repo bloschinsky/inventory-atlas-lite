@@ -4,17 +4,21 @@ Every item has a core yes/no **New** attribute that records whether it is new (u
 separate from **Condition**, which stays free text describing the physical state:
 
 ```text
-New: Yes             New: No
-Condition: Excellent Condition: Good, minor scratches on body
+New: [ New ]          New: [ Used ]
+Condition: Excellent  Condition: Good, minor scratches on body
 ```
 
 ## Behavior
 
 - **Add/Edit Item** shows a **New** switch above Condition. A blank item starts unchecked (`false`).
-- **Item details** always show **New** with a localized **Yes** or **No**, directly above Condition.
+- **Read-only views** show the flag as a status badge instead of Yes/No: a green **New** badge for
+  `true` and an amber **Used** badge for `false`. The words are localized (Ukrainian **Новий** and
+  **Вживаний**) and always visible, so color is never the only carrier of meaning.
+- **Item details** always show the badge under the **New** label, directly above Condition.
 - **Items list**: **New** is a core column in the **Columns** picker (after Condition). It is hidden by
-  default, shows localized Yes/No, and sorts on the server like the other core columns: No before Yes
-  ascending, with the item id keeping equal values in a stable order across pages.
+  default, shows the New/Used badge in the table and in the phone cards (without a label there,
+  since the badge names itself), and sorts on the server like the other core columns: No before Yes
+  ascending (Used before New), with the item id keeping equal values in a stable order across pages.
 - **Duplicate** copies the source item's New value together with the other base values.
 - **Templates** may set a New default: **Not set**, **No**, or **Yes**. Not set leaves items created from
   the template at the normal default (`false`). Existing templates have no New default.
@@ -51,6 +55,13 @@ exactly as they were, and no lifecycle state is inferred from them.
   and rejects any non-boolean as `AI_INVALID_RESPONSE`.
 - **Client:** `itemDraft.js` carries `is_new` in every draft (blank, edited item, AI, template,
   duplicate); `ItemDraftFields.vue` renders the item switch or the template tri-state select.
+  `ItemNewStatusBadge.vue` is the only owner of the read-only mapping: it takes `is-new` and renders a
+  Tabler `badge` with `bg-success-subtle text-success-emphasis` (New) or
+  `bg-warning-subtle text-warning-emphasis` (Used). These Bootstrap subtle/emphasis pairs resolve
+  through `light-dark()`, so both modes keep a contrast of at least 4.5:1. Item details and
+  `ItemResults.vue` (table cell and card line) use it; the cell text in `itemColumns.js` returns the
+  same New/Used words so the card emptiness check stays consistent. The badge is presentation only:
+  forms, templates, the API, and sorting still work with the boolean.
 
 ## Verification
 
@@ -62,11 +73,15 @@ exactly as they were, and no lifecycle state is inferred from them.
 - `test/ai-providers.test.js`: the schema, input, and instructions offered to the model, and the
   conservative normalization.
 - `test/e2e.test.js`: the flag over HTTP in create, details, list, and sort.
-- Playwright: toggling New on create and edit with the value on Item details, the template default
+- Playwright: `test/e2e/item-new-status.spec.js` covers the New and Used badges and their styles in
+  the Items table, boolean sorting of the New column, Item details, the phone cards, the unchanged
+  form switch, the Ukrainian labels, and the text contrast in light and dark mode. Other specs cover
+  toggling New on create and edit with the badge on Item details, the template default
   flowing into the item form, Duplicate, the Columns picker, and batch preview and refusal.
 
 ## Limitations
 
-- New is a single yes/no attribute; there is no New/Used/Refurbished lifecycle, no condition presets,
+- New is a single yes/no attribute; **Used** is only its display for `false`. There is no
+  Refurbished or other lifecycle state, no condition presets,
   and no automatic cleanup of old Condition values such as `New`.
 - Bulk Replace Value and the Dashboard do not use the flag.

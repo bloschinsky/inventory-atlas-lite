@@ -31,7 +31,7 @@ document describes the current behaviour and its boundaries, not the original pl
 | [In-app QR scanner](in-app-qr-scanner.md) | Read an item QR code with the camera or from an image, locally in the browser, and open the matching item. |
 | [Custom-field autocomplete](custom-field-autocomplete.md) | Suggest previously saved values for text custom fields; the same control serves Transferred To. |
 | [Purchase and serial fields](purchase-and-serial-fields.md) | Record an optional purchase date, structured multi-currency price, and serial number on every item. |
-| [New item flag](item-new-flag.md) | Record whether an item is new as a core yes/no attribute, separate from the free-text Condition, in the item form, details, list columns, templates, duplicates, batch import, and AI drafts. |
+| [New item flag](item-new-flag.md) | Record whether an item is new as a core yes/no attribute, separate from the free-text Condition, shown as a New/Used status badge, in the item form, details, list columns, templates, duplicates, batch import, and AI drafts. |
 | [Transferred To field](transferred-to-field.md) | Note who or where an item was lent, given, or sold to, with autocomplete, search, and an informational badge. |
 | [AI feature visibility](ai-feature-visibility.md) | Hide every AI action and the AI page while **Enable AI features** is off, without weakening the server-side AI guards. |
 | [AI providers](ai-providers.md) | Use OpenAI, OpenRouter, Ollama, LM Studio, or a custom OpenAI-compatible endpoint for every AI feature, with model discovery, a connection test, image-capability checks, and normalized errors. |

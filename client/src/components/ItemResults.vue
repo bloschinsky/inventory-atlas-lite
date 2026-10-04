@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue';
+import ItemNewStatusBadge from './ItemNewStatusBadge.vue';
 import ItemThumbnail from './ItemThumbnail.vue';
 import SortableHeader from './SortableHeader.vue';
 import { columnText } from '../itemColumns.js';
@@ -113,6 +114,9 @@ const editRoute = item => `/items/${item.id}/edit`;
                   </span>
                 </div>
               </td>
+              <td v-else-if="column.key === 'isNew'">
+                <ItemNewStatusBadge :is-new="item.is_new" />
+              </td>
               <td
                 v-else
                 class="truncate-cell"
@@ -182,7 +186,7 @@ const editRoute = item => `/items/${item.id}/edit`;
             >
               {{ item.name }}
             </RouterLink>
-            <!-- Empty values are left out to keep the card short; the category needs no label. -->
+            <!-- Empty values are left out to keep the card short; the category and the New badge need no label. -->
             <template
               v-for="column in metaColumns"
               :key="column.key"
@@ -191,7 +195,11 @@ const editRoute = item => `/items/${item.id}/edit`;
                 v-if="columnText(item, column)"
                 class="meta-text mb-0"
               >
-                <template v-if="column.key === 'category'">
+                <ItemNewStatusBadge
+                  v-if="column.key === 'isNew'"
+                  :is-new="item.is_new"
+                />
+                <template v-else-if="column.key === 'category'">
                   {{ columnText(item, column) }}
                 </template>
                 <template v-else>
