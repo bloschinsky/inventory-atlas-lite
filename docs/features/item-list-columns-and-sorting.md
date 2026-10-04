@@ -9,7 +9,8 @@ server before the page is cut, and the view choice is remembered in the browser.
 
 ## Behavior
 
-- **Columns** lists the core columns in a fixed order — Photo, Name, Category, Condition, New, Location,
+- **Columns** lists the core columns in a fixed order — Photo, Name, Category, Condition, Condition
+  Notes, New, Location,
   Stored inside, Purchase Date, Purchase Price, Serial Number, Transferred To, Created, Updated —
   followed by the custom field columns in alphabetical order. **Name** is always checked and
   disabled. **Reset to default** restores Photo, Name, Category, Condition, Location, and Stored
@@ -26,7 +27,8 @@ server before the page is cut, and the view choice is remembered in the browser.
   yes/no fields show the translated Yes/No. Other custom values are shown exactly as stored.
 - **Sorting.** Sortable headers are Tabler `table-sort` buttons and the header cell carries
   `aria-sort`. A new column sorts ascending; the active column toggles between ascending and
-  descending. Photo and Stored inside are not sortable and have no sort button. Changing the sort
+  descending. Photo and Stored inside are not sortable and have no sort button. Condition shows the
+  [grade badge](condition-grading.md) and sorts by grade rank, with Not set last. Changing the sort
   returns to page 1.
 - **Phone cards** (below `lg`): the name is the title; the thumbnail is shown only while Photo is
   chosen; the category is an unlabeled line; every other chosen column with a value is a

@@ -1,6 +1,6 @@
 import { AppError, errorBody } from './appError.js';
 import {
-  requiredText, validateFieldValue, validatePurchaseDate, validatePurchasePrice, validateSerialNumber,
+  requiredText, validateConditionGrade, validateFieldValue, validatePurchaseDate, validatePurchasePrice, validateSerialNumber,
   validateTransferredTo
 } from './itemValidation.js';
 
@@ -15,9 +15,14 @@ export const ITEM_IMPORT_VERSION = 1;
 export const MAX_BATCH_ITEMS = 100;
 
 const documentProperties = ['version', 'category', 'items'];
-const textProperties = ['name', 'condition', 'location', 'description', 'transferredTo', 'purchaseDate', 'serialNumber'];
-// `new` is the item's New flag. Version 1 documents without it stay valid: the flag is then false.
-const itemProperties = [...textProperties, 'new', 'purchasePrice', 'customFields'];
+const textProperties = ['name', 'conditionGrade', 'conditionNotes', 'location', 'description', 'transferredTo', 'purchaseDate', 'serialNumber'];
+/*
+  `new` is the item's New flag. Version 1 documents without it stay valid: the flag is then false.
+  `condition` is the legacy free-text Condition of older version 1 documents. It is still accepted and
+  read as Condition Notes, never as a grade; the structured grade only comes from `conditionGrade`.
+*/
+const LEGACY_CONDITION = 'condition';
+const itemProperties = [...textProperties, 'new', 'purchasePrice', 'customFields', LEGACY_CONDITION];
 const priceProperties = ['amount', 'currency'];
 
 const isPlainObject = value => !!value && typeof value === 'object' && !Array.isArray(value);
@@ -29,7 +34,8 @@ export function itemImportTemplate(category, fields) {
   const blank = () => ({
     name: '',
     new: false,
-    condition: '',
+    conditionGrade: null,
+    conditionNotes: '',
     location: '',
     description: '',
     transferredTo: '',
@@ -60,10 +66,14 @@ const readItem = (item, index, fieldsByKey) => {
   if (unsupported) {
     throw refuse('IMPORT_ITEM_UNSUPPORTED_PROPERTY', { index: position, property: unsupported, supported: itemProperties.join(', ') });
   }
-  for (const property of textProperties) {
+  for (const property of [...textProperties, LEGACY_CONDITION]) {
     if (item[property] !== undefined && item[property] !== null && typeof item[property] !== 'string') {
       throw refuse('IMPORT_ITEM_TEXT_EXPECTED', { index: position, property });
     }
+  }
+  // Two Condition Notes would leave no single value to keep, so the document has to choose one.
+  if (item[LEGACY_CONDITION] && item.conditionNotes) {
+    throw refuse('IMPORT_ITEM_CONDITION_CONFLICT', { index: position });
   }
   // Only a real boolean is accepted; "yes", 1, or null are refused rather than guessed.
   if (item.new !== undefined && typeof item.new !== 'boolean') {
@@ -103,6 +113,8 @@ const readItem = (item, index, fieldsByKey) => {
 
   return {
     ...Object.fromEntries(textProperties.map(property => [property, item[property] ?? ''])),
+    conditionGrade: item.conditionGrade || null,
+    conditionNotes: item.conditionNotes || item[LEGACY_CONDITION] || '',
     new: item.new ?? false,
     purchasePrice: {
       amount: price.amount === null || price.amount === undefined ? '' : String(price.amount),
@@ -163,6 +175,7 @@ const check = (errors, property, work) => {
 export function reviewItemDraft(draft, fields) {
   const errors = {};
   check(errors, 'name', () => requiredText(draft.name, 'ITEM_NAME_REQUIRED'));
+  check(errors, 'conditionGrade', () => validateConditionGrade(draft.conditionGrade));
   check(errors, 'purchaseDate', () => validatePurchaseDate(draft.purchaseDate));
   check(errors, 'purchasePrice', () => validatePurchasePrice(draft.purchasePrice));
   check(errors, 'serialNumber', () => validateSerialNumber(draft.serialNumber));
@@ -183,7 +196,8 @@ export const itemImportRequestBody = (draft, categoryId, fields) => ({
   category_id: categoryId,
   description: draft.description,
   is_new: draft.new,
-  condition: draft.condition,
+  condition_grade: draft.conditionGrade,
+  condition_notes: draft.conditionNotes,
   location: draft.location,
   transferred_to: draft.transferredTo,
   purchase_date: draft.purchaseDate,

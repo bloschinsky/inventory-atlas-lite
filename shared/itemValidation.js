@@ -5,6 +5,7 @@
   Refusals are AppErrors with a stable code and the 400 status the API answers with.
 */
 import { AppError } from './appError.js';
+import { isConditionGrade } from './conditionGrades.js';
 
 const invalid = (code, params) => new AppError(code, params, 400);
 
@@ -73,13 +74,21 @@ export const validateIsNew = value => {
 // A template may leave the New flag unset (null), so items created from it keep their own default.
 export const validateTemplateIsNew = value => (value === null || value === undefined ? null : validateIsNew(value));
 
+// The structured Condition is one of the fixed grade keys or unset (null). Nothing else is guessed.
+export const validateConditionGrade = value => {
+  if (value === null || value === undefined || value === '') return null;
+  if (!isConditionGrade(value)) throw invalid('INVALID_CONDITION_GRADE');
+  return value;
+};
+
 // The optional base attributes shared by items and item templates, validated the same way for both.
 export const readItemDetails = body => {
   const purchaseDate = validatePurchaseDate(body.purchase_date);
   const purchasePrice = validatePurchasePrice(body.purchase_price);
   return {
     description: nullableText(body.description),
-    condition: nullableText(body.condition),
+    conditionGrade: validateConditionGrade(body.condition_grade),
+    conditionNotes: nullableText(body.condition_notes),
     location: nullableText(body.location),
     purchaseDate,
     purchasePriceAmount: purchasePrice.amount,

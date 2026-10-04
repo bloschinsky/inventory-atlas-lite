@@ -38,7 +38,8 @@ test('creates, edits, uses, and deletes an item template without linking the ite
   await page.getByRole('link', { name: `Edit ${templateName}` }).click();
   await expect(page.getByLabel('Location')).toHaveValue('Garage');
   await expect(page.getByLabel('Size')).toHaveValue('40x24x21');
-  await page.getByLabel('Condition').fill('New');
+  await page.getByLabel('Condition', { exact: true }).selectOption('excellent');
+  await page.getByLabel('Condition Notes').fill('Sealed box');
   await page.getByLabel('New', { exact: true }).selectOption({ label: 'Yes' });
   await page.getByLabel('Sealed').selectOption('1');
   await page.getByRole('button', { name: 'Save template' }).click();
@@ -52,7 +53,8 @@ test('creates, edits, uses, and deletes an item template without linking the ite
   await expect(page.getByLabel('Name *')).toHaveValue('Cardboard box');
   await expect(page.getByLabel('Category *')).toHaveValue(/\d+/);
   await expect(page.getByRole('checkbox', { name: 'New', exact: true })).toBeChecked();
-  await expect(page.getByLabel('Condition')).toHaveValue('New');
+  await expect(page.getByLabel('Condition', { exact: true })).toHaveValue('excellent');
+  await expect(page.getByLabel('Condition Notes')).toHaveValue('Sealed box');
   await expect(page.getByLabel('Location')).toHaveValue('Garage');
   await expect(page.getByLabel('Size')).toHaveValue('40x24x21');
   await expect(page.getByLabel('Max weight')).toHaveValue('5');
@@ -77,7 +79,8 @@ test('creates, edits, uses, and deletes an item template without linking the ite
   await expect(page.getByRole('row').filter({ hasText: templateName })).toHaveCount(0);
   await page.goto(itemUrl);
   await expect(page.getByRole('heading', { name: itemName })).toBeVisible();
-  await expect(detail(page, 'Condition')).toHaveText('New');
+  await expect(detail(page, 'Condition')).toHaveText('Excellent');
+  await expect(detail(page, 'Condition Notes')).toHaveText('Sealed box');
   await expect(detail(page, 'Max weight')).toHaveText('5');
 });
 

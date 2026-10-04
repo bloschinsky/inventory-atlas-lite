@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.51.0",
+    "date": "2026-10-04",
+    "changes": [
+      "Condition is now a fixed grade: Excellent, Good, Fair, Poor, or Broken, or Not set. It appears as a colored badge in the Items list, on cards, and on the item page, sorts from Broken to Excellent, and can filter the Items list.",
+      "The new Condition Notes field keeps free-text details such as scratches or battery state. Every existing Condition text was moved there unchanged, and no grade was guessed from it, so existing items start with Condition Not set.",
+      "An info button next to Condition opens Condition grading, which explains each grade. The Dashboard Condition breakdown now shows the grades in a fixed order with the badge colors, templates, Duplicate, Batch Add from JSON, and AI Add Item carry both values, and Replace field value changes Condition Notes."
+    ]
+  },
+  {
     "version": "0.49.0",
     "date": "2026-10-04",
     "changes": [

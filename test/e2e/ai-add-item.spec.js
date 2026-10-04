@@ -37,7 +37,8 @@ test('uses AI suggestions in the normal editable Add Item form and saves only af
         baseFields: {
           name: suggestedName,
           description: 'Visible camera body',
-          condition: 'Used',
+          condition_grade: 'fair',
+          condition_notes: 'Worn strap',
           location: null,
           purchase_date: null,
           purchase_price: null,
@@ -76,11 +77,15 @@ test('uses AI suggestions in the normal editable Add Item form and saves only af
   const beforeSave = await request.get(`/api/items?search=${encodeURIComponent(suggestedName)}`);
   expect((await beforeSave.json()).pagination.total).toBe(0);
 
-  await page.getByLabel('Condition').fill('Good');
+  // The suggested grade and notes arrive in their own fields and stay editable.
+  await expect(page.getByLabel('Condition', { exact: true })).toHaveValue('fair');
+  await expect(page.getByLabel('Condition Notes')).toHaveValue('Worn strap');
+  await page.getByLabel('Condition', { exact: true }).selectOption('good');
   await page.getByRole('button', { name: 'Save item' }).click();
   await expect(page).toHaveURL(/\/items\/\d+$/);
   await expect(page.getByRole('heading', { name: suggestedName })).toBeVisible();
   await expect(detail(page, 'Condition')).toHaveText('Good');
+  await expect(detail(page, 'Condition Notes')).toHaveText('Worn strap');
   await expect(detail(page, 'Brand')).toHaveText('Olympus');
   await expect(page.getByRole('img', { name: 'sample-photo.png' })).toBeVisible();
 });
@@ -231,7 +236,7 @@ test('creates a reviewable draft from a description alone, without a photo or ba
         categoryId: category.id,
         confidence: 0.64,
         needsDetailedImageAnalysis: false,
-        baseFields: { name: suggestedName, condition: 'Used' },
+        baseFields: { name: suggestedName, condition_notes: 'Used' },
         dynamicFields: { [brand.id]: 'Creative Labs' },
         warnings: []
       })
@@ -265,7 +270,7 @@ test('creates a reviewable draft from a description alone, without a photo or ba
   const beforeSave = await request.get(`/api/items?search=${encodeURIComponent(suggestedName)}`);
   expect((await beforeSave.json()).pagination.total).toBe(0);
 
-  await page.getByLabel('Condition').fill('Good');
+  await page.getByLabel('Condition', { exact: true }).selectOption('good');
   await page.getByRole('button', { name: 'Save item' }).click();
   await expect(page).toHaveURL(/\/items\/\d+$/);
   await expect(page.getByRole('heading', { name: suggestedName })).toBeVisible();

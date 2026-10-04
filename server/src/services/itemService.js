@@ -4,6 +4,7 @@ import { itemImportRequestBody, readItemImportDocument } from '../../../shared/i
 import { isCustomColumnKey } from '../../../shared/itemColumns.js';
 import { buildItemColumns } from './itemColumns.js';
 import { readFieldValues, readItemDetails, requiredText, validateIsNew } from '../../../shared/itemValidation.js';
+import { isConditionGrade } from '../../../shared/conditionGrades.js';
 
 // The stored purchase price columns are presented as one object, exactly as the API always has, and
 // the stored 0/1 New flag as a boolean.
@@ -60,6 +61,7 @@ export class ItemService {
   /*
     `sort` and `fields` carry column keys from the columns catalog. They are only ever resolved to
     known field ids here; an unknown key is ignored, and an unknown sort falls back to the name.
+    `condition` filters by one grade key, or by "unset" for items without a grade; anything else is ignored.
     Only the requested custom columns get values, loaded for the whole page in one query.
   */
   list(query = {}) {
@@ -73,6 +75,7 @@ export class ItemService {
     const { rows, total } = this.items.search({
       search: String(query.search || '').trim(),
       categoryId: Number.parseInt(query.categoryId) || null,
+      conditionGrade: query.condition === 'unset' ? null : isConditionGrade(query.condition) ? query.condition : undefined,
       sort: sortColumn ? { fieldIds: sortColumn.fieldIds, type: sortColumn.type } : { core: query.sort },
       direction: query.direction,
       limit: pageSize,

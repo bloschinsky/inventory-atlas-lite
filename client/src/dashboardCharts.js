@@ -12,7 +12,10 @@ export const loadApexCharts = () => {
   return apexCharts;
 };
 
-// The categorical order is fixed, so a condition keeps its color while the others change.
+import { CONDITION_GRADES } from '../../shared/conditionGrades.js';
+import { conditionGradeColorVariable } from './conditionGrades.js';
+
+// The categorical order is fixed, so a category keeps its color while the others change.
 const CATEGORICAL = ['--tblr-primary', '--tblr-orange', '--tblr-teal', '--tblr-purple', '--tblr-pink'];
 const TOKENS = {
   primary: '--tblr-primary',
@@ -46,6 +49,7 @@ export function resolveChartTheme() {
   };
   const colors = Object.fromEntries(Object.entries(TOKENS).map(([name, variable]) => [name, read(variable)]));
   colors.categorical = CATEGORICAL.map(read);
+  colors.conditionGrades = Object.fromEntries(CONDITION_GRADES.map(grade => [grade, read(conditionGradeColorVariable(grade))]));
   colors.mode = document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'dark' : 'light';
   probe.remove();
   return colors;
@@ -140,15 +144,8 @@ export const categoryTreemapOptions = ({ colors, entries, label, format, onSelec
   });
 };
 
-// Blank and grouped conditions are neutral; named conditions take the categorical colors in order.
-export const conditionColors = (colors, entries) => {
-  let next = 0;
-  return entries.map(entry => {
-    if (entry.key === '__other__') return colors.neutral;
-    if (entry.key === 'not-specified') return colors.faint;
-    return colors.categorical[next++ % colors.categorical.length];
-  });
-};
+// Every grade keeps the color of its badge; an unset grade is the quiet neutral.
+export const conditionColors = (colors, entries) => entries.map(entry => colors.conditionGrades[entry.key] || colors.faint);
 
 export const conditionDonutOptions = ({ colors, entries, labels, total, totalLabel, format }) => base(colors, 'donut', 240, {
   series: entries.map(entry => entry.count),

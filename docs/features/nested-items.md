@@ -75,7 +75,7 @@ separate container, room, or shelf entity.
 - `GET /api/items` joins the parent row and returns `parent_id` and `parent_name` for each listed
   item, so the list needs no extra request per row.
 - `GET /api/items/:id` returns `parent_item_id`, a `parent` summary (`id`, `uuid`, `name`), and
-  `children` summaries (`id`, `uuid`, `name`, category name, condition, thumbnail ID). The full
+  `children` summaries (`id`, `uuid`, `name`, category name, condition grade, thumbnail ID). The full
   descendant tree is never expanded in a response.
 - `GET /api/items/parent-candidates?search=&excludeId=` returns at most 20 lightweight candidates,
   each with its direct container's name, with the excluded item and its descendants

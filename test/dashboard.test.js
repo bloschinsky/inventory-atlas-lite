@@ -44,11 +44,13 @@ test('dashboard aggregates, filters, normalizes, and truncates inventory data', 
     const items = [];
     for (let categoryIndex = 0; categoryIndex < categories.length; categoryIndex++) {
       for (let count = 0; count < 8 - categoryIndex; count++) {
-        const condition = [' Good ', 'good', 'GOOD', 'Fair', 'Poor', 'New', 'Used', 'Damaged', 'Unknown'][categoryIndex];
+        const grade = ['good', 'good', 'fair', 'poor', 'excellent', null, null, 'broken'][categoryIndex];
         items.push(await send('/api/items', json('POST', {
           name: `Item ${categoryIndex}-${count}`,
           category_id: categories[categoryIndex].id,
-          condition,
+          condition_grade: grade,
+          // Notes that read like a grade never count as one.
+          condition_notes: grade ? null : ' Good ',
           location: categoryIndex === 0 ? '  Shelf A  ' : '   '
         })));
       }
@@ -59,7 +61,8 @@ test('dashboard aggregates, filters, normalizes, and truncates inventory data', 
     await send(`/api/items/${contained.id}`, json('PUT', {
       name: contained.name,
       category_id: contained.category_id,
-      condition: contained.condition,
+      condition_grade: contained.condition_grade,
+      condition_notes: contained.condition_notes,
       location: 'Legacy location',
       parent_item_id: container.id
     }));
@@ -93,14 +96,18 @@ test('dashboard aggregates, filters, normalizes, and truncates inventory data', 
     assert.equal(dashboard.categoryDistribution.length, 7);
     assert.equal(dashboard.categoryDistribution.at(-1).label, 'Other');
     assert.equal(dashboard.categoryDistribution.at(-1).count, 3);
-    assert.deepEqual(dashboard.conditionDistribution.slice(0, 2).map(row => [row.label, row.count]), [['Good', 21], ['Fair', 5]]);
-    assert.equal(dashboard.conditionDistribution.at(-1).label, 'Other');
+    // Fixed grade order, best first, with Not set last; the notes play no part.
+    assert.deepEqual(dashboard.conditionDistribution, [
+      { key: 'excellent', count: 4 }, { key: 'good', count: 15 }, { key: 'fair', count: 6 }, { key: 'poor', count: 5 },
+      { key: 'broken', count: 1 }, { key: 'not-set', count: 5 }
+    ]);
+    assert.equal(dashboard.fieldCoverage.find(field => field.key === 'condition').count, 31);
 
     const filtered = await get(`/api/dashboard?categoryId=${categories[7].id}`);
     assert.equal(filtered.totalItems, 1);
     assert.equal(filtered.categoryDistribution.find(row => row.categoryId === categories[7].id).selected, true);
     assert.equal(filtered.categoryDistribution.find(row => row.categoryId === categories[7].id).count, 1);
-    assert.equal(filtered.conditionDistribution[0].label, 'Damaged');
+    assert.deepEqual(filtered.conditionDistribution, [{ key: 'broken', count: 1 }]);
     assert.equal(filtered.recentActivity.reduce((sum, bucket) => sum + bucket.count, 0), filtered.addedLast30Days);
     assert.deepEqual(filtered.locationDistribution, [{ key: '__unknown__', label: 'Unknown', count: 1 }]);
 

@@ -91,7 +91,7 @@ test('Ukrainian formats dates and money but never translates or changes the item
   const category = await createCategory(request, categoryName, [{ name: 'Mount', type: 'boolean' }]);
   const name = unique('Camera Items & Photo');
   const item = await createItem(request, {
-    name, category_id: category.id, condition: 'Good', location: 'Shelf', description: 'Settings',
+    name, category_id: category.id, condition_grade: 'good', condition_notes: 'Good', location: 'Shelf', description: 'Settings',
     purchase_date: '2024-11-18', purchase_price: { amount: '1500', currency: 'UAH' }, serial_number: 'SN-1',
     field_values: {}
   });
@@ -102,7 +102,9 @@ test('Ukrainian formats dates and money but never translates or changes the item
   await expect(heading(page)).toHaveText(name);
   await expect(page.getByRole('link', { name: 'Усі предмети' })).toBeVisible();
   await expect(page.getByText(categoryName, { exact: true })).toBeVisible();
-  await expect(detail(page, 'Стан')).toHaveText('Good');
+  // The grade is named in the interface language; the notes are user data and stay as entered.
+  await expect(detail(page, 'Стан')).toHaveText('Добрий');
+  await expect(detail(page, 'Нотатки про стан')).toHaveText('Good');
   await expect(detail(page, 'Опис')).toHaveText('Settings');
   // The hryvnia sign depends on the browser's ICU version: newer data writes ₴, older data грн.
   await expect(detail(page, 'Ціна покупки')).toHaveText(/^1\s500,00\s(₴|грн)$/);

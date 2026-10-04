@@ -96,6 +96,9 @@ body.app-menu-open { overflow: hidden; }
 .checklist-description { white-space: pre-line; }
 .checklist-picker-results { max-height: 22rem; overflow-y: auto; }
 
+/* Condition Notes keep the line breaks they were typed with. */
+.condition-notes { white-space: pre-line; }
+
 /* Photo viewer */
 .photo-frame { display: grid; place-items: center; min-height: 260px; max-height: 60vh; background: var(--app-media-bg); border-radius: var(--tblr-border-radius) var(--tblr-border-radius) 0 0; overflow: hidden; }
 .photo-frame img { max-width: 100%; max-height: 60vh; object-fit: contain; }

@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n';
 import { api } from '../api.js';
 import { formatDate, formatNumber } from '../i18n/index.js';
 import { theme } from '../theme.js';
+import { conditionGradeLabelKey } from '../conditionGrades.js';
 import {
   categoryTreemapOptions, conditionColors, conditionDonutOptions, fieldCoverageOptions, locationBarOptions,
   photoCoverageOptions, placementOptions, recentActivityOptions, resolveChartTheme
@@ -63,14 +64,11 @@ function selectCategory(entry) {
 
 /*
   The server names its summary buckets in English; they are recognized by their keys and shown in the
-  active language. Category names, conditions, and locations are user data and stay as entered.
+  active language. Category names and locations are user data and stay as entered; a Condition entry
+  is a fixed grade key (or not-set) and is named by its translation.
 */
 const categoryLabel = entry => (entry.categoryId === null ? t('dashboard.other') : entry.label);
-function conditionLabel(entry) {
-  if (entry.key === '__other__') return t('dashboard.other');
-  if (entry.key === 'not-specified' && entry.label === 'Not specified') return t('dashboard.notSpecified');
-  return entry.label;
-}
+const conditionLabel = entry => t(conditionGradeLabelKey(entry.key === 'not-set' ? null : entry.key));
 function locationLabel(entry) {
   if (entry.key === '__other__') return t('dashboard.other');
   if (entry.key === '__unknown__') return t('dashboard.unknown');

@@ -1,9 +1,9 @@
 import { httpError } from '../httpError.js';
+import { CONDITION_GRADES } from '../../../shared/conditionGrades.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const LOCATION_LIMIT = 7;
 
-const titleCase = value => value.replace(/(^|[\s/-])([a-z])/g, (_match, separator, letter) => `${separator}${letter.toUpperCase()}`);
 const percentage = (count, total) => (total ? Math.round((count / total) * 100) : 0);
 // The UTC text form SQLite's CURRENT_TIMESTAMP writes, so it compares directly with created_at.
 const sqliteTimestamp = date => date.toISOString().slice(0, 19).replace('T', ' ');
@@ -14,6 +14,17 @@ const groupedDistribution = (rows, limit, makeEntry) => {
   const otherCount = rows.slice(limit).reduce((sum, row) => sum + row.count, 0);
   if (otherCount) visible.push({ key: '__other__', label: 'Other', count: otherCount });
   return visible;
+};
+
+/*
+  The Condition breakdown in its fixed order, best grade first, with Not set last. Grades without items
+  are left out, so the donut only draws what exists; the key alone tells the client the label and color.
+*/
+const conditionDistribution = rows => {
+  const counts = new Map(rows.map(row => [row.grade, row.count]));
+  return [...[...CONDITION_GRADES].reverse(), null]
+    .filter(grade => counts.get(grade))
+    .map(grade => ({ key: grade ?? 'not-set', count: counts.get(grade) }));
 };
 
 /*
@@ -107,11 +118,6 @@ export class DashboardService {
     const now = this.now();
     const metrics = this.dashboard.itemMetrics(categoryId, sqliteTimestamp(now));
     const total = metrics.totalItems;
-    const conditionDistribution = groupedDistribution(this.dashboard.countsByCondition(categoryId), 5, row => ({
-      key: row.key || 'not-specified',
-      label: row.key ? titleCase(row.key) : 'Not specified',
-      count: row.count
-    }));
     // Coverage of each field on its own; the fields are deliberately never combined into one score.
     const fieldCoverage = [
       ['photos', metrics.withPhotos],
@@ -138,7 +144,7 @@ export class DashboardService {
       addedLast30Days: metrics.addedLast30Days,
       recentActivity: dailyBuckets(this.dashboard.countsByCreatedDay(categoryId, sqliteTimestamp(now)), now),
       categoryDistribution: this.categoryDistribution(category),
-      conditionDistribution,
+      conditionDistribution: conditionDistribution(this.dashboard.countsByConditionGrade(categoryId)),
       fieldCoverage,
       locationDistribution: locationDistribution(this.dashboard.countsByEffectiveLocation(categoryId))
     };

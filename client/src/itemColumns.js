@@ -1,5 +1,6 @@
 import { CORE_ITEM_COLUMNS, DEFAULT_ITEM_SORT } from '../../shared/itemColumns.js';
 import { formatDate, formatDateTime, formatMoney, i18n } from './i18n/index.js';
+import { conditionGradeLabelKey } from './conditionGrades.js';
 
 // The Items view as the column picker, the table, and the cards see it.
 export const ITEMS_VIEW_STORAGE_KEY = 'inventory-atlas.items.view';
@@ -25,7 +26,8 @@ export function labelColumns(columns) {
 const coreText = {
   category: item => item.category_name,
   isNew: item => t(item.is_new ? 'common.yes' : 'common.no'),
-  condition: item => item.condition,
+  condition: item => item.condition_grade && t(conditionGradeLabelKey(item.condition_grade)),
+  conditionNotes: item => item.condition_notes,
   location: item => item.effective_location,
   storedInside: item => item.parent_name,
   purchaseDate: item => formatDate(item.purchase_date),

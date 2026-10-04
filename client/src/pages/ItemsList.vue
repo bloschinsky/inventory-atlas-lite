@@ -6,6 +6,7 @@ import { api } from '../api.js';
 import { capabilities } from '../capabilities.js';
 import { CORE_ITEM_COLUMNS, DEFAULT_ITEM_SORT, ITEMS_VIEW_STORAGE_KEY, labelColumns } from '../itemColumns.js';
 import { labelSelection, printLabelsRoute, toggleLabelSelection } from '../labelSelection.js';
+import { CONDITION_GRADES_BEST_FIRST } from '../conditionGrades.js';
 import { useTablePreferences } from '../useTablePreferences.js';
 import AddItemMenu from '../components/AddItemMenu.vue';
 import BatchAddItemsDialog from '../components/BatchAddItemsDialog.vue';
@@ -27,7 +28,8 @@ const batchOpen = ref(false);
 const moveOpen = ref(false);
 const moveButton = ref(null);
 const noticeBox = ref(null);
-const filters = reactive({ search: '', categoryId: '', page: 1 });
+// `condition` is a grade key, "unset" for items without a grade, or empty for every item.
+const filters = reactive({ search: '', categoryId: '', condition: '', page: 1 });
 let timer;
 let ready = false;
 
@@ -42,7 +44,7 @@ const customFields = computed(() => visibleColumns.value.filter(column => !colum
 const mobileSortColumns = computed(() => labeledColumns.value.filter(column => column.sortable
   && (column.key === view.sort || visibleColumns.value.includes(column))));
 
-const filtered = computed(() => Boolean(filters.search.trim() || filters.categoryId));
+const filtered = computed(() => Boolean(filters.search.trim() || filters.categoryId || filters.condition));
 const countLabel = computed(() => t('items.count', result.value.pagination.total));
 
 async function load() {
@@ -51,7 +53,7 @@ async function load() {
     .filter(([, value]) => value !== ''));
   try { result.value = await api(`/api/items?${params}`); } catch (e) { error.value = e.message; } finally { loading.value = false; }
 }
-watch(() => [filters.categoryId, filters.page, view.sort, view.direction, customFields.value], () => { if (ready) load(); });
+watch(() => [filters.categoryId, filters.condition, filters.page, view.sort, view.direction, customFields.value], () => { if (ready) load(); });
 watch(() => filters.search, () => { clearTimeout(timer); filters.page = 1; timer = setTimeout(load, 250); });
 function changed() { filters.page = 1; }
 function sortBy(key) {
@@ -137,7 +139,7 @@ onMounted(async () => {
 
   <div class="card mb-3">
     <div class="card-body row g-3 align-items-end">
-      <div class="col-12 col-lg-6">
+      <div class="col-12 col-lg-4">
         <label
           class="form-label"
           for="items-search"
@@ -150,7 +152,7 @@ onMounted(async () => {
           :placeholder="$t('items.searchPlaceholder')"
         >
       </div>
-      <div class="col-12 col-sm-6 col-lg-4">
+      <div class="col-12 col-sm-4 col-lg-3">
         <label
           class="form-label"
           for="items-category"
@@ -173,7 +175,33 @@ onMounted(async () => {
           </option>
         </select>
       </div>
-      <div class="col-12 col-sm-6 col-lg-2">
+      <div class="col-12 col-sm-4 col-lg-3">
+        <label
+          class="form-label"
+          for="items-condition"
+        >{{ $t('items.fields.condition') }}</label>
+        <select
+          id="items-condition"
+          v-model="filters.condition"
+          class="form-select"
+          @change="changed"
+        >
+          <option value="">
+            {{ $t('condition.allConditions') }}
+          </option>
+          <option
+            v-for="grade in CONDITION_GRADES_BEST_FIRST"
+            :key="grade"
+            :value="grade"
+          >
+            {{ $t(`condition.grades.${grade}`) }}
+          </option>
+          <option value="unset">
+            {{ $t('condition.notSet') }}
+          </option>
+        </select>
+      </div>
+      <div class="col-12 col-sm-4 col-lg-2">
         <TableColumnPicker
           v-model:visible="view.visible"
           :columns="labeledColumns"

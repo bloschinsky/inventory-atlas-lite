@@ -32,7 +32,7 @@ field is informational only: it has no states, no history, and no effect on any 
 
 ## User interface
 
-- The item form has a **Transferred To** input under Condition and Location. It uses the shared
+- The item form has a **Transferred To** input under Condition, Location, and Condition Notes. It uses the shared
   `FieldAutocomplete` combobox with the suggestions endpoint above, so previously used values are
   offered on focus and while typing, but any new text can be saved and the field can be cleared.
 - When the value is set, the item page shows a `Transferred to: <value>` badge under the item name,

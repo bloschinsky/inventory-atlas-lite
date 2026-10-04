@@ -1,13 +1,17 @@
 import { httpError } from '../httpError.js';
 import { detectImageMime } from '../imageMime.js';
+import { CONDITION_GRADES, isConditionGrade } from '../../../shared/conditionGrades.js';
 
 const baseFieldNames = [
-  'name', 'description', 'condition', 'location', 'purchase_date',
+  'name', 'description', 'condition_notes', 'location', 'purchase_date',
   'purchase_price_amount', 'purchase_price_currency', 'serial_number'
 ];
 const nullableString = { type: ['string', 'null'] };
 // The New flag is the one boolean base field; it is described to the model next to the text fields.
 const IS_NEW = 'is_new';
+// The structured Condition: one of the fixed grade keys, or null when the evidence does not settle it.
+const CONDITION_GRADE = 'condition_grade';
+const extraBaseFields = [IS_NEW, CONDITION_GRADE];
 
 function responseSchema(categories) {
   return {
@@ -22,8 +26,12 @@ function responseSchema(categories) {
       baseFields: {
         type: 'object',
         additionalProperties: false,
-        required: [...baseFieldNames, IS_NEW],
-        properties: { ...Object.fromEntries(baseFieldNames.map(name => [name, nullableString])), [IS_NEW]: { type: 'boolean' } }
+        required: [...baseFieldNames, ...extraBaseFields],
+        properties: {
+          ...Object.fromEntries(baseFieldNames.map(name => [name, nullableString])),
+          [IS_NEW]: { type: 'boolean' },
+          [CONDITION_GRADE]: { type: ['string', 'null'], enum: [null, ...CONDITION_GRADES] }
+        }
       },
       dynamicFields: {
         type: 'array',
@@ -44,7 +52,7 @@ function responseSchema(categories) {
 function inventorySchema(categories, fields) {
   const byCategory = new Map(categories.map(category => [category.id, { id: category.id, name: category.name, fields: [] }]));
   for (const field of fields) byCategory.get(field.category_id)?.fields.push({ id: field.id, name: field.name, type: field.type });
-  return { baseFields: [...baseFieldNames, IS_NEW], categories: [...byCategory.values()] };
+  return { baseFields: [...baseFieldNames, ...extraBaseFields], categories: [...byCategory.values()] };
 }
 
 const instructions = `Create a conservative inventory draft from the supplied evidence. The user may supply an item photo, a written description, or both; work with whatever is present.
@@ -52,7 +60,8 @@ When an image is supplied, first record important visible branding, product labe
 For name, use the most specific commercial product name that can be reliably identified from the supplied evidence. Prioritize exact product branding, family names, and model names visibly printed on the item or explicitly stated by the user. Visible printed text is direct evidence, not speculation. Do not replace a specific visible product name with a generic item type.
 Distinguish the commercial product name from model numbers, part numbers, serial numbers, and generic item types. If a specific product name is visible or stated, use it in name. Use observedMarkings when mapping name, model or part number fields, serial number, and other supported fields.
 Treat facts the user states in the description and clearly readable markings in the image as supported evidence. When both sources agree, combine them. When they add different details, merge the supported facts. When they conflict, do not silently choose one: use the most strongly supported value and add a warning that names the conflict so the user can resolve it during review.
-Set is_new to true only when the evidence explicitly establishes that the item is new or unused: the user says so, or readable labeling or context states it. Never infer it from a box, clean packaging, a pristine look, or the absence of visible wear; otherwise set is_new to false. Describe the physical state in condition and never write New, Used, or a similar lifecycle state there.
+Set is_new to true only when the evidence explicitly establishes that the item is new or unused: the user says so, or readable labeling or context states it. Never infer it from a box, clean packaging, a pristine look, or the absence of visible wear; otherwise set is_new to false. Never derive is_new from the condition, or the condition from is_new.
+Set condition_grade only when the evidence clearly supports one grade: excellent (works correctly, no significant damage, at most very small signs of use), good (works correctly, visible signs of normal use), fair (works, significant wear or minor defects), poor (serious defects, works only partly or needs repair), or broken (does not work correctly, needs repair or replacement). Otherwise set condition_grade to null; never guess it. Put specific details of the physical state, such as scratches, defects, wear, missing parts, or battery state, in condition_notes, and never write New, Used, or a similar lifecycle state there.
 Use only supported facts. Never invent unsupported values, serial numbers, purchase prices, purchase dates, locations, exact model or part numbers, or hidden technical specifications. Explicit user-provided values and visible image markings may be used. Use null when a value is unknown. Choose only a supplied category and only its field IDs. Return JSON only.`;
 
 function cleanString(value, maximum = 5000) {
@@ -74,7 +83,7 @@ function normalizeDraft(raw, categories, fields, hasImage) {
       !Array.isArray(raw.dynamicFields) || !Array.isArray(raw.warnings)) {
     throw httpError(502, 'AI_INVALID_RESPONSE');
   }
-  const unknownBase = Object.keys(raw.baseFields || {}).filter(name => name !== IS_NEW && !baseFieldNames.includes(name));
+  const unknownBase = Object.keys(raw.baseFields || {}).filter(name => !extraBaseFields.includes(name) && !baseFieldNames.includes(name));
   if (unknownBase.length) throw httpError(502, 'AI_INVALID_RESPONSE');
   // A missing or null New flag is read as "not new"; any other non-boolean is a malformed response.
   if (![undefined, null, true, false].includes(raw.baseFields[IS_NEW])) throw httpError(502, 'AI_INVALID_RESPONSE');
@@ -110,7 +119,7 @@ function normalizeDraft(raw, categories, fields, hasImage) {
   const baseFields = {
     name: cleanString(source.name, 255),
     description: cleanString(source.description),
-    condition: cleanString(source.condition, 255),
+    condition_notes: cleanString(source.condition_notes),
     location: cleanString(source.location, 255),
     purchase_date: /^\d{4}-\d{2}-\d{2}$/.test(source.purchase_date || '') ? source.purchase_date : null,
     purchase_price: purchaseAmount && currency && Intl.supportedValuesOf('currency').includes(currency) ? { amount: purchaseAmount, currency } : null,
@@ -121,6 +130,8 @@ function normalizeDraft(raw, categories, fields, hasImage) {
   if (!usable) throw httpError(422, 'AI_NO_ITEM_DETAILS');
   // Only an explicit true makes the draft new; the flag alone never makes a draft usable.
   baseFields.is_new = source[IS_NEW] === true;
+  // A grade outside the fixed scale is dropped rather than mapped to a near one.
+  baseFields.condition_grade = isConditionGrade(source[CONDITION_GRADE]) ? source[CONDITION_GRADE] : null;
   return {
     categoryId: category?.id ?? null,
     confidence: Number.isFinite(raw.confidence) ? Math.min(1, Math.max(0, raw.confidence)) : null,

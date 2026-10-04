@@ -29,12 +29,12 @@ the conventions of the active language; stored values and the API are unchanged.
 
 ## What is never translated
 
-- User data: item, category, and custom-field names, descriptions, conditions, locations,
+- User data: item, category, and custom-field names, descriptions, condition notes, locations,
   Transferred To, serial numbers, entered field values, and imported JSON are shown exactly as stored.
 - Release notes in Version History, which are bundled release data, and fixed technical text such as
   confirmation phrases (`RESTORE`, `RESET INVENTORY`), file names, paths, and environment variables.
 - Summary buckets that the Dashboard API names in English (`Other`, `Not specified`) are recognized
-  by their keys and translated in the browser; user-entered conditions stay as they are.
+  by their keys and translated in the browser; user-entered condition notes stay as they are, while the fixed Condition grades are translated.
 
 ## Server messages
 

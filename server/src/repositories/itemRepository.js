@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { containsLike, startsWithLike } from './sql.js';
+import { CONDITION_GRADES } from '../../../shared/conditionGrades.js';
 
 // Every item is walked down from its top-level container, so one pass labels the whole table with
 // the root that provides its effective location. Items inside a cycle are simply never reached.
@@ -17,12 +18,17 @@ const CUSTOM_TEXT_SEARCH = `EXISTS (
   WHERE sv.item_id = i.id AND sf.type = 'text' AND sv.value LIKE @search ESCAPE '\\'
 )`;
 
+// The semantic rank of the structured Condition (1 = broken … 5 = excellent); an unset grade is NULL.
+const CONDITION_RANK = `CASE i.condition_grade ${CONDITION_GRADES.map((grade, index) => `WHEN '${grade}' THEN ${index + 1}`).join(' ')} END`;
+
 // The whitelist of core sort expressions. A request only ever selects a key here, never SQL. The
 // location is the effective one: the root container's, or the item's own when it has no root.
+// Condition sorts by rank, never by its key or label; Condition Notes is plain text.
 const CORE_SORT = {
   name: 'i.name COLLATE NOCASE',
   category: 'c.name COLLATE NOCASE',
-  condition: 'i.condition COLLATE NOCASE',
+  condition: CONDITION_RANK,
+  conditionNotes: "NULLIF(TRIM(i.condition_notes), '') COLLATE NOCASE",
   isNew: 'i.is_new',
   location: "NULLIF(TRIM(CASE WHEN root.id IS NULL THEN i.location ELSE root.location END), '') COLLATE NOCASE",
   purchaseDate: 'i.purchase_date',
@@ -136,7 +142,7 @@ export class ItemRepository {
 
   listChildren(id) {
     return this.db.prepare(`
-      SELECT i.id, i.uuid, i.name, i.condition, c.name AS category_name,
+      SELECT i.id, i.uuid, i.name, i.condition_grade, c.name AS category_name,
         (SELECT id FROM item_photos p WHERE p.item_id = i.id ORDER BY p.id LIMIT 1) AS thumbnail_id
       FROM items i JOIN categories c ON c.id = i.category_id
       WHERE i.parent_item_id = ? ORDER BY i.name COLLATE NOCASE
@@ -176,9 +182,10 @@ export class ItemRepository {
   /*
     `sort` is either { core: key } or { fieldIds, type } of a merged custom column; unknown keys fall
     back to the name. Empty values always come last, and the item id keeps equal values in a stable
-    order, so pagination never repeats or skips a row.
+    order, so pagination never repeats or skips a row. `conditionGrade` is a grade key, or null for
+    items whose Condition is not set; leaving it undefined applies no Condition filter.
   */
-  search({ search, categoryId, sort = {}, direction, limit, offset }) {
+  search({ search, categoryId, conditionGrade, sort = {}, direction, limit, offset }) {
     const where = [];
     const params = {};
     if (search) {
@@ -188,6 +195,11 @@ export class ItemRepository {
     if (categoryId) {
       where.push('i.category_id = @categoryId');
       params.categoryId = categoryId;
+    }
+    if (conditionGrade === null) where.push('i.condition_grade IS NULL');
+    else if (conditionGrade) {
+      where.push('i.condition_grade = @conditionGrade');
+      params.conditionGrade = conditionGrade;
     }
     const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
     const total = this.db.prepare(`SELECT COUNT(*) AS count FROM items i ${clause}`).get(params).count;
@@ -199,7 +211,7 @@ export class ItemRepository {
     const order = direction === 'desc' ? 'DESC' : 'ASC';
     const rows = this.db.prepare(`
       ${ROOTS_CTE}
-      SELECT i.id, i.uuid, i.name, i.is_new, i.condition, i.location, i.purchase_date,
+      SELECT i.id, i.uuid, i.name, i.is_new, i.condition_grade, i.condition_notes, i.location, i.purchase_date,
         i.purchase_price_amount, i.purchase_price_currency, i.serial_number, i.transferred_to, i.created_at, i.updated_at,
         c.id AS category_id, c.name AS category_name,
         parent.id AS parent_id, parent.name AS parent_name,
@@ -259,21 +271,21 @@ export class ItemRepository {
 
   insert(attributes) {
     return this.db.prepare(`
-      INSERT INTO items (uuid, name, category_id, description, is_new, condition, location, purchase_date,
+      INSERT INTO items (uuid, name, category_id, description, is_new, condition_grade, condition_notes, location, purchase_date,
         purchase_price_amount, purchase_price_currency, serial_number, transferred_to, parent_item_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(randomUUID(), attributes.name, attributes.categoryId, attributes.description, attributes.isNew ? 1 : 0,
-      attributes.condition, attributes.location, attributes.purchaseDate, attributes.purchasePriceAmount,
+      attributes.conditionGrade, attributes.conditionNotes, attributes.location, attributes.purchaseDate, attributes.purchasePriceAmount,
       attributes.purchasePriceCurrency, attributes.serialNumber, attributes.transferredTo, attributes.parentId).lastInsertRowid;
   }
 
   update(id, attributes) {
     this.db.prepare(`
-      UPDATE items SET name = ?, category_id = ?, description = ?, is_new = ?, condition = ?, location = ?,
+      UPDATE items SET name = ?, category_id = ?, description = ?, is_new = ?, condition_grade = ?, condition_notes = ?, location = ?,
         purchase_date = ?, purchase_price_amount = ?, purchase_price_currency = ?, serial_number = ?,
         transferred_to = ?, parent_item_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
     `).run(attributes.name, attributes.categoryId, attributes.description, attributes.isNew ? 1 : 0,
-      attributes.condition, attributes.location,
+      attributes.conditionGrade, attributes.conditionNotes, attributes.location,
       attributes.purchaseDate, attributes.purchasePriceAmount, attributes.purchasePriceCurrency,
       attributes.serialNumber, attributes.transferredTo, attributes.parentId, id);
   }

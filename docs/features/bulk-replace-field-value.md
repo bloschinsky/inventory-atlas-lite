@@ -9,10 +9,11 @@ transaction.
 
 ## User-visible behaviour
 
-- Supported fields: **Condition**, **Location**, **Transferred To**, and every custom field of type
-  `text`. Name, description, serial number, dates, prices, numbers, booleans, **Stored inside**, and
+- Supported fields: **Condition Notes**, **Location**, **Transferred To**, and every custom field of type
+  `text`. The structured [Condition grade](condition-grading.md) is not text and is never offered, so
+  no arbitrary value can be written to it. Name, description, serial number, dates, prices, numbers, booleans, **Stored inside**, and
   **Category** are not offered.
-- **Field** lists Condition, Location, Transferred To, and **Custom text field…**. The core fields
+- **Field** lists Condition Notes, Location, Transferred To, and **Custom text field…**. The core fields
   always apply to items of every category. **Custom text field…** reveals a **Category** select,
   which lists only categories that have a text custom field, and a **Custom field** select with only
   that category's text fields, starting at the first one; it stays disabled until a category is
@@ -41,7 +42,7 @@ transaction.
 ## Implementation overview
 
 - API, registered in `server/src/routes/itemRoutes.js` before `/api/items/:id`:
-  - `GET /api/items/bulk-replace/fields` → `{ core: ['condition', 'location', 'transferredTo'], custom: [{ id, name, category_id, category_name }] }`;
+  - `GET /api/items/bulk-replace/fields` → `{ core: ['conditionNotes', 'location', 'transferredTo'], custom: [{ id, name, category_id, category_name }] }`;
   - `GET /api/items/bulk-replace/values/:type/:id?search=&limit=` → `[{ value, usage_count }]`, where
     `type` is `core` (then `id` is a core key) or `custom` (then `id` is a field id); `limit` defaults
     to 10 and is capped at 50;
@@ -55,7 +56,7 @@ transaction.
   reads and matches again inside its transaction; the preview count from the client is never sent or
   trusted.
 - `server/src/repositories/bulkReplaceRepository.js` holds the SQL. Core keys map to columns through a
-  fixed whitelist (`condition`, `location`, `transferred_to`); no column name comes from a request.
+  fixed whitelist (`condition_notes`, `location`, `transferred_to`); no column name comes from a request.
   Item ids travel as one JSON parameter. A custom replacement updates `item_field_values` and then
   `items.updated_at` of the changed items; a core replacement updates the column and `updated_at`.
 - Refusals: `BULK_REPLACE_UNSUPPORTED_FIELD`, `FIELD_NOT_FOUND` (404) for an unknown custom field id,
@@ -70,7 +71,8 @@ transaction.
 
 - `test/bulk-replace.test.js` covers exact Location replacement, case-insensitive and whitespace
   matching (including Cyrillic), untouched substring values, untouched records that already hold the
-  target, an existing target value, Condition, Transferred To, one text custom field, same-name fields
+  target, an existing target value, Condition Notes (with the grade left untouched and refused as a
+  target), Transferred To, one text custom field, same-name fields
   in different categories, rejection of unsupported and non-text fields and invalid values, a preview
   that writes nothing, re-evaluation on apply, rollback when a write fails, effective location
   inheritance after replacing a container's Location, and value discovery.

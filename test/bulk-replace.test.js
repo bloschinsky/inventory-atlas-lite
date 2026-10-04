@@ -119,15 +119,19 @@ test('records that already hold the target keep their row untouched while new on
   assert.deepEqual(bulkReplaceService.values(location), [{ value: 'KP Garage', usage_count: 2 }]);
 });
 
-test('Condition and Transferred To are replaced on their own column only', () => {
+test('Condition Notes and Transferred To are replaced on their own column only', () => {
   const { add, column, bulkReplaceService } = build();
-  const item = add('Camera', { condition: 'Used', location: 'Used', transferred_to: 'Anna' });
+  const item = add('Camera', { condition_grade: 'fair', condition_notes: 'Used', location: 'Used', transferred_to: 'Anna' });
   const other = add('Lens', { transferred_to: 'Anna Smith' });
 
-  assert.deepEqual(bulkReplaceService.apply({ field: { type: 'core', key: 'condition' }, from: 'used', to: 'Good' }), { updated: 1 });
+  assert.deepEqual(bulkReplaceService.apply({ field: { type: 'core', key: 'conditionNotes' }, from: 'used', to: 'Good' }), { updated: 1 });
   assert.deepEqual(bulkReplaceService.apply({ field: { type: 'core', key: 'transferredTo' }, from: 'ANNA', to: 'Anna K.' }), { updated: 1 });
 
-  assert.equal(column('condition', item.id), 'Good');
+  assert.equal(column('condition_notes', item.id), 'Good');
+  // The structured grade is never treated as text: it is not a target, and the notes replacement leaves it alone.
+  assert.equal(column('condition_grade', item.id), 'fair');
+  failure(() => bulkReplaceService.apply({ field: { type: 'core', key: 'condition' }, from: 'fair', to: 'Great' }), 400, 'BULK_REPLACE_UNSUPPORTED_FIELD');
+  assert.equal(column('condition_grade', item.id), 'fair');
   assert.equal(column('location', item.id), 'Used');
   assert.equal(column('transferred_to', item.id), 'Anna K.');
   assert.equal(column('transferred_to', other.id), 'Anna Smith');
@@ -146,7 +150,7 @@ test('a custom text field is replaced by its id and never mixed with a same-name
   db.prepare("UPDATE items SET updated_at = '2020-01-01 00:00:00'").run();
 
   const fields = bulkReplaceService.fields();
-  assert.deepEqual(fields.core, ['condition', 'location', 'transferredTo']);
+  assert.deepEqual(fields.core, ['conditionNotes', 'location', 'transferredTo']);
   assert.deepEqual(fields.custom.map(field => [field.id, field.name, field.category_name]), [[brand.id, 'Brand', 'Gear'], [otherBrand.id, 'brand', 'Lenses']]);
   assert.deepEqual(bulkReplaceService.values({ type: 'custom', fieldId: brand.id }), [
     { value: 'creative', usage_count: 1 }, { value: 'Creative Labs', usage_count: 1 }

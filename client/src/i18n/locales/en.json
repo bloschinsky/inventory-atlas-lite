@@ -219,7 +219,6 @@
     "byCondition": "Condition breakdown",
     "noConditionData": "No condition data in this scope.",
     "other": "Other",
-    "notSpecified": "Not specified",
     "unknown": "Unknown",
     "total": "Total",
     "itemsSeries": "Items",
@@ -274,6 +273,7 @@
       "category": "Category",
       "isNew": "New",
       "condition": "Condition",
+      "conditionNotes": "Condition Notes",
       "location": "Location",
       "storedInside": "Stored inside",
       "transferredTo": "Transferred To",
@@ -306,6 +306,28 @@
       "unchanged": "Nothing changed: the selected items are already inside {name}."
     }
   },
+  "condition": {
+    "grades": {
+      "excellent": "Excellent",
+      "good": "Good",
+      "fair": "Fair",
+      "poor": "Poor",
+      "broken": "Broken"
+    },
+    "notSet": "Not set",
+    "allConditions": "All conditions",
+    "helpTitle": "Condition grading",
+    "helpButton": "Condition grading help",
+    "closeHelp": "Close Condition grading",
+    "definitions": {
+      "excellent": "The item works correctly. The item has no significant damage. It can have very small signs of use.",
+      "good": "The item works correctly. It has visible signs of normal use. The signs of use do not prevent normal operation.",
+      "fair": "The item works. It has significant wear or minor defects. The defects can affect comfort, appearance, or some functions.",
+      "poor": "The item has serious defects. It can work only partly or require repair.",
+      "broken": "The item does not work correctly. Repair or replacement is necessary."
+    },
+    "notesHint": "Use Condition Notes for details that are not described by the grade."
+  },
   "tableView": {
     "columns": "Columns",
     "visibleColumns": "Visible columns",
@@ -334,7 +356,7 @@
     "confidence": "AI confidence: {percent}%.",
     "noCategories": "Create a category before adding an item.",
     "manageCategories": "Manage categories",
-    "conditionPlaceholder": "Good, needs repair…",
+    "conditionNotesPlaceholder": "Small scratch near the left hinge. Battery capacity is about 70%.",
     "locationPlaceholder": "Garage, box A…",
     "ownLocation": "This field keeps this item's own saved location.",
     "transferredToPlaceholder": "Person or destination",
@@ -1082,6 +1104,7 @@
     "IMPORT_ITEMS_MISSING": "The document must contain an \"items\" array.",
     "IMPORT_ITEM_NOT_OBJECT": "Item {index} must be a JSON object.",
     "IMPORT_ITEM_BOOLEAN_EXPECTED": "Item {index} \"{property}\" must be true or false.",
+    "IMPORT_ITEM_CONDITION_CONFLICT": "Item {index} has both \"condition\" and \"conditionNotes\". Keep only \"conditionNotes\".",
     "IMPORT_ITEM_TEXT_EXPECTED": "Item {index} \"{property}\" must be text or null.",
     "IMPORT_ITEM_UNSUPPORTED_PROPERTY": "Item {index} has an unsupported property \"{property}\". Supported properties: {supported}.",
     "IMPORT_NO_ITEMS": "The document does not contain any items.",
@@ -1116,6 +1139,7 @@
     "INVALID_PURCHASE_PRICE_CURRENCY": "Purchase price currency must be a valid ISO 4217 code.",
     "INVALID_REQUEST": "The request is invalid.",
     "INVALID_IS_NEW": "New must be true or false.",
+    "INVALID_CONDITION_GRADE": "Condition must be Excellent, Good, Fair, Poor, Broken, or not set.",
     "INVALID_SERIAL_NUMBER": "Serial number must be text.",
     "INVALID_TRANSFERRED_TO": "Transferred To must be text.",
     "ITEM_CANNOT_CONTAIN_ITSELF": "An item cannot be stored inside itself.",

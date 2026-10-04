@@ -13,7 +13,7 @@ test('Duplicate opens a prefilled Add Item form and saves a separate item', asyn
   const sourceName = unique('Box #1');
   const source = await createItem(request, {
     name: sourceName, category_id: category.id, parent_item_id: container.id, description: 'Brown cardboard',
-    is_new: true, condition: 'New', location: 'Garage', purchase_date: '2024-11-18', purchase_price: { amount: '12.50', currency: 'EUR' },
+    is_new: true, condition_grade: 'poor', condition_notes: 'Dented corner', location: 'Garage', purchase_date: '2024-11-18', purchase_price: { amount: '12.50', currency: 'EUR' },
     serial_number: 'BOX-0001', transferred_to: 'Neighbor', field_values: { [size.id]: '40x24x21', [sealed.id]: '1' }
   });
   const photoBytes = await readFile(fixture);
@@ -33,7 +33,9 @@ test('Duplicate opens a prefilled Add Item form and saves a separate item', asyn
   await expect(page.getByLabel('Name *')).toHaveValue(sourceName);
   await expect(page.getByLabel('Category *')).toHaveValue(String(category.id));
   await expect(page.getByRole('checkbox', { name: 'New', exact: true })).toBeChecked();
-  await expect(page.getByLabel('Condition')).toHaveValue('New');
+  // New and a Poor grade are a valid pair; both are copied as they are.
+  await expect(page.getByLabel('Condition', { exact: true })).toHaveValue('poor');
+  await expect(page.getByLabel('Condition Notes')).toHaveValue('Dented corner');
   await expect(page.getByLabel('Location')).toHaveValue('Garage');
   await expect(page.getByLabel('Transferred To')).toHaveValue('Neighbor');
   await expect(page.getByLabel('Purchase Date')).toHaveValue('2024-11-18');
@@ -59,6 +61,8 @@ test('Duplicate opens a prefilled Add Item form and saves a separate item', asyn
 
   await expect(page.getByRole('heading', { name: copyName })).toBeVisible();
   await expect(detail(page, 'New')).toHaveText('Yes');
+  await expect(detail(page, 'Condition')).toHaveText('Poor');
+  await expect(detail(page, 'Condition Notes')).toHaveText('Dented corner');
   await expect(page).not.toHaveURL(`/items/${source.id}`);
   await expect(detail(page, 'Location')).toHaveText('Garage');
   await expect(detail(page, 'Size')).toHaveText('60x40x40');

@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { CONDITION_GRADES } from '../../shared/conditionGrades.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 export const dataDir = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(root, 'data');
@@ -16,11 +17,12 @@ export const databasePath = path.join(dataDir, 'inventory.sqlite');
   because it was written by a newer release whose schema this one cannot read.
   Version 2 added the item template tables; version 3 added the database_metadata table; version 4
   added the checklist tables; version 5 added items.last_verified_at and the container audit columns of
-  checklist_runs; version 6 added items.is_new and item_templates.is_new.
+  checklist_runs; version 6 added items.is_new and item_templates.is_new; version 7 renamed the free-text
+  condition of items and templates to condition_notes and added the structured condition_grade.
   user_version stays the source of truth: database_metadata.schema_version mirrors it and is written
   in the same transaction, so the two never disagree.
 */
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 export const DEFAULT_DATABASE_NAME = 'Inventory Atlas';
 
@@ -32,14 +34,18 @@ export const DEFAULT_DATABASE_NAME = 'Inventory Atlas';
 export const TRACKED_TABLES = ['categories', 'custom_fields', 'items', 'item_field_values', 'item_photos',
   'item_templates', 'item_template_field_values', 'checklists', 'checklist_items', 'checklist_runs', 'checklist_run_items'];
 
+// Only a fixed grade key, or NULL for an unset Condition, can be stored, whatever writes the row.
+const CONDITION_GRADE_CHECK = `CHECK (condition_grade IN (${CONDITION_GRADES.map(grade => `'${grade}'`).join(', ')}))`;
+
 // ISO 8601 in UTC with milliseconds, so two writes in the same second still order correctly.
 const SQL_NOW = "strftime('%Y-%m-%dT%H:%M:%fZ', 'now')";
 
 // Tables and columns that every Inventory Atlas Lite database has ever had. Restore validation uses
 // them to recognize one of our backups before deciding whether it only needs the usual migrations.
+// The free-text condition is not listed: version 7 renamed it to condition_notes.
 export const CORE_SCHEMA = {
   categories: ['id', 'name'],
-  items: ['id', 'uuid', 'name', 'category_id', 'description', 'condition', 'location'],
+  items: ['id', 'uuid', 'name', 'category_id', 'description', 'location'],
   custom_fields: ['id', 'category_id', 'name', 'type'],
   item_field_values: ['id', 'item_id', 'field_id', 'value'],
   item_photos: ['id', 'item_id', 'filename', 'mime_type', 'data']
@@ -49,11 +55,11 @@ export const CORE_SCHEMA = {
 export const CURRENT_SCHEMA = {
   ...CORE_SCHEMA,
   categories: [...CORE_SCHEMA.categories, 'created_at', 'updated_at'],
-  items: [...CORE_SCHEMA.items, 'purchase_date', 'purchase_price_amount', 'purchase_price_currency',
+  items: [...CORE_SCHEMA.items, 'condition_grade', 'condition_notes', 'purchase_date', 'purchase_price_amount', 'purchase_price_currency',
     'serial_number', 'transferred_to', 'parent_item_id', 'last_verified_at', 'is_new', 'created_at', 'updated_at'],
   custom_fields: [...CORE_SCHEMA.custom_fields, 'created_at', 'updated_at'],
   item_photos: [...CORE_SCHEMA.item_photos, 'created_at'],
-  item_templates: ['id', 'name', 'category_id', 'item_name', 'description', 'condition', 'location', 'purchase_date',
+  item_templates: ['id', 'name', 'category_id', 'item_name', 'description', 'condition_grade', 'condition_notes', 'location', 'purchase_date',
     'purchase_price_amount', 'purchase_price_currency', 'serial_number', 'transferred_to', 'is_new', 'created_at', 'updated_at'],
   item_template_field_values: ['id', 'template_id', 'field_id', 'value'],
   database_metadata: ['id', 'database_uuid', 'name', 'created_at', 'last_updated_at', 'schema_version'],
@@ -122,7 +128,8 @@ export const applySchema = connection => connection.transaction(() => {
       name TEXT NOT NULL,
       category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE RESTRICT,
       description TEXT,
-      condition TEXT,
+      condition_grade TEXT ${CONDITION_GRADE_CHECK},
+      condition_notes TEXT,
       location TEXT,
       purchase_date TEXT,
       purchase_price_amount TEXT,
@@ -167,7 +174,8 @@ export const applySchema = connection => connection.transaction(() => {
       category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
       item_name TEXT,
       description TEXT,
-      condition TEXT,
+      condition_grade TEXT ${CONDITION_GRADE_CHECK},
+      condition_notes TEXT,
       location TEXT,
       purchase_date TEXT,
       purchase_price_amount TEXT,
@@ -274,6 +282,16 @@ export const applySchema = connection => connection.transaction(() => {
   // Existing templates keep no New default.
   const templateColumns = new Set(connection.prepare('PRAGMA table_info(item_templates)').all().map(column => column.name));
   if (!templateColumns.has('is_new')) connection.exec('ALTER TABLE item_templates ADD COLUMN is_new INTEGER CHECK (is_new IN (0, 1))');
+  /*
+    Version 7: the old free-text condition keeps every value, untouched, as condition_notes. The new
+    grade starts unset: free text such as "Good" is never parsed into a grade.
+  */
+  for (const [table, columns] of [['items', itemColumns], ['item_templates', templateColumns]]) {
+    if (columns.has('condition') && !columns.has('condition_notes')) {
+      connection.exec(`ALTER TABLE ${table} RENAME COLUMN condition TO condition_notes`);
+    }
+    if (!columns.has('condition_grade')) connection.exec(`ALTER TABLE ${table} ADD COLUMN condition_grade TEXT ${CONDITION_GRADE_CHECK}`);
+  }
   connection.exec('CREATE INDEX IF NOT EXISTS idx_items_parent ON items(parent_item_id)');
   const runColumns = new Set(connection.prepare('PRAGMA table_info(checklist_runs)').all().map(column => column.name));
   const missingRunColumns = [

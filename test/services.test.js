@@ -116,6 +116,7 @@ test('batch item import creates every item through the regular item rules', () =
     document: document([
       {
         name: ' Hub ',
+        // The legacy free-text property of older documents is read as Condition Notes, never as a grade.
         condition: 'Good',
         location: 'Shelf A',
         description: 'Seven-port hub',
@@ -131,7 +132,7 @@ test('batch item import creates every item through the regular item rules', () =
   assert.equal(created.length, 2);
   const [hub, cable] = created;
   assert.equal(hub.name, 'Hub');
-  assert.equal(hub.condition, 'Good');
+  assert.deepEqual([hub.condition_grade, hub.condition_notes], [null, 'Good']);
   assert.equal(hub.location, 'Shelf A');
   assert.equal(hub.description, 'Seven-port hub');
   assert.equal(hub.transferred_to, null);
@@ -167,7 +168,7 @@ test('batch item import creates every item through the regular item rules', () =
   refused(batch([{ name: 'X', uuid: '00000000-0000-4000-8000-000000000000' }]),
     { code: 'IMPORT_ITEM_UNSUPPORTED_PROPERTY', params: {
       index: 1, property: 'uuid',
-      supported: 'name, condition, location, description, transferredTo, purchaseDate, serialNumber, new, purchasePrice, customFields'
+      supported: 'name, conditionGrade, conditionNotes, location, description, transferredTo, purchaseDate, serialNumber, new, purchasePrice, customFields, condition'
     } });
   refused(batch([{ name: 'X', customFields: { Colour: 'Red' } }]), { code: 'IMPORT_UNKNOWN_CUSTOM_FIELD', params: { index: 1, field: 'Colour', known: 'Brand, Ports, Released, Working' } });
   refused(batch([{ name: 'X' }, { name: 'Y', customFields: { Ports: 'many' } }]), inItem(2, 'INVALID_CUSTOM_FIELD_NUMBER', { field: 'Ports' }));
@@ -245,7 +246,7 @@ test('core columns sort type-correctly with empty values last in both directions
   const add = (name, category, extra = {}) => itemService.create({ name, category_id: category.id, ...extra });
   add('Cheap', tools, { purchase_price: { amount: '9.5', currency: 'USD' }, purchase_date: '2024-02-01', serial_number: 'b-2' });
   add('Dear', books, { purchase_price: { amount: '100', currency: 'EUR' }, purchase_date: '2023-12-31', serial_number: 'A-1' });
-  add('Unpriced', tools, { condition: 'good' });
+  add('Unpriced', tools, { condition_grade: 'good' });
   const names = query => itemService.list(query).items.map(item => item.name);
 
   // Prices compare as numbers (9.5 < 100), not as text ("100" < "9.5").
@@ -399,7 +400,7 @@ test('the dashboard summarizes the inventory and its optional category scope', (
   const cameras = categoryService.create({ name: 'Cameras' });
   const tools = categoryService.create({ name: 'Tools' });
   const box = itemService.create({ name: 'Box', category_id: tools.id, location: 'Shelf' });
-  itemService.create({ name: 'Camera', category_id: cameras.id, condition: ' USED ' });
+  itemService.create({ name: 'Camera', category_id: cameras.id, condition_grade: 'fair', condition_notes: ' USED ' });
   itemService.create({ name: 'Lens', category_id: cameras.id, parent_item_id: box.id });
 
   const overview = dashboardService.overview({});
@@ -412,11 +413,8 @@ test('the dashboard summarizes the inventory and its optional category scope', (
   const scoped = dashboardService.overview({ categoryId: String(cameras.id) });
   assert.deepEqual(scoped.scope, { categoryId: cameras.id, categoryName: 'Cameras' });
   assert.equal(scoped.totalItems, 2);
-  // Conditions are grouped case-insensitively and labelled for display.
-  assert.deepEqual(scoped.conditionDistribution, [
-    { key: 'not-specified', label: 'Not specified', count: 1 },
-    { key: 'used', label: 'Used', count: 1 }
-  ]);
+  // Grades come in their fixed order with Not set last; the client names them.
+  assert.deepEqual(scoped.conditionDistribution, [{ key: 'fair', count: 1 }, { key: 'not-set', count: 1 }]);
   assert.ok(scoped.categoryDistribution.find(row => row.label === 'Cameras').selected);
 
   failure(() => dashboardService.overview({ categoryId: 'all' }), 400, 'INVALID_CATEGORY_ID');
@@ -472,9 +470,9 @@ test('the dashboard reports the coverage of each useful field separately', () =>
   const { db, categoryService, itemService, dashboardService } = build();
   const cameras = categoryService.create({ name: 'Cameras' });
   const empty = categoryService.create({ name: 'Empty' });
-  const box = itemService.create({ name: 'Box', category_id: cameras.id, location: 'Office', condition: 'Good' });
+  const box = itemService.create({ name: 'Box', category_id: cameras.id, location: 'Office', condition_grade: 'good' });
   itemService.create({
-    name: 'Camera', category_id: cameras.id, parent_item_id: box.id, condition: ' ',
+    name: 'Camera', category_id: cameras.id, parent_item_id: box.id, condition_notes: 'Notes alone are not a Condition',
     purchase_date: '2026-01-31', purchase_price: { amount: '100', currency: 'usd' }, serial_number: ' SN-1 '
   });
   itemService.create({ name: 'Lens', category_id: cameras.id, purchase_date: '2026-02-01' });
@@ -757,7 +755,7 @@ test('using a template yields an item draft that survives deleted fields and blo
   const capacity = customFieldService.create(drives.id, { name: 'Capacity', type: 'text' });
   const rpm = customFieldService.create(drives.id, { name: 'RPM', type: 'number' });
   const template = itemTemplateService.create({
-    name: 'IronWolf 4 TB', category_id: drives.id, item_name: 'Seagate IronWolf 4 TB', condition: 'New',
+    name: 'IronWolf 4 TB', category_id: drives.id, item_name: 'Seagate IronWolf 4 TB', condition_grade: 'excellent', condition_notes: 'Sealed',
     transferred_to: 'Office', field_values: { [capacity.id]: '4 TB', [rpm.id]: '5400' }
   });
 
@@ -766,7 +764,8 @@ test('using a template yields an item draft that survives deleted fields and blo
     templateName: 'IronWolf 4 TB',
     categoryId: drives.id,
     baseFields: {
-      name: 'Seagate IronWolf 4 TB', description: null, is_new: null, condition: 'New', location: null, purchase_date: null,
+      name: 'Seagate IronWolf 4 TB', description: null, is_new: null, condition_grade: 'excellent', condition_notes: 'Sealed', location: null,
+      purchase_date: null,
       purchase_price: null, serial_number: null, transferred_to: 'Office'
     },
     dynamicFields: { [capacity.id]: '4 TB', [rpm.id]: '5400' },
@@ -775,9 +774,9 @@ test('using a template yields an item draft that survives deleted fields and blo
 
   // The item is saved from the reviewed draft and keeps no link to the template.
   const item = itemService.create({ ...draft.baseFields, name: 'Drive #1', category_id: draft.categoryId, field_values: draft.dynamicFields });
-  itemTemplateService.update(template.id, { name: 'IronWolf', category_id: drives.id, condition: 'Used' });
+  itemTemplateService.update(template.id, { name: 'IronWolf', category_id: drives.id, condition_grade: 'fair', condition_notes: 'Used' });
   const loaded = itemService.get(item.id);
-  assert.equal(loaded.condition, 'New');
+  assert.deepEqual([loaded.condition_grade, loaded.condition_notes], ['excellent', 'Sealed']);
   assert.deepEqual(loaded.fields.map(field => field.value), ['4 TB', '5400']);
   itemTemplateService.remove(template.id);
   assert.equal(itemService.get(item.id).name, 'Drive #1');

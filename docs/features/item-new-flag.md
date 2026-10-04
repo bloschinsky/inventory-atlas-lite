@@ -1,11 +1,13 @@
 # New item flag
 
 Every item has a core yes/no **New** attribute that records whether it is new (unused) or not. It is
-separate from **Condition**, which stays free text describing the physical state:
+separate from the [Condition grade and Condition Notes](condition-grading.md), which describe the
+physical state:
 
 ```text
 New: Yes             New: No
-Condition: Excellent Condition: Good, minor scratches on body
+Condition: Poor      Condition: Excellent
+                     Condition Notes: Minor scratches on body
 ```
 
 ## Behavior
@@ -25,8 +27,9 @@ Condition: Excellent Condition: Good, minor scratches on body
   told to set it only when the user says the item is new or unused, or readable labeling or context
   states it, and never because of a box, clean packaging, a pristine look, or no visible wear.
 
-Condition is never parsed or rewritten: existing values such as `New`, `Like new`, or `Used once` stay
-exactly as they were, and no lifecycle state is inferred from them.
+Condition is never parsed to set the flag: old free-text values such as `New`, `Like new`, or
+`Used once` stay exactly as they were (since schema version 7 as Condition Notes), and no lifecycle
+state is inferred from them. The flag never sets a grade either.
 
 ## Implementation
 
@@ -67,6 +70,6 @@ exactly as they were, and no lifecycle state is inferred from them.
 
 ## Limitations
 
-- New is a single yes/no attribute; there is no New/Used/Refurbished lifecycle, no condition presets,
-  and no automatic cleanup of old Condition values such as `New`.
+- New is a single yes/no attribute; there is no New/Used/Refurbished lifecycle and no automatic
+  cleanup of old Condition Notes such as `New`.
 - Bulk Replace Value and the Dashboard do not use the flag.

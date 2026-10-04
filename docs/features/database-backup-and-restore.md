@@ -45,9 +45,9 @@ backup become the active database. It is not a merge, an import, or a selective 
   closed connection. Statements and transactions in the repositories are therefore built when
   they are used, never at module load.
 - `applySchema()` creates the tables, runs the additive column migrations, and stamps
-  `PRAGMA user_version` with `SCHEMA_VERSION` (currently `6`; version 2 added the item template
+  `PRAGMA user_version` with `SCHEMA_VERSION` (currently `7`; version 2 added the item template
   tables, version 3 the [database metadata](database-metadata.md) table, whose UUID, name, and
-  timestamps a restore brings back unchanged, version 4 the [checklist](checklists.md) tables, version 5 `items.last_verified_at` with the container audit columns of `checklist_runs`, and version 6 the [New flag](item-new-flag.md) columns `items.is_new`, which existing items receive as `0`, and the nullable `item_templates.is_new`). It runs as one transaction. Databases written before
+  timestamps a restore brings back unchanged, version 4 the [checklist](checklists.md) tables, version 5 `items.last_verified_at` with the container audit columns of `checklist_runs`, and version 6 the [New flag](item-new-flag.md) columns `items.is_new`, which existing items receive as `0`, and the nullable `item_templates.is_new`, and version 7 the [Condition grade](condition-grading.md): the free-text `condition` of items and templates renamed to `condition_notes` with every value kept, and a new `condition_grade` that starts unset). It runs as one transaction. Databases written before
   this feature report `0` and are upgraded in place; a version 1
   backup gains the empty template tables on its staged copy. `CORE_SCHEMA` is the shape every version of the application
   has had and is used to recognize a backup; `CURRENT_SCHEMA` is what the running application needs.
