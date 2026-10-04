@@ -42,7 +42,7 @@ test('creates an item, finds it in the list, and edits its values', async ({ pag
   await expect(page.getByRole('link', { name: itemName, exact: true })).toBeVisible();
 
   await page.getByRole('link', { name: itemName, exact: true }).click();
-  await expect(detail(page, 'New')).toHaveText('Yes');
+  await expect(detail(page, 'New')).toHaveText('New');
   await expect(detail(page, 'Condition')).toHaveText('Good');
   await expect(detail(page, 'Location')).toHaveText('Shelf A');
   await expect(detail(page, 'Purchase Date')).toContainText('2024');
@@ -68,7 +68,7 @@ test('creates an item, finds it in the list, and edits its values', async ({ pag
   await page.getByRole('button', { name: 'Save item' }).click();
 
   await expect(page.getByRole('heading', { name: renamed })).toBeVisible();
-  await expect(detail(page, 'New')).toHaveText('No');
+  await expect(detail(page, 'New')).toHaveText('Used');
   await expect(detail(page, 'Condition')).toHaveText('Excellent');
   await expect(detail(page, 'Purchase Price')).toHaveText('€39.50');
   await expect(detail(page, 'Serial Number')).toHaveText('12A/9382-B');

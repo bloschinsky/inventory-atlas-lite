@@ -269,6 +269,10 @@
     "editItem": "Редагувати {name}",
     "transferredTo": "Передано: {name}",
     "inheritedLocation": "Показане місце успадковано від батьківського контейнера.",
+    "newStatus": {
+      "new": "Новий",
+      "used": "Вживаний"
+    },
     "fields": {
       "name": "Назва",
       "category": "Категорія",

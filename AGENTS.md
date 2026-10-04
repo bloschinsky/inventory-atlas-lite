@@ -109,6 +109,7 @@ The project stays small and readable. Do not add:
 - `client/src/capabilities.js` — shared visibility state of optional features, loaded once from `/api/capabilities`.
 - `client/src/pages/ItemsList.vue` — item list, search, filtering, column choice, sorting, and pagination.
 - `client/src/components/ItemResults.vue` — the item table and phone cards, rendered from the visible column list.
+- `client/src/components/ItemNewStatusBadge.vue` — the read-only New/Used badge of the core New flag, shared by the item table, cards, and details.
 - `client/src/itemColumns.js` — Items view column labels, cell text formatting, and its preference storage key.
 - `client/src/useTablePreferences.js` — reusable browser-local table view state: visible columns, sort, reset, and reconciliation with the current columns.
 - `client/src/components/TableColumnPicker.vue` and `SortableHeader.vue` — reusable Columns menu and sortable table header cell.

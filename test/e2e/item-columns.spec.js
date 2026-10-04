@@ -48,10 +48,10 @@ test('the Columns control shows, hides, keeps, and resets item columns', async (
   await expect(table.getByRole('columnheader', { name: fieldName })).toHaveCount(1);
   await expect(table.getByRole('row').filter({ hasText: `${token} camera` })).toContainText('Leica');
   await expect(table.getByRole('row').filter({ hasText: `${token} camera` })).toContainText('SN-CAM');
-  // New is shown as a localized yes/no value, and its header sorts the list like any other column.
+  // New is shown as a localized New/Used badge, and its header sorts the list like any other column.
   await expect(table.getByRole('columnheader', { name: 'New', exact: true })).toBeVisible();
-  await expect(table.getByRole('row').filter({ hasText: `${token} camera` })).toContainText('Yes');
-  await expect(table.getByRole('row').filter({ hasText: `${token} amplifier` })).toContainText('No');
+  await expect(table.getByRole('row').filter({ hasText: `${token} camera` })).toContainText('New');
+  await expect(table.getByRole('row').filter({ hasText: `${token} amplifier` })).toContainText('Used');
   await expect(table.getByRole('row').filter({ hasText: `${token} amplifier` })).toContainText('Marantz');
 
   // The choice is a preference of this browser and survives a reload.

@@ -269,6 +269,10 @@
     "editItem": "Edit {name}",
     "transferredTo": "Transferred to: {name}",
     "inheritedLocation": "Displayed location is inherited from the parent container.",
+    "newStatus": {
+      "new": "New",
+      "used": "Used"
+    },
     "fields": {
       "name": "Name",
       "category": "Category",

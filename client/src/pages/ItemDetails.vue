@@ -7,6 +7,7 @@ import { formatDate, formatDateTime, formatMoney } from '../i18n/index.js';
 import AuditContentsDialog from '../components/AuditContentsDialog.vue';
 import ChecklistRunHistory from '../components/ChecklistRunHistory.vue';
 import ItemPhotoViewer from '../components/ItemPhotoViewer.vue';
+import ItemNewStatusBadge from '../components/ItemNewStatusBadge.vue';
 import ItemQrDialog from '../components/ItemQrDialog.vue';
 import ItemThumbnail from '../components/ItemThumbnail.vue';
 
@@ -145,7 +146,7 @@ onMounted(load);
                 {{ $t('items.fields.isNew') }}
               </dt>
               <dd class="col-sm-8">
-                {{ item.is_new ? $t('common.yes') : $t('common.no') }}
+                <ItemNewStatusBadge :is-new="item.is_new" />
               </dd>
               <dt class="col-sm-4">
                 {{ $t('items.fields.condition') }}

@@ -259,7 +259,8 @@ unusable, the message explains why and your description stays in the modal for a
 1. Open **Items** and press **Add item**. If no category exists yet, the form tells you to create one
    first and links to **Manage categories**.
 2. Fill in **Name** and choose a **Category**. Both are required.
-3. Turn on **New** if the item is new or unused; it starts off. **Condition** stays a separate free
+3. Turn on **New** if the item is new or unused; it starts off. The item page and the **New** list
+   column show it as a green **New** or an amber **Used** badge. **Condition** stays a separate free
    text for the physical state, such as *Excellent* or *Good, minor scratches on body*.
    Optionally fill in **Condition**, **Location**, **Transferred To**, **Purchase Date**, **Purchase
    Price**, **Serial Number**, **Stored inside**, and **Description**. Purchase Price has separate amount and currency

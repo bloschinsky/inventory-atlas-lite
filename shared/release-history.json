@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.49.1",
+    "date": "2026-10-04",
+    "changes": [
+      "The New field now reads at a glance: item pages and the New column of the Items list show a green New or an amber Used badge instead of Yes or No. Editing still uses the same New switch, and sorting by the column works as before."
+    ]
+  },
+  {
     "version": "0.49.0",
     "date": "2026-10-04",
     "changes": [
