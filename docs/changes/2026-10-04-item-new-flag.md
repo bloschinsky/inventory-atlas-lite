@@ -60,3 +60,7 @@ physical state. Nothing is parsed from or written to Condition.
   (21/21). Playwright now covers toggling New on create and edit and reading it on Item details, the
   template default flowing into the item form, Duplicate, the Columns picker with Yes/No cells, and
   the batch preview switch and refusal of a non-boolean `new`.
+- Release: the `v0.48.0` Release workflow stopped in `npm run test:e2e` with 119 passed and 1
+  failed, so no release was published. The new New-switch step of `test/e2e/items.spec.js` was blocked
+  by the expanded folded-hover sidebar on Linux headless Chromium; 0.48.1 fixes the test and publishes
+  this feature (see `2026-10-04-item-new-flag-release-test.md`).

@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.48.1",
+    "date": "2026-10-04",
+    "changes": [
+      "Publishes the New item field from 0.48.0, whose release was stopped by a browser test that failed only on the release server. The test now waits correctly; the application itself is unchanged."
+    ]
+  },
+  {
     "version": "0.48.0",
     "date": "2026-10-04",
     "changes": [

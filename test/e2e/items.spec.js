@@ -9,6 +9,8 @@ test('creates an item, finds it in the list, and edits its values', async ({ pag
   const itemName = unique('Rangefinder');
 
   await page.goto('/items/new');
+  // A fresh headless page keeps the pointer at (0, 0), which expands the folded sidebar over the New switch.
+  await page.mouse.move(600, 400);
   await page.getByLabel('Name *').fill(itemName);
   await page.getByLabel('Category *').selectOption({ label: categoryName });
   // New is a switch of its own; Condition stays free text.
