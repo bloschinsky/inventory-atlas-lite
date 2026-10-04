@@ -22,7 +22,7 @@ export class CustomFieldRepository {
   }
 
   findById(id) {
-    return this.db.prepare('SELECT id, type FROM custom_fields WHERE id = ?').get(id);
+    return this.db.prepare('SELECT id, category_id, name, type FROM custom_fields WHERE id = ?').get(id);
   }
 
   findByIds(ids) {
@@ -47,6 +47,11 @@ export class CustomFieldRepository {
       const insertField = this.db.prepare('INSERT INTO custom_fields (category_id, name, type) VALUES (?, ?, ?)');
       return fields.map(field => insertField.run(categoryId, field.name, field.type).lastInsertRowid);
     })();
+  }
+
+  // Only the name changes: values stay linked to the same field id.
+  updateName(id, name) {
+    return this.db.prepare('UPDATE custom_fields SET name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(name, id).changes;
   }
 
   deleteById(id) {

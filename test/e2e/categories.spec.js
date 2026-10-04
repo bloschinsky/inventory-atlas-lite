@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { createCategory, setAiEnabled, unique } from './helpers.js';
+import { createCategory, createItem, detail, setAiEnabled, unique } from './helpers.js';
 
 test.beforeEach(async ({ request }) => { await setAiEnabled(request, true); });
 
@@ -25,6 +25,34 @@ test('creates a category and its custom fields', async ({ page }) => {
 
   // The category summary reflects both new fields once the list reloads.
   await expect(entry).toContainText('0 items · 2 fields');
+});
+
+test('renames a custom field and keeps its saved values under the new label', async ({ page, request }) => {
+  const categoryName = unique('Rename Cameras');
+  const category = await createCategory(request, categoryName, [{ name: 'Manufactuer', type: 'text' }, { name: 'Model', type: 'text' }]);
+  const [field] = await (await request.get(`/api/categories/${category.id}/fields`)).json();
+  const item = await createItem(request, { name: unique('Rename F3'), category_id: category.id, field_values: { [field.id]: 'Nikon' } });
+  await page.goto('/categories');
+  await page.mouse.move(600, 400);
+  await page.getByRole('button').filter({ hasText: categoryName }).click();
+
+  // A name taken in the category is refused, and the field keeps its name.
+  const row = name => page.getByRole('listitem').filter({ hasText: name });
+  page.once('dialog', dialog => dialog.accept('model'));
+  await row('Manufactuer').getByRole('button', { name: 'Rename' }).click();
+  await expect(page.getByRole('alert')).toContainText('Field "model" already exists in this category.');
+  await expect(row('Manufactuer')).toBeVisible();
+
+  page.once('dialog', dialog => dialog.accept('Manufacturer'));
+  await row('Manufactuer').getByRole('button', { name: 'Rename' }).click();
+  await expect(row('Manufacturer')).toContainText('Text');
+  await expect(page.getByRole('alert')).toBeHidden();
+  await expect(page.getByRole('listitem').filter({ hasText: 'Manufactuer' })).toHaveCount(0);
+
+  await page.goto(`/items/${item.uuid}`);
+  await expect(detail(page, 'Manufacturer')).toHaveText('Nikon');
+  await page.getByRole('link', { name: 'Edit' }).click();
+  await expect(page.getByLabel('Manufacturer')).toHaveValue('Nikon');
 });
 
 test('batch add fields reviews a pasted document before creating the fields', async ({ page, request }) => {

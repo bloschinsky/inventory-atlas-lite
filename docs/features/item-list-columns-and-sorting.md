@@ -77,7 +77,9 @@ server before the page is cut, and the view choice is remembered in the browser.
 - Preferences are stored under `inventory-atlas.items.view` in `localStorage`. Once the catalog
   loads, keys that no longer exist are dropped, a default-visible column that the saved state has
   never offered is added, and an unknown sort returns to Name ascending. Blocked storage only loses
-  the persistence.
+  the persistence. Renaming a custom field changes its column key, so the column can split from or
+  merge into another one, and the old key is dropped the same way (see
+  [Rename custom fields](rename-custom-fields.md)).
 
 ## Verification
 

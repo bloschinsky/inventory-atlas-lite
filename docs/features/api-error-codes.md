@@ -32,7 +32,7 @@ the same as before the migration.
 | Situation | Status | Code |
 | --- | --- | --- |
 | Application or domain rule | its own status (400, 404, 409, 422, 502, 503, 504, …) | the specific code, such as `ITEM_NOT_FOUND`, `CATEGORY_IN_USE`, `INVALID_PURCHASE_PRICE_AMOUNT` |
-| Unique name conflict from SQLite | 409 | `DUPLICATE_NAME` |
+| Unique name conflict from SQLite | 409 | `DUPLICATE_NAME` (a custom field rename answers `FIELD_ALREADY_EXISTS` instead) |
 | Upload limit or bad multipart request | 400 | `UPLOAD_FILE_TOO_LARGE`, `UPLOAD_TOO_MANY_FILES`, `UPLOAD_UNEXPECTED_FILE`, `UPLOAD_FAILED` |
 | Unparsable or oversized JSON body | 400 / 413 | `INVALID_JSON_BODY`, `REQUEST_TOO_LARGE` |
 | Writes during a restore or reset | 503 | `DATABASE_MAINTENANCE` |

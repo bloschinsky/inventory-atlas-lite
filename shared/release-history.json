@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.49.0",
+    "date": "2026-10-04",
+    "changes": [
+      "Custom fields can now be renamed on Categories & Fields with the new Rename button. The field keeps its type and category, and every value already saved on items and templates stays and appears under the new name.",
+      "Items list columns, Batch Add from JSON, and AI Add Item use the new name right away. Same-name fields of the same type still share one column, so a rename can split a shared column or join an existing one."
+    ]
+  },
+  {
     "version": "0.48.1",
     "date": "2026-10-04",
     "changes": [

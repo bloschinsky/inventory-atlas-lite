@@ -189,10 +189,19 @@ partial first day through today.
    *Fields for* the selected category.
 2. Enter a **Field name**, pick the type, and press **Add**. Field names are unique within a
    category.
-3. Press **Delete** next to a field to remove it. The confirmation warns that saved values may also
+3. Press **Rename** next to a field, enter the new name, and confirm. The field keeps its type and
+   category, and every value already saved on items and templates stays and appears under the new
+   name. The new name must still be unique within the category, ignoring case.
+4. Press **Delete** next to a field to remove it. The confirmation warns that saved values may also
    be deleted — deleting a field deletes that field's values on every item of the category.
 
 Field types are fixed after creation; to change a type, delete the field and add a new one.
+
+After a rename, use the new name in Batch Add from JSON: the generated template already does, and a
+document that still uses the old name is refused as an unknown custom field. On **Items**, columns
+follow the new name: same-name, same-type fields of different categories merge into one column, so a
+rename can split a merged column or join an existing one. A column you had shown under the old name
+is no longer shown; turn the column of the new name on under **Columns**.
 
 ### Add several fields at once
 
@@ -1046,8 +1055,9 @@ backup, and keep the copies on a different machine than the server.
   changes its location, container, or any other item data except **Last verified**. A completed run
   cannot be edited or deleted; run it again instead.
 - Deleting a custom field also deletes the values saved for it on every item of that category.
-- Custom field types cannot be changed after creation, and categories cannot be merged. The batch
-  editor only creates new fields; it never renames or retypes existing ones.
+- Custom field types cannot be changed after creation, a field cannot move to another category, and
+  categories cannot be merged. Fields are renamed one at a time on **Categories & Fields**; the batch
+  editor only creates new fields and never renames or retypes existing ones.
 - Restore replaces the whole inventory from a full SQLite backup. There is no merge, no selective
   restore of single items or categories, and no CSV import or any export.
 - **Batch Add from JSON** only creates new items, at most 100 per batch, in one existing category.

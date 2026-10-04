@@ -98,6 +98,8 @@ category templates.
   [AI Add Fields](ai-add-fields.md) reuses this editor to review an AI-generated document.
 - Category templates, schema export, and import from an uploaded file are not part of this feature.
 - Existing fields cannot be renamed or retyped from the batch editor; it only creates new fields.
+  A single field is renamed from the field list (see [Rename custom fields](rename-custom-fields.md)).
+  The name rules are shared through `fieldNameError()` in `shared/fieldDefinitions.js`.
 
 ## Verification
 

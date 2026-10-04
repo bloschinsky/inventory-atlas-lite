@@ -1,6 +1,8 @@
 import { httpError } from '../httpError.js';
 import { requiredText } from '../../../shared/itemValidation.js';
-import { FIELD_TYPES, blockingRows, creatableFields, readFieldDefinitionDocument, reviewFieldDefinitions } from '../../../shared/fieldDefinitions.js';
+import {
+  FIELD_TYPES, blockingRows, creatableFields, fieldNameError, readFieldDefinitionDocument, reviewFieldDefinitions, sameFieldName
+} from '../../../shared/fieldDefinitions.js';
 
 const allowedTypes = new Set(FIELD_TYPES.map(type => type.value));
 
@@ -39,9 +41,38 @@ export class CustomFieldService {
     return this.fields.findByIds(this.fields.insertMany(category.id, creatableFields(rows)));
   }
 
-  suggestions(fieldId, { search, limit }) {
+  requireField(fieldId) {
     const field = this.fields.findById(fieldId);
     if (!field) throw httpError(404, 'FIELD_NOT_FOUND');
+    return field;
+  }
+
+  /*
+    Renames the field in place. Its id, type, and category never change, so every item and template
+    value linked to it is kept exactly as stored. Only `name` may be sent.
+  */
+  rename(fieldId, input) {
+    const field = this.requireField(fieldId);
+    const unsupported = Object.keys(input ?? {}).find(property => property !== 'name');
+    if (unsupported) throw httpError(400, 'FIELD_UPDATE_UNSUPPORTED_PROPERTY', { property: unsupported });
+    const name = typeof input?.name === 'string' ? input.name.trim() : '';
+    if (name === field.name) return field;
+    const problem = fieldNameError(name);
+    if (problem) throw httpError(400, problem.code, problem.params);
+    const taken = () => httpError(409, 'FIELD_ALREADY_EXISTS', { name });
+    if (this.fields.listByCategory(field.category_id).some(other => other.id !== field.id && sameFieldName(other.name, name))) throw taken();
+    try {
+      if (!this.fields.updateName(field.id, name)) throw httpError(404, 'FIELD_NOT_FOUND');
+    } catch (error) {
+      // The UNIQUE(category_id, name) constraint stays the final authority over a conflicting write.
+      if (error?.code === 'SQLITE_CONSTRAINT_UNIQUE') throw taken();
+      throw error;
+    }
+    return this.requireField(field.id);
+  }
+
+  suggestions(fieldId, { search, limit }) {
+    const field = this.requireField(fieldId);
     if (field.type !== 'text') throw httpError(400, 'SUGGESTIONS_TEXT_ONLY');
     return this.fields.listValueSuggestions(
       field.id,

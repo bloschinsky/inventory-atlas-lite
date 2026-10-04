@@ -69,14 +69,23 @@ export function parseFieldDefinitionDocument(text) {
   return readFieldDefinitionDocument(document);
 }
 
+// The naming rules every field name follows, whether it arrives in a batch or as a rename.
+export function fieldNameError(name) {
+  if (!name) return { code: 'FIELD_NAME_REQUIRED', params: {} };
+  if (name.length > MAX_FIELD_NAME_LENGTH) return { code: 'FIELD_NAME_TOO_LONG', params: { max: MAX_FIELD_NAME_LENGTH } };
+  if (reservedNames.has(key(name))) return { code: 'FIELD_NAME_RESERVED', params: { name } };
+  return null;
+}
+
+export const sameFieldName = (first, second) => key(first) === key(second);
+
 // A blocked row carries its reason as { code, params }, the same body the API refuses the batch with.
 const blocked = (status, code, params = {}) => ({ status, error: { code, params } });
 
 const reviewOne = (draft, existing, seen) => {
   const name = String(draft.name ?? '').trim();
-  if (!name) return blocked('invalid', 'FIELD_NAME_REQUIRED');
-  if (name.length > MAX_FIELD_NAME_LENGTH) return blocked('invalid', 'FIELD_NAME_TOO_LONG', { max: MAX_FIELD_NAME_LENGTH });
-  if (reservedNames.has(key(name))) return blocked('invalid', 'FIELD_NAME_RESERVED', { name });
+  const nameError = fieldNameError(name);
+  if (nameError) return blocked('invalid', nameError.code, nameError.params);
   if (!supportedTypes.has(draft.type)) return blocked('invalid-type', 'UNSUPPORTED_FIELD_TYPE', { type: draft.type || '—' });
   if (draft.required) return blocked('invalid', 'REQUIRED_FIELD_UNSUPPORTED', { name });
   if (existing.has(key(name))) return blocked('exists', 'FIELD_ALREADY_EXISTS', { name });

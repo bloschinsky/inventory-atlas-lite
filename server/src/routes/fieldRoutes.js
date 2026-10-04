@@ -16,6 +16,7 @@ export const createFieldRoutes = ({ customFieldService, aiFieldService }) => {
   router.get('/api/fields/:id/suggestions', (req, res) => {
     res.json(customFieldService.suggestions(req.params.id, { search: req.query.search, limit: req.query.limit }));
   });
+  router.patch('/api/fields/:id', (req, res) => res.json(customFieldService.rename(req.params.id, req.body)));
   router.delete('/api/fields/:id', (req, res) => {
     customFieldService.remove(req.params.id, req.query.confirm === 'true');
     res.status(204).end();

@@ -19,6 +19,7 @@ async function rename(category) { const name = prompt(t('categories.renamePrompt
 async function removeCategory(category) { if (!confirm(t('categories.confirmDelete', { name: category.name }))) return; try { await api(`/api/categories/${category.id}`, { method: 'DELETE' }); if (selected.value?.id === category.id) { selected.value = null; fields.value = []; } await load(); } catch (e) { error.value = e.message; } }
 async function addField() { try { await api(`/api/categories/${selected.value.id}/fields`, jsonOptions('POST', newField.value)); newField.value = { name: '', type: 'text' }; await select(selected.value); await load(); } catch (e) { error.value = e.message; } }
 async function batchCreated() { dialogMode.value = ''; await select(selected.value); await load(); }
+async function renameField(field) { const name = prompt(t('categories.renameFieldPrompt'), field.name); if (!name || name === field.name) return; try { await api(`/api/fields/${field.id}`, jsonOptions('PATCH', { name })); error.value = ''; await select(selected.value); } catch (e) { error.value = e.message; } }
 async function removeField(field) { if (!confirm(t('categories.confirmDeleteField', { name: field.name }))) return; try { await api(`/api/fields/${field.id}?confirm=true`, { method: 'DELETE' }); await select(selected.value); await load(); } catch (e) { error.value = e.message; } }
 onMounted(() => load().catch(e => error.value = e.message));
 </script>
@@ -162,12 +163,18 @@ onMounted(() => load().catch(e => error.value = e.message));
               :key="field.id"
               class="list-group-item d-flex justify-content-between align-items-center"
             >
-              <span>{{ field.name }} <span class="badge bg-blue-lt">{{ $t(`fieldTypes.${field.type}`) }}</span></span><button
+              <span>{{ field.name }} <span class="badge bg-blue-lt">{{ $t(`fieldTypes.${field.type}`) }}</span></span><span class="d-flex gap-1"><button
+                type="button"
+                class="btn btn-outline-secondary btn-sm"
+                @click="renameField(field)"
+              >
+                {{ $t('common.rename') }}
+              </button><button
                 class="btn btn-outline-danger btn-sm"
                 @click="removeField(field)"
               >
                 {{ $t('common.delete') }}
-              </button>
+              </button></span>
             </li><li
               v-if="!fields.length"
               class="list-group-item text-secondary"

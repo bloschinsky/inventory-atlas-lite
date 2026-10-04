@@ -132,7 +132,7 @@ The project stays small and readable. Do not add:
 - `client/src/components/BulkMoveDialog.vue` — the Items list **Move to…** dialog: destination search, the selection-root summary, confirmation, and the bulk move.
 - `client/src/pages/ScanQr.vue` — `/scan`: live camera and image QR scanning that opens the matching item.
 - `client/src/qrScan.js` — local QR decoding with the bundled `jsqr` and classification of the scanned text.
-- `client/src/pages/Categories.vue` — category and custom field management.
+- `client/src/pages/Categories.vue` — category and custom field management, including renaming a field in place.
 - `client/src/pages/DataBackup.vue` — SQLite backup download, restore, and the Danger Zone.
 - `client/src/components/BulkReplaceValue.vue` — the Data page card that previews and applies the replacement of one exact field value on every matching item.
 - `client/src/components/ResetDatabaseDialog.vue` — impact review and confirmation of the inventory reset.
@@ -164,6 +164,7 @@ The project stays small and readable. Do not add:
 - `server/src/db.js` — database path, SQLite connection, PRAGMAs, current table/index schema, the database metadata row and its write triggers, and the fresh-database initializer used by the reset.
 - `test/e2e.test.js` — end-to-end acceptance test for the API, persistence, photos, and backups.
 - `test/services.test.js` — service-level regression tests that run without HTTP against a temporary database.
+- `test/custom-field-rename.test.js` — custom field rename: unchanged ids, types, categories, and item and template values, name validation and conflicts, column split and merge, Batch Add names, and the `PATCH /api/fields/:id` contract.
 - `test/item-new-flag.test.js` — the core New flag: schema and the version 6 migration, restore validation, strict boolean validation, list sorting, the column catalog, template defaults, and batch import.
 - `test/serverProcess.js` — starts and stops the real server for the API tests on a free port chosen by the operating system (`PORT=0`), reading the bound port from its listening line.
 - `test/hierarchy.test.js` — the hierarchy endpoint (shape, inherited location, one statement), the Location and Category projection rules, per-grouping expansion, and the Graph layout.

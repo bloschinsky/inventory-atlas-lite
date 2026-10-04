@@ -359,6 +359,30 @@ test('AI Add Fields runs through the provider abstraction and keeps its own vali
   await rejects(aiFieldService.generateForCategory(category.id, 'Old PC cards'), 502, 'AI_INVALID_FIELDS');
 });
 
+test('AI flows read a renamed field under its new name and the same id', async () => {
+  let reply = () => ({ version: 1, fields: [{ name: 'manufacturer', type: 'text', required: false }] });
+  const features = buildFeatures({ settings: ollama, reply: request => reply(request) });
+  const category = features.categoryService.create({ name: 'Sound Cards' });
+  const maker = features.customFieldService.create(category.id, { name: 'Manufactuer', type: 'text' });
+  features.customFieldService.rename(maker.id, { name: 'Manufacturer' });
+
+  // AI Add Fields sees the current name, and its draft still goes through the duplicate-name review.
+  const draft = await features.aiFieldService.generateForCategory(category.id, 'Sound cards');
+  assert.deepEqual(JSON.parse(features.calls[0].request.input).existingFields, ['Manufacturer']);
+  assert.throws(() => features.customFieldService.createBatch(category.id, draft), { code: 'FIELD_ALREADY_EXISTS' });
+
+  // AI Add Item receives the renamed field with its unchanged id and fills it by that id.
+  reply = () => ({
+    observedMarkings: [], categoryId: category.id, confidence: 0.9, needsDetailedImageAnalysis: false,
+    baseFields: { name: 'Sound Blaster', description: null, condition: null, location: null, purchase_date: null, purchase_price_amount: null, purchase_price_currency: null, serial_number: null },
+    dynamicFields: [{ fieldId: maker.id, value: 'Creative' }], warnings: []
+  });
+  const item = await features.aiItemAnalysisService.analyze(null, 'Creative sound card');
+  assert.match(features.calls[1].request.input, new RegExp(`"id":${maker.id},"name":"Manufacturer"`));
+  assert.doesNotMatch(features.calls[1].request.input, /Manufactuer/);
+  assert.deepEqual(item.dynamicFields, { [maker.id]: 'Creative' });
+});
+
 test('AI Add Item accepts text with any model and photos only with a model that can read them', async () => {
   const draft = categoryId => ({
     observedMarkings: [], categoryId, confidence: 0.8, needsDetailedImageAnalysis: false,

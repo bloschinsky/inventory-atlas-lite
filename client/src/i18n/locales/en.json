@@ -585,6 +585,7 @@
     "fieldType": "Field type",
     "noFields": "No custom fields.",
     "renamePrompt": "New category name:",
+    "renameFieldPrompt": "New field name. Saved values stay with the field:",
     "confirmDelete": "Delete category “{name}”?",
     "confirmDeleteField": "Delete field “{name}”? Saved values may also be deleted."
   },
@@ -1062,6 +1063,7 @@
     "FIELD_NAME_TOO_LONG": "Field name must be {max} characters or fewer.",
     "FIELD_NOT_FOUND": "Field not found.",
     "FIELD_NOT_IN_CATEGORY": "Field {fieldId} does not belong to the selected category.",
+    "FIELD_UPDATE_UNSUPPORTED_PROPERTY": "Only the field name can be changed; \"{property}\" cannot be updated.",
     "FIELD_VALUES_NOT_OBJECT": "Field values must be an object.",
     "GITHUB_INVALID_RESPONSE": "GitHub returned an unexpected response.",
     "GITHUB_RATE_LIMITED": "GitHub is rate limiting update checks. Try again later.",

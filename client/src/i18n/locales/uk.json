@@ -585,6 +585,7 @@
     "fieldType": "Тип поля",
     "noFields": "Власних полів немає.",
     "renamePrompt": "Нова назва категорії:",
+    "renameFieldPrompt": "Нова назва поля. Збережені значення залишаться в полі:",
     "confirmDelete": "Видалити категорію «{name}»?",
     "confirmDeleteField": "Видалити поле «{name}»? Збережені значення також можуть бути видалені."
   },
@@ -1062,6 +1063,7 @@
     "FIELD_NAME_TOO_LONG": "Назва поля має містити не більше {max} символів.",
     "FIELD_NOT_FOUND": "Поле не знайдено.",
     "FIELD_NOT_IN_CATEGORY": "Поле {fieldId} не належить до вибраної категорії.",
+    "FIELD_UPDATE_UNSUPPORTED_PROPERTY": "Змінити можна лише назву поля; «{property}» оновити не можна.",
     "FIELD_VALUES_NOT_OBJECT": "Значення полів мають бути об'єктом.",
     "GITHUB_INVALID_RESPONSE": "GitHub повернув неочікувану відповідь.",
     "GITHUB_RATE_LIMITED": "GitHub обмежує частоту перевірок оновлень. Спробуйте пізніше.",
