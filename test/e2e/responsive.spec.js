@@ -45,7 +45,7 @@ test.describe('narrow screens', () => {
   test('the items page shows touch-friendly cards instead of the desktop table', async ({ page, request }) => {
     const category = await createCategory(request, unique('Torches'));
     const itemName = unique('Head torch');
-    await createItem(request, { name: itemName, category_id: category.id, condition: 'Good', location: 'Shelf B' });
+    await createItem(request, { name: itemName, category_id: category.id, condition_grade: 'good', location: 'Shelf B' });
 
     await page.goto('/items');
     await page.getByPlaceholder('Search name, description, serial number, transferred to or text fields…').fill(itemName);

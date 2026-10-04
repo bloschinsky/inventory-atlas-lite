@@ -54,5 +54,5 @@ input: suggestions speed up typing, they do not restrict what can be saved.
 - Suggestions are derived from saved values only. There is no dictionary table, no administration
   page, and no way to delete or rename a suggestion other than changing the saved item values.
 - Matching is prefix-based; there is no fuzzy search or typo correction.
-- Autocomplete is not enabled for the item name, description, condition, or location. Transferred
+- Autocomplete is not enabled for the item name, description, condition notes, or location. Transferred
   To has its own suggestions over the saved values of that base field.

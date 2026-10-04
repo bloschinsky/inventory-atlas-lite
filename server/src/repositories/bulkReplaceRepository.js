@@ -1,6 +1,7 @@
 // The item columns a bulk replacement may write, by their Items column key. A request only ever
-// selects a key here, never SQL.
-const CORE_COLUMNS = { condition: 'condition', location: 'location', transferredTo: 'transferred_to' };
+// selects a key here, never SQL. Only free text belongs here: the structured Condition grade is never
+// written as arbitrary text, so only its Condition Notes can be replaced.
+const CORE_COLUMNS = { conditionNotes: 'condition_notes', location: 'location', transferredTo: 'transferred_to' };
 
 export const REPLACEABLE_CORE_KEYS = Object.keys(CORE_COLUMNS);
 

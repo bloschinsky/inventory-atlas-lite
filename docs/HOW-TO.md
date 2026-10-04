@@ -9,7 +9,7 @@ feature see [`features/README.md`](features/README.md).
 
 Inventory Atlas Lite is a small self-hosted catalogue of physical things you own: tools, cameras,
 lenses, cables, spare parts, boxes in the garage. For every item you record a name, a category,
-whether it is new, an optional condition, location, description, purchase details, serial number, where the item was
+whether it is new, an optional condition grade with condition notes, location, description, purchase details, serial number, where the item was
 transferred to, your own custom fields, and photos.
 
 All inventory records and original photo bytes live in one SQLite database on your server. Normal
@@ -156,13 +156,15 @@ separate fields, and they keep separate value suggestions.
    the keyboard), to apply it as the filter; the selected category stays blue while the others turn
    gray. Only the six largest categories are shown separately, with smaller groups combined under
    **Other**, which cannot be selected; an actively selected smaller category remains visible.
-4. **Condition breakdown** is a donut chart of the filtered items, with the count of every condition
-   listed below it.
+4. **Condition breakdown** is a donut chart of the filtered items by their **Condition** grade, always
+   in the order Excellent, Good, Fair, Poor, Broken, then **Not set**, with the same colors as the
+   Condition badges and the count of each listed below it. Condition Notes are not counted.
 5. **Placement status** counts each item exactly once: first as **Inside a container**, otherwise as
    **Direct location** when it has location text, or as **Unplaced**. It uses each item's own saved
    location, not the inherited one. Containers themselves remain normal inventory items.
 6. **Field coverage** shows, for Photos, Placement, Condition, Purchase date, Purchase price, and
-   Serial number separately, how many of the filtered items have the field filled in, both as a radar
+   Serial number separately, how many of the filtered items have the field filled in (Condition counts
+   items with a grade), both as a radar
    chart and as a list such as `82% (164 / 200)`. A purchase price counts only with both an amount
    and a currency. There is no combined score.
 7. **Items by location** counts the filtered items by the location the Items list displays: an item
@@ -261,9 +263,12 @@ unusable, the message explains why and your description stays in the modal for a
    first and links to **Manage categories**.
 2. Fill in **Name** and choose a **Category**. Both are required.
 3. Turn on **New** if the item is new or unused; it starts off. The item page and the **New** list
-   column show it as a green **New** or an amber **Used** badge. **Condition** stays a separate free
-   text for the physical state, such as *Excellent* or *Good, minor scratches on body*.
-   Optionally fill in **Condition**, **Location**, **Transferred To**, **Purchase Date**, **Purchase
+   column show it as a green **New** or an amber **Used** badge. **Condition** is separate from New:
+   choose one grade — **Excellent**, **Good**, **Fair**, **Poor**, or **Broken** — or leave it **Not
+   set**; the chosen grade is shown as its colored badge. Press the info button beside **Condition**
+   to open **Condition grading**, which explains every grade; close it with **Close**, ×, Escape, or a
+   click outside. Put details such as *Small crack near the left hinge* in **Condition Notes**.
+   Optionally fill in **Condition**, **Condition Notes**, **Location**, **Transferred To**, **Purchase Date**, **Purchase
    Price**, **Serial Number**, **Stored inside**, and **Description**. Purchase Price has separate amount and currency
    controls; clear the amount to leave the whole price unspecified.
 4. Values for the category's custom fields appear under **Category fields**. Text fields suggest
@@ -302,8 +307,8 @@ press **Save item** there.
 2. Enter a **Template name**, which is how the template is listed, and choose a **Category**. Both
    are required.
 3. Fill in only the values new items should start with: **Default item name**, **New** (**Not set**,
-   **No**, or **Yes**; Not set leaves new items at No), **Condition**,
-   **Location**, **Transferred To**, **Purchase Date**, **Purchase Price**, **Serial Number**,
+   **No**, or **Yes**; Not set leaves new items at No), **Condition** (a grade or **Not set**),
+   **Condition Notes**, **Location**, **Transferred To**, **Purchase Date**, **Purchase Price**, **Serial Number**,
    **Description**, and the category's custom fields. Every value is optional; an empty field stays
    empty in new items, and a Boolean field can stay **Not set**. Values are checked with the same
    rules as an item. Changing the category loads that category's fields.
@@ -416,7 +421,10 @@ audits, and deleting the container keeps its audits readable.
    attribute and every custom field of the chosen category, so it always matches the category's
    current fields. Fill it in, add or delete entries in `items`, or paste a document produced
    elsewhere. `"new": true` marks an item as new; leave it out or set `false` otherwise. Only
-   `true` or `false` is accepted, and `condition` is never used for it. A batch holds at most 100 items.
+   `true` or `false` is accepted. `"conditionGrade"` is one of `"excellent"`, `"good"`, `"fair"`,
+   `"poor"`, `"broken"`, or `null`, and `"conditionNotes"` is free text. Older documents with a
+   `"condition"` text are still accepted: that text becomes the Condition Notes, never a grade. A
+   batch holds at most 100 items.
 4. Press **Preview**. Nothing is saved yet. A document that cannot be read — invalid JSON, a
    different `category`, an unsupported property, an unknown custom field, more than 100 items — is
    reported as one message and stays in the editor for correction.
@@ -573,9 +581,11 @@ enables the live camera.
 1. Open **Items**.
 2. Type into **Search**. The search runs as you type and matches the item name, description, serial
    number, **Transferred To**, and the values of **text** custom fields — whether or not their column
-   is shown. It does not match condition, location, or number, date, and yes/no fields.
-3. Narrow the list with **Category** (**All categories** by default).
-4. Choose what the list shows with **Columns**: tick or untick Photo, Category, Condition, New, Location,
+   is shown. It does not match condition, condition notes, location, or number, date, and yes/no fields.
+3. Narrow the list with **Category** (**All categories** by default) and **Condition** (**All
+   conditions**, one grade, or **Not set**).
+4. Choose what the list shows with **Columns**: tick or untick Photo, Category, Condition, Condition
+   Notes, New, Location,
    **Stored inside**, Purchase Date, Purchase Price, Serial Number, Transferred To, Created, Updated,
    and your custom fields. **Name** always stays. Custom fields with the same name and type in
    different categories share one column, so one **Brand** column shows the brand of every category
@@ -584,6 +594,7 @@ enables the live camera.
    **Stored inside**. The choice and the sort are remembered in this browser only.
 5. On a wide screen, click a column header to sort by it; the first click sorts ascending, the next
    one descending, and an arrow marks the sorted column. Photo and **Stored inside** do not sort.
+   **Condition** sorts by grade from Broken to Excellent (or back), with **Not set** always last.
    Empty values are always listed last, numbers and prices sort by amount (whatever the currency),
    and dates by date. The sort covers the whole filtered list, not just the page on screen, and
    changing it returns to the first page.
@@ -725,7 +736,7 @@ Use this to fix inconsistent naming without editing items one by one, for exampl
 location `Garage` to `KP Garage` everywhere.
 
 1. Open **Data / Backup** and find **Replace field value**.
-2. Choose the **Field**: **Condition**, **Location**, or **Transferred To** change that value on items
+2. Choose the **Field**: **Condition Notes**, **Location**, or **Transferred To** change that value on items
    of every category. For a text custom field choose **Custom text field…**, then the **Category**;
    **Custom field** then lists only that category's text fields and starts at the first one. Only
    that one field is changed; a field with the same name in another category is left alone.
@@ -1093,7 +1104,9 @@ backup, and keep the copies on a different machine than the server.
 - The interface, including error messages, is available in English and Ukrainian only. The release
   notes in **Version History** are shown in English in both languages.
 - Autocomplete is offered for text custom fields and **Transferred To** only, not for the name,
-  condition, location, or description.
+  condition notes, location, or description.
+- **Condition** uses one fixed scale for every category; there are no custom scales or half grades,
+  and the grade cannot be changed in bulk. Bulk Replace Value changes Condition Notes only.
 - The live camera in **Scan QR** needs the application to be opened over HTTPS or on `localhost`.
   Over plain HTTP only **Scan from image** is available. The scanner reads Inventory Atlas item
   codes only; it does not open other QR codes or read barcodes.

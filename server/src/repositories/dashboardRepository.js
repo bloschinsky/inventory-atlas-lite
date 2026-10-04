@@ -30,7 +30,7 @@ export class DashboardRepository {
         COALESCE(SUM(CASE WHEN i.parent_item_id IS NULL AND TRIM(COALESCE(i.location, '')) != '' THEN 1 ELSE 0 END), 0) AS directLocation,
         COALESCE(SUM(CASE WHEN i.parent_item_id IS NULL AND TRIM(COALESCE(i.location, '')) = '' THEN 1 ELSE 0 END), 0) AS unplaced,
         COALESCE(SUM(CASE WHEN i.created_at >= datetime(@now, '-30 days') THEN 1 ELSE 0 END), 0) AS addedLast30Days,
-        COALESCE(SUM(CASE WHEN TRIM(COALESCE(i.condition, '')) != '' THEN 1 ELSE 0 END), 0) AS withCondition,
+        COALESCE(SUM(CASE WHEN i.condition_grade IS NOT NULL THEN 1 ELSE 0 END), 0) AS withCondition,
         COALESCE(SUM(CASE WHEN date(i.purchase_date) = i.purchase_date THEN 1 ELSE 0 END), 0) AS withPurchaseDate,
         COALESCE(SUM(CASE WHEN TRIM(COALESCE(i.purchase_price_amount, '')) != ''
           AND TRIM(COALESCE(i.purchase_price_currency, '')) != '' THEN 1 ELSE 0 END), 0) AS withPurchasePrice,
@@ -61,14 +61,13 @@ export class DashboardRepository {
     `).all();
   }
 
-  countsByCondition(categoryId) {
+  // Items per structured Condition grade; an unset grade is reported with a null grade.
+  countsByConditionGrade(categoryId) {
     const { clause, params } = this.scope(categoryId);
     return this.db.prepare(`
-      SELECT CASE WHEN TRIM(COALESCE(i.condition, '')) = '' THEN '' ELSE LOWER(TRIM(i.condition)) END AS key,
-        COUNT(*) AS count
+      SELECT i.condition_grade AS grade, COUNT(*) AS count
       FROM items i ${clause}
-      GROUP BY key
-      ORDER BY count DESC, key COLLATE NOCASE
+      GROUP BY i.condition_grade
     `).all(params);
   }
 

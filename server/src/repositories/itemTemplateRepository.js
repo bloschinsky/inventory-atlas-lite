@@ -35,21 +35,22 @@ export class ItemTemplateRepository {
 
   insert(attributes) {
     return this.db.prepare(`
-      INSERT INTO item_templates (name, category_id, item_name, description, is_new, condition, location, purchase_date,
-        purchase_price_amount, purchase_price_currency, serial_number, transferred_to)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO item_templates (name, category_id, item_name, description, is_new, condition_grade, condition_notes, location,
+        purchase_date, purchase_price_amount, purchase_price_currency, serial_number, transferred_to)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(attributes.name, attributes.categoryId, attributes.itemName, attributes.description, storedFlag(attributes.isNew),
-      attributes.condition, attributes.location, attributes.purchaseDate, attributes.purchasePriceAmount,
+      attributes.conditionGrade, attributes.conditionNotes, attributes.location, attributes.purchaseDate, attributes.purchasePriceAmount,
       attributes.purchasePriceCurrency, attributes.serialNumber, attributes.transferredTo).lastInsertRowid;
   }
 
   update(id, attributes) {
     this.db.prepare(`
-      UPDATE item_templates SET name = ?, category_id = ?, item_name = ?, description = ?, is_new = ?, condition = ?,
-        location = ?, purchase_date = ?, purchase_price_amount = ?, purchase_price_currency = ?, serial_number = ?,
+      UPDATE item_templates SET name = ?, category_id = ?, item_name = ?, description = ?, is_new = ?, condition_grade = ?,
+        condition_notes = ?, location = ?, purchase_date = ?, purchase_price_amount = ?, purchase_price_currency = ?, serial_number = ?,
         transferred_to = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
     `).run(attributes.name, attributes.categoryId, attributes.itemName, attributes.description, storedFlag(attributes.isNew),
-      attributes.condition, attributes.location, attributes.purchaseDate, attributes.purchasePriceAmount, attributes.purchasePriceCurrency,
+      attributes.conditionGrade, attributes.conditionNotes, attributes.location, attributes.purchaseDate, attributes.purchasePriceAmount,
+      attributes.purchasePriceCurrency,
       attributes.serialNumber, attributes.transferredTo, id);
   }
 

@@ -90,17 +90,19 @@ test('a fresh database has a non-null New flag on items and an optional one on t
   assert.throws(() => db.prepare("INSERT INTO items (uuid, name, category_id, is_new) VALUES ('x', 'X', 1, 2)").run(), /CHECK/);
 });
 
-test('a version 5 database gains the New flag as false without touching any condition', () => {
+test('a version 5 database gains the New flag as false without guessing it from the old condition text', () => {
   const db = legacyDatabase();
-  const conditions = db.prepare('SELECT id, condition FROM items ORDER BY id').all();
+  const conditions = db.prepare('SELECT id, condition AS condition_notes FROM items ORDER BY id').all();
   applySchema(db);
   assert.equal(Number(db.pragma('user_version', { simple: true })), SCHEMA_VERSION);
   assert.deepEqual(db.prepare('SELECT DISTINCT is_new FROM items').all(), [{ is_new: 0 }]);
-  assert.deepEqual(db.prepare('SELECT id, condition FROM items ORDER BY id').all(), conditions);
-  assert.deepEqual(db.prepare('SELECT is_new, condition FROM item_templates').get(), { is_new: null, condition: 'New' });
+  // The old text survives as Condition Notes, and "New" sets neither the flag nor a grade.
+  assert.deepEqual(db.prepare('SELECT id, condition_notes FROM items ORDER BY id').all(), conditions);
+  assert.deepEqual(db.prepare('SELECT is_new, condition_grade, condition_notes FROM item_templates').get(),
+    { is_new: null, condition_grade: null, condition_notes: 'New' });
   // Applying the schema again changes nothing.
   applySchema(db);
-  assert.deepEqual(db.prepare('SELECT id, condition FROM items ORDER BY id').all(), conditions);
+  assert.deepEqual(db.prepare('SELECT id, condition_notes FROM items ORDER BY id').all(), conditions);
   assert.equal(db.prepare('SELECT COUNT(*) AS count FROM items WHERE is_new = 0').get().count, 5);
 });
 
@@ -114,7 +116,8 @@ test('a version 5 backup is migrated by restore validation and passes the curren
   assert.equal(summary.items, 5);
   const migrated = new Database(file, { readonly: true });
   try {
-    assert.deepEqual(migrated.prepare('SELECT name, is_new, condition FROM items WHERE id = 1').get(), { name: 'Zenit E', is_new: 0, condition: 'New' });
+    assert.deepEqual(migrated.prepare('SELECT name, is_new, condition_grade, condition_notes FROM items WHERE id = 1').get(),
+      { name: 'Zenit E', is_new: 0, condition_grade: null, condition_notes: 'New' });
   } finally {
     migrated.close();
   }
@@ -122,15 +125,16 @@ test('a version 5 backup is migrated by restore validation and passes the curren
 
 test('items are created and edited with a boolean New flag that defaults to false', () => {
   const { category, itemService } = build();
-  const fresh = itemService.create({ name: 'Zenit E', category_id: category.id, is_new: true, condition: 'Excellent' });
+  // New and Condition are independent: a new item can be graded Poor.
+  const fresh = itemService.create({ name: 'Zenit E', category_id: category.id, is_new: true, condition_grade: 'poor' });
   assert.equal(fresh.is_new, true);
-  assert.equal(fresh.condition, 'Excellent');
+  assert.equal(fresh.condition_grade, 'poor');
   assert.equal(itemService.create({ name: 'Kiev 4', category_id: category.id, is_new: false }).is_new, false);
   assert.equal(itemService.create({ name: 'Smena 8', category_id: category.id }).is_new, false);
   assert.equal(itemService.create({ name: 'FED 2', category_id: category.id, is_new: null }).is_new, false);
 
-  const edited = itemService.update(fresh.id, { name: 'Zenit E', category_id: category.id, is_new: false, condition: 'Good, minor scratches' });
-  assert.equal(edited.is_new, false);
+  const edited = itemService.update(fresh.id, { name: 'Zenit E', category_id: category.id, is_new: false, condition_grade: 'excellent' });
+  assert.deepEqual([edited.is_new, edited.condition_grade], [false, 'excellent']);
   assert.equal(itemService.get(fresh.id).is_new, false);
   itemService.update(fresh.id, { name: 'Zenit E', category_id: category.id, is_new: true });
   assert.equal(itemService.get(fresh.id).is_new, true);
@@ -184,8 +188,8 @@ test('a duplicate draft built from an item carries its New flag', () => {
   const { category, itemService } = build();
   const source = itemService.create({ name: 'Zenit E', category_id: category.id, is_new: true });
   // The duplicate flow posts the source's base values again under a new name, like the item form does.
-  const { is_new: isNew, condition, location } = itemService.get(source.id);
-  const copy = itemService.create({ name: 'Zenit E (copy)', category_id: category.id, is_new: isNew, condition, location });
+  const { is_new: isNew, condition_grade, condition_notes, location } = itemService.get(source.id);
+  const copy = itemService.create({ name: 'Zenit E (copy)', category_id: category.id, is_new: isNew, condition_grade, condition_notes, location });
   assert.equal(copy.is_new, true);
   assert.notEqual(copy.uuid, source.uuid);
 });
@@ -201,9 +205,10 @@ test('batch import accepts an optional boolean new property and refuses anything
 
   const created = itemService.createBatch({
     categoryId: category.id,
-    document: { version: 1, category: category.name, items: [{ name: 'A', new: true, condition: 'Sealed' }, { name: 'B' }] }
+    document: { version: 1, category: category.name, items: [{ name: 'A', new: true, conditionNotes: 'Sealed' }, { name: 'B' }] }
   });
-  assert.deepEqual(created.map(item => [item.name, item.is_new, item.condition]), [['A', true, 'Sealed'], ['B', false, null]]);
+  assert.deepEqual(created.map(item => [item.name, item.is_new, item.condition_grade, item.condition_notes]),
+    [['A', true, null, 'Sealed'], ['B', false, null, null]]);
 
   // The preview and the API refuse the same values with the same error.
   for (const value of ['true', 'yes', 1, null]) {

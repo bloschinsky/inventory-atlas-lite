@@ -75,7 +75,7 @@ Checklist run        one use, copied from the checklist when it starts,
 - Completion and the Last verified updates are one SQLite transaction: the run is checked to be still
   in progress, marked completed, and the items updated, or nothing changes at all.
 - Recording a verification changes no other item column: not `updated_at`, `location`,
-  `parent_item_id`, `condition`, or `transferred_to`.
+  `parent_item_id`, `condition_grade`, `condition_notes`, or `transferred_to`.
 - **Item details** shows a read-only **Last verified** row in the Details card with the time in the
   interface language, or **Never**. The item form has no field for it.
 
@@ -102,7 +102,7 @@ Checklist run        one use, copied from the checklist when it starts,
   the run page says the container was deleted, and the history stays readable.
 - An audit records evidence only. Completing it never moves a Present item into the container, never
   takes a Missing item out, and never changes any item's `location`, `parent_item_id`, effective
-  location, condition, or Transferred To. A Missing result stays in the run history; the item's own
+  location, Condition, Condition Notes, or Transferred To. A Missing result stays in the run history; the item's own
   page is one tap away to decide what to do.
 
 ## Snapshots, history, and inventory changes

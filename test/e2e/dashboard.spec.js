@@ -35,7 +35,7 @@ test('renders dashboard metrics and synchronizes the category filter with the UR
   const category = await createCategory(request, unique('Dashboard cameras'));
   const emptyCategory = await createCategory(request, unique('Dashboard empty'));
   const cabinet = unique('Cabinet');
-  const box = await createItem(request, { name: unique('Box'), category_id: category.id, condition: ' Good ', location: cabinet });
+  const box = await createItem(request, { name: unique('Box'), category_id: category.id, condition_grade: 'good', location: cabinet });
   await createItem(request, { name: unique('Camera'), category_id: category.id, location: 'Attic', parent_item_id: box.id, serial_number: 'SN-1' });
 
   await page.goto('/dashboard');
@@ -56,7 +56,8 @@ test('renders dashboard metrics and synchronizes the category filter with the UR
   await expect(chart(page, 'photo')).toHaveAccessibleName(/0% of items have photos/);
   await expect(chart(page, 'placement')).toHaveAccessibleName(/Inside a container: 1, Direct location: 1, Unplaced: 0/);
   await expect(chart(page, 'recent')).toHaveAccessibleName(/2 in total/);
-  await expect(chart(page, 'conditions')).toHaveAccessibleName(/Not specified: 1, Good: 1/);
+  // Fixed grade order with Not set last, whatever the counts.
+  await expect(chart(page, 'conditions')).toHaveAccessibleName(/Good: 1, Not set: 1/);
   await expect(chart(page, 'fields')).toHaveAccessibleName(/Placement: 100% \(2 \/ 2\).*Serial number: 50% \(1 \/ 2\)/);
   await expect(chart(page, 'locations')).toHaveAccessibleName(new RegExp(`location\\. ${cabinet}: 2$`));
   await expect(page.getByText('50% (1 / 2)').first()).toBeVisible();

@@ -374,7 +374,7 @@ test('AI flows read a renamed field under its new name and the same id', async (
   // AI Add Item receives the renamed field with its unchanged id and fills it by that id.
   reply = () => ({
     observedMarkings: [], categoryId: category.id, confidence: 0.9, needsDetailedImageAnalysis: false,
-    baseFields: { name: 'Sound Blaster', description: null, condition: null, location: null, purchase_date: null, purchase_price_amount: null, purchase_price_currency: null, serial_number: null },
+    baseFields: { name: 'Sound Blaster', description: null, condition_notes: null, location: null, purchase_date: null, purchase_price_amount: null, purchase_price_currency: null, serial_number: null },
     dynamicFields: [{ fieldId: maker.id, value: 'Creative' }], warnings: []
   });
   const item = await features.aiItemAnalysisService.analyze(null, 'Creative sound card');
@@ -386,7 +386,7 @@ test('AI flows read a renamed field under its new name and the same id', async (
 test('AI Add Item accepts text with any model and photos only with a model that can read them', async () => {
   const draft = categoryId => ({
     observedMarkings: [], categoryId, confidence: 0.8, needsDetailedImageAnalysis: false,
-    baseFields: { name: 'Sound card', description: null, condition: null, location: null, purchase_date: null, purchase_price_amount: null, purchase_price_currency: null, serial_number: null },
+    baseFields: { name: 'Sound card', description: null, condition_notes: null, location: null, purchase_date: null, purchase_price_amount: null, purchase_price_currency: null, serial_number: null },
     dynamicFields: [{ fieldId: 999999, value: 'dropped' }], warnings: []
   });
   let categoryId;
@@ -434,7 +434,7 @@ test('AI Add Item offers the New flag and only keeps an explicit true', async ()
   const reply = () => ({
     observedMarkings: [], categoryId, confidence: 0.9, needsDetailedImageAnalysis: false,
     baseFields: {
-      name: 'Sound card', description: null, condition: null, location: null, purchase_date: null,
+      name: 'Sound card', description: null, condition_notes: null, location: null, purchase_date: null,
       purchase_price_amount: null, purchase_price_currency: null, serial_number: null,
       ...(isNew === undefined ? {} : { is_new: isNew })
     },
@@ -460,5 +460,37 @@ test('AI Add Item offers the New flag and only keeps an explicit true', async ()
   for (const value of ['true', 'new', 1]) {
     isNew = value;
     await rejects(features.aiItemAnalysisService.analyze(null, 'A sound card'), 502, 'AI_INVALID_RESPONSE');
+  }
+});
+
+test('AI Add Item proposes a structured Condition only from the fixed grades and keeps details as notes', async () => {
+  let grade;
+  let categoryId;
+  const reply = () => ({
+    observedMarkings: [], categoryId, confidence: 0.9, needsDetailedImageAnalysis: false,
+    baseFields: {
+      name: 'Sound card', description: null, condition_notes: 'Scratched bracket', location: null, purchase_date: null,
+      purchase_price_amount: null, purchase_price_currency: null, serial_number: null, is_new: true,
+      ...(grade === undefined ? {} : { condition_grade: grade })
+    },
+    dynamicFields: [], warnings: []
+  });
+  const features = buildFeatures({ settings: ollama, reply });
+  categoryId = features.categoryService.create({ name: 'Audio Cards' }).id;
+
+  grade = 'poor';
+  const draft = await features.aiItemAnalysisService.analyze(null, 'A sound card with a scratched bracket');
+  // The grade, the notes, and the New flag stay independent of each other.
+  assert.deepEqual([draft.baseFields.condition_grade, draft.baseFields.condition_notes, draft.baseFields.is_new], ['poor', 'Scratched bracket', true]);
+  const { schema, instructions } = features.calls[0].request;
+  assert.deepEqual(schema.properties.baseFields.properties.condition_grade.enum, [null, 'broken', 'poor', 'fair', 'good', 'excellent']);
+  assert.ok(schema.properties.baseFields.required.includes('condition_grade'));
+  assert.equal(schema.properties.baseFields.properties.condition, undefined);
+  assert.match(instructions, /Otherwise set condition_grade to null; never guess it/);
+
+  // Anything outside the scale is dropped to an unset grade instead of being mapped to a near one.
+  for (const value of ['Good', 'mint', 'new', 4, null, undefined]) {
+    grade = value;
+    assert.equal((await features.aiItemAnalysisService.analyze(null, 'A sound card')).baseFields.condition_grade, null);
   }
 });

@@ -44,10 +44,11 @@ test('inventory acceptance path persists and produces a valid backup', async () 
     const year = await request(`/api/categories/${category.id}/fields`, json('POST', { name: 'Year', type: 'number' }));
     const item = await request('/api/items', json('POST', {
       name: 'Olympus Pen F', category_id: category.id, description: 'Half-frame camera',
-      is_new: true, condition: 'Good', location: 'Cabinet A', field_values: { [brand.id]: 'Olympus', [year.id]: '1963' }
+      is_new: true, condition_grade: 'good', condition_notes: 'Light brassing', location: 'Cabinet A',
+      field_values: { [brand.id]: 'Olympus', [year.id]: '1963' }
     }));
-    // New is a real boolean in every response; Condition stays the free text that was entered.
-    assert.deepEqual([item.is_new, item.condition], [true, 'Good']);
+    // New is a real boolean in every response; the Condition grade and its notes are separate values.
+    assert.deepEqual([item.is_new, item.condition_grade, item.condition_notes], [true, 'good', 'Light brassing']);
     assert.equal((await request(`/api/items/${item.uuid}`)).is_new, true);
 
     const photoData = new FormData();
@@ -60,6 +61,12 @@ test('inventory acceptance path persists and produces a valid backup', async () 
     assert.ok(list.items[0].thumbnail_id);
     assert.equal(list.items[0].is_new, true);
     assert.equal((await request('/api/items?sort=isNew&direction=desc')).items[0].is_new, true);
+    assert.equal((await request('/api/items?condition=good')).pagination.total, 1);
+    assert.equal((await request('/api/items?condition=unset')).pagination.total, 0);
+    // An arbitrary string is refused rather than stored as a grade.
+    const refusedGrade = await fetch(`${base}/api/items`, json('POST', { name: 'X', category_id: category.id, condition_grade: 'Good' }));
+    assert.equal(refusedGrade.status, 400);
+    assert.deepEqual(await refusedGrade.json(), { error: { code: 'INVALID_CONDITION_GRADE', params: {} } });
 
     // The Items view asks for the column catalog, then for exactly the custom values it shows.
     const { fields: columns } = await request('/api/items/columns');
@@ -76,7 +83,7 @@ test('inventory acceptance path persists and produces a valid backup', async () 
     assert.equal(dashboard.totalItems, 1);
     assert.deepEqual(dashboard.photoCoverage, { withPhotos: 1, withoutPhotos: 0, percentage: 100 });
     assert.equal(dashboard.placement.directLocation, 1);
-    assert.equal(dashboard.conditionDistribution[0].label, 'Good');
+    assert.deepEqual(dashboard.conditionDistribution, [{ key: 'good', count: 1 }]);
 
     const backupResponse = await fetch(`${base}/api/backup`);
     assert.ok(backupResponse.ok);
@@ -426,7 +433,7 @@ test('batch item import creates the whole batch atomically and keeps it over a r
 
     const response = await fetch(`${base}/api/items/batch`, batch([
       {
-        name: 'Router', condition: 'Good', location: 'Rack', purchaseDate: '2023-11-02',
+        name: 'Router', conditionGrade: 'good', conditionNotes: 'Scuffed case', location: 'Rack', purchaseDate: '2023-11-02',
         purchasePrice: { amount: '1999.99', currency: 'UAH' }, serialNumber: 'RT-1',
         customFields: { Brand: 'MikroTik', Ports: 5, Released: '2021-01-15', Working: true }
       },
@@ -435,6 +442,7 @@ test('batch item import creates the whole batch atomically and keeps it over a r
     assert.equal(response.status, 201);
     const created = await response.json();
     assert.deepEqual(created.map(item => item.name), ['Router', 'Switch']);
+    assert.deepEqual([created[0].condition_grade, created[0].condition_notes], ['good', 'Scuffed case']);
     assert.ok(created.every(item => /^[0-9a-f-]{36}$/.test(item.uuid)));
 
     // One invalid item refuses the whole batch with a positioned, structured reason and writes nothing.
@@ -591,7 +599,7 @@ test('AI settings stay server-side and image analysis returns a validated invent
         needsDetailedImageAnalysis: true,
         baseFields: {
           name: 'Creative Sound Blaster Audigy LS',
-          description: 'Creative Sound Blaster Audigy LS PCI audio card.', condition: null,
+          description: 'Creative Sound Blaster Audigy LS PCI audio card.', condition_notes: null,
           location: null, purchase_date: null, purchase_price_amount: null,
           purchase_price_currency: null, serial_number: 'C6SB0312418000742R'
         },

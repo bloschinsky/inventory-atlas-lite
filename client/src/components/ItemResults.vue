@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue';
+import ConditionGradeBadge from './ConditionGradeBadge.vue';
 import ItemNewStatusBadge from './ItemNewStatusBadge.vue';
 import ItemThumbnail from './ItemThumbnail.vue';
 import SortableHeader from './SortableHeader.vue';
@@ -128,6 +129,10 @@ const editRoute = item => `/items/${item.id}/edit`;
                 >
                   {{ item.parent_name }}
                 </RouterLink>
+                <ConditionGradeBadge
+                  v-else-if="column.key === 'condition'"
+                  :grade="item.condition_grade"
+                />
                 <template v-else>
                   {{ columnText(item, column) || '—' }}
                 </template>
@@ -210,6 +215,10 @@ const editRoute = item => `/items/${item.id}/edit`;
                   >
                     {{ item.parent_name }}
                   </RouterLink>
+                  <ConditionGradeBadge
+                    v-else-if="column.key === 'condition'"
+                    :grade="item.condition_grade"
+                  />
                   <template v-else>
                     {{ columnText(item, column) }}
                   </template>

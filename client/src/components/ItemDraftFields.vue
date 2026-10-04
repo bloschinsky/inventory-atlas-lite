@@ -1,5 +1,10 @@
 <script setup>
+import { ref } from 'vue';
+import { IconInfoCircle } from '@tabler/icons-vue';
+import ConditionGradeBadge from './ConditionGradeBadge.vue';
+import ConditionHelpDialog from './ConditionHelpDialog.vue';
 import FieldAutocomplete from './FieldAutocomplete.vue';
+import { CONDITION_GRADES_BEST_FIRST } from '../conditionGrades.js';
 
 /*
   The item values shared by the item form and the template editor, bound to the form state of
@@ -15,6 +20,7 @@ defineProps({
 });
 const form = defineModel('form', { type: Object, required: true });
 const currencies = Intl.supportedValuesOf('currency');
+const conditionHelpOpen = ref(false);
 </script>
 
 <template>
@@ -53,7 +59,7 @@ const currencies = Intl.supportedValuesOf('currency');
       </option>
     </select>
   </div>
-  <!-- New is the item's own yes/no state; Condition stays free text describing the physical state. -->
+  <!-- New is the item's own yes/no state; Condition and Condition Notes describe the physical state on their own. -->
   <div
     v-if="template"
     class="mb-3"
@@ -91,15 +97,47 @@ const currencies = Intl.supportedValuesOf('currency');
   </div>
   <div class="row">
     <div class="col-md-6 mb-3">
-      <label
-        class="form-label"
-        for="item-condition"
-      >{{ $t('items.fields.condition') }}</label><input
-        id="item-condition"
-        v-model="form.condition"
-        class="form-control"
-        :placeholder="$t('itemForm.conditionPlaceholder')"
-      >
+      <div class="d-flex align-items-center gap-1 mb-2">
+        <label
+          class="form-label mb-0"
+          for="item-condition-grade"
+        >{{ $t('items.fields.condition') }}</label>
+        <button
+          type="button"
+          class="btn btn-ghost-secondary btn-icon btn-sm"
+          :aria-label="$t('condition.helpButton')"
+          :title="$t('condition.helpButton')"
+          @click="conditionHelpOpen = true"
+        >
+          <IconInfoCircle
+            :size="18"
+            :stroke-width="1.75"
+            aria-hidden="true"
+          />
+        </button>
+      </div>
+      <!-- Native options cannot be colored, so the chosen grade is shown as its badge beside the select. -->
+      <div class="input-group">
+        <span
+          class="input-group-text"
+          aria-hidden="true"
+        ><ConditionGradeBadge :grade="form.condition_grade" /></span><select
+          id="item-condition-grade"
+          v-model="form.condition_grade"
+          class="form-select"
+        >
+          <option :value="null">
+            {{ $t('condition.notSet') }}
+          </option><option
+            v-for="grade in CONDITION_GRADES_BEST_FIRST"
+            :key="grade"
+            :value="grade"
+          >
+            {{ $t(`condition.grades.${grade}`) }}
+          </option>
+        </select>
+      </div>
+      <ConditionHelpDialog v-model:open="conditionHelpOpen" />
     </div><div class="col-md-6 mb-3">
       <label
         class="form-label"
@@ -117,6 +155,18 @@ const currencies = Intl.supportedValuesOf('currency');
         {{ $t('items.inheritedLocation') }} {{ $t('itemForm.ownLocation') }}
       </div>
     </div>
+  </div>
+  <div class="mb-3">
+    <label
+      class="form-label"
+      for="item-condition-notes"
+    >{{ $t('items.fields.conditionNotes') }}</label><textarea
+      id="item-condition-notes"
+      v-model="form.condition_notes"
+      class="form-control"
+      rows="2"
+      :placeholder="$t('itemForm.conditionNotesPlaceholder')"
+    />
   </div>
   <div class="mb-3">
     <label

@@ -13,10 +13,12 @@ test('creates an item, finds it in the list, and edits its values', async ({ pag
   await page.mouse.move(600, 400);
   await page.getByLabel('Name *').fill(itemName);
   await page.getByLabel('Category *').selectOption({ label: categoryName });
-  // New is a switch of its own; Condition stays free text.
+  // New is a switch of its own; Condition is a fixed grade with free-text notes beside it.
   await expect(page.getByRole('checkbox', { name: 'New', exact: true })).not.toBeChecked();
   await page.getByRole('checkbox', { name: 'New', exact: true }).check();
-  await page.getByLabel('Condition').fill('Good');
+  await expect(page.getByLabel('Condition', { exact: true }).locator('option:checked')).toHaveText('Not set');
+  await page.getByLabel('Condition', { exact: true }).selectOption('good');
+  await page.getByLabel('Condition Notes').fill('Light brassing');
   await page.getByLabel('Location').fill('Shelf A');
   await page.getByLabel('Purchase Date').fill('2024-11-18');
   await page.getByLabel('Purchase Price', { exact: true }).fill('49.99');
@@ -44,6 +46,7 @@ test('creates an item, finds it in the list, and edits its values', async ({ pag
   await page.getByRole('link', { name: itemName, exact: true }).click();
   await expect(detail(page, 'New')).toHaveText('New');
   await expect(detail(page, 'Condition')).toHaveText('Good');
+  await expect(detail(page, 'Condition Notes')).toHaveText('Light brassing');
   await expect(detail(page, 'Location')).toHaveText('Shelf A');
   await expect(detail(page, 'Purchase Date')).toContainText('2024');
   await expect(detail(page, 'Purchase Price')).toHaveText('$49.99');
@@ -59,7 +62,9 @@ test('creates an item, finds it in the list, and edits its values', async ({ pag
   await page.getByLabel('Name *').fill(renamed);
   await expect(page.getByRole('checkbox', { name: 'New', exact: true })).toBeChecked();
   await page.getByRole('checkbox', { name: 'New', exact: true }).uncheck();
-  await page.getByLabel('Condition').fill('Excellent');
+  await expect(page.getByLabel('Condition', { exact: true })).toHaveValue('good');
+  await page.getByLabel('Condition', { exact: true }).selectOption({ label: 'Excellent' });
+  await page.getByLabel('Condition Notes').fill('');
   await page.getByLabel('Purchase Price', { exact: true }).fill('39.50');
   await page.getByLabel('Purchase Price currency').selectOption('EUR');
   await page.getByLabel('Serial Number').fill('12A/9382-B');
@@ -70,6 +75,8 @@ test('creates an item, finds it in the list, and edits its values', async ({ pag
   await expect(page.getByRole('heading', { name: renamed })).toBeVisible();
   await expect(detail(page, 'New')).toHaveText('Used');
   await expect(detail(page, 'Condition')).toHaveText('Excellent');
+  // Empty notes are left out instead of being shown as a blank line.
+  await expect(page.locator('dt:text-is("Condition Notes")')).toHaveCount(0);
   await expect(detail(page, 'Purchase Price')).toHaveText('€39.50');
   await expect(detail(page, 'Serial Number')).toHaveText('12A/9382-B');
   await expect(detail(page, 'Year')).toHaveText('1987');

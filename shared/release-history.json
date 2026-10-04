@@ -6,6 +6,9 @@
       "Choose the cover photo of an item: in Add Item and Edit Item, press the star under any photo to make it the cover, or move photos left and right to change their order. The order is saved with the item.",
       "The cover is always the first photo. It opens first on the item page and is the thumbnail in the Items list, the Hierarchy, container contents, and checklists. Deleting the cover makes the next photo the cover, and existing items keep the cover they had.",
       "Newly selected photos join the same row and can be reordered, or made the cover, before they are uploaded. Choosing more files now adds them to the selection instead of replacing it.",
+      "Condition is now a fixed grade: Excellent, Good, Fair, Poor, or Broken, or Not set. It appears as a colored badge in the Items list, on cards, and on the item page, sorts from Broken to Excellent, and can filter the Items list.",
+      "The new Condition Notes field keeps free-text details such as scratches or battery state. Every existing Condition text was moved there unchanged, and no grade was guessed from it, so existing items start with Condition Not set.",
+      "An info button next to Condition opens Condition grading, which explains each grade. The Dashboard Condition breakdown now shows the grades in a fixed order with the badge colors, templates, Duplicate, Batch Add from JSON, and AI Add Item carry both values, and Replace field value changes Condition Notes.",
       "The New field now reads at a glance: item pages and the New column of the Items list show a green New or an amber Used badge instead of Yes or No. Editing still uses the same New switch, and sorting by the column works as before."
     ]
   },

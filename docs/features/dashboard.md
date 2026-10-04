@@ -39,11 +39,10 @@ Row 2 — distributions:
   active one). An empty selected category has no tile but keeps its button. Legacy rows without a
   category appear as **Uncategorized**.
 - **Condition breakdown** is a donut chart of the current scope with the scope total in its center and
-  a legend listing every group with its count. Values are trimmed and grouped case-insensitively,
-  blank values become **Not specified**, and deterministic title-case labels represent normalized
-  keys. The five largest groups remain separate and the rest become **Other**. Named conditions take
-  Tabler's primary, orange, teal, purple, and pink in that fixed order; **Not specified** and
-  **Other** use two different neutral grays.
+  a legend listing every group with its count. It counts the structured
+  [Condition grade](condition-grading.md), never Condition Notes, in the fixed order Excellent, Good,
+  Fair, Poor, Broken, then **Not set**; grades without items are left out. Each grade has the color of
+  its badge (Tabler green, blue, yellow, orange, red), and Not set a neutral gray.
 
 Row 3 — analytics:
 
@@ -52,7 +51,7 @@ Row 3 — analytics:
   - **Photos**: the item has at least one photo;
   - **Placement**: the item is inside a container, or is top-level with non-blank saved location
     text (the Placement status semantics);
-  - **Condition**: the trimmed condition is not empty;
+  - **Condition**: the item has a Condition grade;
   - **Purchase date**: a real calendar date is stored (`date(purchase_date) = purchase_date` in
     SQLite, the same `YYYY-MM-DD` form the item validation writes);
   - **Purchase price**: both the amount and the currency are stored, which is the only complete form
@@ -101,9 +100,9 @@ charts, and guide the user to **Add item**.
   example *Bar chart of items by location. Office: 4, Garage: 1, Unknown: 3*. The KPI numbers,
   placement and condition legends, the field-coverage list, and the category buttons keep the
   critical values visible as text.
-- Category, condition, and location values are user data and are never translated; the server's
-  English bucket names (`Other`, `Not specified`, `Unknown`, `Uncategorized`) are recognized by their
-  keys and shown in the active language. Numbers use the locale formatters.
+- Category and location values are user data and are never translated; the server's English bucket
+  names (`Other`, `Unknown`, `Uncategorized`) are recognized by their keys and shown in the active
+  language. Condition entries carry only a grade key (or `not-set`) and are named by their translation. Numbers use the locale formatters.
 
 ## API and time semantics
 
@@ -137,7 +136,7 @@ ahead of the server clock is counted in today's bucket. There are no historical 
 
 - `DashboardRepository` holds all SQL. `itemMetrics()` computes the KPI, placement, and field-coverage
   counts in one aggregate statement; `countsByCreatedDay()`, `countsByCategory()`,
-  `countsByCondition()`, and `countsByEffectiveLocation()` are the other aggregates. A response runs a
+  `countsByConditionGrade()`, and `countsByEffectiveLocation()` are the other aggregates. A response runs a
   fixed number of statements at any inventory size, with the category bound as a parameter.
 - `countsByEffectiveLocation()` reuses `ROOTS_CTE` exported by `ItemRepository`, the recursive CTE
   that labels every item with its root container for the Items list, and the same
@@ -162,7 +161,7 @@ ahead of the server clock is counted in today's bucket. There are no historical 
   placement-total invariant.
 - `test/dashboard.test.js` covers the same API over HTTP, including empty and populated databases,
   one and multiple photos, the inclusive rolling-date boundary, filtered and empty categories, bad
-  IDs, uncategorized legacy rows, normalized conditions, and both truncation rules.
+  IDs, uncategorized legacy rows, the fixed Condition grade order, and both truncation rules.
 - `test/e2e/dashboard.spec.js` covers all eight groups and seven charts, scoped chart values after a
   category change, one chart instance per chart after refreshes, treemap tile selection and the
   non-selectable Other tile, keyboard filtering with the category buttons, URL synchronization and

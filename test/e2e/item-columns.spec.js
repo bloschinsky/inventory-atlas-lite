@@ -37,14 +37,14 @@ test('the Columns control shows, hides, keeps, and resets item columns', async (
   await picker.getByRole('checkbox', { name: 'Serial Number' }).check();
   await expect(picker.getByRole('checkbox', { name: 'New', exact: true })).not.toBeChecked();
   await picker.getByRole('checkbox', { name: 'New', exact: true }).check();
-  await picker.getByRole('checkbox', { name: 'Condition' }).uncheck();
+  await picker.getByRole('checkbox', { name: 'Condition', exact: true }).uncheck();
   await picker.getByRole('checkbox', { name: fieldName }).check();
   await page.keyboard.press('Escape');
   await expect(picker).toBeHidden();
 
   // One merged column carries the values of both categories.
   await expect(table.getByRole('columnheader', { name: 'Serial Number' })).toBeVisible();
-  await expect(table.getByRole('columnheader', { name: 'Condition' })).toHaveCount(0);
+  await expect(table.getByRole('columnheader', { name: 'Condition', exact: true })).toHaveCount(0);
   await expect(table.getByRole('columnheader', { name: fieldName })).toHaveCount(1);
   await expect(table.getByRole('row').filter({ hasText: `${token} camera` })).toContainText('Leica');
   await expect(table.getByRole('row').filter({ hasText: `${token} camera` })).toContainText('SN-CAM');
@@ -60,11 +60,11 @@ test('the Columns control shows, hides, keeps, and resets item columns', async (
   await searchBox(page).fill(token);
   await expect(table.getByRole('row').filter({ hasText: `${token} amplifier` })).toContainText('Marantz');
   await expect(table.getByRole('columnheader', { name: 'Serial Number' })).toBeVisible();
-  await expect(table.getByRole('columnheader', { name: 'Condition' })).toHaveCount(0);
+  await expect(table.getByRole('columnheader', { name: 'Condition', exact: true })).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Columns' }).click();
   await page.getByRole('button', { name: 'Reset to default' }).click();
-  await expect(table.getByRole('columnheader', { name: 'Condition' })).toBeVisible();
+  await expect(table.getByRole('columnheader', { name: 'Condition', exact: true })).toBeVisible();
   await expect(table.getByRole('columnheader', { name: 'Serial Number' })).toHaveCount(0);
   await expect(table.getByRole('columnheader', { name: 'New', exact: true })).toHaveCount(0);
   await expect(table.getByRole('columnheader', { name: fieldName })).toHaveCount(0);

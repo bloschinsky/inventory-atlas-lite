@@ -1,7 +1,7 @@
 # New/Used status badges for the New flag
 
 - **Completed:** 2026-10-04
-- **Version:** 0.49.1
+- **Version:** 0.50.0 (prepared as 0.49.1, released together with item photo ordering; see `2026-10-04-release-0.50.0.md`)
 
 ## Summary
 
@@ -22,7 +22,7 @@ boolean is now presented as a semantic status badge in read-only item views inst
 - **i18n:** `items.newStatus.new`/`used` in English (New, Used) and Ukrainian (Новий, Вживаний,
   matching the existing masculine `items.fields.isNew`).
 - **Documentation:** updated `docs/features/item-new-flag.md`, its index entry, `docs/HOW-TO.md`,
-  `AGENTS.md`, and the 0.49.1 release-history entry. The task was tracked as a GitHub issue, so there
+  `AGENTS.md`, and the 0.50.0 release-history entry. The task was tracked as a GitHub issue, so there
   was no `docs/issues/` file to remove.
 
 ## Verification

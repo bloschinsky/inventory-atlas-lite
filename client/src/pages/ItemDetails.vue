@@ -9,6 +9,7 @@ import ChecklistRunHistory from '../components/ChecklistRunHistory.vue';
 import ItemPhotoViewer from '../components/ItemPhotoViewer.vue';
 import ItemNewStatusBadge from '../components/ItemNewStatusBadge.vue';
 import ItemQrDialog from '../components/ItemQrDialog.vue';
+import ConditionGradeBadge from '../components/ConditionGradeBadge.vue';
 import ItemThumbnail from '../components/ItemThumbnail.vue';
 
 const route = useRoute(); const router = useRouter(); const { t } = useI18n();
@@ -151,9 +152,17 @@ onMounted(load);
               <dt class="col-sm-4">
                 {{ $t('items.fields.condition') }}
               </dt>
-              <dd class="col-sm-8 text-break">
-                {{ item.condition || '—' }}
+              <dd class="col-sm-8">
+                <ConditionGradeBadge :grade="item.condition_grade" />
               </dd>
+              <template v-if="item.condition_notes">
+                <dt class="col-sm-4">
+                  {{ $t('items.fields.conditionNotes') }}
+                </dt>
+                <dd class="col-sm-8 text-break condition-notes">
+                  {{ item.condition_notes }}
+                </dd>
+              </template>
               <dt class="col-sm-4">
                 {{ $t('items.fields.location') }}
               </dt>
@@ -296,8 +305,8 @@ onMounted(load);
                     {{ child.name }}
                   </RouterLink>
                   <p class="meta-text mb-0">
-                    {{ child.category_name }}<template v-if="child.condition">
-                      · {{ child.condition }}
+                    {{ child.category_name }}<template v-if="child.condition_grade">
+                      · <ConditionGradeBadge :grade="child.condition_grade" />
                     </template>
                   </p>
                 </div>

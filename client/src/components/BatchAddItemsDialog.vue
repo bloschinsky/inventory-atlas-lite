@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n';
 import { api, jsonOptions } from '../api.js';
 import { translateError } from '../i18n/index.js';
+import { CONDITION_GRADES_BEST_FIRST } from '../conditionGrades.js';
 import {
   MAX_BATCH_ITEMS, hasDraftErrors, itemImportDocument, itemImportTemplate, parseItemImportDocument,
   reviewItemDraft
@@ -237,11 +238,37 @@ onBeforeUnmount(() => {
                 <div class="col-md-6">
                   <label
                     class="form-label"
-                    :for="inputId(index, 'condition')"
+                    :for="inputId(index, 'condition-grade')"
                   >{{ $t('items.fields.condition') }}</label>
+                  <select
+                    :id="inputId(index, 'condition-grade')"
+                    v-model="draft.conditionGrade"
+                    class="form-select"
+                    :class="{ 'is-invalid': reviews[index].conditionGrade }"
+                  >
+                    <option :value="null">
+                      {{ $t('condition.notSet') }}
+                    </option>
+                    <option
+                      v-for="grade in CONDITION_GRADES_BEST_FIRST"
+                      :key="grade"
+                      :value="grade"
+                    >
+                      {{ $t(`condition.grades.${grade}`) }}
+                    </option>
+                  </select>
+                  <div class="invalid-feedback">
+                    {{ translateError(reviews[index].conditionGrade) }}
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label
+                    class="form-label"
+                    :for="inputId(index, 'condition-notes')"
+                  >{{ $t('items.fields.conditionNotes') }}</label>
                   <input
-                    :id="inputId(index, 'condition')"
-                    v-model="draft.condition"
+                    :id="inputId(index, 'condition-notes')"
+                    v-model="draft.conditionNotes"
                     class="form-control"
                   >
                 </div>
