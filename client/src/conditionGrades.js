@@ -12,7 +12,7 @@ export const CONDITION_GRADES_BEST_FIRST = [...CONDITION_GRADES].reverse();
 
 export const conditionGradeLabelKey = grade => (grade ? `condition.grades.${grade}` : 'condition.notSet');
 
-export const conditionGradeBadgeClass = grade => (grade ? `bg-${GRADE_COLORS[grade]}-lt` : 'bg-secondary-lt');
+export const conditionGradeBadgeClass = grade => `condition-badge condition-badge-${grade ? GRADE_COLORS[grade] : 'unset'}`;
 
 // The Tabler custom property of a grade's color, which the Dashboard resolves for its charts.
 export const conditionGradeColorVariable = grade => `--tblr-${GRADE_COLORS[grade]}`;

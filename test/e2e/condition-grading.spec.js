@@ -2,12 +2,39 @@ import { expect, test } from '@playwright/test';
 import { createCategory, createItem, detail, unique } from './helpers.js';
 
 const GRADES = [
-  { key: 'excellent', label: 'Excellent', badge: /\bbg-green-lt\b/ },
-  { key: 'good', label: 'Good', badge: /\bbg-blue-lt\b/ },
-  { key: 'fair', label: 'Fair', badge: /\bbg-yellow-lt\b/ },
-  { key: 'poor', label: 'Poor', badge: /\bbg-orange-lt\b/ },
-  { key: 'broken', label: 'Broken', badge: /\bbg-red-lt\b/ }
+  { key: 'excellent', label: 'Excellent', badge: /\bcondition-badge-green\b/ },
+  { key: 'good', label: 'Good', badge: /\bcondition-badge-blue\b/ },
+  { key: 'fair', label: 'Fair', badge: /\bcondition-badge-yellow\b/ },
+  { key: 'poor', label: 'Poor', badge: /\bcondition-badge-orange\b/ },
+  { key: 'broken', label: 'Broken', badge: /\bcondition-badge-red\b/ }
 ];
+
+/*
+  WCAG contrast of every badge's text against its tinted background as painted over the surface
+  behind it. Each color is resolved by painting it on a canvas, so color-mix() and light-dark() count
+  exactly as the browser draws them.
+*/
+const badgeContrasts = page => page.locator('dl .badge').evaluateAll(badges => {
+  const context = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+  const paint = (...colors) => {
+    context.clearRect(0, 0, 1, 1);
+    for (const color of colors) {
+      context.fillStyle = color;
+      context.fillRect(0, 0, 1, 1);
+    }
+    return [...context.getImageData(0, 0, 1, 1).data].slice(0, 3);
+  };
+  const luminance = rgb => {
+    const [r, g, b] = rgb.map(value => value / 255).map(value => (value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  return badges.map(badge => {
+    const surface = getComputedStyle(badge.closest('.modal-content')).backgroundColor;
+    const style = getComputedStyle(badge);
+    const [light, dark] = [luminance(paint(surface, style.backgroundColor)), luminance(paint(surface, style.color))].sort((a, b) => b - a);
+    return { label: badge.textContent.trim(), ratio: (light + 0.05) / (dark + 0.05) };
+  });
+});
 const phone = { width: 390, height: 844 };
 
 const helpDialog = page => page.getByRole('dialog', { name: 'Condition grading' });
@@ -47,12 +74,23 @@ test('the info button beside Condition opens the grading help, which closes and 
   await page.mouse.click(5, 5);
   await expect(dialog).toBeHidden();
 
+  // Every badge label stays readable in both color modes.
+  for (const scheme of ['light', 'dark']) {
+    await page.emulateMedia({ colorScheme: scheme });
+    await page.evaluate(mode => document.documentElement.setAttribute('data-bs-theme', mode), scheme);
+    await help.click();
+    for (const { label, ratio } of await badgeContrasts(helpDialog(page))) {
+      expect(ratio, `${label} badge contrast in ${scheme} mode`).toBeGreaterThanOrEqual(4.5);
+    }
+    await page.keyboard.press('Escape');
+  }
+
   // The selector offers Not set and the five grades; the chosen one is shown as its badge.
   const select = page.getByLabel('Condition', { exact: true });
   await expect(select.locator('option')).toHaveText(['Not set', ...GRADES.map(grade => grade.label)]);
   await select.selectOption('broken');
   await expect(page.locator('.input-group-text .badge')).toHaveText('Broken');
-  await expect(page.locator('.input-group-text .badge')).toHaveClass(/\bbg-red-lt\b/);
+  await expect(page.locator('.input-group-text .badge')).toHaveClass(/\bcondition-badge-red\b/);
 });
 
 test('the Items table shows Condition badges, sorts them by rank, and filters by grade', async ({ page, request }) => {
@@ -78,7 +116,7 @@ test('the Items table shows Condition badges, sorts them by rank, and filters by
   }
   // An unset grade is neutral and never looks like Broken; its notes never become a grade.
   await expect(row(names.null).locator('.badge')).toHaveText('Not set');
-  await expect(row(names.null).locator('.badge')).toHaveClass(/\bbg-secondary-lt\b/);
+  await expect(row(names.null).locator('.badge')).toHaveClass(/\bcondition-badge-unset\b/);
   await expect(table.getByRole('columnheader', { name: 'Condition Notes' })).toHaveCount(0);
 
   // The rank orders the grades, not their labels, and Not set stays last.
@@ -123,7 +161,7 @@ test.describe('narrow screens', () => {
     await page.goto('/items');
     await page.getByPlaceholder('Search name, description, serial number, transferred to or text fields…').fill(itemName);
     const card = page.getByRole('listitem').filter({ has: page.getByRole('link', { name: itemName, exact: true }) });
-    await expect(card.locator('.badge', { hasText: 'Fair' })).toHaveClass(/\bbg-yellow-lt\b/);
+    await expect(card.locator('.badge', { hasText: 'Fair' })).toHaveClass(/\bcondition-badge-yellow\b/);
 
     await page.goto('/items/new');
     await page.getByRole('button', { name: 'Condition grading help' }).click();

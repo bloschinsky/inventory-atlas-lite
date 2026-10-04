@@ -21,6 +21,8 @@ independent of the New flag.
 - **API:** items and templates carry `condition_grade` and `condition_notes` in requests, responses,
   the template item draft, and the list. `GET /api/items` gains `condition=<key>|unset`. Condition
   sorts by rank with Not set last; the new `conditionNotes` core column sorts as text.
+- **Badges:** `ConditionGradeBadge.vue` with a tint of the grade's Tabler color and text mixed toward
+  the body color, so every label keeps a contrast of at least 4.5:1 in both color modes.
 - **Items page:** Condition badges in the table and the phone cards, a Condition filter, and a
   Condition Notes column hidden by default.
 - **Item form and template editor:** a Condition select with the chosen badge beside it, an info
@@ -63,7 +65,8 @@ independent of the New flag.
 - `npm run test:e2e` — 124 Chromium tests passed with `APP_VERSION=0.51.0`. Without it the 7 What's New
   tests fail only because the uncommitted working copy sits on the `v0.49.0` tag, which
   `vite.config.js` prefers over `package.json`. New `test/e2e/condition-grading.spec.js` covers the
-  help dialog (content, badges, close button, Escape, backdrop, focus return), the selector badge,
+  help dialog (content, badges, close button, Escape, backdrop, focus return), badge text contrast in
+  light and dark mode, the selector badge,
   table badges and colors for every grade and Not set, rank sorting both ways, the filter, the
   Condition Notes column, details, and the dialog and cards at phone width; the items, templates,
   Duplicate, AI Add Item, Dashboard, columns, and Ukrainian specs were updated.

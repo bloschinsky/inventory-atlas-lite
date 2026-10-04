@@ -28,7 +28,9 @@ Broken are all valid, and none of the three values is ever derived from another.
 
 Only the stable keys are stored; the labels and the help text are localized in English and Ukrainian.
 A badge always shows its label, so color never carries the meaning alone, and Not set never looks like
-Broken.
+Broken. A badge is a light tint of its Tabler color behind text mixed from that color and the body
+text color, which keeps the label at a contrast of at least 4.5:1 in light and dark mode (the bright
+text of Tabler's `-lt` badges falls below that for yellow and orange).
 
 ## Behavior
 
@@ -93,7 +95,8 @@ stay as they were. The same migration runs on older backups on their staged rest
   The client names each entry through its translation and colors it from the same Tabler variable as
   its badge.
 - **Client:** `client/src/conditionGrades.js` maps each key to its label key, badge class
-  (`bg-<color>-lt`, `bg-secondary-lt` for Not set), and color variable;
+  (`condition-badge condition-badge-<color>`, `condition-badge-unset` for Not set, styled in
+  `client/src/style.css` from Tabler custom properties only), and color variable;
   `ConditionGradeBadge.vue` is the shared badge and `ConditionHelpDialog.vue` the help dialog. The
   help text lives in the `condition.*` translation keys.
 - **AI:** `aiItemAnalysisService.js` offers `condition_grade` with an enum of the keys plus `null` and
@@ -113,7 +116,7 @@ stay as they were. The same migration runs on older backups on their staged rest
   normalization, the notes-only bulk replacement, the Dashboard over HTTP, the API refusal and filter,
   and the unchanged New flag.
 - Playwright `test/e2e/condition-grading.spec.js`: the help dialog (content, badges, close button,
-  Escape, backdrop, focus return), the selector and its badge, table badges and colors for every grade
+  Escape, backdrop, focus return), the computed text contrast of every badge in light and dark mode, the selector and its badge, table badges and colors for every grade
   and Not set, rank sorting in both directions, the filter, the Condition Notes column, details, and
   the dialog and cards at phone width. Items, templates, Duplicate, AI Add Item, Dashboard, columns,
   and Ukrainian specs cover the changed flows.

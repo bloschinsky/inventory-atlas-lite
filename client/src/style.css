@@ -98,6 +98,21 @@ body.app-menu-open { overflow: hidden; }
 
 /* Condition Notes keep the line breaks they were typed with. */
 .condition-notes { white-space: pre-line; }
+/*
+  Condition grade badges: a tint of the grade's Tabler color behind text mixed from the same color and
+  the body text color. The body color is dark in light mode and light in dark mode, so the label keeps
+  readable contrast in both, which the bright text of Tabler's -lt badges does not for yellow or orange.
+*/
+.condition-badge {
+  background-color: color-mix(in srgb, var(--app-condition-color) 16%, transparent);
+  color: color-mix(in srgb, var(--app-condition-color) 35%, var(--tblr-body-color));
+}
+.condition-badge-red { --app-condition-color: var(--tblr-red); }
+.condition-badge-orange { --app-condition-color: var(--tblr-orange); }
+.condition-badge-yellow { --app-condition-color: var(--tblr-yellow); }
+.condition-badge-blue { --app-condition-color: var(--tblr-blue); }
+.condition-badge-green { --app-condition-color: var(--tblr-green); }
+.condition-badge-unset { --app-condition-color: var(--tblr-secondary); }
 
 /* Photo viewer */
 .photo-frame { display: grid; place-items: center; min-height: 260px; max-height: 60vh; background: var(--app-media-bg); border-radius: var(--tblr-border-radius) var(--tblr-border-radius) 0 0; overflow: hidden; }
