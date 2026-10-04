@@ -59,8 +59,8 @@ test('the hierarchy endpoint returns lightweight flat nodes with inherited locat
   const bag = add('Camera Bag', box, 'Hallway');
   const camera = add('Nikon F80', bag);
   add('Coffee mug', null, '  ');
-  db.prepare("INSERT INTO item_photos (item_id, filename, mime_type, data) VALUES (?, 'a.png', 'image/png', x'00')").run(camera.id);
-  db.prepare("INSERT INTO item_photos (item_id, filename, mime_type, data) VALUES (?, 'b.png', 'image/png', x'00')").run(camera.id);
+  db.prepare("INSERT INTO item_photos (item_id, filename, mime_type, data, sort_order) VALUES (?, 'a.png', 'image/png', x'00', 0)").run(camera.id);
+  db.prepare("INSERT INTO item_photos (item_id, filename, mime_type, data, sort_order) VALUES (?, 'b.png', 'image/png', x'00', 1)").run(camera.id);
   const firstPhoto = db.prepare('SELECT MIN(id) AS id FROM item_photos').get().id;
 
   const { items } = itemService.hierarchy();

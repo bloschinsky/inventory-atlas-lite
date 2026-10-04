@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, useId, watch } from 'vue';
 
+// The photos arrive in their persisted order, so the carousel opens on the first one, the cover.
 const props = defineProps({ photos: { type: Array, required: true } });
 defineEmits(['delete']);
 

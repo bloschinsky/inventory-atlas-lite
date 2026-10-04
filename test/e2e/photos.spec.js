@@ -184,3 +184,91 @@ test.describe('on a phone', () => {
     await expect(slide(page, 2)).toBeVisible();
   });
 });
+
+// The photo order shown in the item form, read from the previews' alternative text.
+const formOrder = page => page.getByRole('list', { name: 'Photos' }).getByRole('img').evaluateAll(images => images.map(image => image.alt));
+const tile = (page, name) => page.getByRole('list', { name: 'Photos' }).getByRole('listitem').filter({ has: page.getByRole('img', { name }) });
+const photoIds = async (request, item) => (await (await request.get(`/api/items/${item.id}`)).json()).photos.map(photo => photo.id);
+
+async function editPhotos(page, item) {
+  await page.goto(`/items/${item.id}/edit`);
+  await page.mouse.move(600, 400);
+  await expect(page.getByRole('list', { name: 'Photos' }).getByRole('img')).not.toHaveCount(0);
+}
+
+test('the cover is chosen and photos are reordered in the item form', async ({ page, request }) => {
+  const item = await itemWithPhotos(request, 3);
+  const [, , third] = await photoIds(request, item);
+
+  await editPhotos(page, item);
+  await expect.poll(() => formOrder(page)).toEqual(['photo-1.png', 'photo-2.png', 'photo-3.png']);
+  await expect(tile(page, 'photo-1.png')).toContainText('Cover');
+  await expect(page.getByRole('button', { name: 'Make photo-1.png the cover photo' })).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Move photo photo-1.png left' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Move photo photo-3.png right' })).toBeDisabled();
+
+  await page.getByRole('button', { name: 'Make photo-3.png the cover photo' }).click();
+  await expect.poll(() => formOrder(page)).toEqual(['photo-3.png', 'photo-1.png', 'photo-2.png']);
+  await expect(tile(page, 'photo-3.png')).toContainText('Cover');
+  await expect(tile(page, 'photo-1.png')).not.toContainText('Cover');
+  await page.getByRole('button', { name: 'Save item' }).click();
+
+  // The details carousel opens on the new cover, and the Items list shows it as the thumbnail.
+  await expect(page).toHaveURL(`/items/${item.id}`);
+  await expect(slide(page, 3)).toBeVisible();
+  await expect(page.getByText('1 / 3')).toBeVisible();
+  await page.mouse.move(600, 400);
+  await page.getByRole('button', { name: 'Next photo' }).click();
+  await expect(slide(page, 1)).toBeVisible();
+  await page.goto('/items');
+  await page.getByPlaceholder('Search name, description, serial number, transferred to or text fields…').fill(item.name);
+  await expect(page.getByRole('img', { name: item.name })).toHaveAttribute('src', `/api/photos/${third}`);
+
+  // Left and right moves, also from the keyboard, persist across a reload.
+  await editPhotos(page, item);
+  await page.getByRole('button', { name: 'Move photo photo-2.png left' }).click();
+  await expect.poll(() => formOrder(page)).toEqual(['photo-3.png', 'photo-2.png', 'photo-1.png']);
+  await expect(page.getByRole('button', { name: 'Move photo photo-2.png left' })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect.poll(() => formOrder(page)).toEqual(['photo-2.png', 'photo-3.png', 'photo-1.png']);
+  await page.getByRole('button', { name: 'Move photo photo-3.png right' }).click();
+  await expect.poll(() => formOrder(page)).toEqual(['photo-2.png', 'photo-1.png', 'photo-3.png']);
+  await page.getByRole('button', { name: 'Save item' }).click();
+  await expect(page).toHaveURL(`/items/${item.id}`);
+  await expect(slide(page, 2)).toBeVisible();
+  await page.reload();
+  await expect(slide(page, 2)).toBeVisible();
+  await editPhotos(page, item);
+  await expect.poll(() => formOrder(page)).toEqual(['photo-2.png', 'photo-1.png', 'photo-3.png']);
+});
+
+test('a newly selected photo can become the cover before it is uploaded', async ({ page, request }) => {
+  const item = await itemWithPhotos(request, 2);
+
+  await editPhotos(page, item);
+  await page.getByLabel('Add photos').setInputFiles({ name: 'photo-9.png', mimeType: 'image/png', buffer: photoBytes });
+  await expect(page.getByText('1 photo ready to upload.')).toBeVisible();
+  await expect(tile(page, 'photo-9.png')).toContainText('Not saved');
+  await page.getByRole('button', { name: 'Make photo-9.png the cover photo' }).click();
+  await expect.poll(() => formOrder(page)).toEqual(['photo-9.png', 'photo-1.png', 'photo-2.png']);
+  await page.getByRole('button', { name: 'Save item' }).click();
+
+  await expect(page).toHaveURL(`/items/${item.id}`);
+  await expect(slide(page, 9)).toBeVisible();
+  await expect(page.getByText('1 / 3')).toBeVisible();
+});
+
+test('deleting the cover makes the next photo the cover', async ({ page, request }) => {
+  const item = await itemWithPhotos(request, 3);
+
+  await editPhotos(page, item);
+  page.once('dialog', dialog => dialog.accept());
+  await page.getByRole('button', { name: 'Delete photo photo-1.png' }).click();
+  await expect(tile(page, 'photo-1.png')).toHaveCount(0);
+  await expect(tile(page, 'photo-2.png')).toContainText('Cover');
+  await expect(page.getByRole('button', { name: 'Move photo photo-2.png left' })).toBeDisabled();
+
+  await page.goto(`/items/${item.id}`);
+  await expect(slide(page, 2)).toBeVisible();
+  await expect(page.getByText('1 / 2')).toBeVisible();
+});

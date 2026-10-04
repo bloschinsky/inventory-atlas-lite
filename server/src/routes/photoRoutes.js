@@ -6,6 +6,9 @@ export const createPhotoRoutes = ({ photoService, imageUpload }) => {
   router.post('/api/items/:id/photos', imageUpload.array('photos', 10), (req, res) => {
     res.status(201).json(photoService.addToItem(req.params.id, req.files));
   });
+  router.put('/api/items/:id/photos/order', (req, res) => {
+    res.json(photoService.reorder(req.params.id, req.body?.photo_ids));
+  });
   router.get('/api/photos/:id', (req, res) => {
     const photo = photoService.get(req.params.id);
     res.type(photo.mime_type)

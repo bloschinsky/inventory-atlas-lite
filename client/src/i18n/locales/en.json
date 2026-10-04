@@ -150,7 +150,11 @@
     "next": "Next photo",
     "show": "Show photo {position} of {total}",
     "delete": "Delete photo",
-    "confirmDelete": "Delete this photo?"
+    "confirmDelete": "Delete this photo?",
+    "cover": "Cover",
+    "makeCover": "Make cover",
+    "moveLeft": "Move photo left",
+    "moveRight": "Move photo right"
   },
   "qr": {
     "title": "QR Code",
@@ -346,12 +350,17 @@
     "categoryFields": "Category fields",
     "deletePhoto": "Delete photo {name}",
     "addPhotos": "Add photos",
-    "photosReady": "{n} photo ready to upload. Choose files to replace the selection. | {n} photos ready to upload. Choose files to replace the selection.",
+    "photosReady": "{n} photo ready to upload. | {n} photos ready to upload.",
     "photoLimits": "Up to 10 images, 15 MB each.",
     "save": "Save item",
     "templateNotice": "Prefilled from the template “{name}”. Review and change any value before saving; the new item does not stay linked to the template.",
     "duplicateNotice": "Prefilled from the item “{name}”. Review and change any value before saving; the new item is saved as a separate item without its photos or container.",
-    "duplicateSerialHint": "Serial numbers are often unique. Check the copied value before saving."
+    "duplicateSerialHint": "Serial numbers are often unique. Check the copied value before saving.",
+    "makeCover": "Make {name} the cover photo",
+    "movePhotoLeft": "Move photo {name} left",
+    "movePhotoRight": "Move photo {name} right",
+    "unsavedPhoto": "Not saved",
+    "photoOrderHelp": "The first photo is the cover shown in lists and opened first. Use the arrows to change the order."
   },
   "templates": {
     "title": "Templates",
@@ -1132,6 +1141,8 @@
     "PARENT_ITEM_NOT_FOUND": "Parent item not found.",
     "PHOTOS_REQUIRED": "Choose at least one image.",
     "PHOTO_NOT_FOUND": "Photo not found.",
+    "PHOTO_ORDER_INVALID": "The photo order must list every photo ID once.",
+    "PHOTO_ORDER_STALE": "The photos of this item changed in the meantime. Reload the item and try again.",
     "REQUEST_FAILED": "Request failed (HTTP {status}).",
     "REQUEST_TOO_LARGE": "The request is too large.",
     "REQUIRED_FIELD_UNSUPPORTED": "Required custom fields are not supported yet; use \"required\": false for \"{name}\".",

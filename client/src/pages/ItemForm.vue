@@ -1,10 +1,10 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
+import { IconChevronLeft, IconChevronRight, IconStar, IconStarFilled, IconTrash } from '@tabler/icons-vue';
 import { api, jsonOptions } from '../api.js';
 import ItemDraftFields from '../components/ItemDraftFields.vue';
-import ItemThumbnail from '../components/ItemThumbnail.vue';
 import PageHeader from '../components/PageHeader.vue';
 import { takePendingAiDraft } from '../aiDraft.js';
 import { draftFromItem, useItemDraftForm } from '../itemDraft.js';
@@ -13,11 +13,9 @@ const route = useRoute(); const router = useRouter(); const { t } = useI18n();
 const editing = computed(() => Boolean(route.params.id));
 const { form, categories, fields, start, fieldValues } = useItemDraftForm();
 form.parent_item_id = null;
-const existingPhotos = ref([]); const photos = ref([]);
 const error = ref(''); const saving = ref(false);
 const aiDraft = ref(null); const templateDraft = ref(null); const duplicateSource = ref(null);
 const photoWarning = ref('');
-const photoPreviews = ref([]);
 const itemId = ref(null); const parent = ref(null); const parentSearch = ref(''); const parentResults = ref([]);
 
 async function searchParents() {
@@ -30,26 +28,74 @@ function selectParent(candidate) {
   parentSearch.value = ''; parentResults.value = [];
 }
 
-watch(photos, selected => {
-  for (const preview of photoPreviews.value) URL.revokeObjectURL(preview.url);
-  photoPreviews.value = selected.map(photo => ({ name: photo.name, url: URL.createObjectURL(photo) }));
+/*
+  Saved photos ({ id }) and newly selected files ({ file, url }) share one visible order; its first
+  photo is the cover. `savedOrder` is the order the server holds, so Save sends an order only when
+  the visible one differs from it. New files are uploaded in their visible order, which appends them
+  after the saved photos, and the combined order is then stored with the ids the upload returned.
+*/
+const photos = ref([]); const savedOrder = ref([]);
+let photoKey = 0;
+const savedPhoto = photo => ({ key: `photo-${photo.id}`, id: photo.id, name: photo.filename, url: `/api/photos/${photo.id}`, file: null });
+const selectedPhoto = file => ({ key: `file-${photoKey++}`, id: null, name: file.name, url: URL.createObjectURL(file), file });
+const photoHelp = computed(() => {
+  const selected = photos.value.filter(photo => photo.file).length;
+  return [selected && t('itemForm.photosReady', selected), photos.value.length > 1 && t('itemForm.photoOrderHelp'), t('itemForm.photoLimits')]
+    .filter(Boolean).join(' ');
 });
-onBeforeUnmount(() => {
-  for (const preview of photoPreviews.value) URL.revokeObjectURL(preview.url);
-});
+const releasePreview = photo => { if (photo.file) URL.revokeObjectURL(photo.url); };
+
+function addPhotos(event) {
+  photos.value = [...photos.value, ...Array.from(event.target.files).map(selectedPhoto)];
+  event.target.value = '';
+}
+// Focus follows the moved photo, so the arrows can be pressed again from the keyboard.
+async function movePhoto(index, target) {
+  const list = [...photos.value];
+  const [photo] = list.splice(index, 1);
+  list.splice(target, 0, photo);
+  photos.value = list;
+  await nextTick();
+  const control = document.getElementById(`${photo.key}-${target < index ? 'left' : 'right'}`);
+  (control && !control.disabled ? control : document.getElementById(`${photo.key}-delete`))?.focus();
+}
+async function removePhoto(photo) {
+  if (photo.id) {
+    if (!confirm(t('photos.confirmDelete'))) return;
+    try { await api(`/api/photos/${photo.id}`, { method: 'DELETE' }); } catch (e) { error.value = e.message; return; }
+    savedOrder.value = savedOrder.value.filter(id => id !== photo.id);
+  }
+  releasePreview(photo);
+  photos.value = photos.value.filter(entry => entry !== photo);
+}
+onBeforeUnmount(() => photos.value.forEach(releasePreview));
+
+async function savePhotos(id) {
+  const selected = photos.value.filter(photo => photo.file);
+  if (selected.length) {
+    const data = new FormData(); for (const photo of selected) data.append('photos', photo.file);
+    const created = await api(`/api/items/${id}/photos`, { method: 'POST', body: data });
+    // An uploaded file becomes a saved photo, so a failed reorder never uploads it twice.
+    const uploaded = new Map(selected.map((photo, index) => [photo.key, savedPhoto(created[index])]));
+    selected.forEach(releasePreview);
+    photos.value = photos.value.map(photo => uploaded.get(photo.key) || photo);
+    savedOrder.value = [...savedOrder.value, ...created.map(photo => photo.id)];
+  }
+  const order = photos.value.map(photo => photo.id);
+  if (order.join() !== savedOrder.value.join()) {
+    await api(`/api/items/${id}/photos/order`, jsonOptions('PUT', { photo_ids: order }));
+    savedOrder.value = order;
+  }
+}
 async function save() {
   saving.value = true; error.value = '';
   try {
     const url = editing.value ? `/api/items/${route.params.id}` : '/api/items';
     const item = await api(url, jsonOptions(editing.value ? 'PUT' : 'POST', { ...form, field_values: fieldValues() }));
-    if (photos.value.length) {
-      const data = new FormData(); for (const photo of photos.value) data.append('photos', photo);
-      await api(`/api/items/${item.id}/photos`, { method: 'POST', body: data });
-    }
+    await savePhotos(item.id);
     router.push(`/items/${item.id}`);
   } catch (e) { error.value = e.message; } finally { saving.value = false; }
 }
-async function removePhoto(id) { if (confirm(t('photos.confirmDelete'))) { await api(`/api/photos/${id}`, { method: 'DELETE' }); existingPhotos.value = existingPhotos.value.filter(p => p.id !== id); } }
 
 /*
   Every way of opening the form ends in one draft: the item being edited, a pending AI suggestion,
@@ -62,14 +108,15 @@ async function loadDraft() {
     const item = await api(`/api/items/${route.params.id}`);
     form.parent_item_id = item.parent_item_id;
     itemId.value = item.id; parent.value = item.parent;
-    existingPhotos.value = item.photos;
+    photos.value = item.photos.map(savedPhoto);
+    savedOrder.value = item.photos.map(photo => photo.id);
     return draftFromItem(item);
   }
   const pending = takePendingAiDraft();
   if (pending) {
     aiDraft.value = pending.draft;
     photoWarning.value = pending.photoWarning;
-    photos.value = pending.photo ? [pending.photo] : [];
+    photos.value = pending.photo ? [selectedPhoto(pending.photo)] : [];
     return pending.draft;
   }
   if (route.query.template) {
@@ -225,53 +272,104 @@ onMounted(async () => {
         <h2 class="card-title mb-3">
           {{ $t('photos.title') }}
         </h2>
-        <div
-          v-if="existingPhotos.length"
-          class="d-flex flex-wrap gap-2 mb-3"
+        <ol
+          v-if="photos.length"
+          class="list-unstyled d-flex flex-wrap gap-3 mb-3"
+          :aria-label="$t('photos.title')"
         >
-          <div
-            v-for="photo in existingPhotos"
-            :key="photo.id"
-            class="position-relative"
+          <li
+            v-for="(photo, index) in photos"
+            :key="photo.key"
+            class="app-photo-tile"
           >
-            <ItemThumbnail
-              :photo-id="photo.id"
-              :name="photo.filename"
-              large
-            />
-            <button
-              type="button"
-              class="btn btn-danger btn-icon btn-sm position-absolute top-0 end-0 p-0 app-thumb-remove"
-              :aria-label="$t('itemForm.deletePhoto', { name: photo.filename })"
-              @click="removePhoto(photo.id)"
-            >
-              ×
-            </button>
-          </div>
-        </div>
+            <div class="app-photo-tile-frame">
+              <img
+                :src="photo.url"
+                :alt="photo.name"
+              >
+              <span
+                v-if="index === 0"
+                class="badge bg-yellow text-yellow-fg app-photo-tile-badge"
+              >
+                <IconStarFilled
+                  :size="12"
+                  aria-hidden="true"
+                />
+                {{ $t('photos.cover') }}
+              </span>
+              <span
+                v-if="photo.file"
+                class="badge bg-blue text-blue-fg app-photo-tile-badge app-photo-tile-badge-end"
+              >{{ $t('itemForm.unsavedPhoto') }}</span>
+            </div>
+            <div class="d-flex justify-content-between gap-1 mt-1">
+              <button
+                :id="`${photo.key}-left`"
+                type="button"
+                class="btn btn-icon app-photo-tile-action"
+                :disabled="index === 0"
+                :title="$t('photos.moveLeft')"
+                :aria-label="$t('itemForm.movePhotoLeft', { name: photo.name })"
+                @click="movePhoto(index, index - 1)"
+              >
+                <IconChevronLeft
+                  :size="18"
+                  aria-hidden="true"
+                />
+              </button>
+              <button
+                v-if="index > 0"
+                type="button"
+                class="btn btn-icon app-photo-tile-action"
+                :title="$t('photos.makeCover')"
+                :aria-label="$t('itemForm.makeCover', { name: photo.name })"
+                @click="movePhoto(index, 0)"
+              >
+                <IconStar
+                  :size="18"
+                  aria-hidden="true"
+                />
+              </button>
+              <button
+                :id="`${photo.key}-right`"
+                type="button"
+                class="btn btn-icon app-photo-tile-action"
+                :disabled="index === photos.length - 1"
+                :title="$t('photos.moveRight')"
+                :aria-label="$t('itemForm.movePhotoRight', { name: photo.name })"
+                @click="movePhoto(index, index + 1)"
+              >
+                <IconChevronRight
+                  :size="18"
+                  aria-hidden="true"
+                />
+              </button>
+              <button
+                :id="`${photo.key}-delete`"
+                type="button"
+                class="btn btn-icon btn-outline-danger app-photo-tile-action"
+                :title="$t('photos.delete')"
+                :aria-label="$t('itemForm.deletePhoto', { name: photo.name })"
+                @click="removePhoto(photo)"
+              >
+                <IconTrash
+                  :size="18"
+                  aria-hidden="true"
+                />
+              </button>
+            </div>
+          </li>
+        </ol>
         <input
           class="form-control"
           type="file"
           :aria-label="$t('itemForm.addPhotos')"
           accept="image/*"
           multiple
-          @change="photos = Array.from($event.target.files)"
+          @change="addPhotos"
         >
-        <div
-          v-if="photoPreviews.length"
-          class="d-flex flex-wrap gap-2 mt-3"
-        >
-          <img
-            v-for="preview in photoPreviews"
-            :key="preview.url"
-            :src="preview.url"
-            :alt="preview.name"
-            class="img-thumbnail app-selected-photo-preview"
-          >
-        </div>
         <div class="form-text">
-          <span v-if="photos.length">{{ $t('itemForm.photosReady', photos.length) }} </span>
-          {{ $t('itemForm.photoLimits') }}
+          {{ photoHelp }}
         </div>
       </div>
       <div class="card-footer d-flex flex-wrap gap-2 justify-content-end">

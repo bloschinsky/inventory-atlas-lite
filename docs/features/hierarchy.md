@@ -147,14 +147,14 @@ Category: Inventory → Category → category-root items → same-category neste
 ## Implementation overview
 
 - `GET /api/items/hierarchy` answers `{ items: [...] }`, one flat node per item with `id`, `uuid`,
-  `name`, `parent_id`, `category_id`, `category_name`, `thumbnail_id` (first photo or `null`),
+  `name`, `parent_id`, `category_id`, `category_name`, `thumbnail_id` (the [cover photo](item-photo-order.md) or `null`),
   `effective_location`, and `children_count` (direct physical contents). Nodes are never nested in
   the response, so any projection derives its own structure from `parent_id`. The route is
   registered before `/api/items/:id`. Neither grouping needs more: the direct container's name is read
   from the same response, so the endpoint is unchanged and there is no request per category or item.
 - `ItemRepository.listHierarchy()` reads every node in one statement. It reuses `ROOTS_CTE` for the
-  root that provides the effective location, and grouped joins for the first photo and the child
-  count, so there is no query per item or per location and no photo data is read.
+  root that provides the effective location, a grouped join for the child count, and the shared
+  indexed cover-photo lookup, so there is no query per item or per location and no photo data is read.
   `ItemService.hierarchy()` maps the root location with the same rule as the items list.
 - `client/src/hierarchyTree.js` holds the pure hierarchy rules. Both projections are built by one
   internal `project()` that keeps a `parent_id` link only when the projection's rule allows it, groups

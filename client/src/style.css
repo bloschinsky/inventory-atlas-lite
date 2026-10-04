@@ -116,8 +116,13 @@ body.app-menu-open { overflow: hidden; }
 /* Dragging the photo itself would start a native image drag instead of a swipe. */
 .photo-carousel img { user-select: none; -webkit-user-drag: none; }
 
-/* The remove button that overlays an uploaded photo thumbnail in the item form. */
-.app-thumb-remove { width: 1.25rem; height: 1.25rem; line-height: 1; }
+/* One photo of the item form: its preview, cover and unsaved badges, and touch-sized order controls. */
+.app-photo-tile { width: 12rem; }
+.app-photo-tile-frame { position: relative; display: grid; place-items: center; height: 9rem; overflow: hidden; border-radius: var(--tblr-border-radius); background: var(--app-media-bg); border: var(--tblr-border-width) var(--tblr-border-style) var(--tblr-border-color); }
+.app-photo-tile-frame img { width: 100%; height: 100%; object-fit: contain; }
+.app-photo-tile-badge { position: absolute; top: .375rem; left: .375rem; display: inline-flex; align-items: center; gap: .25rem; }
+.app-photo-tile-badge-end { left: auto; right: .375rem; }
+.app-photo-tile-action { min-width: 44px; min-height: 44px; }
 
 /*
   Tabler styles its sidebar navigation only inside the desktop vertical navbar, so the mobile
@@ -177,7 +182,6 @@ body.app-menu-open { overflow: hidden; }
   max-width: min(100%, 26rem);
   object-fit: contain;
 }
-.app-selected-photo-preview { width: 10rem; height: 10rem; object-fit: contain; }
 
 /*
   Version History opens over the still visible About dialog, so it needs the layer above Bootstrap's

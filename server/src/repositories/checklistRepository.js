@@ -1,3 +1,4 @@
+import { coverPhotoIdSql } from './itemPhotoRepository.js';
 import { ROOTS_CTE } from './itemRepository.js';
 
 // Reusable checklists and their ordered item references. Statements are prepared when they are used,
@@ -33,7 +34,7 @@ export class ChecklistRepository {
       ${ROOTS_CTE}
       SELECT ci.id, ci.item_id, ci.item_name_snapshot, i.uuid AS item_uuid, i.name AS item_name,
         cat.name AS category_name, i.location, root.id AS root_id, root.location AS root_location,
-        (SELECT id FROM item_photos p WHERE p.item_id = i.id ORDER BY p.id LIMIT 1) AS thumbnail_id
+        ${coverPhotoIdSql('i.id')} AS thumbnail_id
       FROM checklist_items ci
       LEFT JOIN items i ON i.id = ci.item_id
       LEFT JOIN categories cat ON cat.id = i.category_id

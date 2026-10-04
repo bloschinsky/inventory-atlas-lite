@@ -479,8 +479,8 @@ test('the dashboard reports the coverage of each useful field separately', () =>
   });
   itemService.create({ name: 'Lens', category_id: cameras.id, purchase_date: '2026-02-01' });
   const loose = itemService.create({ name: 'Strap', category_id: cameras.id });
-  db.prepare("INSERT INTO item_photos (item_id, filename, mime_type, data) VALUES (?, 'a.png', 'image/png', x'00')").run(box.id);
-  db.prepare("INSERT INTO item_photos (item_id, filename, mime_type, data) VALUES (?, 'b.png', 'image/png', x'00')").run(box.id);
+  db.prepare("INSERT INTO item_photos (item_id, filename, mime_type, data, sort_order) VALUES (?, 'a.png', 'image/png', x'00', 0)").run(box.id);
+  db.prepare("INSERT INTO item_photos (item_id, filename, mime_type, data, sort_order) VALUES (?, 'b.png', 'image/png', x'00', 1)").run(box.id);
   // Incomplete legacy values do not count: a date SQLite cannot read, and an amount without currency.
   db.prepare("UPDATE items SET purchase_date = '2026-02-30', purchase_price_amount = '5' WHERE id = ?").run(loose.id);
 
