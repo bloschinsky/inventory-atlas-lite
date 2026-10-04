@@ -59,7 +59,7 @@ function createInventory(dir) {
   applySchema(db);
   const category = db.prepare("INSERT INTO categories (name) VALUES ('Cameras')").run().lastInsertRowid;
   const item = db.prepare("INSERT INTO items (uuid, name, category_id) VALUES (?, 'Zenit E', ?)").run(crypto.randomUUID(), category).lastInsertRowid;
-  db.prepare("INSERT INTO item_photos (item_id, filename, mime_type, data) VALUES (?, 'zenit.png', 'image/png', ?)").run(item, crypto.randomBytes(700 * 1024));
+  db.prepare("INSERT INTO item_photos (item_id, filename, mime_type, data, sort_order) VALUES (?, 'zenit.png', 'image/png', ?, 0)").run(item, crypto.randomBytes(700 * 1024));
   return db;
 }
 

@@ -52,7 +52,8 @@ the English names.
    **Field name**, choose the type (Text, Number, Date, Boolean), and press **Add**.
 3. Go to **Items** and press **Add item**. Fill in **Name** and **Category** — both are required —
    and any other values you want.
-4. Select photos at the bottom of the form. They are uploaded when you save the item.
+4. Select photos at the bottom of the form. They are uploaded when you save the item; the first one
+   is the cover.
 5. Fill in **Location** (free text, such as `Garage`) and, if the item sits inside another item you
    have already recorded, set **Stored inside**.
 6. Press **Save item**. You land on the item page; check that it also appears on **Items** and that
@@ -475,19 +476,28 @@ web, create categories or fields, or make a second AI request.
 4. An item that still contains other items cannot be deleted. The message reports how many items are
    inside; move or delete them first.
 
-### Add, view, and remove photos
+### Add, view, order, and remove photos
 
 1. Photos are added through the item form, at the bottom, under **Photos**. Select one or several
-   files and save.
+   files and save. Choosing files again adds them after the ones already shown; a file that is not
+   uploaded yet is marked **Not saved**.
 2. Up to **10 images per upload, 15 MB each**. Supported formats are JPEG, PNG, WebP, and GIF; other
    files are rejected by the server.
 3. The item page shows one large photo at a time. With several photos it becomes a carousel: the
    arrows over the left and right edge of the image move one photo, the small bars at the bottom of
    the image jump straight to a photo, and a `1 / 3` counter below shows where you are. You can also
-   swipe on a touch screen or drag with the mouse. Nothing changes on its own. The first photo is
-   used as the thumbnail in the items list.
-4. Delete a photo with **Delete photo** under it on the item page, or with the **×** button on its
-   thumbnail in the edit form. Both act immediately and are separate from deleting the item.
+   swipe on a touch screen or drag with the mouse. Nothing changes on its own. It opens on the cover
+   photo.
+4. **The first photo is the cover.** It is marked **Cover** in the form, opens first on the item page,
+   and is the thumbnail in the Items list, the Hierarchy, the contents of a container, and checklists.
+   To change it, press the star (**Make cover**) under any other photo in the item form, or reorder the
+   photos with the left and right arrows (**Move photo left** / **Move photo right**). A newly selected
+   file can become the cover too. The new order is saved with **Save item**. If the photos changed in
+   another tab meanwhile, saving reports it; reload the item and try again.
+5. Delete a photo with **Delete photo** under it on the item page, or with the trash button under its
+   tile in the edit form. Both act immediately after confirmation and are separate from deleting the
+   item; a **Not saved** file is simply dropped from the selection. Deleting the cover makes the next
+   photo the cover.
 
 ### Show the QR code of an item
 

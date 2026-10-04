@@ -16,11 +16,12 @@ export const databasePath = path.join(dataDir, 'inventory.sqlite');
   because it was written by a newer release whose schema this one cannot read.
   Version 2 added the item template tables; version 3 added the database_metadata table; version 4
   added the checklist tables; version 5 added items.last_verified_at and the container audit columns of
-  checklist_runs; version 6 added items.is_new and item_templates.is_new.
+  checklist_runs; version 6 added items.is_new and item_templates.is_new; version 7 added
+  item_photos.sort_order.
   user_version stays the source of truth: database_metadata.schema_version mirrors it and is written
   in the same transaction, so the two never disagree.
 */
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 export const DEFAULT_DATABASE_NAME = 'Inventory Atlas';
 
@@ -52,7 +53,7 @@ export const CURRENT_SCHEMA = {
   items: [...CORE_SCHEMA.items, 'purchase_date', 'purchase_price_amount', 'purchase_price_currency',
     'serial_number', 'transferred_to', 'parent_item_id', 'last_verified_at', 'is_new', 'created_at', 'updated_at'],
   custom_fields: [...CORE_SCHEMA.custom_fields, 'created_at', 'updated_at'],
-  item_photos: [...CORE_SCHEMA.item_photos, 'created_at'],
+  item_photos: [...CORE_SCHEMA.item_photos, 'sort_order', 'created_at'],
   item_templates: ['id', 'name', 'category_id', 'item_name', 'description', 'condition', 'location', 'purchase_date',
     'purchase_price_amount', 'purchase_price_currency', 'serial_number', 'transferred_to', 'is_new', 'created_at', 'updated_at'],
   item_template_field_values: ['id', 'template_id', 'field_id', 'value'],
@@ -151,12 +152,14 @@ export const applySchema = connection => connection.transaction(() => {
       value TEXT,
       UNIQUE(item_id, field_id)
     );
+    -- sort_order is the persisted photo order within one item, 0..n-1; the first photo is the cover.
     CREATE TABLE IF NOT EXISTS item_photos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
       filename TEXT NOT NULL,
       mime_type TEXT NOT NULL,
       data BLOB NOT NULL,
+      sort_order INTEGER NOT NULL,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
     -- A template is a preset for new items, never an item. Deleting its category keeps the template
@@ -275,6 +278,19 @@ export const applySchema = connection => connection.transaction(() => {
   const templateColumns = new Set(connection.prepare('PRAGMA table_info(item_templates)').all().map(column => column.name));
   if (!templateColumns.has('is_new')) connection.exec('ALTER TABLE item_templates ADD COLUMN is_new INTEGER CHECK (is_new IN (0, 1))');
   connection.exec('CREATE INDEX IF NOT EXISTS idx_items_parent ON items(parent_item_id)');
+  // Existing photos keep the order they were shown in, by id, so no item's cover changes. The
+  // migration is not an inventory edit, so the update trigger is recreated only after it ran.
+  const photoColumns = new Set(connection.prepare('PRAGMA table_info(item_photos)').all().map(column => column.name));
+  if (!photoColumns.has('sort_order')) {
+    connection.exec(`
+      DROP TRIGGER IF EXISTS item_photos_update_touches_metadata;
+      ALTER TABLE item_photos ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0;
+      UPDATE item_photos SET sort_order = ranked.position
+      FROM (SELECT id, ROW_NUMBER() OVER (PARTITION BY item_id ORDER BY id) - 1 AS position FROM item_photos) ranked
+      WHERE ranked.id = item_photos.id;
+    `);
+  }
+  connection.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_photos_item_order ON item_photos(item_id, sort_order)');
   const runColumns = new Set(connection.prepare('PRAGMA table_info(checklist_runs)').all().map(column => column.name));
   const missingRunColumns = [
     ['source', "TEXT NOT NULL DEFAULT 'checklist' CHECK(source IN ('checklist', 'container_audit'))"],

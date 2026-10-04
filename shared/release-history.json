@@ -1,8 +1,11 @@
 [
   {
-    "version": "0.49.1",
+    "version": "0.50.0",
     "date": "2026-10-04",
     "changes": [
+      "Choose the cover photo of an item: in Add Item and Edit Item, press the star under any photo to make it the cover, or move photos left and right to change their order. The order is saved with the item.",
+      "The cover is always the first photo. It opens first on the item page and is the thumbnail in the Items list, the Hierarchy, container contents, and checklists. Deleting the cover makes the next photo the cover, and existing items keep the cover they had.",
+      "Newly selected photos join the same row and can be reordered, or made the cover, before they are uploaded. Choosing more files now adds them to the selection instead of replacing it.",
       "The New field now reads at a glance: item pages and the New column of the Items list show a green New or an amber Used badge instead of Yes or No. Editing still uses the same New switch, and sorting by the column works as before."
     ]
   },

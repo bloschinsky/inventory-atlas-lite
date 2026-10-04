@@ -2,7 +2,9 @@
 
 The photo card on the item details page (`client/src/components/ItemPhotoViewer.vue`) shows the
 stored photos of one item. It renders three states and nothing else: an empty state, a plain single
-photo, and a carousel for two or more photos.
+photo, and a carousel for two or more photos. The photos arrive in their [persisted order](item-photo-order.md),
+so the carousel opens on the cover photo and its arrows and indicators follow that order; the component
+has no ordering rule of its own.
 
 ## States
 

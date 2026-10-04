@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { coverPhotoIdSql } from './itemPhotoRepository.js';
 import { containsLike, startsWithLike } from './sql.js';
 
 // Every item is walked down from its top-level container, so one pass labels the whole table with
@@ -137,7 +138,7 @@ export class ItemRepository {
   listChildren(id) {
     return this.db.prepare(`
       SELECT i.id, i.uuid, i.name, i.condition, c.name AS category_name,
-        (SELECT id FROM item_photos p WHERE p.item_id = i.id ORDER BY p.id LIMIT 1) AS thumbnail_id
+        ${coverPhotoIdSql('i.id')} AS thumbnail_id
       FROM items i JOIN categories c ON c.id = i.category_id
       WHERE i.parent_item_id = ? ORDER BY i.name COLLATE NOCASE
     `).all(id);
@@ -145,8 +146,9 @@ export class ItemRepository {
 
   /*
     Every item with only what a hierarchy node shows, in one statement: the root that provides its
-    effective location, its direct child count, and its first photo come from grouped joins rather
-    than a query per item. Names order siblings, and the id keeps equal names stable.
+    effective location and its direct child count come from grouped joins rather than a query per
+    item, and its cover photo from the indexed lookup that every thumbnail uses. Names order
+    siblings, and the id keeps equal names stable.
   */
   listHierarchy() {
     return this.db.prepare(`
@@ -154,11 +156,10 @@ export class ItemRepository {
       SELECT i.id, i.uuid, i.name, i.parent_item_id AS parent_id, i.location,
         c.id AS category_id, c.name AS category_name,
         root.id AS root_id, root.location AS root_location,
-        photo.thumbnail_id, COALESCE(kids.children_count, 0) AS children_count
+        ${coverPhotoIdSql('i.id')} AS thumbnail_id, COALESCE(kids.children_count, 0) AS children_count
       FROM items i JOIN categories c ON c.id = i.category_id
       LEFT JOIN roots ON roots.id = i.id
       LEFT JOIN items root ON root.id = roots.root_id
-      LEFT JOIN (SELECT item_id, MIN(id) AS thumbnail_id FROM item_photos GROUP BY item_id) photo ON photo.item_id = i.id
       LEFT JOIN (SELECT parent_item_id, COUNT(*) AS children_count FROM items
         WHERE parent_item_id IS NOT NULL GROUP BY parent_item_id) kids ON kids.parent_item_id = i.id
       ORDER BY i.name COLLATE NOCASE, i.id
@@ -204,7 +205,7 @@ export class ItemRepository {
         c.id AS category_id, c.name AS category_name,
         parent.id AS parent_id, parent.name AS parent_name,
         root.id AS root_id, root.uuid AS root_uuid, root.name AS root_name, root.location AS root_location,
-        (SELECT id FROM item_photos p WHERE p.item_id = i.id ORDER BY p.id LIMIT 1) AS thumbnail_id
+        ${coverPhotoIdSql('i.id')} AS thumbnail_id
       FROM items i JOIN categories c ON c.id = i.category_id
       LEFT JOIN items parent ON parent.id = i.parent_item_id
       LEFT JOIN roots ON roots.id = i.id

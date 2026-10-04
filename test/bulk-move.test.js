@@ -196,7 +196,7 @@ test('the effective location follows the new container while saved values and ot
   const camera = add('Camera', boxA, { location: 'Drawer', serial_number: 'SN-1', field_values: { [serial.id]: 'EF' } });
   const home = add('Home cabinet', null, { location: 'Home' });
   const boxB = add('Box B', home);
-  db.prepare('INSERT INTO item_photos (item_id, filename, mime_type, data) VALUES (?, ?, ?, ?)')
+  db.prepare('INSERT INTO item_photos (item_id, filename, mime_type, data, sort_order) VALUES (?, ?, ?, ?, 0)')
     .run(camera.id, 'camera.jpg', 'image/jpeg', Buffer.from('jpg'));
   const [boxBefore, cameraBefore] = [row(boxA), row(camera)];
   assert.equal(itemService.get(camera.id).effective_location, 'Garage');

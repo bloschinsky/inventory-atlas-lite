@@ -1,3 +1,5 @@
+import { coverPhotoIdSql } from './itemPhotoRepository.js';
+
 // Checklist runs and their per-item states. A run only ever reads its own snapshot rows, so editing or
 // deleting the checklist it came from never changes it.
 const SUMMARY = `
@@ -67,7 +69,7 @@ export class ChecklistRunRepository {
   listItems(runId) {
     return this.db.prepare(`
       SELECT ri.id, ri.item_id, ri.item_name_snapshot, ri.position, ri.status, ri.checked_at, ri.note, i.uuid AS item_uuid,
-        (SELECT id FROM item_photos p WHERE p.item_id = ri.item_id ORDER BY p.id LIMIT 1) AS thumbnail_id
+        ${coverPhotoIdSql('ri.item_id')} AS thumbnail_id
       FROM checklist_run_items ri LEFT JOIN items i ON i.id = ri.item_id
       WHERE ri.run_id = ? ORDER BY ri.position, ri.id
     `).all(runId);

@@ -121,7 +121,7 @@ The project stays small and readable. Do not add:
 - `client/src/useHierarchyExpansion.js` — the opened branches of the Hierarchy page (one browse set per grouping and a search set) shared by the Tree and Graph views.
 - `client/src/hierarchyGraph.js` — the library-independent Graph layout: deterministic left-to-right node positions, edges, the node limit, and view fitting.
 - `client/src/pages/ItemDetails.vue` — item details, Last verified, photos, deletion, and the container's Audit contents and recent audits; `client/src/components/AuditContentsDialog.vue` chooses the audit scope and starts the audit.
-- `client/src/pages/ItemForm.vue` — item creation/editing, custom field values, and photo uploads; it is prefilled from an item draft (the edited item, an AI draft, `?template=`, or `?duplicate=`).
+- `client/src/pages/ItemForm.vue` — item creation/editing, custom field values, photo uploads, and the photo order and cover; it is prefilled from an item draft (the edited item, an AI draft, `?template=`, or `?duplicate=`).
 - `client/src/itemDraft.js` — item drafts: the shared form state of the item form and the template editor, and the drafts built from an item or a template.
 - `client/src/components/ItemDraftFields.vue` — the item base and custom field inputs shared by the item form and the template editor.
 - `client/src/pages/Templates.vue` and `TemplateForm.vue` — the item template list and the template editor (also started from an item through `?fromItem=`).
@@ -166,6 +166,7 @@ The project stays small and readable. Do not add:
 - `test/e2e.test.js` — end-to-end acceptance test for the API, persistence, photos, and backups.
 - `test/services.test.js` — service-level regression tests that run without HTTP against a temporary database.
 - `test/custom-field-rename.test.js` — custom field rename: unchanged ids, types, categories, and item and template values, name validation and conflicts, column split and merge, Batch Add names, and the `PATCH /api/fields/:id` contract.
+- `test/item-photo-order.test.js` — persisted photo order and the cover photo: the schema and the version 7 migration, restore validation, ordered uploads, reorder validation and atomicity, deletion, the shared cover thumbnail, and the `PUT /api/items/:id/photos/order` contract.
 - `test/item-new-flag.test.js` — the core New flag: schema and the version 6 migration, restore validation, strict boolean validation, list sorting, the column catalog, template defaults, and batch import.
 - `test/serverProcess.js` — starts and stops the real server for the API tests on a free port chosen by the operating system (`PORT=0`), reading the bound port from its listening line.
 - `test/hierarchy.test.js` — the hierarchy endpoint (shape, inherited location, one statement), the Location and Category projection rules, per-grouping expansion, and the Graph layout.
@@ -227,7 +228,7 @@ are mandatory for all frontend work:
 - `item_field_values` store custom field values as text; booleans are normalized to `"1"` or `"0"`.
 - `item_templates` and `item_template_field_values` store user-defined presets for new items. A template is never an item; deleting its category sets `category_id` to NULL, and template values of deleted fields are ignored when read.
 - `database_metadata` holds exactly one row: the database UUID, name, `created_at`, `last_updated_at`, and a mirror of `PRAGMA user_version` (the schema version source of truth). Triggers advance `last_updated_at` on every write to the tables in `TRACKED_TABLES` in `server/src/db.js`; a new inventory table must be added there.
-- `item_photos` stores metadata and BLOB data in the same database. The API accepts up to 10 JPEG/PNG/WebP/GIF files of 15 MB each.
+- `item_photos` stores metadata and BLOB data in the same database. The API accepts up to 10 JPEG/PNG/WebP/GIF files of 15 MB each. `sort_order` (`0..n-1`, unique per item) is the persisted photo order, and the first photo is the cover: there is no cover flag. Every thumbnail query uses `coverPhotoIdSql()` from `server/src/repositories/itemPhotoRepository.js`.
 - Foreign keys are enabled. Related fields, values, and photos are deleted according to their `ON DELETE` rules; do not bypass those rules with manual operations.
 - `DATA_DIR` changes the persistent data directory. Tests must use a temporary directory instead of the working database in `data/`.
 
