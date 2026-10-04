@@ -19,7 +19,7 @@ async function mergedFieldCategories(request) {
 test('the Columns control shows, hides, keeps, and resets item columns', async ({ page, request }) => {
   const { fieldName, categories: [cameras, amplifiers] } = await mergedFieldCategories(request);
   const token = unique('Columned');
-  await createItem(request, { name: `${token} camera`, category_id: cameras.id, serial_number: 'SN-CAM', field_values: { [cameras.fieldId]: 'Leica' } });
+  await createItem(request, { name: `${token} camera`, category_id: cameras.id, is_new: true, serial_number: 'SN-CAM', field_values: { [cameras.fieldId]: 'Leica' } });
   await createItem(request, { name: `${token} amplifier`, category_id: amplifiers.id, field_values: { [amplifiers.fieldId]: 'Marantz' } });
 
   await page.goto('/items');
@@ -28,12 +28,15 @@ test('the Columns control shows, hides, keeps, and resets item columns', async (
   const table = page.getByRole('table');
   await expect(table.getByRole('link', { name: `${token} camera`, exact: true })).toBeVisible();
   await expect(table.getByRole('columnheader', { name: 'Serial Number' })).toHaveCount(0);
+  await expect(table.getByRole('columnheader', { name: 'New', exact: true })).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Columns' }).click();
   const picker = page.getByRole('group', { name: 'Visible columns' });
   await expect(picker.getByRole('checkbox', { name: 'Name' })).toBeChecked();
   await expect(picker.getByRole('checkbox', { name: 'Name' })).toBeDisabled();
   await picker.getByRole('checkbox', { name: 'Serial Number' }).check();
+  await expect(picker.getByRole('checkbox', { name: 'New', exact: true })).not.toBeChecked();
+  await picker.getByRole('checkbox', { name: 'New', exact: true }).check();
   await picker.getByRole('checkbox', { name: 'Condition' }).uncheck();
   await picker.getByRole('checkbox', { name: fieldName }).check();
   await page.keyboard.press('Escape');
@@ -45,6 +48,10 @@ test('the Columns control shows, hides, keeps, and resets item columns', async (
   await expect(table.getByRole('columnheader', { name: fieldName })).toHaveCount(1);
   await expect(table.getByRole('row').filter({ hasText: `${token} camera` })).toContainText('Leica');
   await expect(table.getByRole('row').filter({ hasText: `${token} camera` })).toContainText('SN-CAM');
+  // New is shown as a localized yes/no value, and its header sorts the list like any other column.
+  await expect(table.getByRole('columnheader', { name: 'New', exact: true })).toBeVisible();
+  await expect(table.getByRole('row').filter({ hasText: `${token} camera` })).toContainText('Yes');
+  await expect(table.getByRole('row').filter({ hasText: `${token} amplifier` })).toContainText('No');
   await expect(table.getByRole('row').filter({ hasText: `${token} amplifier` })).toContainText('Marantz');
 
   // The choice is a preference of this browser and survives a reload.
@@ -59,6 +66,7 @@ test('the Columns control shows, hides, keeps, and resets item columns', async (
   await page.getByRole('button', { name: 'Reset to default' }).click();
   await expect(table.getByRole('columnheader', { name: 'Condition' })).toBeVisible();
   await expect(table.getByRole('columnheader', { name: 'Serial Number' })).toHaveCount(0);
+  await expect(table.getByRole('columnheader', { name: 'New', exact: true })).toHaveCount(0);
   await expect(table.getByRole('columnheader', { name: fieldName })).toHaveCount(0);
 });
 

@@ -272,6 +272,7 @@
     "fields": {
       "name": "Назва",
       "category": "Категорія",
+      "isNew": "Новий",
       "condition": "Стан",
       "location": "Місце",
       "storedInside": "Зберігається в",
@@ -1078,6 +1079,7 @@
     "IMPORT_DUPLICATE_CUSTOM_FIELD": "Предмет {index} задає власне поле «{field}» більше одного разу.",
     "IMPORT_ITEMS_MISSING": "Документ має містити масив \"items\".",
     "IMPORT_ITEM_NOT_OBJECT": "Предмет {index} має бути JSON-об'єктом.",
+    "IMPORT_ITEM_BOOLEAN_EXPECTED": "Властивість \"{property}\" предмета {index} має бути true або false.",
     "IMPORT_ITEM_TEXT_EXPECTED": "Властивість \"{property}\" предмета {index} має бути текстом або null.",
     "IMPORT_ITEM_UNSUPPORTED_PROPERTY": "Предмет {index} має непідтримувану властивість \"{property}\". Підтримувані властивості: {supported}.",
     "IMPORT_NO_ITEMS": "Документ не містить жодного предмета.",
@@ -1111,6 +1113,7 @@
     "INVALID_PURCHASE_PRICE_AMOUNT": "Сума ціни покупки має бути невід'ємним числом із не більше ніж чотирма знаками після коми.",
     "INVALID_PURCHASE_PRICE_CURRENCY": "Валюта ціни покупки має бути дійсним кодом ISO 4217.",
     "INVALID_REQUEST": "Некоректний запит.",
+    "INVALID_IS_NEW": "Значення «Новий» має бути true або false.",
     "INVALID_SERIAL_NUMBER": "Серійний номер має бути текстом.",
     "INVALID_TRANSFERRED_TO": "Поле «Передано кому» має бути текстом.",
     "ITEM_CANNOT_CONTAIN_ITSELF": "Предмет не може зберігатися сам у собі.",

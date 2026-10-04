@@ -63,6 +63,16 @@ export const validateSerialNumber = value => shortText(value, { invalid: 'INVALI
 
 export const validateTransferredTo = value => shortText(value, { invalid: 'INVALID_TRANSFERRED_TO', tooLong: 'TRANSFERRED_TO_TOO_LONG' });
 
+// The New flag of an item is a real JSON boolean; omitted or null means the item is not new.
+export const validateIsNew = value => {
+  if (value === null || value === undefined) return false;
+  if (typeof value !== 'boolean') throw invalid('INVALID_IS_NEW');
+  return value;
+};
+
+// A template may leave the New flag unset (null), so items created from it keep their own default.
+export const validateTemplateIsNew = value => (value === null || value === undefined ? null : validateIsNew(value));
+
 // The optional base attributes shared by items and item templates, validated the same way for both.
 export const readItemDetails = body => {
   const purchaseDate = validatePurchaseDate(body.purchase_date);

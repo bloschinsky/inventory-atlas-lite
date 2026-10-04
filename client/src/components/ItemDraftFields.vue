@@ -53,6 +53,42 @@ const currencies = Intl.supportedValuesOf('currency');
       </option>
     </select>
   </div>
+  <!-- New is the item's own yes/no state; Condition stays free text describing the physical state. -->
+  <div
+    v-if="template"
+    class="mb-3"
+  >
+    <label
+      class="form-label"
+      for="item-is-new"
+    >{{ $t('items.fields.isNew') }}</label><select
+      id="item-is-new"
+      v-model="form.is_new"
+      class="form-select"
+    >
+      <option :value="null">
+        {{ $t('templates.notSet') }}
+      </option><option :value="false">
+        {{ $t('common.no') }}
+      </option><option :value="true">
+        {{ $t('common.yes') }}
+      </option>
+    </select>
+  </div>
+  <div
+    v-else
+    class="mb-3"
+  >
+    <label class="form-check form-switch">
+      <input
+        id="item-is-new"
+        v-model="form.is_new"
+        class="form-check-input"
+        type="checkbox"
+      >
+      <span class="form-check-label">{{ $t('items.fields.isNew') }}</span>
+    </label>
+  </div>
   <div class="row">
     <div class="col-md-6 mb-3">
       <label

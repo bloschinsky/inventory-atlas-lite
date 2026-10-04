@@ -12,9 +12,11 @@ prefilled; the item is created only when that form is saved. There are no built-
   and **Delete** (after a browser confirmation); **Add template** opens an empty editor.
 - The template editor (`/templates/new`, `/templates/:id/edit`) shows **Template name** and then the
   same fields as the item form, through the shared `ItemDraftFields.vue`: **Default item name**,
-  **Category**, Condition, Location, Transferred To, Purchase Date, Purchase Price, Serial Number,
+  **Category**, New, Condition, Location, Transferred To, Purchase Date, Purchase Price, Serial Number,
   Description, and the custom fields of the chosen category. The template name and the category are
-  required; everything else may stay empty, and a Boolean field can stay **Not set**. A notice states
+  required; everything else may stay empty, and a Boolean field and the [New](item-new-flag.md)
+  default can stay **Not set** (stored as `NULL`), so items created from the template start with
+  New = No unless the template sets Yes. A notice states
   that the values are defaults for future items, and the serial number carries a hint that unique
   values are usually best left blank. Changing the category loads that category's fields; values of
   the previous category's fields are not sent.

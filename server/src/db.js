@@ -16,11 +16,11 @@ export const databasePath = path.join(dataDir, 'inventory.sqlite');
   because it was written by a newer release whose schema this one cannot read.
   Version 2 added the item template tables; version 3 added the database_metadata table; version 4
   added the checklist tables; version 5 added items.last_verified_at and the container audit columns of
-  checklist_runs.
+  checklist_runs; version 6 added items.is_new and item_templates.is_new.
   user_version stays the source of truth: database_metadata.schema_version mirrors it and is written
   in the same transaction, so the two never disagree.
 */
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 export const DEFAULT_DATABASE_NAME = 'Inventory Atlas';
 
@@ -50,11 +50,11 @@ export const CURRENT_SCHEMA = {
   ...CORE_SCHEMA,
   categories: [...CORE_SCHEMA.categories, 'created_at', 'updated_at'],
   items: [...CORE_SCHEMA.items, 'purchase_date', 'purchase_price_amount', 'purchase_price_currency',
-    'serial_number', 'transferred_to', 'parent_item_id', 'last_verified_at', 'created_at', 'updated_at'],
+    'serial_number', 'transferred_to', 'parent_item_id', 'last_verified_at', 'is_new', 'created_at', 'updated_at'],
   custom_fields: [...CORE_SCHEMA.custom_fields, 'created_at', 'updated_at'],
   item_photos: [...CORE_SCHEMA.item_photos, 'created_at'],
   item_templates: ['id', 'name', 'category_id', 'item_name', 'description', 'condition', 'location', 'purchase_date',
-    'purchase_price_amount', 'purchase_price_currency', 'serial_number', 'transferred_to', 'created_at', 'updated_at'],
+    'purchase_price_amount', 'purchase_price_currency', 'serial_number', 'transferred_to', 'is_new', 'created_at', 'updated_at'],
   item_template_field_values: ['id', 'template_id', 'field_id', 'value'],
   database_metadata: ['id', 'database_uuid', 'name', 'created_at', 'last_updated_at', 'schema_version'],
   checklists: ['id', 'name', 'description', 'mode', 'created_at', 'updated_at'],
@@ -131,6 +131,7 @@ export const applySchema = connection => connection.transaction(() => {
       transferred_to TEXT,
       parent_item_id INTEGER REFERENCES items(id) ON DELETE RESTRICT,
       last_verified_at TEXT,
+      is_new INTEGER NOT NULL DEFAULT 0 CHECK (is_new IN (0, 1)),
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
@@ -173,6 +174,8 @@ export const applySchema = connection => connection.transaction(() => {
       purchase_price_currency TEXT,
       serial_number TEXT,
       transferred_to TEXT,
+      -- NULL leaves the New flag of items created from the template at its own default.
+      is_new INTEGER CHECK (is_new IN (0, 1)),
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
@@ -261,11 +264,16 @@ export const applySchema = connection => connection.transaction(() => {
     ['purchase_price_currency', 'TEXT'],
     ['serial_number', 'TEXT'],
     ['transferred_to', 'TEXT'],
-    ['last_verified_at', 'TEXT']
+    ['last_verified_at', 'TEXT'],
+    // Existing items read as not new; the free-text condition is never parsed to guess otherwise.
+    ['is_new', 'INTEGER NOT NULL DEFAULT 0 CHECK (is_new IN (0, 1))']
   ];
   for (const [name, definition] of missingItemColumns) {
     if (!itemColumns.has(name)) connection.exec(`ALTER TABLE items ADD COLUMN ${name} ${definition}`);
   }
+  // Existing templates keep no New default.
+  const templateColumns = new Set(connection.prepare('PRAGMA table_info(item_templates)').all().map(column => column.name));
+  if (!templateColumns.has('is_new')) connection.exec('ALTER TABLE item_templates ADD COLUMN is_new INTEGER CHECK (is_new IN (0, 1))');
   connection.exec('CREATE INDEX IF NOT EXISTS idx_items_parent ON items(parent_item_id)');
   const runColumns = new Set(connection.prepare('PRAGMA table_info(checklist_runs)').all().map(column => column.name));
   const missingRunColumns = [

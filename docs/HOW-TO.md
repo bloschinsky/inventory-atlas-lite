@@ -8,8 +8,8 @@ feature see [`features/README.md`](features/README.md).
 ## 1. What Inventory Atlas Lite does
 
 Inventory Atlas Lite is a small self-hosted catalogue of physical things you own: tools, cameras,
-lenses, cables, spare parts, boxes in the garage. For every item you record a name, a category, an
-optional condition, location, description, purchase details, serial number, where the item was
+lenses, cables, spare parts, boxes in the garage. For every item you record a name, a category,
+whether it is new, an optional condition, location, description, purchase details, serial number, where the item was
 transferred to, your own custom fields, and photos.
 
 All inventory records and original photo bytes live in one SQLite database on your server. Normal
@@ -250,7 +250,9 @@ unusable, the message explains why and your description stays in the modal for a
 1. Open **Items** and press **Add item**. If no category exists yet, the form tells you to create one
    first and links to **Manage categories**.
 2. Fill in **Name** and choose a **Category**. Both are required.
-3. Optionally fill in **Condition**, **Location**, **Transferred To**, **Purchase Date**, **Purchase
+3. Turn on **New** if the item is new or unused; it starts off. **Condition** stays a separate free
+   text for the physical state, such as *Excellent* or *Good, minor scratches on body*.
+   Optionally fill in **Condition**, **Location**, **Transferred To**, **Purchase Date**, **Purchase
    Price**, **Serial Number**, **Stored inside**, and **Description**. Purchase Price has separate amount and currency
    controls; clear the amount to leave the whole price unspecified.
 4. Values for the category's custom fields appear under **Category fields**. Text fields suggest
@@ -288,7 +290,8 @@ press **Save item** there.
 1. Open **Templates** in the navigation and press **Add template**.
 2. Enter a **Template name**, which is how the template is listed, and choose a **Category**. Both
    are required.
-3. Fill in only the values new items should start with: **Default item name**, **Condition**,
+3. Fill in only the values new items should start with: **Default item name**, **New** (**Not set**,
+   **No**, or **Yes**; Not set leaves new items at No), **Condition**,
    **Location**, **Transferred To**, **Purchase Date**, **Purchase Price**, **Serial Number**,
    **Description**, and the category's custom fields. Every value is optional; an empty field stays
    empty in new items, and a Boolean field can stay **Not set**. Values are checked with the same
@@ -401,7 +404,8 @@ audits, and deleting the container keeps its audits readable.
 3. Press **Insert Template**. It writes a document with two blank items that lists every item
    attribute and every custom field of the chosen category, so it always matches the category's
    current fields. Fill it in, add or delete entries in `items`, or paste a document produced
-   elsewhere. A batch holds at most 100 items.
+   elsewhere. `"new": true` marks an item as new; leave it out or set `false` otherwise. Only
+   `true` or `false` is accepted, and `condition` is never used for it. A batch holds at most 100 items.
 4. Press **Preview**. Nothing is saved yet. A document that cannot be read — invalid JSON, a
    different `category`, an unsupported property, an unknown custom field, more than 100 items — is
    reported as one message and stays in the editor for correction.
@@ -551,7 +555,7 @@ enables the live camera.
    number, **Transferred To**, and the values of **text** custom fields — whether or not their column
    is shown. It does not match condition, location, or number, date, and yes/no fields.
 3. Narrow the list with **Category** (**All categories** by default).
-4. Choose what the list shows with **Columns**: tick or untick Photo, Category, Condition, Location,
+4. Choose what the list shows with **Columns**: tick or untick Photo, Category, Condition, New, Location,
    **Stored inside**, Purchase Date, Purchase Price, Serial Number, Transferred To, Created, Updated,
    and your custom fields. **Name** always stays. Custom fields with the same name and type in
    different categories share one column, so one **Brand** column shows the brand of every category

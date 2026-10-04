@@ -19,6 +19,7 @@ base64 data, or call any AI service; photos are added to each item afterwards th
   "items": [
     {
       "name": "USB hub",
+      "new": false,
       "condition": "Good",
       "location": "Shelf A",
       "description": "",
@@ -37,11 +38,15 @@ base64 data, or call any AI service; photos are added to each item afterwards th
 - `category` must name the category selected in the dialog (compared trimmed and case-insensitively).
   The selected category is authoritative; the document cannot redirect items to another one.
 - `items` must contain between 1 and 100 entries.
-- An item accepts only `name`, `condition`, `location`, `description`, `transferredTo`,
+- An item accepts only `name`, `new`, `condition`, `location`, `description`, `transferredTo`,
   `purchaseDate`, `purchasePrice` (`amount` and `currency` only), `serialNumber`, and `customFields`.
   All of them are optional in the document; the name is required before the batch can be created.
   Server-owned values — IDs, UUIDs, timestamps, and the containing item — cannot be expressed, and
   any such property is rejected as unsupported.
+- `new` is the item's [New flag](item-new-flag.md). It must be `true` or `false`; any other value,
+  including `null`, `"yes"`, or `1`, is refused (`IMPORT_ITEM_BOOLEAN_EXPECTED`) in the preview and
+  the API alike. An omitted `new` creates the item with New = No. It is never read from `condition`.
+  Adding the optional property kept the document at version 1, so earlier documents remain valid.
 - The text attributes must be strings or `null`. `purchasePrice.amount` may be a number, a string, or
   `null`; `purchasePrice.currency` a string or `null`.
 - `customFields` is keyed by the names of the category's current custom fields, matched trimmed and

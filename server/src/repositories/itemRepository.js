@@ -23,6 +23,7 @@ const CORE_SORT = {
   name: 'i.name COLLATE NOCASE',
   category: 'c.name COLLATE NOCASE',
   condition: 'i.condition COLLATE NOCASE',
+  isNew: 'i.is_new',
   location: "NULLIF(TRIM(CASE WHEN root.id IS NULL THEN i.location ELSE root.location END), '') COLLATE NOCASE",
   purchaseDate: 'i.purchase_date',
   purchasePrice: 'CAST(i.purchase_price_amount AS REAL)',
@@ -198,7 +199,7 @@ export class ItemRepository {
     const order = direction === 'desc' ? 'DESC' : 'ASC';
     const rows = this.db.prepare(`
       ${ROOTS_CTE}
-      SELECT i.id, i.uuid, i.name, i.condition, i.location, i.purchase_date,
+      SELECT i.id, i.uuid, i.name, i.is_new, i.condition, i.location, i.purchase_date,
         i.purchase_price_amount, i.purchase_price_currency, i.serial_number, i.transferred_to, i.created_at, i.updated_at,
         c.id AS category_id, c.name AS category_name,
         parent.id AS parent_id, parent.name AS parent_name,
@@ -258,20 +259,21 @@ export class ItemRepository {
 
   insert(attributes) {
     return this.db.prepare(`
-      INSERT INTO items (uuid, name, category_id, description, condition, location, purchase_date,
+      INSERT INTO items (uuid, name, category_id, description, is_new, condition, location, purchase_date,
         purchase_price_amount, purchase_price_currency, serial_number, transferred_to, parent_item_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(randomUUID(), attributes.name, attributes.categoryId, attributes.description, attributes.condition,
-      attributes.location, attributes.purchaseDate, attributes.purchasePriceAmount, attributes.purchasePriceCurrency,
-      attributes.serialNumber, attributes.transferredTo, attributes.parentId).lastInsertRowid;
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(randomUUID(), attributes.name, attributes.categoryId, attributes.description, attributes.isNew ? 1 : 0,
+      attributes.condition, attributes.location, attributes.purchaseDate, attributes.purchasePriceAmount,
+      attributes.purchasePriceCurrency, attributes.serialNumber, attributes.transferredTo, attributes.parentId).lastInsertRowid;
   }
 
   update(id, attributes) {
     this.db.prepare(`
-      UPDATE items SET name = ?, category_id = ?, description = ?, condition = ?, location = ?,
+      UPDATE items SET name = ?, category_id = ?, description = ?, is_new = ?, condition = ?, location = ?,
         purchase_date = ?, purchase_price_amount = ?, purchase_price_currency = ?, serial_number = ?,
         transferred_to = ?, parent_item_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
-    `).run(attributes.name, attributes.categoryId, attributes.description, attributes.condition, attributes.location,
+    `).run(attributes.name, attributes.categoryId, attributes.description, attributes.isNew ? 1 : 0,
+      attributes.condition, attributes.location,
       attributes.purchaseDate, attributes.purchasePriceAmount, attributes.purchasePriceCurrency,
       attributes.serialNumber, attributes.transferredTo, attributes.parentId, id);
   }

@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.48.0",
+    "date": "2026-10-04",
+    "changes": [
+      "Every item now has a New switch, separate from Condition: mark an item as new in the item form and see New Yes or No on its page. Condition stays free text for the physical state, and existing items start as not new without any change to their Condition.",
+      "New is available as a column in the Items list, hidden until you turn it on under Columns, and the list can be sorted by it. Duplicate copies it, and a template can set New to Yes or No or leave it unset.",
+      "Batch Add from JSON accepts \"new\": true or false for each item, and AI Add Item marks an item as new only when you say so or its labeling clearly states it, never just because it looks pristine or is in a box."
+    ]
+  },
+  {
     "version": "0.47.0",
     "date": "2026-09-30",
     "changes": [

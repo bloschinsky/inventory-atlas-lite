@@ -44,8 +44,11 @@ test('inventory acceptance path persists and produces a valid backup', async () 
     const year = await request(`/api/categories/${category.id}/fields`, json('POST', { name: 'Year', type: 'number' }));
     const item = await request('/api/items', json('POST', {
       name: 'Olympus Pen F', category_id: category.id, description: 'Half-frame camera',
-      condition: 'Good', location: 'Cabinet A', field_values: { [brand.id]: 'Olympus', [year.id]: '1963' }
+      is_new: true, condition: 'Good', location: 'Cabinet A', field_values: { [brand.id]: 'Olympus', [year.id]: '1963' }
     }));
+    // New is a real boolean in every response; Condition stays the free text that was entered.
+    assert.deepEqual([item.is_new, item.condition], [true, 'Good']);
+    assert.equal((await request(`/api/items/${item.uuid}`)).is_new, true);
 
     const photoData = new FormData();
     photoData.append('photos', new Blob([Buffer.from('89504e470d0a1a0a', 'hex')], { type: 'image/png' }), 'camera.png');
@@ -55,6 +58,8 @@ test('inventory acceptance path persists and produces a valid backup', async () 
     const list = await request(`/api/items?search=Olympus&categoryId=${category.id}`);
     assert.equal(list.pagination.total, 1);
     assert.ok(list.items[0].thumbnail_id);
+    assert.equal(list.items[0].is_new, true);
+    assert.equal((await request('/api/items?sort=isNew&direction=desc')).items[0].is_new, true);
 
     // The Items view asks for the column catalog, then for exactly the custom values it shows.
     const { fields: columns } = await request('/api/items/columns');

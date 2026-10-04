@@ -6,7 +6,7 @@ import { api } from './api.js';
   shape the AI analysis and the template API return — { categoryId, baseFields, dynamicFields } — so a
   blank form, an AI suggestion, a template, and an existing item all initialize the same fields.
 */
-const BASE_FIELDS = ['description', 'condition', 'location', 'purchase_date', 'purchase_price', 'serial_number', 'transferred_to'];
+const BASE_FIELDS = ['description', 'is_new', 'condition', 'location', 'purchase_date', 'purchase_price', 'serial_number', 'transferred_to'];
 const baseFields = (source, name) => ({ name, ...Object.fromEntries(BASE_FIELDS.map(key => [key, source[key]])) });
 
 export const draftFromItem = item => ({
@@ -23,12 +23,14 @@ export const draftFromTemplate = template => ({
 
 /*
   The shared form state: the base fields, the categories, and the custom fields of the chosen
-  category. `emptyBoolean` is what a yes/no field starts with: "No" for an item, unset for a template.
-  Values of fields outside the current category stay in the form but are never sent.
+  category. `emptyBoolean` is what a yes/no field starts with: "No" for an item, unset for a template;
+  the New flag follows the same rule as false or null. Values of fields outside the current category
+  stay in the form but are never sent.
 */
 export function useItemDraftForm({ emptyBoolean = '0' } = {}) {
+  const emptyIsNew = emptyBoolean === '' ? null : false;
   const form = reactive({
-    name: '', category_id: '', description: '', condition: '', location: '', purchase_date: '',
+    name: '', category_id: '', description: '', is_new: emptyIsNew, condition: '', location: '', purchase_date: '',
     purchase_price: { amount: '', currency: 'UAH' }, serial_number: '', transferred_to: '', field_values: {}
   });
   const categories = ref([]);
@@ -53,6 +55,8 @@ export function useItemDraftForm({ emptyBoolean = '0' } = {}) {
         // A category that no longer exists is never kept: the user has to choose one.
         category_id: categories.value.some(category => category.id === draft.categoryId) ? draft.categoryId : '',
         description: base.description || '',
+        // An unset template default leaves the flag at the form's own empty value.
+        is_new: typeof base.is_new === 'boolean' ? base.is_new : emptyIsNew,
         condition: base.condition || '',
         location: base.location || '',
         purchase_date: base.purchase_date || '',

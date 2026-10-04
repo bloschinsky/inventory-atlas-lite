@@ -26,10 +26,11 @@ test('batch add from JSON previews, edits, and creates a category batch', async 
   const template = JSON.parse(await editor.inputValue());
   expect(template.category).toBe(categoryName);
   expect(Object.keys(template.items[0].customFields)).toEqual(['Brand', 'Ports', 'Working']);
+  expect(template.items[0].new).toBe(false);
 
   const blank = template.items[0];
   template.items = [
-    { ...blank, name: router, location: 'Rack', purchasePrice: { amount: 1500, currency: 'UAH' }, serialNumber: 'RT-77',
+    { ...blank, name: router, new: true, location: 'Rack', purchasePrice: { amount: 1500, currency: 'UAH' }, serialNumber: 'RT-77',
       customFields: { Brand: 'MikroTk', Ports: 5, Working: true } },
     { ...blank, name: modem, customFields: { Brand: 'ZyXEL', Ports: 'four', Working: false } },
     { ...blank, name: spare }
@@ -40,6 +41,10 @@ test('batch add from JSON previews, edits, and creates a category batch', async 
   const draft = number => dialog.getByRole('region', { name: `Proposed item ${number}` });
   await expect(draft(1).getByLabel('Name *')).toHaveValue(router);
   await expect(draft(3).getByLabel('Name *')).toHaveValue(spare);
+  await expect(draft(1).getByRole('checkbox', { name: 'New', exact: true })).toBeChecked();
+  await expect(draft(2).getByRole('checkbox', { name: 'New', exact: true })).not.toBeChecked();
+  // The preview can change the flag before anything is created.
+  await draft(2).getByRole('checkbox', { name: 'New', exact: true }).check();
 
   // The invalid number is shown inline and blocks creation until it is corrected.
   await expect(draft(2).getByText('Field "Ports" must be a number.')).toBeVisible();
@@ -59,10 +64,25 @@ test('batch add from JSON previews, edits, and creates a category batch', async 
   await expect(page.getByRole('link', { name: spare, exact: true })).toHaveCount(0);
 
   await page.getByRole('link', { name: router, exact: true }).click();
+  await expect(detail(page, 'New')).toHaveText('Yes');
   await expect(detail(page, 'Location')).toHaveText('Rack');
   await expect(detail(page, 'Purchase Price')).toHaveText('UAH 1,500.00');
   await expect(detail(page, 'Serial Number')).toHaveText('RT-77');
   await expect(detail(page, 'Brand')).toHaveText('MikroTik');
   await expect(detail(page, 'Ports')).toHaveText('5');
   await expect(detail(page, 'Working')).toHaveText('Yes');
+});
+
+test('batch add refuses a New value that is not a boolean', async ({ page, request }) => {
+  const categoryName = unique('Lenses');
+  await createCategory(request, categoryName);
+
+  await page.goto('/items');
+  await page.mouse.move(600, 400);
+  await page.getByLabel('Category').selectOption({ label: categoryName });
+  await page.getByRole('button', { name: 'Batch Add from JSON' }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Item import JSON').fill(JSON.stringify({ version: 1, category: categoryName, items: [{ name: 'Helios 44', new: 'yes' }] }));
+  await dialog.getByRole('button', { name: 'Preview' }).click();
+  await expect(dialog.getByRole('alert')).toHaveText('Item 1 "new" must be true or false.');
 });

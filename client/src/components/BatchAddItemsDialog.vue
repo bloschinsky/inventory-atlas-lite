@@ -245,6 +245,17 @@ onBeforeUnmount(() => {
                     class="form-control"
                   >
                 </div>
+                <div class="col-md-6 d-flex align-items-end">
+                  <label class="form-check form-switch mb-2">
+                    <input
+                      :id="inputId(index, 'new')"
+                      v-model="draft.new"
+                      class="form-check-input"
+                      type="checkbox"
+                    >
+                    <span class="form-check-label">{{ $t('items.fields.isNew') }}</span>
+                  </label>
+                </div>
                 <div class="col-md-6">
                   <label
                     class="form-label"

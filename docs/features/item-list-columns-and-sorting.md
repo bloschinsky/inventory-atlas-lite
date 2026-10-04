@@ -9,7 +9,7 @@ server before the page is cut, and the view choice is remembered in the browser.
 
 ## Behavior
 
-- **Columns** lists the core columns in a fixed order — Photo, Name, Category, Condition, Location,
+- **Columns** lists the core columns in a fixed order — Photo, Name, Category, Condition, New, Location,
   Stored inside, Purchase Date, Purchase Price, Serial Number, Transferred To, Created, Updated —
   followed by the custom field columns in alphabetical order. **Name** is always checked and
   disabled. **Reset to default** restores Photo, Name, Category, Condition, Location, and Stored

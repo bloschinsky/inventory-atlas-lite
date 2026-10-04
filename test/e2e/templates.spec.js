@@ -24,8 +24,9 @@ test('creates, edits, uses, and deletes an item template without linking the ite
   await page.getByLabel('Location').fill('Garage');
   await page.getByLabel('Size').fill('40x24x21');
   await page.getByLabel('Max weight').fill('5');
-  // A yes/no field may stay unset in a template.
+  // A yes/no field and the New default may stay unset in a template.
   await expect(page.getByLabel('Sealed')).toHaveValue('');
+  await expect(page.getByLabel('New', { exact: true }).locator('option:checked')).toHaveText('Not set');
   await page.getByRole('button', { name: 'Save template' }).click();
 
   await expect(page).toHaveURL('/templates');
@@ -38,6 +39,7 @@ test('creates, edits, uses, and deletes an item template without linking the ite
   await expect(page.getByLabel('Location')).toHaveValue('Garage');
   await expect(page.getByLabel('Size')).toHaveValue('40x24x21');
   await page.getByLabel('Condition').fill('New');
+  await page.getByLabel('New', { exact: true }).selectOption({ label: 'Yes' });
   await page.getByLabel('Sealed').selectOption('1');
   await page.getByRole('button', { name: 'Save template' }).click();
   await expect(page).toHaveURL('/templates');
@@ -49,6 +51,7 @@ test('creates, edits, uses, and deletes an item template without linking the ite
   await expect(page.getByText(`Prefilled from the template “${templateName}”.`)).toBeVisible();
   await expect(page.getByLabel('Name *')).toHaveValue('Cardboard box');
   await expect(page.getByLabel('Category *')).toHaveValue(/\d+/);
+  await expect(page.getByRole('checkbox', { name: 'New', exact: true })).toBeChecked();
   await expect(page.getByLabel('Condition')).toHaveValue('New');
   await expect(page.getByLabel('Location')).toHaveValue('Garage');
   await expect(page.getByLabel('Size')).toHaveValue('40x24x21');
@@ -64,6 +67,7 @@ test('creates, edits, uses, and deletes an item template without linking the ite
   await expect(detail(page, 'Location')).toHaveText('Attic');
   await expect(detail(page, 'Size')).toHaveText('40x24x21');
   await expect(detail(page, 'Sealed')).toHaveText('Yes');
+  await expect(detail(page, 'New')).toHaveText('Yes');
   const itemUrl = page.url();
 
   // Deleting the template leaves the created item untouched.

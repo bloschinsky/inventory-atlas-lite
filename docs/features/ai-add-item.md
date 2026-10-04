@@ -51,7 +51,10 @@ visible branding and labels in an internal `observedMarkings` array, then maps t
 specific reliable commercial product name, model or part fields, and serial number. Visible printed
 text and facts stated in the description both count as direct evidence, while unknown values remain
 null and hidden specifications, serial numbers, purchase data, locations, and exact part numbers must
-not be guessed. When the description and the image disagree, the instructions require a warning that
+not be guessed. The [New flag](item-new-flag.md) (`is_new`) is set only when the user says the item
+is new or unused or readable labeling or context states it, never because of a box, clean packaging,
+a pristine look, or no visible wear; the server keeps only an explicit `true` and reads a missing or
+`null` flag as not new. When the description and the image disagree, the instructions require a warning that
 names the conflict rather than a silent choice, leaving the resolution to the human review. Without
 an image `observedMarkings` stays empty and the server forces `needsDetailedImageAnalysis` to false. The server validates the response again: a suggested
 category must exist, dynamic field IDs must belong to it, and values must match text, number, date,

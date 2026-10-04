@@ -24,6 +24,7 @@ export function labelColumns(columns) {
 
 const coreText = {
   category: item => item.category_name,
+  isNew: item => t(item.is_new ? 'common.yes' : 'common.no'),
   condition: item => item.condition,
   location: item => item.effective_location,
   storedInside: item => item.parent_name,

@@ -272,6 +272,7 @@
     "fields": {
       "name": "Name",
       "category": "Category",
+      "isNew": "New",
       "condition": "Condition",
       "location": "Location",
       "storedInside": "Stored inside",
@@ -1078,6 +1079,7 @@
     "IMPORT_DUPLICATE_CUSTOM_FIELD": "Item {index} sets custom field \"{field}\" more than once.",
     "IMPORT_ITEMS_MISSING": "The document must contain an \"items\" array.",
     "IMPORT_ITEM_NOT_OBJECT": "Item {index} must be a JSON object.",
+    "IMPORT_ITEM_BOOLEAN_EXPECTED": "Item {index} \"{property}\" must be true or false.",
     "IMPORT_ITEM_TEXT_EXPECTED": "Item {index} \"{property}\" must be text or null.",
     "IMPORT_ITEM_UNSUPPORTED_PROPERTY": "Item {index} has an unsupported property \"{property}\". Supported properties: {supported}.",
     "IMPORT_NO_ITEMS": "The document does not contain any items.",
@@ -1111,6 +1113,7 @@
     "INVALID_PURCHASE_PRICE_AMOUNT": "Purchase price amount must be a non-negative decimal with up to four decimal places.",
     "INVALID_PURCHASE_PRICE_CURRENCY": "Purchase price currency must be a valid ISO 4217 code.",
     "INVALID_REQUEST": "The request is invalid.",
+    "INVALID_IS_NEW": "New must be true or false.",
     "INVALID_SERIAL_NUMBER": "Serial number must be text.",
     "INVALID_TRANSFERRED_TO": "Transferred To must be text.",
     "ITEM_CANNOT_CONTAIN_ITSELF": "An item cannot be stored inside itself.",

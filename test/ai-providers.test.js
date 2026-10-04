@@ -403,3 +403,38 @@ test('AI Add Item accepts text with any model and photos only with a model that 
   invalid.categoryService.create({ name: 'Audio Cards' });
   await rejects(invalid.aiItemAnalysisService.analyze(null, 'A card'), 502, 'AI_INVALID_RESPONSE');
 });
+
+test('AI Add Item offers the New flag and only keeps an explicit true', async () => {
+  let isNew;
+  let categoryId;
+  const reply = () => ({
+    observedMarkings: [], categoryId, confidence: 0.9, needsDetailedImageAnalysis: false,
+    baseFields: {
+      name: 'Sound card', description: null, condition: null, location: null, purchase_date: null,
+      purchase_price_amount: null, purchase_price_currency: null, serial_number: null,
+      ...(isNew === undefined ? {} : { is_new: isNew })
+    },
+    dynamicFields: [], warnings: []
+  });
+  const features = buildFeatures({ settings: ollama, reply });
+  categoryId = features.categoryService.create({ name: 'Audio Cards' }).id;
+
+  isNew = true;
+  assert.equal((await features.aiItemAnalysisService.analyze(null, 'A brand new, unused sound card')).baseFields.is_new, true);
+  const { schema, instructions, input } = features.calls[0].request;
+  assert.deepEqual(schema.properties.baseFields.properties.is_new, { type: 'boolean' });
+  assert.ok(schema.properties.baseFields.required.includes('is_new'));
+  assert.ok(JSON.parse(input).inventorySchema.baseFields.includes('is_new'));
+  assert.match(instructions, /Never infer it from a box, clean packaging, a pristine look, or the absence of visible wear/);
+
+  // False and a missing or null flag all read as not new.
+  for (const value of [false, null, undefined]) {
+    isNew = value;
+    assert.equal((await features.aiItemAnalysisService.analyze(null, 'A sound card')).baseFields.is_new, false);
+  }
+  // Anything but a boolean is a malformed answer, never a guess.
+  for (const value of ['true', 'new', 1]) {
+    isNew = value;
+    await rejects(features.aiItemAnalysisService.analyze(null, 'A sound card'), 502, 'AI_INVALID_RESPONSE');
+  }
+});

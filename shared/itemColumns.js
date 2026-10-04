@@ -9,6 +9,7 @@ export const CORE_ITEM_COLUMNS = [
   { key: 'name', type: 'text', sortable: true, searchable: true, visibleByDefault: true, required: true },
   { key: 'category', type: 'text', sortable: true, searchable: false, visibleByDefault: true },
   { key: 'condition', type: 'text', sortable: true, searchable: false, visibleByDefault: true },
+  { key: 'isNew', type: 'boolean', sortable: true, searchable: false, visibleByDefault: false },
   { key: 'location', type: 'text', sortable: true, searchable: false, visibleByDefault: true },
   { key: 'storedInside', type: 'item', sortable: false, searchable: false, visibleByDefault: true },
   { key: 'purchaseDate', type: 'date', sortable: true, searchable: false, visibleByDefault: false },

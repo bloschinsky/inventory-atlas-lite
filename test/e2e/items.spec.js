@@ -11,6 +11,9 @@ test('creates an item, finds it in the list, and edits its values', async ({ pag
   await page.goto('/items/new');
   await page.getByLabel('Name *').fill(itemName);
   await page.getByLabel('Category *').selectOption({ label: categoryName });
+  // New is a switch of its own; Condition stays free text.
+  await expect(page.getByRole('checkbox', { name: 'New', exact: true })).not.toBeChecked();
+  await page.getByRole('checkbox', { name: 'New', exact: true }).check();
   await page.getByLabel('Condition').fill('Good');
   await page.getByLabel('Location').fill('Shelf A');
   await page.getByLabel('Purchase Date').fill('2024-11-18');
@@ -37,6 +40,7 @@ test('creates an item, finds it in the list, and edits its values', async ({ pag
   await expect(page.getByRole('link', { name: itemName, exact: true })).toBeVisible();
 
   await page.getByRole('link', { name: itemName, exact: true }).click();
+  await expect(detail(page, 'New')).toHaveText('Yes');
   await expect(detail(page, 'Condition')).toHaveText('Good');
   await expect(detail(page, 'Location')).toHaveText('Shelf A');
   await expect(detail(page, 'Purchase Date')).toContainText('2024');
@@ -51,6 +55,8 @@ test('creates an item, finds it in the list, and edits its values', async ({ pag
   await page.getByRole('link', { name: 'Edit' }).click();
   await expect(page.getByLabel('Name *')).toHaveValue(itemName);
   await page.getByLabel('Name *').fill(renamed);
+  await expect(page.getByRole('checkbox', { name: 'New', exact: true })).toBeChecked();
+  await page.getByRole('checkbox', { name: 'New', exact: true }).uncheck();
   await page.getByLabel('Condition').fill('Excellent');
   await page.getByLabel('Purchase Price', { exact: true }).fill('39.50');
   await page.getByLabel('Purchase Price currency').selectOption('EUR');
@@ -60,6 +66,7 @@ test('creates an item, finds it in the list, and edits its values', async ({ pag
   await page.getByRole('button', { name: 'Save item' }).click();
 
   await expect(page.getByRole('heading', { name: renamed })).toBeVisible();
+  await expect(detail(page, 'New')).toHaveText('No');
   await expect(detail(page, 'Condition')).toHaveText('Excellent');
   await expect(detail(page, 'Purchase Price')).toHaveText('€39.50');
   await expect(detail(page, 'Serial Number')).toHaveText('12A/9382-B');

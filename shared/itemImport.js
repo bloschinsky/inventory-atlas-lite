@@ -16,7 +16,8 @@ export const MAX_BATCH_ITEMS = 100;
 
 const documentProperties = ['version', 'category', 'items'];
 const textProperties = ['name', 'condition', 'location', 'description', 'transferredTo', 'purchaseDate', 'serialNumber'];
-const itemProperties = [...textProperties, 'purchasePrice', 'customFields'];
+// `new` is the item's New flag. Version 1 documents without it stay valid: the flag is then false.
+const itemProperties = [...textProperties, 'new', 'purchasePrice', 'customFields'];
 const priceProperties = ['amount', 'currency'];
 
 const isPlainObject = value => !!value && typeof value === 'object' && !Array.isArray(value);
@@ -27,6 +28,7 @@ const refuse = (code, params) => new AppError(code, params, 400);
 export function itemImportTemplate(category, fields) {
   const blank = () => ({
     name: '',
+    new: false,
     condition: '',
     location: '',
     description: '',
@@ -63,6 +65,10 @@ const readItem = (item, index, fieldsByKey) => {
       throw refuse('IMPORT_ITEM_TEXT_EXPECTED', { index: position, property });
     }
   }
+  // Only a real boolean is accepted; "yes", 1, or null are refused rather than guessed.
+  if (item.new !== undefined && typeof item.new !== 'boolean') {
+    throw refuse('IMPORT_ITEM_BOOLEAN_EXPECTED', { index: position, property: 'new' });
+  }
 
   const price = item.purchasePrice ?? {};
   if (!isPlainObject(price)) throw refuse('IMPORT_PRICE_NOT_OBJECT', { index: position });
@@ -97,6 +103,7 @@ const readItem = (item, index, fieldsByKey) => {
 
   return {
     ...Object.fromEntries(textProperties.map(property => [property, item[property] ?? ''])),
+    new: item.new ?? false,
     purchasePrice: {
       amount: price.amount === null || price.amount === undefined ? '' : String(price.amount),
       currency: price.currency ?? ''
@@ -175,6 +182,7 @@ export const itemImportRequestBody = (draft, categoryId, fields) => ({
   name: draft.name,
   category_id: categoryId,
   description: draft.description,
+  is_new: draft.new,
   condition: draft.condition,
   location: draft.location,
   transferred_to: draft.transferredTo,

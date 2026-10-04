@@ -142,6 +142,12 @@ onMounted(load);
           <div class="card-body">
             <dl class="row mb-0">
               <dt class="col-sm-4">
+                {{ $t('items.fields.isNew') }}
+              </dt>
+              <dd class="col-sm-8">
+                {{ item.is_new ? $t('common.yes') : $t('common.no') }}
+              </dd>
+              <dt class="col-sm-4">
                 {{ $t('items.fields.condition') }}
               </dt>
               <dd class="col-sm-8 text-break">

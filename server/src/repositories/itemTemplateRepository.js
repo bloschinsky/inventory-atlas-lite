@@ -1,5 +1,9 @@
 // Item templates and their stored custom field values. Statements are prepared when they are used,
 // because a restore replaces the connection behind the `db` proxy.
+
+// An optional yes/no default is stored as NULL (unset), 0, or 1.
+const storedFlag = value => (value === null || value === undefined ? null : Number(value));
+
 export class ItemTemplateRepository {
   constructor(db) {
     this.db = db;
@@ -31,21 +35,21 @@ export class ItemTemplateRepository {
 
   insert(attributes) {
     return this.db.prepare(`
-      INSERT INTO item_templates (name, category_id, item_name, description, condition, location, purchase_date,
+      INSERT INTO item_templates (name, category_id, item_name, description, is_new, condition, location, purchase_date,
         purchase_price_amount, purchase_price_currency, serial_number, transferred_to)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(attributes.name, attributes.categoryId, attributes.itemName, attributes.description, attributes.condition,
-      attributes.location, attributes.purchaseDate, attributes.purchasePriceAmount, attributes.purchasePriceCurrency,
-      attributes.serialNumber, attributes.transferredTo).lastInsertRowid;
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(attributes.name, attributes.categoryId, attributes.itemName, attributes.description, storedFlag(attributes.isNew),
+      attributes.condition, attributes.location, attributes.purchaseDate, attributes.purchasePriceAmount,
+      attributes.purchasePriceCurrency, attributes.serialNumber, attributes.transferredTo).lastInsertRowid;
   }
 
   update(id, attributes) {
     this.db.prepare(`
-      UPDATE item_templates SET name = ?, category_id = ?, item_name = ?, description = ?, condition = ?, location = ?,
-        purchase_date = ?, purchase_price_amount = ?, purchase_price_currency = ?, serial_number = ?,
+      UPDATE item_templates SET name = ?, category_id = ?, item_name = ?, description = ?, is_new = ?, condition = ?,
+        location = ?, purchase_date = ?, purchase_price_amount = ?, purchase_price_currency = ?, serial_number = ?,
         transferred_to = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
-    `).run(attributes.name, attributes.categoryId, attributes.itemName, attributes.description, attributes.condition,
-      attributes.location, attributes.purchaseDate, attributes.purchasePriceAmount, attributes.purchasePriceCurrency,
+    `).run(attributes.name, attributes.categoryId, attributes.itemName, attributes.description, storedFlag(attributes.isNew),
+      attributes.condition, attributes.location, attributes.purchaseDate, attributes.purchasePriceAmount, attributes.purchasePriceCurrency,
       attributes.serialNumber, attributes.transferredTo, id);
   }
 

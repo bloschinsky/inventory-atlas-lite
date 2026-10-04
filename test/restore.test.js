@@ -101,7 +101,7 @@ test('a downloaded backup is validated, summarized, and fully restored over newe
     const validated = await uploadBackup(backup);
     assert.equal(validated.status, 200);
     assert.deepEqual(validated.body.summary, {
-      categories: 1, items: 2, fields: 1, fieldValues: 1, photos: 1, templates: 1, checklists: 1, checklistRuns: 2, schemaVersion: 5, migratedFrom: null
+      categories: 1, items: 2, fields: 1, fieldValues: 1, photos: 1, templates: 1, checklists: 1, checklistRuns: 2, schemaVersion: 6, migratedFrom: null
     });
     assert.equal(validated.body.filename, 'inventory-2026-09-17.sqlite');
     assert.equal(validated.body.size_bytes, backup.length);
@@ -292,7 +292,7 @@ test('a backup from before schema versioning is migrated on the staged copy and 
     assert.equal(validated.status, 200);
     assert.equal(validated.body.summary.items, 1);
     assert.equal(validated.body.summary.migratedFrom, 0);
-    assert.equal(validated.body.summary.schemaVersion, 5);
+    assert.equal(validated.body.summary.schemaVersion, 6);
 
     // The uploaded source file on disk is untouched by validation.
     const source = new Database(legacyPath, { readonly: true });
@@ -307,7 +307,7 @@ test('a backup from before schema versioning is migrated on the staged copy and 
     const metadata = await request('/api/database/metadata');
     assert.match(metadata.database_uuid, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
     assert.equal(metadata.name, 'Inventory Atlas');
-    assert.equal(metadata.schema_version, 5);
+    assert.equal(metadata.schema_version, 6);
     // The restored database carries the current schema, so current features keep working.
     const restored = await request('/api/items', json('POST', {
       name: 'Added after restore', category_id: 1, serial_number: 'SN-1'

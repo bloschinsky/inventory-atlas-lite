@@ -6,6 +6,8 @@ const baseFieldNames = [
   'purchase_price_amount', 'purchase_price_currency', 'serial_number'
 ];
 const nullableString = { type: ['string', 'null'] };
+// The New flag is the one boolean base field; it is described to the model next to the text fields.
+const IS_NEW = 'is_new';
 
 function responseSchema(categories) {
   return {
@@ -20,8 +22,8 @@ function responseSchema(categories) {
       baseFields: {
         type: 'object',
         additionalProperties: false,
-        required: baseFieldNames,
-        properties: Object.fromEntries(baseFieldNames.map(name => [name, nullableString]))
+        required: [...baseFieldNames, IS_NEW],
+        properties: { ...Object.fromEntries(baseFieldNames.map(name => [name, nullableString])), [IS_NEW]: { type: 'boolean' } }
       },
       dynamicFields: {
         type: 'array',
@@ -42,7 +44,7 @@ function responseSchema(categories) {
 function inventorySchema(categories, fields) {
   const byCategory = new Map(categories.map(category => [category.id, { id: category.id, name: category.name, fields: [] }]));
   for (const field of fields) byCategory.get(field.category_id)?.fields.push({ id: field.id, name: field.name, type: field.type });
-  return { baseFields: baseFieldNames, categories: [...byCategory.values()] };
+  return { baseFields: [...baseFieldNames, IS_NEW], categories: [...byCategory.values()] };
 }
 
 const instructions = `Create a conservative inventory draft from the supplied evidence. The user may supply an item photo, a written description, or both; work with whatever is present.
@@ -50,6 +52,7 @@ When an image is supplied, first record important visible branding, product labe
 For name, use the most specific commercial product name that can be reliably identified from the supplied evidence. Prioritize exact product branding, family names, and model names visibly printed on the item or explicitly stated by the user. Visible printed text is direct evidence, not speculation. Do not replace a specific visible product name with a generic item type.
 Distinguish the commercial product name from model numbers, part numbers, serial numbers, and generic item types. If a specific product name is visible or stated, use it in name. Use observedMarkings when mapping name, model or part number fields, serial number, and other supported fields.
 Treat facts the user states in the description and clearly readable markings in the image as supported evidence. When both sources agree, combine them. When they add different details, merge the supported facts. When they conflict, do not silently choose one: use the most strongly supported value and add a warning that names the conflict so the user can resolve it during review.
+Set is_new to true only when the evidence explicitly establishes that the item is new or unused: the user says so, or readable labeling or context states it. Never infer it from a box, clean packaging, a pristine look, or the absence of visible wear; otherwise set is_new to false. Describe the physical state in condition and never write New, Used, or a similar lifecycle state there.
 Use only supported facts. Never invent unsupported values, serial numbers, purchase prices, purchase dates, locations, exact model or part numbers, or hidden technical specifications. Explicit user-provided values and visible image markings may be used. Use null when a value is unknown. Choose only a supplied category and only its field IDs. Return JSON only.`;
 
 function cleanString(value, maximum = 5000) {
@@ -71,8 +74,10 @@ function normalizeDraft(raw, categories, fields, hasImage) {
       !Array.isArray(raw.dynamicFields) || !Array.isArray(raw.warnings)) {
     throw httpError(502, 'AI_INVALID_RESPONSE');
   }
-  const unknownBase = Object.keys(raw.baseFields || {}).filter(name => !baseFieldNames.includes(name));
+  const unknownBase = Object.keys(raw.baseFields || {}).filter(name => name !== IS_NEW && !baseFieldNames.includes(name));
   if (unknownBase.length) throw httpError(502, 'AI_INVALID_RESPONSE');
+  // A missing or null New flag is read as "not new"; any other non-boolean is a malformed response.
+  if (![undefined, null, true, false].includes(raw.baseFields[IS_NEW])) throw httpError(502, 'AI_INVALID_RESPONSE');
   if (baseFieldNames.some(name => !(name in raw.baseFields) || (raw.baseFields[name] !== null && typeof raw.baseFields[name] !== 'string'))) {
     throw httpError(502, 'AI_INVALID_RESPONSE');
   }
@@ -114,6 +119,8 @@ function normalizeDraft(raw, categories, fields, hasImage) {
   const warnings = Array.isArray(raw.warnings) ? raw.warnings.filter(value => typeof value === 'string').map(value => value.slice(0, 500)) : [];
   const usable = category || Object.values(baseFields).some(Boolean) || Object.keys(dynamicFields).length;
   if (!usable) throw httpError(422, 'AI_NO_ITEM_DETAILS');
+  // Only an explicit true makes the draft new; the flag alone never makes a draft usable.
+  baseFields.is_new = source[IS_NEW] === true;
   return {
     categoryId: category?.id ?? null,
     confidence: Number.isFinite(raw.confidence) ? Math.min(1, Math.max(0, raw.confidence)) : null,

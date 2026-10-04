@@ -167,7 +167,7 @@ test('batch item import creates every item through the regular item rules', () =
   refused(batch([{ name: 'X', uuid: '00000000-0000-4000-8000-000000000000' }]),
     { code: 'IMPORT_ITEM_UNSUPPORTED_PROPERTY', params: {
       index: 1, property: 'uuid',
-      supported: 'name, condition, location, description, transferredTo, purchaseDate, serialNumber, purchasePrice, customFields'
+      supported: 'name, condition, location, description, transferredTo, purchaseDate, serialNumber, new, purchasePrice, customFields'
     } });
   refused(batch([{ name: 'X', customFields: { Colour: 'Red' } }]), { code: 'IMPORT_UNKNOWN_CUSTOM_FIELD', params: { index: 1, field: 'Colour', known: 'Brand, Ports, Released, Working' } });
   refused(batch([{ name: 'X' }, { name: 'Y', customFields: { Ports: 'many' } }]), inItem(2, 'INVALID_CUSTOM_FIELD_NUMBER', { field: 'Ports' }));
@@ -766,7 +766,7 @@ test('using a template yields an item draft that survives deleted fields and blo
     templateName: 'IronWolf 4 TB',
     categoryId: drives.id,
     baseFields: {
-      name: 'Seagate IronWolf 4 TB', description: null, condition: 'New', location: null, purchase_date: null,
+      name: 'Seagate IronWolf 4 TB', description: null, is_new: null, condition: 'New', location: null, purchase_date: null,
       purchase_price: null, serial_number: null, transferred_to: 'Office'
     },
     dynamicFields: { [capacity.id]: '4 TB', [rpm.id]: '5400' },

@@ -8,7 +8,7 @@ physical items without creating a template. Nothing is created until the form is
 - The item page offers **Duplicate** next to **Edit**. It links to `/items/new?duplicate=<id>`.
 - The Add Item form loads the source item and prefills it through the shared item draft
   (`draftFromItem()` in `client/src/itemDraft.js`), the same mechanism used for editing, AI drafts,
-  and templates: category, name, description, condition, location, purchase date, purchase price,
+  and templates: category, name, description, [New](item-new-flag.md), condition, location, purchase date, purchase price,
   serial number, Transferred To, and the custom field values of the item's category.
 - A notice names the source item and states that the new item is saved separately, without its
   photos or container. Every value can be changed or cleared before saving; the name is copied as is

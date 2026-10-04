@@ -1,5 +1,7 @@
 import { httpError } from '../httpError.js';
-import { nullableText, readFieldValues, readItemDetails, requiredText, validateFieldValue } from '../../../shared/itemValidation.js';
+import {
+  nullableText, readFieldValues, readItemDetails, requiredText, validateFieldValue, validateTemplateIsNew
+} from '../../../shared/itemValidation.js';
 
 // A stored value is only usable while its field still exists in the category and still accepts it.
 const fits = (field, value) => {
@@ -39,7 +41,7 @@ export class ItemTemplateService {
     rest are counted, so the editor and the use flow can say that some were ignored.
   */
   present(template) {
-    const { purchase_price_amount: amount, purchase_price_currency: currency, ...rest } = template;
+    const { purchase_price_amount: amount, purchase_price_currency: currency, is_new: isNew, ...rest } = template;
     const fields = template.category_id ? this.fields.listTypesByCategory(template.category_id) : [];
     const byId = new Map(fields.map(field => [field.id, field]));
     const fieldValues = {};
@@ -50,6 +52,8 @@ export class ItemTemplateService {
     }
     return {
       ...rest,
+      // An unset New default stays null; a set one is a boolean like the item's.
+      is_new: isNew === null ? null : Boolean(isNew),
       purchase_price: amount === null ? null : { amount, currency },
       field_values: fieldValues,
       ignored_field_count: ignored
@@ -68,7 +72,9 @@ export class ItemTemplateService {
     return {
       // An empty field is simply not part of the template.
       values: values.filter(([, value]) => value !== null),
-      attributes: { name, categoryId, itemName: nullableText(body.item_name), ...readItemDetails(body) }
+      attributes: {
+        name, categoryId, itemName: nullableText(body.item_name), isNew: validateTemplateIsNew(body.is_new), ...readItemDetails(body)
+      }
     };
   }
 
@@ -111,6 +117,7 @@ export class ItemTemplateService {
       baseFields: {
         name: template.item_name,
         description: template.description,
+        is_new: template.is_new,
         condition: template.condition,
         location: template.location,
         purchase_date: template.purchase_date,

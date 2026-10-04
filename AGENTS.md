@@ -164,6 +164,7 @@ The project stays small and readable. Do not add:
 - `server/src/db.js` — database path, SQLite connection, PRAGMAs, current table/index schema, the database metadata row and its write triggers, and the fresh-database initializer used by the reset.
 - `test/e2e.test.js` — end-to-end acceptance test for the API, persistence, photos, and backups.
 - `test/services.test.js` — service-level regression tests that run without HTTP against a temporary database.
+- `test/item-new-flag.test.js` — the core New flag: schema and the version 6 migration, restore validation, strict boolean validation, list sorting, the column catalog, template defaults, and batch import.
 - `test/serverProcess.js` — starts and stops the real server for the API tests on a free port chosen by the operating system (`PORT=0`), reading the bound port from its listening line.
 - `test/hierarchy.test.js` — the hierarchy endpoint (shape, inherited location, one statement), the Location and Category projection rules, per-grouping expansion, and the Graph layout.
 - `test/checklists.test.js` — checklist definitions, ordering, duplicates, runs, state changes, counts, completion, run history, snapshots over renamed and deleted items and deleted checklists, Last verified, container audits, and the version 3 and 4 migrations at the service level.
@@ -220,7 +221,7 @@ are mandatory for all frontend work:
 
 - `categories` group items; a category used by any item cannot be deleted.
 - `custom_fields` belong to a category and have the type `text`, `number`, `date`, or `boolean`.
-- `items` have a UUID, category, basic text attributes, and timestamps.
+- `items` have a UUID, category, basic text attributes, a non-null `is_new` flag (`0`/`1`, a boolean in the API, separate from the free-text `condition`), and timestamps. `item_templates.is_new` is nullable: `NULL` means the template sets no New default.
 - `item_field_values` store custom field values as text; booleans are normalized to `"1"` or `"0"`.
 - `item_templates` and `item_template_field_values` store user-defined presets for new items. A template is never an item; deleting its category sets `category_id` to NULL, and template values of deleted fields are ignored when read.
 - `database_metadata` holds exactly one row: the database UUID, name, `created_at`, `last_updated_at`, and a mirror of `PRAGMA user_version` (the schema version source of truth). Triggers advance `last_updated_at` on every write to the tables in `TRACKED_TABLES` in `server/src/db.js`; a new inventory table must be added there.

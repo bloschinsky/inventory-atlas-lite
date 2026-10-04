@@ -3,13 +3,14 @@ import { errorBody } from '../../../shared/appError.js';
 import { itemImportRequestBody, readItemImportDocument } from '../../../shared/itemImport.js';
 import { isCustomColumnKey } from '../../../shared/itemColumns.js';
 import { buildItemColumns } from './itemColumns.js';
-import { readFieldValues, readItemDetails, requiredText } from '../../../shared/itemValidation.js';
+import { readFieldValues, readItemDetails, requiredText, validateIsNew } from '../../../shared/itemValidation.js';
 
-// The stored purchase price columns are presented as one object, exactly as the API always has.
+// The stored purchase price columns are presented as one object, exactly as the API always has, and
+// the stored 0/1 New flag as a boolean.
 const itemResponse = item => {
   if (!item) return item;
   const { purchase_price_amount: amount, purchase_price_currency: currency, ...rest } = item;
-  return { ...rest, purchase_price: amount === null ? null : { amount, currency } };
+  return { ...rest, is_new: Boolean(rest.is_new), purchase_price: amount === null ? null : { amount, currency } };
 };
 
 export const presentLocation = value => (value && value.trim() ? value : null);
@@ -251,7 +252,7 @@ export class ItemService {
     if (!this.categories.findById(categoryId)) throw httpError(400, 'CATEGORY_REQUIRED');
     const values = readFieldValues(body.field_values, this.fields.listTypesByCategory(categoryId));
     const parentId = this.resolveParentId(body.parent_item_id, itemId);
-    return { values, attributes: { name, categoryId, ...readItemDetails(body), parentId } };
+    return { values, attributes: { name, categoryId, isNew: validateIsNew(body.is_new), ...readItemDetails(body), parentId } };
   }
 
   // Callers wrap it in a transaction, so the item row and its field values are written together.
