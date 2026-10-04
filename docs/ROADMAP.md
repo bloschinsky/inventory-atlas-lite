@@ -1,7 +1,7 @@
 # Roadmap overview
 
 This overview lists the active feature work planned for Inventory Atlas Lite. It is current as of
-2026-09-30. Each linked task file is the authoritative specification for scope, acceptance criteria,
+2026-10-04. Each linked task file is the authoritative specification for scope, acceptance criteria,
 and verification.
 
 Implemented behavior is documented separately in [`features/README.md`](features/README.md).
@@ -24,6 +24,12 @@ Implemented behavior is documented separately in [`features/README.md`](features
    server-side cycle protection stays authoritative. See
    [`TASK-HIERARCHY-PHASE-3-DRAG-DROP.md`](issues/TASK-HIERARCHY-PHASE-3-DRAG-DROP.md). Category
    grouping stays read-only.
+
+4. **Fluid desktop workspace** — Planned; no dependencies. Replaces the centered, max-width
+   `container-xl` around every routed page with a fluid application container, so Dashboard, Items,
+   and the other pages use the full width beside the sidebar on wide screens while keeping the normal
+   Tabler gutters and correct label printing. See
+   [`TASK-FLUID-DESKTOP-WORKSPACE.md`](issues/TASK-FLUID-DESKTOP-WORKSPACE.md).
 
 ## Data management
 
