@@ -109,9 +109,10 @@ The project stays small and readable. Do not add:
   `sqlite.js`), `express.js` is the Router stand-in the demo build aliases `express` to, `fixture.js`
   is the canonical demo inventory that `seed.js` loads through the services, and `photos/` holds its
   generated item photos. `client/src/components/DemoBanner.vue` and `DemoUnavailable.vue` are the
-  demo strip and the stand-in for server-only features. The demo's guided tour: `tourSteps.js` (the
-  ordered, data-driven steps), `tour.js` (the step engine), `tourActions.js` (the DOM actions a step
-  performs), and `client/src/components/DemoTour.vue` (launcher, card, spotlight); it finds the UI
+  demo strip and the stand-in for server-only features. The demo's guided tour: `tourChapters.js`
+  (the ordered, data-driven chapters and their scenes), `tour.js` (the chapter engine: playback,
+  Pause, Replay, abort), `tourActions.js` (`TIMING` and the DOM actions a scene performs), and
+  `client/src/components/DemoTour.vue` (launcher, inverse-theme card, spotlight); it finds the UI
   through `data-tour` attributes, and `backend.js` `reset()` gives it a fresh fixture.
 - `client/src/i18n/index.js` — the `vue-i18n` instance, the browser-local language preference, and display formatting in the active locale.
 - `client/src/i18n/core.js` — supported locales, vue-i18n options (English default and fallback, Ukrainian plural rule), and the `Intl` date, number, money, and file-size formatters.
@@ -209,11 +210,13 @@ The project stays small and readable. Do not add:
 - `test/landing.test.js` — landing release resolution, site address, and documentation link checks;
   `test/e2e/landing.spec.js` — the built landing page under a Pages-style base path.
 - `test/demo.test.js` — the public demo data layer in Node: deterministic fixture, seeded content,
-  isolation of changes, the sql.js adapter, and the demo photo and private-data checks;
+  isolation of changes, the sql.js adapter, the demo photo and private-data checks, the fixture
+  template and checklist the tour opens, and the guided tour's copy rules;
   `test/e2e/demo.spec.js` — the built demo inside the landing build: no server requests, photos,
   temporary changes and Reset demo, reloaded deep links, unavailable features, no bundled secrets;
-  `test/e2e/tour.spec.js` — the demo's guided tour: every step, idempotent Back/Next, restart, close,
-  missing targets, Ukrainian, reduced motion, phones, and its absence from the self-hosted app.
+  `test/e2e/tour.spec.js` — the demo's guided tour: every chapter and its scenes, idempotent
+  Replay/Back/Next, Pause/Resume, close, failing scenes, the inverse theme, Ukrainian, reduced motion,
+  phones, and its absence from the self-hosted app.
 - `docs/README.md` — documentation layout and conventions.
 - `docs/HOW-TO.md` — quick user guide for the current application.
 - `docs/issues/` — active tasks, feature specifications, and future work.

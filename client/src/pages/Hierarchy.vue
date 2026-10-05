@@ -118,7 +118,10 @@ onMounted(load);
   </div>
 
   <template v-else>
-    <div class="card mb-3">
+    <div
+      class="card mb-3"
+      data-tour="hierarchy-controls"
+    >
       <div class="card-body d-flex flex-wrap align-items-end gap-3">
         <div class="flex-grow-1">
           <label
@@ -136,6 +139,7 @@ onMounted(load);
         <div
           v-for="control in controls"
           :key="control.name"
+          :data-tour="`hierarchy-${control.name}`"
         >
           <div
             :id="`hierarchy-${control.name}-label`"

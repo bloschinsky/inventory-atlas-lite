@@ -33,7 +33,8 @@ export const photoUrl = id => (demo ? demo.photoUrl(id) : `/api/photos/${id}`);
 
 /*
   Demo only: puts the canonical fixture back without a reload. `dataRevision` counts those resets;
-  App.vue keys the page on it, so the open page loads the fresh data. It never changes otherwise.
+  App.vue keys the page on it, so the open page loads the fresh data. Otherwise only the demo's
+  guided tour changes it, through `reloadDemoPage()`, to replay a chapter on a freshly mounted page.
 */
 export const dataRevision = ref(0);
 export async function resetDemoData() {
@@ -41,6 +42,7 @@ export async function resetDemoData() {
   demo.reset();
   dataRevision.value++;
 }
+export const reloadDemoPage = () => { dataRevision.value++; };
 
 // A response without an error body, for example from a failing proxy, is reported by its status.
 async function failure(response) {

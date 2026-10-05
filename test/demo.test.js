@@ -6,6 +6,8 @@ import * as fixture from '../client/src/demo/fixture.js';
 import { seedDemoInventory } from '../client/src/demo/seed.js';
 import { createDemoServices } from '../client/src/demo/services.js';
 import { openDemoDatabase } from '../client/src/demo/sqlite.js';
+import en from '../client/src/i18n/locales/en.json' with { type: 'json' };
+import uk from '../client/src/i18n/locales/uk.json' with { type: 'json' };
 
 /*
   The public demo's data layer, run in Node: the sql.js adapter, the canonical fixture, and its seed
@@ -114,6 +116,53 @@ test('the guided tour item fits the fixture and is not part of the seeded invent
   const item = visit.itemService.get(created.uuid);
   assert.equal(item.parent.name, tourItem.container);
   assert.equal(item.effective_location, 'Home / Office');
+});
+
+test('the Templates and Checklists chapters find their template and checklist in the fixture', () => {
+  const visit = seeded();
+  const [template] = fixture.templates;
+  const [checklist] = fixture.checklists;
+  assert.equal(template.category, fixture.tourItem.category);
+  assert.ok(Object.keys(template.fields).length, 'the template predefines a category field');
+  const [listed] = visit.itemTemplateService.list();
+  assert.equal(listed.name, template.name);
+  // The chapter checks the first item of a checklist that has never run, so the change is visible.
+  const [seededChecklist] = visit.checklistService.list();
+  assert.equal(seededChecklist.name, checklist.name);
+  assert.equal(seededChecklist.last_run, null);
+  assert.equal(fixture.items.find(item => item.key === checklist.items[0]).name, 'Nikon F65');
+});
+
+/*
+  The presenter copy follows the ASD-STE100-inspired rules of docs/features/demo-guided-tour.md:
+  short scenes of one or two sentences, the product's own terms, and no filler or vague openers.
+  Ukrainian keeps the same brevity.
+*/
+test('the guided tour copy stays short, direct, and consistent in both languages', () => {
+  const scenes = locale => Object.entries(locale.tour.chapters)
+    .flatMap(([chapter, { scenes: entries }]) => Object.entries(entries).map(([id, text]) => ({ id: `${chapter}.${id}`, text })));
+  const english = scenes(en);
+  assert.deepEqual(scenes(uk).map(entry => entry.id), english.map(entry => entry.id));
+  assert.equal(Object.keys(en.tour.chapters).length, 8);
+  const sentences = text => text.split(/(?<=[.!?])s+/).filter(Boolean);
+  for (const { id, text } of [...english, ...scenes(uk)]) {
+    assert.ok(sentences(text).length <= 2, `${id} has at most two sentences`);
+    assert.ok(text.length <= 160, `${id} stays short`);
+  }
+  for (const { id, text } of english) {
+    for (const sentence of sentences(text)) {
+      assert.ok(sentence.split(/s+/).length <= 22, `${id}: "${sentence}" is one short sentence`);
+      assert.doesNotMatch(sentence, /^(It|This|That|They) /, `${id}: "${sentence}" names its subject`);
+    }
+    // One term per concept, and no marketing filler or vague openers.
+    assert.doesNotMatch(text, /\b(asset|object|thing|stuff|metadata|property|properties|record|records)\b/i, id);
+    assert.doesNotMatch(text, /\b(simply|easily|just|powerful|seamless|amazing|let's|let us|quickly)\b/i, id);
+  }
+  // The UI names the product's concepts, and the copy uses them.
+  const copy = english.map(entry => entry.text).join(' ');
+  for (const term of ['Item', 'Category', 'Field', 'Location', 'Hierarchy', 'Tree View', 'Graph View', 'Template', 'Checklist', 'Dashboard', 'Condition']) {
+    assert.ok(copy.includes(term), `the copy uses the term ${term}`);
+  }
 });
 
 test('the sql.js adapter keeps the better-sqlite3 behavior the repositories rely on', () => {

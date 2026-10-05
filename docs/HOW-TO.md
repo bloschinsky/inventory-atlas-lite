@@ -26,9 +26,11 @@ inventory, so keep it on a trusted LAN or behind a VPN.
 inventory with photos, containers, checklists, and a filled Dashboard. A **Demo mode** strip at the
 top marks it. You can add, edit, move, and delete items, but nothing is saved: reloading the page or
 pressing **Reset demo** brings back the sample inventory. **Guided tour** in the lower-right corner
-walks you through categories, placement, adding an item, finding it, and the Dashboard in six steps:
-press **Next** to let it act in the real pages, **Back** to return, or close it at any time to explore
-on your own. Starting it again begins from the sample inventory. Download Backup, Restore, the Danger Zone,
+is an automated presentation in eight chapters — the Dashboard, Categories & Fields, Hierarchy, adding
+an item, finding items, Templates, Checklists, and what changed — played in the real pages. Each
+chapter runs on its own; press **Next** or **Back** to change chapters, **Pause** and **Resume** to
+hold it, **Replay chapter** to watch the current chapter again, or close it at any time to explore on
+your own. Starting it again begins from the sample inventory. Download Backup, Restore, the Danger Zone,
 Settings → Cloud Backup and AI, and Check for updates need a real installation and say *Not
 available in the public demo* instead.
 

@@ -1009,40 +1009,102 @@
   "tour": {
     "launch": "Guided tour",
     "label": "Guided tour",
-    "progress": "Step {current} of {total}",
+    "progress": "Chapter {current} of {total}",
     "progressLabel": "Tour progress",
+    "sceneProgress": "Scene {current} of {total}",
     "back": "Back",
     "next": "Next",
     "close": "Close tour",
-    "working": "Showing it in the app…",
-    "failed": "This step could not be shown. Try again, or skip to the next step.",
-    "skipStep": "Skip step",
+    "playing": "Showing it in the app…",
+    "paused": "Paused. Press Resume to continue.",
+    "pause": "Pause",
+    "resume": "Resume",
+    "replay": "Replay chapter",
+    "failed": "This chapter could not be shown. Replay the chapter, or go to the next one.",
     "explore": "Explore on your own",
     "github": "View on GitHub",
-    "steps": {
-      "welcome": {
-        "title": "Welcome to Inventory Atlas Lite",
-        "text": "An inventory has four building blocks: locations say where things are, containers are items that hold other items, categories say what an item is, and items carry the details. Where something lives and what it is stay separate."
+    "chapters": {
+      "dashboard": {
+        "title": "The Dashboard",
+        "scenes": {
+          "summary": "The Dashboard shows your inventory at a glance. The top cards count Items, photos, placement, and new additions.",
+          "categories": "Items by category shows how your Items divide between Categories. Select a Category to filter the Dashboard.",
+          "condition": "Condition breakdown shows how many Items have each Condition, from Excellent to Broken.",
+          "fields": "Field coverage shows how many Items have each detail filled in. Use it to find incomplete Items.",
+          "locations": "Items by location shows where your Items are. Each bar is one Location."
+        }
       },
       "categories": {
-        "title": "Categories with their own fields",
-        "text": "Each category adds the fields that matter for it. Photography records the lens Mount, the film Format, and when the gear was Last tested, next to the name, condition, price, and serial number every item has."
+        "title": "Categories & Fields",
+        "scenes": {
+          "overview": "Categories define what an Item is. Each Category can have its own Fields.",
+          "select": "Select the Photography Category.",
+          "fields": "Photography has three Fields: Mount, Format, and Last tested. Other Categories have other Fields.",
+          "location": "A Category tells what an Item is. A Location tells where the Item is."
+        }
       },
-      "placement": {
-        "title": "Where everything lives",
-        "text": "The hierarchy is the storage tree. The Camera Bag sits in Home / Office, and everything inside it inherits that location, so moving the bag moves its contents too."
+      "hierarchy": {
+        "title": "Hierarchy",
+        "scenes": {
+          "overview": "Hierarchy shows the same Items as a structure. Group by and View change how the structure looks.",
+          "location": "Group by Location shows where each Item is. Camera Bag is in Home / Office, and the Items in Camera Bag get the same Location.",
+          "category": "Group by Category shows what each Item is. The same Items are now under their Categories.",
+          "tree": "Tree View lists each group with its Items. Open Photography to see its Items.",
+          "graph": "Graph View shows the same Hierarchy as linked nodes. Use it to see nested Items at a glance."
+        }
       },
       "addItem": {
-        "title": "Add an item",
-        "text": "This is the real Add item form. The tour fills in a spare camera body: category, condition, serial number, the Camera Bag it is stored in, two Photography fields, and a photo. Next saves it."
+        "title": "Add an Item",
+        "scenes": {
+          "name": "The tour fills in the real Add item form. Every Item starts with a name.",
+          "category": "Select the Photography Category. The Category sets which Fields the Item has.",
+          "condition": "Set the Condition to Good. The New switch stays off, because this camera is used.",
+          "serial": "Add the serial number. The serial number tells two identical cameras apart.",
+          "placement": "Set Stored inside to Camera Bag. An Item can be inside another Item, such as a bag or a box.",
+          "fields": "Fill in the Photography Fields. Only Photography Items have these Fields.",
+          "photo": "Add a photo. A photo makes the Item easy to recognize.",
+          "save": "Save the Item. The new Item is now part of the Hierarchy and the Dashboard."
+        }
       },
-      "findItem": {
-        "title": "Find it again",
-        "text": "The new camera is in the Items list now. The Photography filter and a search for “Nikon” narrow the list to the matching items."
+      "items": {
+        "title": "Find Items",
+        "scenes": {
+          "overview": "The Items list shows all your Items. Search, filter, and sort the list here.",
+          "filter": "Filter by the Photography Category. The list shows only Photography Items.",
+          "sort": "Sort the list by Condition. The order of the Items changes.",
+          "search": "Search for Nikon. The list shows only the matching Items.",
+          "result": "The search finds {name}. Open an Item to see all its details."
+        }
       },
-      "dashboard": {
-        "title": "The whole inventory at a glance",
-        "text": "The Dashboard already counts the new item in its totals and photo coverage. That is the core loop: describe, place, add, and find. Everything stays in this browser tab."
+      "templates": {
+        "title": "Templates",
+        "scenes": {
+          "list": "Templates keep the values of Items that you add often.",
+          "open": "Open the 35mm film roll Template.",
+          "values": "The Template sets the Category, the name, New, and Format. Each new Item from the Template gets these values.",
+          "use": "Select Use on the Templates page to add an Item from the Template. All Items from one Template start the same."
+        }
+      },
+      "checklists": {
+        "title": "Checklists",
+        "scenes": {
+          "list": "Checklists are lists of Items for a task. Use Checklists to pack, to move, or to check equipment.",
+          "open": "Open the Weekend photo walk Checklist. The Checklist names the Items to pack.",
+          "check": "Start the Checklist and mark Nikon F65 as Packed. Each change is saved at once.",
+          "uses": "The progress shows how many Items are checked. Complete the Checklist when all Items are checked."
+        }
+      },
+      "result": {
+        "title": "Your inventory changed",
+        "scenes": {
+          "changed": "The tour added {name} to {category}, inside {container}, with a photo and Fields.",
+          "unchanged": "The tour did not save a new Item. The Dashboard shows the same values as before.",
+          "total": "Total items: {before} → {after}.",
+          "category": "Items by category, {name}: {before} → {after}.",
+          "condition": "Condition breakdown, {name}: {before} → {after}.",
+          "location": "Items by location, {name}: {before} → {after}.",
+          "explore": "The tour is complete. Explore the demo on your own, or reset the demo to start again."
+        }
       }
     }
   },

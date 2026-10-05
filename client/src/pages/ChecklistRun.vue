@@ -164,6 +164,7 @@ watch(() => route.params.runId, runId => { if (runId) load(); }, { immediate: tr
     <section
       class="card mb-3"
       aria-live="polite"
+      data-tour="checklist-progress"
     >
       <div class="card-body">
         <p class="h3 mb-2">
@@ -199,6 +200,7 @@ watch(() => route.params.runId, runId => { if (runId) load(); }, { immediate: tr
         :key="item.id"
         class="card checklist-run-item"
         :class="`checklist-run-item-${item.status}`"
+        data-tour="checklist-run-item"
       >
         <div class="card-body p-3">
           <div class="d-flex align-items-center gap-2 mb-2">

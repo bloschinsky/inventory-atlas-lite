@@ -106,6 +106,7 @@ onMounted(load);
   <div
     v-else
     class="row row-cards"
+    data-tour="checklist-list"
   >
     <div
       v-for="checklist in checklists"

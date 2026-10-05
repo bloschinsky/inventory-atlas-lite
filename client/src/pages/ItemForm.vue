@@ -222,7 +222,10 @@ onMounted(async () => {
           :fields="fields"
           :duplicate="Boolean(duplicateSource)"
         >
-          <div class="mb-3">
+          <div
+            class="mb-3"
+            data-tour="item-parent"
+          >
             <label class="form-label">{{ $t('items.fields.storedInside') }}</label>
             <div
               v-if="parent"

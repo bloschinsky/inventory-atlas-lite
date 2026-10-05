@@ -88,7 +88,10 @@ const openItem = ({ node }) => { if (node.data.item) router.push(`/items/${node.
 </script>
 
 <template>
-  <section class="card">
+  <section
+    class="card"
+    data-tour="hierarchy-graph"
+  >
     <div class="card-header flex-wrap gap-2">
       <div class="card-actions d-flex flex-wrap gap-2 ms-0 w-100">
         <button

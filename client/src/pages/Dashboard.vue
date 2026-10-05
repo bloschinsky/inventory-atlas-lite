@@ -408,6 +408,7 @@ onBeforeUnmount(() => controller?.abort());
         <section
           class="card h-100 dashboard-card"
           aria-labelledby="category-distribution-title"
+          data-tour="dashboard-categories"
         >
           <div class="card-header d-block">
             <h2
@@ -470,6 +471,7 @@ onBeforeUnmount(() => controller?.abort());
         <section
           class="card h-100 dashboard-card"
           aria-labelledby="condition-distribution-title"
+          data-tour="dashboard-condition"
         >
           <div class="card-header">
             <h2
@@ -517,6 +519,7 @@ onBeforeUnmount(() => controller?.abort());
         <section
           class="card h-100 dashboard-card"
           aria-labelledby="field-coverage-title"
+          data-tour="dashboard-fields"
         >
           <div class="card-header d-block">
             <h2
@@ -564,6 +567,7 @@ onBeforeUnmount(() => controller?.abort());
         <section
           class="card h-100 dashboard-card"
           aria-labelledby="location-distribution-title"
+          data-tour="dashboard-locations"
         >
           <div class="card-header d-block">
             <h2

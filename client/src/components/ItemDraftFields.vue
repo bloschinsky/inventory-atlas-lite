@@ -263,7 +263,10 @@ const conditionHelpOpen = ref(false);
       rows="3"
     />
   </div>
-  <template v-if="fields.length">
+  <div
+    v-if="fields.length"
+    data-tour="item-custom-fields"
+  >
     <hr>
     <h2 class="card-title mb-3">
       {{ $t('itemForm.categoryFields') }}
@@ -308,5 +311,5 @@ const conditionHelpOpen = ref(false);
         :type="field.type"
       >
     </div>
-  </template>
+  </div>
 </template>

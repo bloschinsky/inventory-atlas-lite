@@ -3,13 +3,32 @@
   values go into the real form controls through the same input and change events typing or choosing
   fires, so the page's own v-model state, validation, and save path take over from there.
 
-  `createTourActions(signal)` binds every action to one step's AbortSignal: once the visitor moves on
-  or closes the tour, the next wait or pause of that step stops it instead of touching the new page.
+  `createTourActions(signal, gate)` binds every action to one chapter run: once the visitor moves on,
+  replays, or closes the tour, the next wait of that run stops it instead of touching the new page,
+  and `gate()` holds a paused presentation before its next action.
 */
 
 export const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// A step that cannot find what it needs; the tour shows Retry and Skip step instead of waiting forever.
+/*
+  The presentation timing, in milliseconds, in one place. Reduced motion drops the decorative beats
+  and the typing cadence, but keeps the reading time of every scene (`view` and `longView`).
+*/
+export const TIMING = {
+  // A minor beat: after a click, a choice, or a scroll.
+  beat: 600,
+  // An important transition: the spotlight moved, a page or a view changed.
+  transition: 900,
+  // How long a completed scene stays on screen before the next one.
+  view: 1300,
+  // Key moments that need a longer look, such as the Graph View.
+  longView: 2600,
+  // The typing cadence: `typeChunk` characters every `typeDelay`.
+  typeDelay: 70,
+  typeChunk: 2
+};
+
+// A scene that cannot find what it needs; the presenter offers Retry chapter instead of waiting forever.
 export class TourTargetError extends Error {
   constructor(target) {
     super(`The guided tour could not find "${target}".`);
@@ -17,8 +36,9 @@ export class TourTargetError extends Error {
   }
 }
 
-export const findHook = name => document.querySelector(`[data-tour="${name}"]`);
 export const isShown = element => Boolean(element?.isConnected && element.getClientRects().length);
+// The shown element of a hook: the Items table and the phone cards, for example, render the same hooks.
+export const findHook = name => [...document.querySelectorAll(`[data-tour="${name}"]`)].find(isShown) ?? null;
 // The first element under `root` matching `selector` whose own text is exactly `text`.
 export const findByText = (root, selector, text) => [...(root?.querySelectorAll(selector) ?? [])]
   .find(element => element.textContent.trim() === text) ?? null;
@@ -27,24 +47,51 @@ const labeledControl = (root, label) => {
   return element?.htmlFor ? document.getElementById(element.htmlFor) : null;
 };
 
-const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+/*
+  A spotlight target is a `data-tour` hook name, or `#<id>` for a labelled form control, which is
+  highlighted together with its label. The presenter resolves it again on every frame, because the
+  page may re-render the element at any time.
+*/
+export function resolveTarget(target) {
+  if (!target) return [];
+  if (!target.startsWith('#')) return [findHook(target)].filter(Boolean);
+  const control = document.getElementById(target.slice(1));
+  return [control, control && document.querySelector(`label[for="${control.id}"]`)].filter(isShown);
+}
+
+// Waits `ms`, or rejects at once when the run is aborted.
+export function sleep(ms, signal) {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) return reject(signal.reason);
+    const done = () => { signal?.removeEventListener('abort', stop); resolve(); };
+    const stop = () => { clearTimeout(timer); reject(signal.reason); };
+    const timer = setTimeout(done, ms);
+    signal?.addEventListener('abort', stop, { once: true });
+  });
+}
 
 // Brings an element into view below the mobile header, smoothly unless motion is reduced.
 export function scrollToElement(element, block = 'center') {
   element.scrollIntoView({ block, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
 }
 
-export function createTourActions(signal) {
+export function createTourActions(signal, gate = async () => {}) {
   const check = () => signal.throwIfAborted();
+  const reduced = prefersReducedMotion();
 
-  // A short visible beat between automated actions; none when motion is reduced.
-  async function pause(ms = 250) {
+  /*
+    A presentation pause: `beat` and `transition` disappear with reduced motion, the reading times
+    stay. A paused presentation stops here, before the next action.
+  */
+  async function pause(kind = 'beat') {
     check();
-    if (!prefersReducedMotion()) await sleep(ms);
+    const ms = typeof kind === 'number' ? kind : TIMING[kind];
+    if (!reduced || kind === 'view' || kind === 'longView') await sleep(ms, signal);
+    await gate();
     check();
   }
 
-  // Polls `test` until it returns something truthy; a throw from `test` fails the step at once.
+  // Polls `test` until it returns something truthy; a throw from `test` fails the scene at once.
   async function waitFor(test, description, timeout = 8000) {
     const end = Date.now() + timeout;
     for (;;) {
@@ -52,29 +99,35 @@ export function createTourActions(signal) {
       const result = test();
       if (result) return result;
       if (Date.now() > end) throw new TourTargetError(description);
-      await sleep(50);
+      await sleep(50, signal);
     }
   }
 
-  const waitForHook = (name, timeout) => waitFor(() => { const element = findHook(name); return isShown(element) && element; }, name, timeout);
+  const waitForHook = (name, timeout) => waitFor(() => findHook(name), name, timeout);
   const waitForText = (root, selector, text) => waitFor(() => findByText(root, selector, text), text);
   const waitForLabel = (root, label) => waitFor(() => labeledControl(root, label), label);
 
   async function focusControl(element) {
     scrollToElement(element);
     element.focus({ preventScroll: true });
-    await pause(200);
+    await pause();
   }
 
-  // Types text into an input, a few characters at a time so the visitor sees it arrive.
+  // Types text into an input a few characters at a time, so the visitor sees it arrive.
   async function type(element, text) {
     await focusControl(element);
-    const chunk = prefersReducedMotion() ? text.length : 3;
+    if (element.value === text && !reduced) {
+      // The same value again (a replay): clear it first, so the typing is still visible.
+      element.value = '';
+      element.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    const chunk = reduced ? Math.max(text.length, 1) : TIMING.typeChunk;
     for (let length = chunk; ; length += chunk) {
       element.value = text.slice(0, length);
       element.dispatchEvent(new Event('input', { bubbles: true }));
       if (length >= text.length) break;
-      await pause(30);
+      // The cadence is not a pause point: a word is never left half typed.
+      if (!reduced) await sleep(TIMING.typeDelay, signal);
     }
     await pause();
   }
@@ -91,7 +144,7 @@ export function createTourActions(signal) {
 
   async function click(element) {
     scrollToElement(element);
-    await pause(200);
+    await pause();
     element.click();
     await pause();
   }

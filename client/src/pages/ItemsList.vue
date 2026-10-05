@@ -137,7 +137,10 @@ onMounted(async () => {
     </template>
   </PageHeader>
 
-  <div class="card mb-3">
+  <div
+    class="card mb-3"
+    data-tour="item-filters"
+  >
     <div class="card-body row g-3 align-items-end">
       <div class="col-12 col-lg-4">
         <label

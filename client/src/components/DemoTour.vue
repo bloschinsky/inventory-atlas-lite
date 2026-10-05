@@ -1,26 +1,37 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { IconArrowLeft, IconArrowRight, IconBrandGithub, IconCompass, IconDownload, IconRefresh } from '@tabler/icons-vue';
+import { useI18n } from 'vue-i18n';
+import {
+  IconArrowLeft, IconArrowRight, IconBrandGithub, IconCompass, IconDownload, IconPlayerPause, IconPlayerPlay, IconRefresh, IconRotate
+} from '@tabler/icons-vue';
 import { resetDemoData } from '../api.js';
 import { appInfo } from '../build-info.js';
+import { theme } from '../theme.js';
 import { createTourController, tour } from '../demo/tour.js';
-import { findHook, isShown } from '../demo/tourActions.js';
-import { tourSteps } from '../demo/tourSteps.js';
+import { resolveTarget } from '../demo/tourActions.js';
+import { tourChapters } from '../demo/tourChapters.js';
 
 /*
   The presenter of the public demo's guided tour: a small launcher that never blocks free
-  exploration, the step card with its controls, and the spotlight around the step's target. The
-  spotlight lets clicks through; only the transparent lock covers the page, and only while a step
-  is performing its actions. The card sits above both, so Close (or Escape) always works.
+  exploration, the chapter card with its controls, and the spotlight around the scene's target. The
+  card uses the inverse of the application's color mode, so it stands apart from the page. The
+  spotlight lets clicks through; only the transparent lock covers the page, and only while a chapter
+  plays and is not paused. The card sits above both, so Pause, Close, and Escape always work.
 */
+const { t } = useI18n();
 const router = useRouter();
-const { start, next, back, retry, skipStep, close } = createTourController(router);
-const total = tourSteps.length;
-const step = computed(() => tourSteps[tour.index]);
-const last = computed(() => tour.index === total - 1);
-const working = computed(() => tour.status === 'working');
+const { start, next, back, replay, pause, resume, close } = createTourController(router);
+const total = tourChapters.length;
+const chapter = computed(() => tourChapters[tour.chapter]);
+const scene = computed(() => chapter.value.scenes.find(entry => entry.id === tour.scenes[tour.scene]));
+const sceneText = computed(() => scene.value
+  ? t(`tour.chapters.${chapter.value.id}.scenes.${scene.value.id}`, scene.value.params?.(tour.data, t) ?? {})
+  : '');
+const last = computed(() => tour.chapter === total - 1);
+const playing = computed(() => tour.status === 'playing');
 const failed = computed(() => tour.status === 'failed');
+const presenterTheme = computed(() => (theme.value === 'dark' ? 'light' : 'dark'));
 const getUrl = `${appInfo.repositoryUrl}#official-releases`;
 
 const launcher = ref(null);
@@ -47,10 +58,14 @@ async function resetAndFinish() {
 const spot = ref(null);
 let frame = 0;
 function track() {
-  const target = tour.target && findHook(tour.target);
+  const elements = resolveTarget(tour.target);
   let box = null;
-  if (target && isShown(target)) {
-    const { top, left, width, height } = target.getBoundingClientRect();
+  if (elements.length) {
+    const rects = elements.map(element => element.getBoundingClientRect());
+    const top = Math.min(...rects.map(rect => rect.top));
+    const left = Math.min(...rects.map(rect => rect.left));
+    const width = Math.max(...rects.map(rect => rect.right)) - left;
+    const height = Math.max(...rects.map(rect => rect.bottom)) - top;
     box = { top: `${top - 6}px`, left: `${left - 6}px`, width: `${width + 12}px`, height: `${height + 12}px` };
   }
   if (JSON.stringify(box) !== JSON.stringify(spot.value)) spot.value = box;
@@ -62,8 +77,8 @@ watch(() => tour.active, active => {
   else spot.value = null;
 });
 
-// While a step acts it moves the focus through the page's fields, so Escape stops the tour from anywhere.
-const escape = event => { if (event.key === 'Escape' && tour.active && working.value) finish(); };
+// While a chapter plays it moves the focus through the page's fields, so Escape stops the tour from anywhere.
+const escape = event => { if (event.key === 'Escape' && tour.active && playing.value) finish(); };
 
 // The page keeps room at its end, so the launcher never hides the last controls of a page.
 onMounted(() => {
@@ -100,7 +115,7 @@ onBeforeUnmount(() => {
     aria-hidden="true"
   />
   <div
-    v-if="tour.active && working"
+    v-if="tour.active && playing && !tour.paused"
     class="demo-tour-lock"
     aria-hidden="true"
   />
@@ -108,6 +123,7 @@ onBeforeUnmount(() => {
   <section
     v-if="tour.active"
     class="card demo-tour-card"
+    :data-bs-theme="presenterTheme"
     role="dialog"
     aria-modal="false"
     aria-labelledby="demo-tour-title"
@@ -126,7 +142,7 @@ onBeforeUnmount(() => {
             {{ $t('tour.label') }}
           </div>
           <div class="small text-secondary">
-            {{ $t('tour.progress', { current: tour.index + 1, total }) }}
+            {{ $t('tour.progress', { current: tour.chapter + 1, total }) }}
           </div>
         </div>
         <button
@@ -141,76 +157,71 @@ onBeforeUnmount(() => {
         class="progress progress-sm mb-3"
         role="progressbar"
         :aria-label="$t('tour.progressLabel')"
-        :aria-valuenow="tour.index + 1"
+        :aria-valuenow="tour.chapter + 1"
         aria-valuemin="1"
         :aria-valuemax="total"
+        :aria-valuetext="$t('tour.progress', { current: tour.chapter + 1, total })"
       >
         <div
           class="progress-bar"
-          :style="{ width: `${(tour.index + 1) / total * 100}%` }"
+          :style="{ width: `${(tour.chapter + 1) / total * 100}%` }"
         />
       </div>
-      <div aria-live="polite">
-        <h2
-          id="demo-tour-title"
-          ref="heading"
-          class="h3 mb-1"
-          tabindex="-1"
+      <h2
+        id="demo-tour-title"
+        ref="heading"
+        class="h3 mb-1"
+        tabindex="-1"
+      >
+        {{ $t(`tour.chapters.${chapter.id}.title`) }}
+      </h2>
+      <p
+        class="mb-2 demo-tour-text"
+        aria-live="polite"
+      >
+        {{ sceneText }}
+      </p>
+      <div class="d-flex flex-wrap align-items-center gap-2">
+        <ol
+          v-if="tour.scenes.length > 1"
+          class="demo-tour-scenes"
+          :aria-label="$t('tour.sceneProgress', { current: tour.scene + 1, total: tour.scenes.length })"
         >
-          {{ $t(`tour.steps.${step.id}.title`) }}
-        </h2>
-        <p class="mb-0">
-          {{ $t(`tour.steps.${step.id}.text`) }}
-        </p>
-        <p
-          v-if="working"
-          class="small text-secondary d-flex align-items-center gap-2 mt-2 mb-0"
-        >
-          <span
-            class="spinner-border spinner-border-sm"
-            aria-hidden="true"
+          <li
+            v-for="(id, index) in tour.scenes"
+            :key="id"
+            :class="{ 'demo-tour-scene-done': index < tour.scene || tour.status === 'done', 'demo-tour-scene-current': index === tour.scene }"
           />
-          {{ $t('tour.working') }}
-        </p>
-        <div
-          v-if="failed"
-          class="alert alert-warning mt-2 mb-0"
-          role="alert"
-        >
-          <p class="mb-2">
-            {{ $t('tour.failed') }}
-          </p>
-          <div class="d-flex flex-wrap gap-2">
-            <button
-              type="button"
-              class="btn btn-sm"
-              @click="retry"
-            >
-              <IconRefresh
-                class="icon"
-                aria-hidden="true"
-              />
-              {{ $t('common.retry') }}
-            </button>
-            <button
-              type="button"
-              class="btn btn-sm"
-              @click="skipStep"
-            >
-              {{ $t('tour.skipStep') }}
-            </button>
-          </div>
-        </div>
+        </ol>
+        <span class="small text-secondary me-auto">
+          <template v-if="playing && tour.paused">{{ $t('tour.paused') }}</template>
+          <span
+            v-else-if="playing"
+            class="d-inline-flex align-items-center gap-2"
+          >
+            <span
+              class="spinner-border spinner-border-sm"
+              aria-hidden="true"
+            />
+            {{ $t('tour.playing') }}
+          </span>
+        </span>
+      </div>
+      <div
+        v-if="failed"
+        class="alert alert-warning mt-2 mb-0"
+        role="alert"
+      >
+        {{ $t('tour.failed') }}
       </div>
     </div>
     <div
-      v-if="!last"
-      class="card-footer d-flex gap-2"
+      class="card-footer d-flex flex-wrap gap-2"
     >
       <button
         type="button"
         class="btn"
-        :disabled="tour.index === 0"
+        :disabled="tour.chapter === 0"
         @click="back"
       >
         <IconArrowLeft
@@ -220,9 +231,36 @@ onBeforeUnmount(() => {
         {{ $t('tour.back') }}
       </button>
       <button
+        v-if="playing"
+        type="button"
+        class="btn"
+        @click="tour.paused ? resume() : pause()"
+      >
+        <component
+          :is="tour.paused ? IconPlayerPlay : IconPlayerPause"
+          class="icon"
+          aria-hidden="true"
+        />
+        {{ tour.paused ? $t('tour.resume') : $t('tour.pause') }}
+      </button>
+      <!-- Replay is offered at all times; once the chapter has played it is the highlighted choice. -->
+      <button
+        type="button"
+        class="btn btn-icon"
+        :class="{ 'btn-outline-primary': !playing }"
+        :aria-label="$t('tour.replay')"
+        :title="$t('tour.replay')"
+        @click="replay"
+      >
+        <IconRotate
+          class="icon"
+          aria-hidden="true"
+        />
+      </button>
+      <button
+        v-if="!last"
         type="button"
         class="btn btn-primary ms-auto"
-        :disabled="working || failed"
         @click="next"
       >
         {{ $t('tour.next') }}
@@ -231,62 +269,48 @@ onBeforeUnmount(() => {
           aria-hidden="true"
         />
       </button>
-    </div>
-    <div
-      v-else
-      class="card-footer d-flex flex-wrap gap-2"
-    >
-      <button
-        type="button"
-        class="btn"
-        @click="back"
-      >
-        <IconArrowLeft
-          class="icon"
-          aria-hidden="true"
-        />
-        {{ $t('tour.back') }}
-      </button>
-      <button
-        type="button"
-        class="btn btn-primary ms-auto"
-        @click="finish"
-      >
-        {{ $t('tour.explore') }}
-      </button>
-      <div class="d-flex flex-wrap gap-2 w-100">
+      <template v-else>
         <button
           type="button"
-          class="btn btn-sm"
-          @click="resetAndFinish"
+          class="btn btn-primary ms-auto"
+          @click="finish"
         >
-          <IconRefresh
-            class="icon"
-            aria-hidden="true"
-          />
-          {{ $t('demo.reset') }}
+          {{ $t('tour.explore') }}
         </button>
-        <a
-          class="btn btn-sm"
-          :href="getUrl"
-        >
-          <IconDownload
-            class="icon"
-            aria-hidden="true"
-          />
-          {{ $t('demo.get') }}
-        </a>
-        <a
-          class="btn btn-sm"
-          :href="appInfo.repositoryUrl"
-        >
-          <IconBrandGithub
-            class="icon"
-            aria-hidden="true"
-          />
-          {{ $t('tour.github') }}
-        </a>
-      </div>
+        <div class="d-flex flex-wrap gap-2 w-100">
+          <button
+            type="button"
+            class="btn btn-sm"
+            @click="resetAndFinish"
+          >
+            <IconRefresh
+              class="icon"
+              aria-hidden="true"
+            />
+            {{ $t('demo.reset') }}
+          </button>
+          <a
+            class="btn btn-sm"
+            :href="getUrl"
+          >
+            <IconDownload
+              class="icon"
+              aria-hidden="true"
+            />
+            {{ $t('demo.get') }}
+          </a>
+          <a
+            class="btn btn-sm"
+            :href="appInfo.repositoryUrl"
+          >
+            <IconBrandGithub
+              class="icon"
+              aria-hidden="true"
+            />
+            {{ $t('tour.github') }}
+          </a>
+        </div>
+      </template>
     </div>
   </section>
 </template>

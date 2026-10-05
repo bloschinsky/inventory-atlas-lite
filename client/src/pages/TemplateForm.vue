@@ -92,6 +92,7 @@ onMounted(async () => {
     </div>
     <form
       class="card"
+      data-tour="template-form"
       @submit.prevent="save"
     >
       <div class="card-body">

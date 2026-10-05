@@ -62,6 +62,7 @@ const editRoute = item => `/items/${item.id}/edit`;
               :sortable="column.sortable"
               :active="column.key === sort"
               :direction="direction"
+              :data-tour="column.sortable ? `item-sort-${column.key}` : undefined"
               @sort="$emit('sort', column.key)"
             />
             <th
@@ -76,6 +77,7 @@ const editRoute = item => `/items/${item.id}/edit`;
           <tr
             v-for="item in items"
             :key="item.id"
+            :data-tour="`item-row-${item.id}`"
           >
             <td>
               <input
@@ -165,6 +167,7 @@ const editRoute = item => `/items/${item.id}/edit`;
       v-for="item in items"
       :key="item.id"
       class="card item-card"
+      :data-tour="`item-row-${item.id}`"
     >
       <div class="card-body p-3">
         <div class="d-flex gap-3">

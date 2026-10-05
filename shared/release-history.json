@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.55.0",
+    "date": "2026-10-06",
+    "changes": [
+      "The Guided tour of the public demo is now a short product presentation in eight chapters: the Dashboard charts, Categories and their Fields, the Hierarchy in Tree and Graph View, adding an item step by step, filtering, sorting, and searching Items, Templates, Checklists, and a final look at what the tour changed. Each chapter plays on its own in the real pages; press Next or Back to change chapters, Pause to stop and look around, and Replay chapter to watch it again.",
+      "The tour card now uses the opposite color mode of the app, so it stands out in both the light and the dark theme. The tour is only part of the public demo; your own installation works exactly as before."
+    ]
+  },
+  {
     "version": "0.54.0",
     "date": "2026-10-05",
     "changes": [

@@ -66,6 +66,7 @@ onMounted(load);
           v-if="openRun"
           :to="`/checklists/runs/${openRun.id}`"
           class="btn btn-primary"
+          data-tour="checklist-continue"
         >
           {{ $t('checklists.continueRun') }}
         </RouterLink>
@@ -74,6 +75,7 @@ onMounted(load);
           class="btn"
           :class="{ 'btn-primary': !openRun }"
           :disabled="starting"
+          data-tour="checklist-start"
           @click="start"
         >
           {{ runs.length ? $t('checklists.runAgain') : $t('checklists.start') }}
@@ -104,6 +106,7 @@ onMounted(load);
     <section
       class="card mb-3"
       aria-labelledby="checklist-expected-items"
+      data-tour="checklist-items"
     >
       <div class="card-header">
         <h2

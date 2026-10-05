@@ -110,6 +110,7 @@ onMounted(load);
   <div
     v-else
     class="card"
+    data-tour="template-list"
   >
     <div class="table-responsive">
       <table class="table table-vcenter card-table">

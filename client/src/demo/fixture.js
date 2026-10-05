@@ -164,7 +164,7 @@ export const checklists = [
 export const photoFiles = items.filter(item => item.photo).map(item => item.photo);
 
 /*
-  The item the guided tour adds (./tourSteps.js): a second body for the film kit in the Camera Bag,
+  The item the guided tour adds (./tourChapters.js): a second body for the film kit in the Camera Bag,
   shown with the seeded camera's generated photo. It is not part of the seeded inventory.
 */
 export const tourItem = {
