@@ -26,6 +26,11 @@ presentation layer over the existing API, and no CDN or other runtime internet d
   the same labels without any pointer.
 - The expanded sidebar is fixed and overlays the page; only the folded width reserves space, so
   expanding never shifts the content sideways.
+- The routed page fills the whole width beside the sidebar: the shell wraps every page in a fluid
+  `.container-fluid.app-content` with the normal Tabler gutters and no shell `max-width`, so data
+  pages such as the Dashboard, Items, and Hierarchy grow with wide and Full HD screens. Narrow
+  surfaces keep their own limit where it helps readability, such as `.form-card`
+  (`--app-form-width`, `820px`) on the item, template, checklist, AI, Settings, and Data forms.
 - The open destination is highlighted in both the folded and the expanded state and carries
   `aria-current="page"`. Every entry has an icon, a label, and a `title` tooltip for the folded rail.
 
@@ -115,7 +120,8 @@ category name.
   reactive value, writes `data-bs-theme`, and persists the choice; both use the same storage key.
 - `client/src/App.vue` is the Tabler `.page` shell only. The mobile header lives inside
   `.page-wrapper`, because a horizontal navbar directly under `.page` makes Tabler hide the vertical
-  sidebar.
+  sidebar. Its `.app-content` wrapper is fluid on purpose; a page that needs a narrower surface
+  limits it locally instead of the shell limiting every route.
 - `client/src/components/AppSidebar.vue` is a plain Tabler
   `navbar navbar-vertical navbar-expand-lg navbar-folded-hover`; the folding, the hover and focus
   expansion, and the transition are Tabler's own CSS, not a custom implementation.
@@ -150,6 +156,11 @@ category name.
   closing with `Escape`, and restoring focus; the card list replacing the table; the name appearing
   above the photo and the photo above the details; multi-photo navigation and photo deletion; and the
   no-photo state.
+- `test/e2e/fluid-workspace.spec.js` checks that the routed wrapper is `.container-fluid` with no
+  `.container-xl` and no `max-width`, that it fills the `.page-wrapper` width minus the normal
+  gutters without sideways scrolling at `1366`, `1440`, `1920`, `2560`, `768`, and `360` pixels,
+  that the Dashboard (with its charts inside their cards), the Items table, and the Hierarchy tree and
+  graph use that width at Full HD, and that `.form-card` forms stay at their local width.
 - Every route was rendered and inspected in Chromium in both colour modes at `1440`, `1024`, `768`,
   `390`, and `320` pixels. No page scrolls horizontally in any of those combinations, and the browser
   console stays free of errors and warnings.

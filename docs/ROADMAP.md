@@ -25,12 +25,6 @@ Implemented behavior is documented separately in [`features/README.md`](features
    [`TASK-HIERARCHY-PHASE-3-DRAG-DROP.md`](issues/TASK-HIERARCHY-PHASE-3-DRAG-DROP.md). Category
    grouping stays read-only.
 
-4. **Fluid desktop workspace** — Planned; no dependencies. Replaces the centered, max-width
-   `container-xl` around every routed page with a fluid application container, so Dashboard, Items,
-   and the other pages use the full width beside the sidebar on wide screens while keeping the normal
-   Tabler gutters and correct label printing. See
-   [`TASK-FLUID-DESKTOP-WORKSPACE.md`](issues/TASK-FLUID-DESKTOP-WORKSPACE.md).
-
 ## Data management
 
 1. **Multiple database profiles** — Planned and unblocked by the completed

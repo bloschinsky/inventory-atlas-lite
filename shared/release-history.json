@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.50.1",
+    "date": "2026-10-05",
+    "changes": [
+      "On wide and Full HD screens the pages now use the whole width beside the sidebar instead of a centered column, so the Dashboard charts, the Items table, and the Hierarchy tree and graph get more room. Forms such as Add Item and Settings keep their comfortable reading width, and phones and tablets look the same as before."
+    ]
+  },
+  {
     "version": "0.50.0",
     "date": "2026-10-04",
     "changes": [

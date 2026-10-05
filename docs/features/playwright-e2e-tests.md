@@ -35,6 +35,7 @@ failing test makes the command exit non-zero.
   server-only API key storage), `theme.spec.js` (the system colour scheme, an explicit light/dark
   choice, and its persistence), and `responsive.spec.js`, which runs at a `390 x 844` phone viewport
   and covers the offcanvas navigation, the mobile item cards, and the item detail order.
+  `fluid-workspace.spec.js` covers the full-width application workspace from phone to `2560px`.
   `print-labels.spec.js` covers item selection and the A4 label print view, including PDF page
   counts from Chromium's print output. `batch-items.spec.js` covers the Batch Add from JSON template,
   preview editing, removal, and batch creation.

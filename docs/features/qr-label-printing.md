@@ -85,8 +85,9 @@ No host, port, or URL is encoded; see [`item-qr-identity.md`](item-qr-identity.m
 - Print CSS: sheets use the named page `labels` (`@page labels { size: A4 portrait; margin: 0 }`),
   are exactly 210 × 297 mm, and break after each sheet except the last. Labels use
   `break-inside: avoid`. The sidebar, the mobile header, the page header, the controls, and the
-  alerts are `d-print-none`, and the shell wrappers lose their margins and backgrounds while a sheet
-  is on the page (`:has(.label-sheets)`), so only the sheets are printed on white.
+  alerts are `d-print-none`, and the shell wrappers (`.page-wrapper`, `.page-body`, and the
+  `.app-content` page container) lose their margins, padding, width limit, and backgrounds while a
+  sheet is on the page (`:has(.label-sheets)`), so only the sheets are printed on white.
 - No schema, table, or stored file was added.
 
 ## Verification
@@ -98,8 +99,8 @@ No host, port, or URL is encoded; see [`item-qr-identity.md`](item-qr-identity.m
   batch request and no per-item request, every label's QR accessible name, the default metadata and
   the toggles, the inherited location, the three presets' label sizes and page counts, the PDF page
   count from Chromium's print output (2 pages for 25 Standard labels, 4 for Large), labels staying
-  inside their sheets, long text staying inside the label in every preset without shrinking the
-  code, black-on-white print colours in dark mode, hidden application chrome in print media, a
+  inside their sheets, no shell margin, padding, or width limit around them in print, long text
+  staying inside the label in every preset without shrinking the code, black-on-white print colours in dark mode, hidden application chrome in print media, a
   deleted item's warning also after a reload, the empty print view, the single-item **Print Label**
   path, and a mocked `window.print()`.
 
