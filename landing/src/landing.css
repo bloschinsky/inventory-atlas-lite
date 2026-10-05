@@ -1,11 +1,13 @@
 /*
   Landing layer on top of Tabler, the design system of the application itself. The navigation, the
-  hero with the principles, and the final call to action are dark bands: they carry
+  hero with the facts rail, and the final call to action are dark bands: they carry
   data-bs-theme="dark", so Tabler's own dark colors apply to their text and buttons in both system
   modes. The showcase between them alternates two Tabler surfaces and follows the visitor's mode.
 */
 :root {
   --landing-section-space: clamp(3.5rem, 8vw, 6.5rem);
+  /* The side gutter of every band: 24 px on phones, 32 px from tablets up. */
+  --landing-gutter: 1.5rem;
   --landing-ink: #0a1630;
   --landing-ink-raised: #10254d;
   --landing-glow: rgba(37, 99, 235, .55);
@@ -14,13 +16,26 @@
   --landing-band-alt: var(--tblr-bg-surface-secondary);
   --landing-shot-shadow: 0 1.5rem 3rem -1.25rem rgba(10, 22, 48, .45);
 }
+@media (min-width: 768px) { :root { --landing-gutter: 2rem; } }
 /* Tabler's light secondary surface is almost white; a cooler gray keeps the bands apart. */
 :root[data-bs-theme='light'] { --landing-band-alt: #eaeff6; }
 
+/*
+  The landing typeface is Geist (bundled from @fontsource-variable/geist in main.js) over Tabler's
+  system stack as the fallback. Only this page loads it; the application keeps Tabler's fonts.
+*/
+:root, [data-bs-theme] { --tblr-body-font-family: 'Geist Variable', var(--tblr-font-sans-serif); }
+body { font-family: var(--tblr-body-font-family); }
+
 html { scroll-behavior: smooth; scroll-padding-top: 4.5rem; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+/* The page behind the open screenshot viewer does not scroll. */
+html.landing-viewer-open { overflow: hidden; }
 
 body { background: var(--landing-band-alt); overflow-wrap: anywhere; }
+
+/* Every band shares one gutter; a row's negative margins and its columns' padding keep text on it. */
+.container-xl { --tblr-gutter-x: calc(var(--landing-gutter) * 2); }
 
 a:focus-visible, .btn:focus-visible {
   outline: 3px solid var(--tblr-primary);
@@ -43,14 +58,18 @@ a:focus-visible, .btn:focus-visible {
   backdrop-filter: blur(8px);
   border-bottom: 1px solid rgba(255, 255, 255, .08);
 }
-.landing-nav .container-xl { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-.landing-brand { display: inline-flex; align-items: center; gap: .5rem; color: #fff; font-weight: 600; font-size: 1.0625rem; text-decoration: none; white-space: nowrap; }
+.landing-nav .container-xl { display: flex; flex-wrap: nowrap; align-items: center; justify-content: space-between; gap: 1rem; }
+/* On the narrowest phones the GitHub button keeps its icon and its accessible name only. */
+@media (max-width: 399.98px) {
+  .landing-nav-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+.landing-brand { display: inline-flex; align-items: center; gap: .5rem; color: #fff; font-weight: 650; font-size: 1.0625rem; letter-spacing: -.01em; text-decoration: none; white-space: nowrap; }
 .landing-brand:hover { color: var(--landing-accent); text-decoration: none; }
 .landing-brand-mark { width: 1.75rem; height: 1.75rem; color: var(--landing-accent); }
 .landing-nav-link { color: rgba(255, 255, 255, .75); font-weight: 500; }
 .landing-nav-link:hover { color: #fff; text-decoration: none; }
 
-/* Hero: glows over the ink, under a dot grid; its bottom edge is plain ink, so the principles continue it. */
+/* Hero: glows over the ink, under a dot grid; its bottom edge is plain ink, so the facts rail continues it. */
 .landing-hero {
   position: relative;
   isolation: isolate;
@@ -72,11 +91,12 @@ a:focus-visible, .btn:focus-visible {
 .landing-eyebrow { display: flex; align-items: center; gap: .625rem; margin-bottom: .75rem; color: var(--tblr-primary); font-size: .8125rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
 .landing-eyebrow-icon { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; flex: 0 0 2.25rem; border-radius: .625rem; color: #fff; background: linear-gradient(135deg, #2563eb, #7c3aed); box-shadow: 0 .5rem 1rem -.5rem rgba(37, 99, 235, .7); }
 .landing-eyebrow-icon .icon { width: 1.25rem; height: 1.25rem; stroke-width: 1.75; }
-.landing-title { margin-bottom: 1rem; color: #fff; font-size: clamp(2.25rem, 5vw, 3.5rem); font-weight: 700; line-height: 1.1; }
-.landing-lead { margin-bottom: 2rem; color: var(--tblr-secondary); font-size: clamp(1.0625rem, 1.6vw, 1.25rem); line-height: 1.6; }
+.landing-title { margin-bottom: 1.125rem; color: #fff; font-size: clamp(2.125rem, 1.4rem + 3.2vw, 3.5rem); font-weight: 720; letter-spacing: -.03em; line-height: 1.05; }
+.landing-lead { max-width: 34rem; margin-bottom: 2rem; color: var(--tblr-secondary); font-size: clamp(1.0625rem, 1rem + .4vw, 1.25rem); line-height: 1.6; }
 .landing-actions { display: flex; flex-wrap: wrap; gap: .75rem; }
 .landing-actions .btn { min-height: 3rem; }
-.landing-release { margin: 1.5rem 0 0; color: var(--tblr-secondary); }
+.landing-external { width: 1rem; height: 1rem; opacity: .75; }
+.landing-release { margin: 1.5rem 0 0; color: var(--tblr-secondary); font-size: .875rem; }
 
 /* Screenshots */
 .landing-shot {
@@ -91,27 +111,49 @@ a:focus-visible, .btn:focus-visible {
 .landing-dark .landing-shot-phone { border-color: #020617; }
 .landing-media { display: flex; align-items: flex-end; gap: 1.5rem; }
 
+/* A screenshot opens the viewer: a zoom cursor and a slight lift are its only hints. */
+.landing-shot-link { display: block; border-radius: var(--tblr-border-radius-lg); cursor: zoom-in; }
+.landing-shot-link:has(.landing-shot-phone) { border-radius: 1.5rem; }
+@media (prefers-reduced-motion: no-preference) {
+  .landing-shot-link .landing-shot { transition: transform .2s ease; }
+  .landing-shot-link:hover .landing-shot { transform: translateY(-3px); }
+}
+
 /* The phone overlaps the lower left of the desktop screenshot without leaving the column. */
 .landing-hero-media { position: relative; padding: 0 0 2.5rem 14%; }
 .landing-hero-media .landing-hero-phone { position: absolute; left: 0; bottom: 0; width: 27%; }
-.landing-shot-link { display: block; flex: 1 1 0; min-width: 0; }
-.landing-shot-link-phone { flex: 0 0 30%; }
 
-/* Principles continue the hero band. */
-.landing-principles { padding-bottom: var(--landing-section-space); border-bottom: 1px solid rgba(255, 255, 255, .08); }
-.landing-principle { height: 100%; padding: 1.25rem; border: 1px solid rgba(255, 255, 255, .08); border-radius: .875rem; background: rgba(255, 255, 255, .04); }
-.landing-principle-icon { width: 2.25rem; height: 2.25rem; margin-bottom: .75rem; padding: .375rem; border-radius: var(--tblr-border-radius); color: var(--tblr-primary); background: var(--tblr-primary-lt); stroke-width: 1.75; }
-.landing-dark .landing-principle-icon { color: var(--landing-accent); background: rgba(59, 130, 246, .18); }
+/* Showcase screenshots carry a short "Page · what it shows" caption. */
+.landing-figure { flex: 1 1 0; min-width: 0; margin: 0; }
+.landing-figure-phone { flex: 0 0 30%; }
+.landing-caption { display: flex; align-items: center; gap: .5rem; margin-top: .875rem; color: var(--tblr-secondary); font-size: .8125rem; font-weight: 500; }
+.landing-caption::before { content: ''; flex: 0 0 1rem; height: 1px; background: currentColor; opacity: .6; }
+
+/* The facts rail continues the hero band: a term and a short line under a hairline with an accent tick. */
+.landing-facts-band { padding-bottom: var(--landing-section-space); border-bottom: 1px solid rgba(255, 255, 255, .08); }
+.landing-facts { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 1.75rem 1.5rem; margin: 0; }
+.landing-fact { position: relative; padding-top: 1rem; border-top: 1px solid rgba(255, 255, 255, .14); }
+.landing-fact::before { content: ''; position: absolute; top: -1px; left: 0; width: 1.5rem; height: 2px; background: var(--landing-accent); }
+.landing-fact dt { margin-bottom: .375rem; color: var(--landing-accent); font-size: .75rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.landing-fact dd { margin: 0; color: var(--tblr-secondary); font-size: .9375rem; line-height: 1.45; }
+@media (max-width: 1199.98px) { .landing-facts { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 575.98px) { .landing-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem 1.25rem; } }
+
+.landing-card-icon { width: 2.25rem; height: 2.25rem; margin-bottom: .75rem; padding: .375rem; border-radius: var(--tblr-border-radius); color: var(--tblr-primary); background: var(--tblr-primary-lt); stroke-width: 1.75; }
 
 /* Showcase sections alternate the two surfaces of the active mode. */
 .landing-section { padding-block: var(--landing-section-space); background: var(--landing-band-alt); }
 .landing-feature:nth-of-type(odd) { background: var(--landing-band); }
 .landing-section-heading { max-width: 44rem; margin-bottom: 2.5rem; }
-.landing-section-title { margin-bottom: 1rem; font-size: clamp(1.75rem, 3.2vw, 2.5rem); font-weight: 700; line-height: 1.2; }
-.landing-text { max-width: 40rem; color: var(--tblr-secondary); font-size: 1.0625rem; line-height: 1.65; }
-.landing-points { margin: 1.5rem 0 0; padding: 0; list-style: none; }
+.landing-section-title { margin-bottom: 1rem; font-size: clamp(1.75rem, 1.35rem + 1.6vw, 2.5rem); font-weight: 680; letter-spacing: -.02em; line-height: 1.15; }
+.landing-text { max-width: 36rem; color: var(--tblr-secondary); font-size: clamp(1.0625rem, 1rem + .2vw, 1.125rem); line-height: 1.65; }
+.landing-points { max-width: 36rem; margin: 1.5rem 0 0; padding: 0; font-size: 1rem; list-style: none; }
 .landing-points li { position: relative; margin-bottom: .75rem; padding-left: 1.75rem; line-height: 1.55; }
 .landing-points li::before { content: ''; position: absolute; left: .25rem; top: .5em; width: .625rem; height: .625rem; border-radius: 50%; background: var(--tblr-primary); }
+
+/* The numbered story of the showcase: "01 / Organize" in the section label. */
+.landing-story-number { color: var(--tblr-body-color); font-variant-numeric: tabular-nums; }
+.landing-story [aria-hidden] { color: var(--tblr-secondary); font-weight: 500; }
 
 .landing-install { background: var(--landing-band); }
 .landing-note { margin: 2rem 0 0; color: var(--tblr-secondary); }
@@ -123,6 +165,57 @@ a:focus-visible, .btn:focus-visible {
 .landing-final .landing-section-title { color: #fff; }
 
 .landing-footer { padding-block: 1.5rem; border-top: 1px solid rgba(255, 255, 255, .08); color: var(--tblr-secondary); font-size: .875rem; }
+
+/*
+  The screenshot viewer (ScreenshotLightbox.vue). The dialog covers the viewport with a small safe
+  margin; the panel inside is a light surface whatever the mode, because the screenshots are light,
+  and the image keeps its aspect ratio inside the space left under the header.
+*/
+.landing-viewer {
+  --landing-viewer-margin: clamp(.5rem, 2.5vw, 2rem);
+  /* The header row with its 1 px bottom border. */
+  --landing-viewer-header: calc(3.5rem + 1px);
+  --landing-viewer-padding: clamp(.5rem, 1.5vw, 1.25rem);
+  width: 100%; height: 100%; max-width: none; max-height: none;
+  margin: 0; padding: var(--landing-viewer-margin);
+  border: 0;
+  background: transparent;
+}
+.landing-viewer[open] { display: flex; align-items: center; justify-content: center; }
+.landing-viewer::backdrop { background: rgba(5, 12, 28, .8); }
+.landing-viewer-panel {
+  display: flex; flex-direction: column;
+  max-width: 100%; max-height: 100%; min-width: min(100%, 20rem);
+  overflow: hidden;
+  border-radius: var(--tblr-border-radius-lg);
+  color: #1d273b;
+  background: #f1f4f9;
+  box-shadow: 0 2rem 5rem -1rem rgba(0, 0, 0, .6);
+}
+.landing-viewer-header { display: flex; align-items: center; gap: .75rem; min-height: var(--landing-viewer-header); flex: 0 0 auto; padding: .375rem .375rem .375rem 1rem; border-bottom: 1px solid rgba(15, 23, 42, .08); background: #fff; }
+/* The title keeps the header at a known height: one line on wide screens, at most two on phones. */
+.landing-viewer-title { flex: 1 1 auto; min-width: 0; margin: 0; overflow: hidden; font-size: .9375rem; font-weight: 600; line-height: 1.3; white-space: nowrap; text-overflow: ellipsis; }
+@media (max-width: 575.98px) {
+  .landing-viewer { --landing-viewer-header: calc(4.5rem + 1px); }
+  .landing-viewer-title { display: -webkit-box; font-size: .875rem; white-space: normal; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
+}
+.landing-viewer-controls { display: flex; flex: 0 0 auto; align-items: center; gap: .125rem; }
+.landing-viewer-controls .btn { flex: 0 0 2.75rem; width: 2.75rem; height: 2.75rem; }
+.landing-viewer-counter { min-width: 2.75rem; color: #667382; font-size: .875rem; font-variant-numeric: tabular-nums; text-align: center; }
+.landing-viewer-stage { display: flex; min-height: 0; padding: var(--landing-viewer-padding); overflow: auto; }
+.landing-viewer-image {
+  display: block; width: auto; height: auto; margin: auto;
+  max-width: 100%;
+  max-height: calc(100dvh - 2 * var(--landing-viewer-margin) - var(--landing-viewer-header) - 2 * var(--landing-viewer-padding));
+  border: 1px solid rgba(15, 23, 42, .1);
+  border-radius: var(--tblr-border-radius);
+  background: #fff;
+}
+.landing-viewer-image-phone { border-radius: 1rem; }
+@media (prefers-reduced-motion: no-preference) {
+  .landing-viewer[open] .landing-viewer-panel { animation: landing-viewer-in .18s ease-out; }
+}
+@keyframes landing-viewer-in { from { opacity: 0; transform: scale(.98); } }
 
 /*
   Reveal on scroll: App.vue marks .landing-reveal elements visible as they enter the viewport. The
@@ -140,6 +233,11 @@ a:focus-visible, .btn:focus-visible {
 }
 
 @media (max-width: 575.98px) {
+  .landing-hero { padding-block: 2.25rem 3rem; }
+  .landing-hero .landing-eyebrow { margin-bottom: 1rem; }
+  .landing-title { margin-bottom: 1rem; }
+  .landing-lead { margin-bottom: 1.75rem; }
+  .landing-release { margin-top: 1.25rem; }
   .landing-actions .btn { width: 100%; }
   .landing-media { gap: .75rem; }
 }

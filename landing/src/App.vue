@@ -1,14 +1,27 @@
 <script setup>
-import { onBeforeUnmount, onMounted } from 'vue';
-import { IconBook, IconBrandGithub, IconPlayerPlay, IconRocket } from '@tabler/icons-vue';
+import { onBeforeUnmount, onMounted, provide, ref } from 'vue';
+import { IconBook, IconBrandGithub, IconExternalLink, IconPlayerPlay, IconRocket } from '@tabler/icons-vue';
 import FeatureSection from './FeatureSection.vue';
+import ScreenshotLightbox from './ScreenshotLightbox.vue';
 import { links } from '../site.js';
-import { hero, info, installOptions, principles, sections } from './content.js';
+import { facts, hero, info, installOptions, sections } from './content.js';
 
 // The history stores calendar dates; UTC keeps the day from shifting in the visitor's time zone.
 const releaseDate = info.release.date
   ? new Intl.DateTimeFormat('en', { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(`${info.release.date}T00:00:00Z`))
   : null;
+
+/*
+  Screenshot links open the viewer with the screenshots of their section. A modified click (new tab,
+  new window, download) keeps the plain link to the full-size file, as without the page script.
+*/
+const viewer = ref(null);
+function openScreenshot(gallery, index, event) {
+  if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+  event.preventDefault();
+  viewer.value.open(gallery, index, event.currentTarget);
+}
+provide('openScreenshot', openScreenshot);
 
 /*
   Reveal on scroll: each .landing-reveal element fades in once it enters the viewport. The hidden
@@ -78,7 +91,7 @@ onBeforeUnmount(() => observer?.disconnect());
             class="icon"
             aria-hidden="true"
           />
-          <span>GitHub</span>
+          <span class="landing-nav-label">GitHub</span>
         </a>
       </div>
     </div>
@@ -122,12 +135,19 @@ onBeforeUnmount(() => observer?.disconnect());
                 v-if="info.demoUrl"
                 class="btn btn-outline-primary btn-lg"
                 :href="info.demoUrl"
+                target="_blank"
+                rel="noopener noreferrer"
               >
                 <IconPlayerPlay
                   class="icon"
                   aria-hidden="true"
                 />
                 Try Demo
+                <span class="visually-hidden">(opens in a new tab)</span>
+                <IconExternalLink
+                  class="icon icon-end landing-external"
+                  aria-hidden="true"
+                />
               </a>
             </div>
             <p
@@ -143,17 +163,24 @@ onBeforeUnmount(() => observer?.disconnect());
           </div>
           <div class="col-lg-7">
             <div class="landing-hero-media">
-              <img
-                class="landing-shot"
-                :src="hero.desktop.src"
-                :alt="hero.desktop.alt"
-                fetchpriority="high"
+              <a
+                v-for="(image, index) in hero"
+                :key="image.src"
+                class="landing-shot-link"
+                :class="{ 'landing-hero-phone': image.phone }"
+                :href="image.src"
+                aria-haspopup="dialog"
+                aria-describedby="landing-viewer-hint"
+                @click="openScreenshot(hero, index, $event)"
               >
-              <img
-                class="landing-shot landing-shot-phone landing-hero-phone"
-                :src="hero.phone.src"
-                :alt="hero.phone.alt"
-              >
+                <img
+                  class="landing-shot"
+                  :class="{ 'landing-shot-phone': image.phone }"
+                  :src="image.src"
+                  :alt="image.alt"
+                  :fetchpriority="image.phone ? null : 'high'"
+                >
+              </a>
             </div>
           </div>
         </div>
@@ -161,39 +188,27 @@ onBeforeUnmount(() => observer?.disconnect());
     </header>
 
     <section
-      class="landing-principles landing-dark"
+      class="landing-facts-band landing-dark"
       data-bs-theme="dark"
-      aria-labelledby="principles-title"
+      aria-labelledby="facts-title"
     >
       <div class="container-xl">
         <h2
-          id="principles-title"
+          id="facts-title"
           class="visually-hidden"
         >
           Your server, your data
         </h2>
-        <div class="row g-4">
+        <dl class="landing-facts landing-reveal">
           <div
-            v-for="(principle, index) in principles"
-            :key="principle.title"
-            class="col-sm-6 col-lg-3 landing-reveal"
-            :style="{ '--landing-reveal-delay': `${index * 0.08}s` }"
+            v-for="fact in facts"
+            :key="fact.term"
+            class="landing-fact"
           >
-            <div class="landing-principle">
-              <component
-                :is="principle.icon"
-                class="landing-principle-icon"
-                aria-hidden="true"
-              />
-              <h3 class="h4 mb-1">
-                {{ principle.title }}
-              </h3>
-              <p class="text-secondary mb-0">
-                {{ principle.text }}
-              </p>
-            </div>
+            <dt>{{ fact.term }}</dt>
+            <dd>{{ fact.text }}</dd>
           </div>
-        </div>
+        </dl>
       </div>
     </section>
 
@@ -201,6 +216,7 @@ onBeforeUnmount(() => observer?.disconnect());
       v-for="(section, index) in sections"
       :key="section.id"
       :section="section"
+      :number="index + 1"
       :reverse="index % 2 === 1"
     />
 
@@ -242,7 +258,7 @@ onBeforeUnmount(() => observer?.disconnect());
               <div class="card-body d-flex flex-column">
                 <component
                   :is="option.icon"
-                  class="landing-principle-icon"
+                  class="landing-card-icon"
                   aria-hidden="true"
                 />
                 <h3 class="card-title mb-2">
@@ -326,4 +342,12 @@ onBeforeUnmount(() => observer?.disconnect());
       </span>
     </div>
   </footer>
+
+  <p
+    id="landing-viewer-hint"
+    hidden
+  >
+    Opens a larger view
+  </p>
+  <ScreenshotLightbox ref="viewer" />
 </template>

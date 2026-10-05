@@ -4,8 +4,7 @@
   application made by landing/scripts/capture-screenshots.mjs from a fictional sample inventory.
 */
 import {
-  IconBrandDocker, IconCategory, IconChartPie, IconChecklist, IconCloudOff, IconDatabase, IconDeviceMobile, IconDownload,
-  IconQrcode, IconServer, IconServer2, IconSitemap, IconTerminal2
+  IconBrandDocker, IconCategory, IconChartPie, IconChecklist, IconDownload, IconQrcode, IconServer2, IconSitemap, IconTerminal2
 } from '@tabler/icons-vue';
 import checklistRunPhone from './assets/screenshots/checklist-run-phone.webp';
 import dashboard from './assets/screenshots/dashboard.webp';
@@ -19,23 +18,31 @@ import { links } from '../site.js';
 
 export const info = __LANDING_INFO__;
 
-export const hero = {
-  desktop: { src: items, alt: 'The Items list of Inventory Atlas Lite: item photos, categories, condition badges, locations, and the containers items are stored inside.' },
-  phone: { src: itemPhone, alt: 'An item page on a phone, showing the item photo and the Edit, Duplicate, and QR Code actions.' }
-};
-
-export const principles = [
-  { icon: IconServer, title: 'Runs on your server', text: 'A home server, a NAS, a Proxmox container, or Docker. There is no hosted service and no account.' },
-  { icon: IconDatabase, title: 'Your data in one file', text: 'Items, fields, and original photos live in one SQLite database you can download and restore.' },
-  { icon: IconDeviceMobile, title: 'Phone-friendly', text: 'Open it from any phone on your network or VPN to look things up, scan labels, and tick off checklists.' },
-  { icon: IconCloudOff, title: 'No cloud required', text: 'Everyday use stays local. AI drafts and cloud backups are optional and off until you set them up.' }
+/*
+  Every screenshot has a short caption, "Page · what it shows", shown under it in the showcase and as
+  the title of the screenshot viewer; the alt text stays the full description.
+*/
+export const hero = [
+  { src: items, caption: 'Items · List view', alt: 'The Items list of Inventory Atlas Lite: item photos, categories, condition badges, locations, and the containers items are stored inside.' },
+  { src: itemPhone, caption: 'Item details · Phone', alt: 'An item page on a phone, showing the item photo and the Edit, Duplicate, and QR Code actions.', phone: true }
 ];
 
+// The facts rail under the hero: the technical identity of the product in a term and one short line.
+export const facts = [
+  { term: 'Self-hosted', text: 'Runs on your own hardware' },
+  { term: 'SQLite', text: 'Items and photos in one file' },
+  { term: 'Docker', text: 'Ready-made container image' },
+  { term: 'Proxmox', text: 'One-command LXC install' },
+  { term: 'No accounts', text: 'Made for a trusted LAN or VPN' },
+  { term: 'Local-first', text: 'AI and cloud backup are optional' }
+];
+
+// The showcase story: each section is numbered in order (01 / Organize) and named by one verb.
 export const sections = [
   {
     id: 'hierarchy',
     icon: IconSitemap,
-    eyebrow: 'Organization',
+    verb: 'Organize',
     title: 'Everything has a place',
     text: 'Model your home the way it really is. Items sit in locations, inside containers, inside other containers — and the Hierarchy shows the whole picture.',
     points: [
@@ -44,12 +51,12 @@ export const sections = [
       'Browse a searchable tree or an interactive graph, by location or by category.',
       'Move a whole selection into another container in one step.'
     ],
-    media: [{ src: hierarchy, alt: 'The Hierarchy tree grouped by location: Basement and Garage, with Garage shelf A containing the Blue toolbox and the tools inside it.' }]
+    media: [{ src: hierarchy, caption: 'Hierarchy · Grouped by location', alt: 'The Hierarchy tree grouped by location: Basement and Garage, with Garage shelf A containing the Blue toolbox and the tools inside it.' }]
   },
   {
     id: 'items',
     icon: IconCategory,
-    eyebrow: 'Items',
+    verb: 'Describe',
     title: 'Categories with fields that fit',
     text: 'Every category gets its own fields, so a drill can record its power source and a camera its lens mount, next to the details every item shares.',
     points: [
@@ -58,12 +65,12 @@ export const sections = [
       'Templates, Duplicate, and Batch Add from JSON for quick data entry.',
       'Choose and sort the columns of the Items list, including custom fields.'
     ],
-    media: [{ src: itemDetails, alt: 'An item page for a cordless drill with its photo, condition, purchase details, serial number, the Tools category fields, and the container it is stored in.' }]
+    media: [{ src: itemDetails, caption: 'Item details · Custom fields', alt: 'An item page for a cordless drill with its photo, condition, purchase details, serial number, the Tools category fields, and the container it is stored in.' }]
   },
   {
     id: 'photos-qr',
     icon: IconQrcode,
-    eyebrow: 'Photos and QR',
+    verb: 'Label',
     title: 'See it, label it, scan it',
     text: 'Keep photos with each item and print QR labels for boxes and shelves. Scan a label with your phone to open the item right away.',
     points: [
@@ -72,12 +79,12 @@ export const sections = [
       'The in-app scanner reads labels with the camera or from an image, locally.',
       'Optional local background removal for clean product photos.'
     ],
-    media: [{ src: labels, alt: 'The Print Labels page with six QR labels on an A4 sheet and options for the layout and the details shown on each label.' }]
+    media: [{ src: labels, caption: 'Print Labels · A4 QR sheet', alt: 'The Print Labels page with six QR labels on an A4 sheet and options for the layout and the details shown on each label.' }]
   },
   {
     id: 'find',
     icon: IconChecklist,
-    eyebrow: 'Find and check',
+    verb: 'Find',
     title: 'Find it fast, check it off',
     text: 'Search names, descriptions, serial numbers, and custom field values, then filter by category and condition. Checklists make packing and audits routine.',
     points: [
@@ -87,14 +94,14 @@ export const sections = [
       'Completed checks record when each item was last verified.'
     ],
     media: [
-      { src: itemsSearch, alt: 'The Items list filtered by the search “camping”, showing the Camping crate and the LED camping lantern.' },
-      { src: checklistRunPhone, alt: 'A packing checklist run on a phone: four of six items checked, with Packed, Missing, and Pending buttons for each item.', phone: true }
+      { src: itemsSearch, caption: 'Items · Search and filters', alt: 'The Items list filtered by the search “camping”, showing the Camping crate and the LED camping lantern.' },
+      { src: checklistRunPhone, caption: 'Checklist run · Phone', alt: 'A packing checklist run on a phone: four of six items checked, with Packed, Missing, and Pending buttons for each item.', phone: true }
     ]
   },
   {
     id: 'dashboard',
     icon: IconChartPie,
-    eyebrow: 'Insights',
+    verb: 'Understand',
     title: 'A dashboard for your stuff — and optional AI',
     text: 'See how big the inventory is, how well it is documented, and where things are. When you want help, AI can draft items and fields for you to review.',
     points: [
@@ -103,7 +110,7 @@ export const sections = [
       'AI Add Item drafts an item from a photo or a description — optional, off by default.',
       'Works with OpenAI, OpenRouter, or a local Ollama or LM Studio model.'
     ],
-    media: [{ src: dashboard, alt: 'The Dashboard with total items, photo coverage, placement status, items added in the last 30 days, items by category, and the condition breakdown.' }]
+    media: [{ src: dashboard, caption: 'Dashboard · Inventory overview', alt: 'The Dashboard with total items, photo coverage, placement status, items added in the last 30 days, items by category, and the condition breakdown.' }]
   }
 ];
 

@@ -202,7 +202,8 @@ The project stays small and readable. Do not add:
   by Git) published to GitHub Pages by `.github/workflows/pages.yml`: `vite.config.js` (base path from
   `LANDING_SITE_URL`, release from `LANDING_RELEASE_TAG`, demo button from `LANDING_DEMO_URL`),
   `site.js` (repository and documentation links, `landingRelease()` over the release history),
-  `src/` (the page, its English-only copy in `content.js`, and the screenshots in
+  `src/` (the page, its English-only copy in `content.js`, the screenshot viewer
+  `ScreenshotLightbox.vue`, the bundled Geist typeface imported in `main.js`, and the screenshots in
   `src/assets/screenshots/`), `public/` (favicon and Open Graph image), and `scripts/` (the
   screenshot capture and its fictional sample inventory).
 - `test/landing.test.js` — landing release resolution, site address, and documentation link checks;

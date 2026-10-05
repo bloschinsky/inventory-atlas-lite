@@ -1,13 +1,17 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, inject } from 'vue';
 
 const props = defineProps({
   section: { type: Object, required: true },
+  // The place of the section in the showcase story, shown as 01, 02, …
+  number: { type: Number, required: true },
   // Alternates the side of the screenshots on wide screens; phones always read text first.
   reverse: { type: Boolean, default: false }
 });
 
 const titleId = computed(() => `${props.section.id}-title`);
+const step = computed(() => String(props.number).padStart(2, '0'));
+const openScreenshot = inject('openScreenshot');
 </script>
 
 <template>
@@ -30,7 +34,11 @@ const titleId = computed(() => `${props.section.id}-title`);
                 aria-hidden="true"
               />
             </span>
-            {{ section.eyebrow }}
+            <span class="landing-story">
+              <span class="landing-story-number">{{ step }}</span>
+              <span aria-hidden="true"> / </span>
+              {{ section.verb }}
+            </span>
           </p>
           <h2
             :id="titleId"
@@ -55,23 +63,33 @@ const titleId = computed(() => `${props.section.id}-title`);
           style="--landing-reveal-delay: .12s"
         >
           <div class="landing-media">
-            <!-- Each screenshot links to its full-size file, so small text can be read up close. -->
-            <a
-              v-for="image in section.media"
+            <!-- Each screenshot opens in the viewer; the link to the full-size file is the no-script fallback. -->
+            <figure
+              v-for="(image, index) in section.media"
               :key="image.src"
-              class="landing-shot-link"
-              :class="{ 'landing-shot-link-phone': image.phone }"
-              :href="image.src"
+              class="landing-figure"
+              :class="{ 'landing-figure-phone': image.phone }"
             >
-              <img
-                class="landing-shot"
-                :class="{ 'landing-shot-phone': image.phone }"
-                :src="image.src"
-                :alt="image.alt"
-                loading="lazy"
-                decoding="async"
+              <a
+                class="landing-shot-link"
+                :href="image.src"
+                aria-haspopup="dialog"
+                aria-describedby="landing-viewer-hint"
+                @click="openScreenshot(section.media, index, $event)"
               >
-            </a>
+                <img
+                  class="landing-shot"
+                  :class="{ 'landing-shot-phone': image.phone }"
+                  :src="image.src"
+                  :alt="image.alt"
+                  loading="lazy"
+                  decoding="async"
+                >
+              </a>
+              <figcaption class="landing-caption">
+                {{ image.caption }}
+              </figcaption>
+            </figure>
           </div>
         </div>
       </div>
