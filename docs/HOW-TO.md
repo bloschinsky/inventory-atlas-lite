@@ -21,6 +21,14 @@ draft. A hosted provider needs Internet access; a local model server on your net
 **There is no authentication.** Anyone who can open the address can read and change the whole
 inventory, so keep it on a trusted LAN or behind a VPN.
 
+**Try it before installing.** The [public demo](https://bloschinsky.github.io/inventory-atlas-lite/demo/)
+(also **Try Demo** on the product page) runs the same interface in your browser on an invented
+inventory with photos, containers, checklists, and a filled Dashboard. A **Demo mode** strip at the
+top marks it. You can add, edit, move, and delete items, but nothing is saved: reloading the page or
+pressing **Reset demo** brings back the sample inventory. Download Backup, Restore, the Danger Zone,
+Settings → Cloud Backup and AI, and Check for updates need a real installation and say *Not
+available in the public demo* instead.
+
 ## 2. Before you start
 
 - Open the address of your installation in a browser, for example `http://192.168.1.145:3000`. A

@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.53.0",
+    "date": "2026-10-05",
+    "changes": [
+      "Try Inventory Atlas Lite without installing it: the product page now has a Try Demo button that opens the real application in your browser, filled with an invented inventory of cameras, electronics, tools, travel gear, and archive boxes, with photos, containers, checklists, and a busy Dashboard.",
+      "Everything you change in the demo stays in that browser tab and disappears on reload or with Reset demo. Backups, restore, reset, cloud backup, AI, and updates need a real installation, so the demo explains that instead of offering them. Your own installation works exactly as before."
+    ]
+  },
+  {
     "version": "0.52.0",
     "date": "2026-10-05",
     "changes": [

@@ -998,6 +998,14 @@
     "resetting": "Resetting…",
     "reset": "Reset Database"
   },
+  "demo": {
+    "label": "Demo mode",
+    "text": "Sample data in this browser tab. Changes are not saved and disappear on reload.",
+    "reset": "Reset demo",
+    "get": "Get Inventory Atlas Lite",
+    "unavailableTitle": "Not available in the public demo",
+    "unavailableText": "This part needs a self-hosted server. Install Inventory Atlas Lite to use it with your own data."
+  },
   "errors": {
     "AI_API_KEY_MISSING": "Add an {provider} API key in Settings to use AI features.",
     "AI_API_KEY_REQUIRED": "Enter the {provider} API key first.",
@@ -1087,6 +1095,7 @@
     "DATABASE_NAME_TOO_LONG": "Database name must be {max} characters or fewer.",
     "DATABASE_OPERATION_RUNNING": "Another database restore or reset is already running. Try again in a moment.",
     "DATABASE_RECOVERY_REQUIRED": "The application is in a failed database recovery state and needs manual recovery.",
+    "DEMO_UNAVAILABLE": "Not available in the public demo.",
     "DESCRIPTION_TOO_LONG": "The description must be {max} characters or fewer.",
     "DOCUMENT_VERSION_MISSING": "The document must declare \"version\": {expected}.",
     "DROPBOX_FOLDER_REFUSED": "Dropbox refused the backup folder. Check that the app still has App folder access.",

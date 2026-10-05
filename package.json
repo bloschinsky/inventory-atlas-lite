@@ -1,6 +1,6 @@
 {
   "name": "simple-personal-inventory",
-  "version": "0.52.0",
+  "version": "0.53.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -19,6 +19,8 @@
     "landing:dev": "vite --config landing/vite.config.js",
     "landing:build": "vite build --config landing/vite.config.js",
     "landing:preview": "vite preview --config landing/vite.config.js",
+    "demo:dev": "vite --mode demo",
+    "demo:build": "vite build --mode demo",
     "landing:screenshots": "npm run build && node landing/scripts/capture-screenshots.mjs"
   },
   "dependencies": {
@@ -44,6 +46,7 @@
     "eslint": "^10.10.0",
     "eslint-plugin-vue": "^10.11.0",
     "globals": "^17.12.0",
+    "sql.js": "^1.14.2",
     "vite": "^7.1.5"
   }
 }

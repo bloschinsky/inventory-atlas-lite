@@ -7,8 +7,8 @@ import { landingRelease, siteUrl } from './site.js';
 /*
   The public landing page: a separate static Vite build of landing/ into dist-landing/, published to
   GitHub Pages by .github/workflows/pages.yml. LANDING_SITE_URL is the Pages address, which also sets
-  the asset base path; LANDING_RELEASE_TAG is the latest published release; LANDING_DEMO_URL, once
-  a public demo exists, shows the Try Demo button.
+  the asset base path; LANDING_RELEASE_TAG is the latest published release; LANDING_DEMO_URL, the
+  address of the public demo the Pages workflow builds into the same site, shows the Try Demo button.
 */
 const site = siteUrl(process.env.LANDING_SITE_URL);
 const history = JSON.parse(readFileSync(new URL('../shared/release-history.json', import.meta.url), 'utf8'));

@@ -8,6 +8,12 @@ on:
       - master
     paths:
       - 'landing/**'
+      # The public demo is the application client running its server code in the browser.
+      - 'client/**'
+      - 'server/src/**'
+      - 'shared/**'
+      - 'index.html'
+      - 'vite.config.js'
       - 'shared/release-history.json'
       - 'shared/releaseHistory.js'
       - 'package.json'
@@ -55,11 +61,20 @@ jobs:
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
       # The landing build needs no install scripts; they only fetch the server's background-removal model.
       - run: npm ci --ignore-scripts
+      # The demo is built in the same job and published in the same artifact, so Try Demo only ever
+      # points to a demo that is deployed together with the page.
       - name: Build the landing page
         env:
           LANDING_SITE_URL: ${{ steps.pages.outputs.base_url }}
           LANDING_RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          LANDING_DEMO_URL: ${{ steps.pages.outputs.base_url }}/demo/
         run: npm run landing:build
+      - name: Build the public demo into dist-landing/demo
+        env:
+          APP_VERSION: ${{ steps.release.outputs.tag }}
+        run: npm run demo:build
+      - name: Check that the demo is in the artifact
+        run: test -f dist-landing/demo/index.html
       - uses: actions/upload-pages-artifact@v5
         with:
           path: dist-landing

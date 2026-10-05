@@ -12,6 +12,8 @@ export const cloudStubURL = `http://127.0.0.1:${cloudStubPort}`;
 // The landing page is built and previewed under a Pages-style base path, as on GitHub Pages.
 export const landingPort = Number(process.env.E2E_LANDING_PORT) || 4458;
 export const landingURL = `http://127.0.0.1:${landingPort}/pages-base-test/`;
+// The public demo is published inside the landing page, as on GitHub Pages.
+export const demoURL = `${landingURL}demo/`;
 
 // The suite always works on a throwaway SQLite database, never on data/inventory.sqlite.
 // The directory is created once in the main process; the servers and workers inherit it.

@@ -1,4 +1,6 @@
 <script setup>
+import { photoUrl } from '../api.js';
+
 defineProps({
   photoId: { type: [Number, String], default: null },
   name: { type: String, required: true },
@@ -13,7 +15,7 @@ defineProps({
   >
     <img
       v-if="photoId"
-      :src="`/api/photos/${photoId}`"
+      :src="photoUrl(photoId)"
       :alt="name"
       loading="lazy"
     >

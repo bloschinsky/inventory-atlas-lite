@@ -27,7 +27,8 @@ application, its build, and its release workflow are unchanged.
   user accounts, so the application belongs on a trusted network or VPN.
 - **Final call to action** with Get Inventory Atlas Lite, View on GitHub, and the user guide
   (`docs/HOW-TO.md`), and a footer with the version and release links.
-- There is no **Try Demo** button until a public demo exists (see *Enabling the demo button*).
+- **Try Demo** next to them opens the [public demo](public-demo.md), the real application running in
+  the browser on an invented inventory. Get Inventory Atlas Lite stays the primary install path.
 - **Look:** the navigation, the hero with the principles, the final call to action, and the footer
   are dark ink-blue bands; the hero has blue and violet glows under a dot-grid texture that fades
   out downwards. The showcase sections between them alternate two surfaces (white and a cool gray in
@@ -62,12 +63,14 @@ application, its build, and its release workflow are unchanged.
     `shared/release-history.json` provides the version and date; a tag without an entry fails the
     build. Without a tag (a local build) the newest history entry is used. Nothing on the page is
     edited for a release.
-  - `LANDING_DEMO_URL` is the address of the public demo, empty for now.
+  - `LANDING_DEMO_URL` is the address of the public demo; without it the Try Demo button is not
+    rendered. The Pages workflow sets it to the Pages address plus `demo/`.
 - `.github/workflows/pages.yml` builds and deploys the page: on pushes to `master` that touch the
   landing or the release history, after every successful **Release** workflow run, and on demand.
   It reads the Pages address with `actions/configure-pages`, looks up the latest published release
   with `gh release view`, installs with `npm ci --ignore-scripts` (the install scripts only fetch the
-  server's background-removal model), builds, and deploys with `actions/upload-pages-artifact` and
+  server's background-removal model), builds the page and then the [public demo](public-demo.md) into
+  `dist-landing/demo/`, checks that the demo is there, and deploys with `actions/upload-pages-artifact` and
   `actions/deploy-pages`. Each step is named, so a failure points at the address, the release, the
   install, the build, or the deployment.
 - **Screenshots** live in `landing/src/assets/screenshots/` (WebP, 30–60 KB each) and the Open Graph
@@ -93,11 +96,11 @@ Pages must be enabled once in the repository: **Settings → Pages → Build and
 GitHub Actions**. Until then the *Read the GitHub Pages address* step fails with *Get Pages site
 failed*. The `github-pages` environment that the deployment uses is created by GitHub automatically.
 
-### Enabling the demo button
+### The demo button
 
-When the public demo exists, set `LANDING_DEMO_URL` on the *Build the landing page* step of
-`pages.yml` to its address. The hero then shows a **Try Demo** button next to the other calls to
-action; nothing else changes. Update `test/e2e/landing.spec.js`, which expects no Try Demo control.
+The *Build the landing page* step of `pages.yml` sets `LANDING_DEMO_URL` to the demo that the next
+step builds into the same artifact, so the hero shows **Try Demo** only with a deployed demo. A
+local build without the variable renders no Try Demo button.
 
 ## Verification
 
@@ -105,8 +108,8 @@ action; nothing else changes. Update `test/e2e/landing.spec.js`, which expects n
   an entry, an empty history), that no landing source repeats the current version, the site address
   normalization, and that every README anchor and document the page links to exists.
 - `test/e2e/landing.spec.js` runs against a production build served under the `/pages-base-test/`
-  base path (an extra web server in `playwright.config.js`): the Get Inventory Atlas Lite, View on
-  GitHub, and install links, the absent Try Demo control, the release text and link from the release
+  base path (an extra web server in `playwright.config.js` that also builds the demo into it): the Get Inventory Atlas Lite, View on
+  GitHub, and install links, the Try Demo link to the demo built into the same site, the release text and link from the release
   history, the canonical, Open Graph, and favicon addresses under the base path, every screenshot
   loading from the base path with alt text and no failed request, and the section headings without
   sideways scrolling at 390, 820, 1366, and 1920 pixels, the dark bands in both system modes, and a

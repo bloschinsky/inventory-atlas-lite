@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref, useId, watch } from 'vue';
+import { photoUrl } from '../api.js';
 
 // The photos arrive in their persisted order, so the carousel opens on the first one, the cover.
 const props = defineProps({ photos: { type: Array, required: true } });
@@ -60,7 +61,7 @@ const cancelDrag = () => { dragStart = null; };
         class="photo-frame"
       >
         <img
-          :src="`/api/photos/${current.id}`"
+          :src="photoUrl(current.id)"
           :alt="current.filename"
         >
       </div>
@@ -88,7 +89,7 @@ const cancelDrag = () => { dragStart = null; };
           >
             <div class="photo-frame">
               <img
-                :src="`/api/photos/${photo.id}`"
+                :src="photoUrl(photo.id)"
                 :alt="photo.filename"
                 draggable="false"
               >

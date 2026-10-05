@@ -1,6 +1,7 @@
 <script setup>
 import { IconBox, IconChevronRight, IconInbox, IconMapPin, IconMapPinOff, IconPackage, IconTags } from '@tabler/icons-vue';
 import { itemMeta, rowName } from '../hierarchyTree.js';
+import { photoUrl } from '../api.js';
 
 /*
   The read-only Tree view of the Hierarchy page: one flat list of the visible rows indented by depth.
@@ -95,7 +96,7 @@ defineEmits(['toggle', 'expand-all', 'collapse-all']);
           <span class="item-thumb hierarchy-thumb">
             <img
               v-if="row.item.thumbnail_id"
-              :src="`/api/photos/${row.item.thumbnail_id}`"
+              :src="photoUrl(row.item.thumbnail_id)"
               alt=""
               loading="lazy"
             >

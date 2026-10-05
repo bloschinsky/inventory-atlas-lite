@@ -3,7 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { IconChevronLeft, IconChevronRight, IconStar, IconStarFilled, IconTrash } from '@tabler/icons-vue';
-import { api, jsonOptions } from '../api.js';
+import { api, jsonOptions, photoUrl } from '../api.js';
 import ItemDraftFields from '../components/ItemDraftFields.vue';
 import PageHeader from '../components/PageHeader.vue';
 import { takePendingAiDraft } from '../aiDraft.js';
@@ -36,7 +36,7 @@ function selectParent(candidate) {
 */
 const photos = ref([]); const savedOrder = ref([]);
 let photoKey = 0;
-const savedPhoto = photo => ({ key: `photo-${photo.id}`, id: photo.id, name: photo.filename, url: `/api/photos/${photo.id}`, file: null });
+const savedPhoto = photo => ({ key: `photo-${photo.id}`, id: photo.id, name: photo.filename, url: photoUrl(photo.id), file: null });
 const selectedPhoto = file => ({ key: `file-${photoKey++}`, id: null, name: file.name, url: URL.createObjectURL(file), file });
 const photoHelp = computed(() => {
   const selected = photos.value.filter(photo => photo.file).length;

@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { coverPhotoIdSql } from './itemPhotoRepository.js';
 import { containsLike, startsWithLike } from './sql.js';
 import { CONDITION_GRADES } from '../../../shared/conditionGrades.js';
@@ -275,7 +274,7 @@ export class ItemRepository {
       INSERT INTO items (uuid, name, category_id, description, is_new, condition_grade, condition_notes, location, purchase_date,
         purchase_price_amount, purchase_price_currency, serial_number, transferred_to, parent_item_id)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(randomUUID(), attributes.name, attributes.categoryId, attributes.description, attributes.isNew ? 1 : 0,
+    `).run(crypto.randomUUID(), attributes.name, attributes.categoryId, attributes.description, attributes.isNew ? 1 : 0,
       attributes.conditionGrade, attributes.conditionNotes, attributes.location, attributes.purchaseDate, attributes.purchasePriceAmount,
       attributes.purchasePriceCurrency, attributes.serialNumber, attributes.transferredTo, attributes.parentId).lastInsertRowid;
   }

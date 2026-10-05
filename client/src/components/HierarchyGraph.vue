@@ -6,6 +6,7 @@ import '@vue-flow/core/dist/style.css';
 import { IconBox, IconFocusCentered, IconInbox, IconMapPin, IconMapPinOff, IconMinus, IconPackage, IconPlus, IconSitemap, IconTags, IconZoomIn, IconZoomOut } from '@tabler/icons-vue';
 import { GRAPH_NODE_LIMIT, fitViewport, graphBounds, layoutGraph } from '../hierarchyGraph.js';
 import { itemMeta, rowName } from '../hierarchyTree.js';
+import { photoUrl } from '../api.js';
 
 /*
   The read-only Graph view of the Hierarchy page. It draws the same visible rows as the Tree, laid out
@@ -206,7 +207,7 @@ const openItem = ({ node }) => { if (node.data.item) router.push(`/items/${node.
             >
               <img
                 v-if="data.type === 'item' && data.item.thumbnail_id"
-                :src="`/api/photos/${data.item.thumbnail_id}`"
+                :src="photoUrl(data.item.thumbnail_id)"
                 alt=""
                 loading="lazy"
               >

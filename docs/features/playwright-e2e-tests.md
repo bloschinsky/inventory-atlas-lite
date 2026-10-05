@@ -40,7 +40,8 @@ failing test makes the command exit non-zero.
   counts from Chromium's print output. `batch-items.spec.js` covers the Batch Add from JSON template,
   preview editing, removal, and batch creation. `landing.spec.js` covers the public landing page,
   which an extra web server builds for production and previews under a Pages-style base path; see
-  [Public landing page](landing-page.md).
+  [Public landing page](landing-page.md). The same server builds the public demo into that site, and
+  `demo.spec.js` runs it there without any API server; see [Public demo](public-demo.md).
 - Tests locate elements by accessible role, label, and visible name, use unique record names, and
   wait for observable UI state instead of fixed sleeps. Generated reports, traces, screenshots, and
   videos are ignored by Git.

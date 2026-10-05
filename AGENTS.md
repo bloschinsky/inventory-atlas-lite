@@ -101,7 +101,15 @@ The project stays small and readable. Do not add:
 - `client/src/components/AppNavigation.vue` — navigation list shared by both of them.
 - `client/src/components/AppBrand.vue` — product mark and name.
 - `client/src/components/ThemeToggle.vue` — light/dark control; `client/src/theme.js` holds the state.
-- `client/src/api.js` — shared `fetch` wrapper and helper for JSON requests.
+- `client/src/api.js` — shared `fetch` wrapper and helper for JSON requests, `photoUrl()` for stored
+  photos, and the only switch to the in-browser backend of the public demo build (`__DEMO__`).
+- `client/src/demo/` — the public demo (`npm run demo:build`, `vite build --mode demo`, into
+  `dist-landing/demo/`): `backend.js` dispatches API requests to the real route tables over
+  `services.js` (the inventory repositories and services on an in-memory sql.js database adapted by
+  `sqlite.js`), `express.js` is the Router stand-in the demo build aliases `express` to, `fixture.js`
+  is the canonical demo inventory that `seed.js` loads through the services, and `photos/` holds its
+  generated item photos. `client/src/components/DemoBanner.vue` and `DemoUnavailable.vue` are the
+  demo strip and the stand-in for server-only features.
 - `client/src/i18n/index.js` — the `vue-i18n` instance, the browser-local language preference, and display formatting in the active locale.
 - `client/src/i18n/core.js` — supported locales, vue-i18n options (English default and fallback, Ukrainian plural rule), and the `Intl` date, number, money, and file-size formatters.
 - `client/src/i18n/locales/` — `en.json` and `uk.json`, the interface messages grouped by feature.
@@ -164,7 +172,8 @@ The project stays small and readable. Do not add:
 - `server/src/cloudBackup/` — cloud backup configuration, the owner-only JSON file store for its credentials and state, schedule rules, and the in-process scheduler timer.
 - `server/src/update/` — deployment capability, the updater's status file, and the privileged update trigger.
 - `server/src/http/` — transport middleware: uploads, the maintenance guard, and the central error handler that answers `{ error: { code, params } }`.
-- `server/src/db.js` — database path, SQLite connection, PRAGMAs, current table/index schema, the database metadata row and its write triggers, and the fresh-database initializer used by the reset.
+- `server/src/db.js` — database path, SQLite connection, PRAGMAs, and the fresh-database initializer used by the reset; it re-exports the schema.
+- `server/src/schema.js` — the current table/index schema, its migrations (`applySchema()`), the database metadata row and its write triggers; free of the file system, so the public demo applies it too.
 - `test/e2e.test.js` — end-to-end acceptance test for the API, persistence, photos, and backups.
 - `test/services.test.js` — service-level regression tests that run without HTTP against a temporary database.
 - `test/custom-field-rename.test.js` — custom field rename: unchanged ids, types, categories, and item and template values, name validation and conflicts, column split and merge, Batch Add names, and the `PATCH /api/fields/:id` contract.
@@ -185,7 +194,7 @@ The project stays small and readable. Do not add:
 - `test/fixtures/` — real source photos used as regression input by the Node.js tests.
 - `test/e2e/settings-navigation.spec.js` — Settings section routes and redirects, the active state, the desktop section list, and the phone section selector.
 - `test/e2e/` — Playwright browser tests, their fixtures, shared helpers, and the run launcher.
-- `playwright.config.js` — Playwright projects, isolated test ports, and the cloud provider stub, API, Vite, and landing build/preview processes started for the suite.
+- `playwright.config.js` — Playwright projects, isolated test ports, and the cloud provider stub, API, Vite, and landing and demo build/preview processes started for the suite.
 - `landing/` — the public landing page, a separate Vue/Vite/Tabler build into `dist-landing/` (ignored
   by Git) published to GitHub Pages by `.github/workflows/pages.yml`: `vite.config.js` (base path from
   `LANDING_SITE_URL`, release from `LANDING_RELEASE_TAG`, demo button from `LANDING_DEMO_URL`),
@@ -195,6 +204,10 @@ The project stays small and readable. Do not add:
   screenshot capture and its fictional sample inventory).
 - `test/landing.test.js` — landing release resolution, site address, and documentation link checks;
   `test/e2e/landing.spec.js` — the built landing page under a Pages-style base path.
+- `test/demo.test.js` — the public demo data layer in Node: deterministic fixture, seeded content,
+  isolation of changes, the sql.js adapter, and the demo photo and private-data checks;
+  `test/e2e/demo.spec.js` — the built demo inside the landing build: no server requests, photos,
+  temporary changes and Reset demo, reloaded deep links, unavailable features, no bundled secrets.
 - `docs/README.md` — documentation layout and conventions.
 - `docs/HOW-TO.md` — quick user guide for the current application.
 - `docs/issues/` — active tasks, feature specifications, and future work.

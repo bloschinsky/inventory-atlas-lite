@@ -1,4 +1,3 @@
-import multer from 'multer';
 import { AppError, errorBody } from '../../../shared/appError.js';
 
 const UPLOAD_CODES = {
@@ -16,7 +15,8 @@ const UPLOAD_CODES = {
 export const errorResponse = error => {
   if (error instanceof AppError) return { status: error.status, body: errorBody(error) };
   if (error?.code === 'SQLITE_CONSTRAINT_UNIQUE') return { status: 409, body: { code: 'DUPLICATE_NAME', params: {} } };
-  if (error instanceof multer.MulterError) return { status: 400, body: { code: UPLOAD_CODES[error.code] || 'UPLOAD_FAILED', params: {} } };
+  // Matched by name, so this mapping stays free of multer and the public demo can share it.
+  if (error?.name === 'MulterError') return { status: 400, body: { code: UPLOAD_CODES[error.code] || 'UPLOAD_FAILED', params: {} } };
   if (error?.type === 'entity.parse.failed') return { status: 400, body: { code: 'INVALID_JSON_BODY', params: {} } };
   if (error?.type === 'entity.too.large') return { status: 413, body: { code: 'REQUEST_TOO_LARGE', params: {} } };
   const status = Number.isInteger(error?.status) && error.status >= 400 && error.status < 500 ? error.status : 500;

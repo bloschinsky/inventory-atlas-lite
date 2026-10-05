@@ -1,5 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
-import { apiPort, baseURL, clientPort, cloudStubPort, cloudStubURL, dataDir, landingPort, landingURL } from './test/e2e/environment.js';
+import { apiPort, baseURL, clientPort, cloudStubPort, cloudStubURL, dataDir, demoURL, landingPort, landingURL } from './test/e2e/environment.js';
 
 export default defineConfig({
   testDir: './test/e2e',
@@ -46,11 +46,12 @@ export default defineConfig({
       stderr: 'pipe'
     },
     {
-      // The production landing build, served under the base path its site address names.
-      command: `vite build --config landing/vite.config.js && vite preview --config landing/vite.config.js --host 127.0.0.1 --port ${landingPort} --strictPort`,
+      // The production landing build with the public demo inside it, as the Pages workflow publishes
+      // them, served under the base path its site address names.
+      command: `vite build --config landing/vite.config.js && vite build --mode demo && vite preview --config landing/vite.config.js --host 127.0.0.1 --port ${landingPort} --strictPort`,
       url: landingURL,
-      // No published tag and no demo: the page must fall back to the release history and hide Try Demo.
-      env: { LANDING_SITE_URL: landingURL, LANDING_RELEASE_TAG: '', LANDING_DEMO_URL: '' },
+      // No published tag: the page must fall back to the release history.
+      env: { LANDING_SITE_URL: landingURL, LANDING_RELEASE_TAG: '', LANDING_DEMO_URL: demoURL },
       timeout: 180_000,
       reuseExistingServer: false,
       stdout: 'pipe',

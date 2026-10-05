@@ -2,8 +2,11 @@
 import AboutDialog from './components/AboutDialog.vue';
 import AppMobileNav from './components/AppMobileNav.vue';
 import AppSidebar from './components/AppSidebar.vue';
+import DemoBanner from './components/DemoBanner.vue';
 import VersionHistoryDialog from './components/VersionHistoryDialog.vue';
 import WhatsNewDialog from './components/WhatsNewDialog.vue';
+
+const demoMode = __DEMO__;
 </script>
 
 <template>
@@ -13,6 +16,7 @@ import WhatsNewDialog from './components/WhatsNewDialog.vue';
     <AppSidebar />
     <div class="page-wrapper">
       <AppMobileNav />
+      <DemoBanner v-if="demoMode" />
       <main class="page-body">
         <!-- Fluid on purpose: the application canvas uses the full width beside the sidebar;
              narrow surfaces such as .form-card keep their own max-width. -->

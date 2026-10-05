@@ -1,5 +1,5 @@
 import { createApp } from 'vue';
-import { createRouter, createWebHistory } from 'vue-router';
+import { createRouter, createWebHashHistory, createWebHistory } from 'vue-router';
 import '@tabler/core/dist/css/tabler.min.css';
 import './style.css';
 import App from './App.vue';
@@ -15,6 +15,7 @@ import Dashboard from './pages/Dashboard.vue';
 import AIAddItem from './pages/AIAddItem.vue';
 import Settings from './pages/Settings.vue';
 import { defaultSettingsPath, settingsSections } from './settingsSections.js';
+import DemoUnavailable from './components/DemoUnavailable.vue';
 import ScanQr from './pages/ScanQr.vue';
 import PrintLabels from './pages/PrintLabels.vue';
 import Templates from './pages/Templates.vue';
@@ -25,7 +26,8 @@ import ChecklistForm from './pages/ChecklistForm.vue';
 import ChecklistRun from './pages/ChecklistRun.vue';
 
 const router = createRouter({
-  history: createWebHistory(),
+  // The static demo on GitHub Pages has no server to answer deep links, so its routes live in the hash.
+  history: __DEMO__ ? createWebHashHistory() : createWebHistory(),
   routes: [
     { path: '/', redirect: '/dashboard' },
     { path: '/dashboard', component: Dashboard },
@@ -52,7 +54,10 @@ const router = createRouter({
       component: Settings,
       children: [
         { path: '', redirect: defaultSettingsPath },
-        ...settingsSections.map(section => ({ path: section.path, component: section.component })),
+        ...settingsSections.map(section => ({
+          path: section.path,
+          component: __DEMO__ && section.serverOnly ? DemoUnavailable : section.component
+        })),
         { path: ':unknown(.*)', redirect: defaultSettingsPath }
       ]
     }

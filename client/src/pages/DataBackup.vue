@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { api, jsonOptions } from '../api.js';
 import { formatFileSize } from '../i18n/index.js';
 import BulkReplaceValue from '../components/BulkReplaceValue.vue';
+import DemoUnavailable from '../components/DemoUnavailable.vue';
 import PageHeader from '../components/PageHeader.vue';
 import ResetDatabaseDialog from '../components/ResetDatabaseDialog.vue';
 
@@ -11,6 +12,8 @@ defineOptions({ name: 'DataBackupPage' });
 const { t } = useI18n();
 
 const CONFIRMATION = 'RESTORE';
+// The public demo has no database file to download, restore, or reset.
+const demoMode = __DEMO__;
 
 const file = ref(null);
 const validation = ref(null);
@@ -107,7 +110,11 @@ async function finishReset(result) {
       :title="$t('backup.title')"
       :subtitle="$t('backup.subtitle')"
     />
-    <section class="card mb-3">
+    <DemoUnavailable v-if="demoMode" />
+    <section
+      v-if="!demoMode"
+      class="card mb-3"
+    >
       <div class="card-header">
         <h2 class="card-title">
           {{ $t('backup.sqlite') }}
@@ -134,7 +141,10 @@ async function finishReset(result) {
       </div>
     </section>
 
-    <section class="card mb-3">
+    <section
+      v-if="!demoMode"
+      class="card mb-3"
+    >
       <div class="card-header">
         <h2 class="card-title">
           {{ $t('backup.restoreTitle') }}
@@ -348,7 +358,10 @@ async function finishReset(result) {
 
     <BulkReplaceValue />
 
-    <section class="card">
+    <section
+      v-if="!demoMode"
+      class="card"
+    >
       <div class="card-header">
         <h2 class="card-title">
           {{ $t('backup.whereTitle') }}
@@ -386,6 +399,7 @@ async function finishReset(result) {
 
     <!-- Kept apart from the backup actions above so a destructive click cannot happen by accident. -->
     <section
+      v-if="!demoMode"
       class="card border-danger mt-5"
       aria-labelledby="danger-zone-title"
     >

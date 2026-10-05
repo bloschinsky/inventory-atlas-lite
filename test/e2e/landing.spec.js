@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import { expect, test } from '@playwright/test';
 import { landingRelease, links, repositoryUrl } from '../../landing/site.js';
-import { landingURL } from './environment.js';
+import { demoURL, landingURL } from './environment.js';
 
 // The public landing page, built for production under a Pages-style base path (see playwright.config.js).
 const basePath = new URL(landingURL).pathname;
@@ -23,14 +23,15 @@ const viewports = [
   { name: 'Full HD', width: 1920, height: 1080 }
 ];
 
-test('the hero offers real install and repository destinations and no demo yet', async ({ page }) => {
+test('the hero offers real install, repository, and demo destinations', async ({ page }) => {
   await page.goto(landingURL);
 
   await expect(page.getByRole('heading', { level: 1, name: 'Inventory Atlas Lite' })).toBeVisible();
   const hero = page.locator('header');
   await expect(hero.getByRole('link', { name: 'Get Inventory Atlas Lite' })).toHaveAttribute('href', links.get);
   await expect(hero.getByRole('link', { name: 'View on GitHub' })).toHaveAttribute('href', repositoryUrl);
-  await expect(page.getByText(/try demo/i)).toHaveCount(0);
+  // Try Demo is an extra path next to the install one, never a replacement for it.
+  await expect(hero.getByRole('link', { name: 'Try Demo' })).toHaveAttribute('href', demoURL);
 
   // The announced release comes from the release history, never from hand-written copy.
   const latest = page.getByTestId('release');

@@ -11,8 +11,8 @@ export default [
   {
     files: ['client/**/*.{js,vue}'],
     languageOptions: {
-      // __APP_BUILD_INFO__ is replaced at build time by the define in vite.config.js.
-      globals: { ...globals.browser, __APP_BUILD_INFO__: 'readonly' }
+      // __APP_BUILD_INFO__ and __DEMO__ are replaced at build time by the defines in vite.config.js.
+      globals: { ...globals.browser, __APP_BUILD_INFO__: 'readonly', __DEMO__: 'readonly' }
     }
   },
   {
