@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.51.0",
+    "date": "2026-10-05",
+    "changes": [
+      "Settings is now split into sections instead of one long page: Interface under General, Database and Cloud Backup under Data, and AI under Services. Only the open section is shown.",
+      "On a computer the sections are listed on the left of Settings; on a phone pick one from the Section selector at the top. Every section has its own address, such as /settings/ai, that can be bookmarked or reloaded.",
+      "The AI settings are grouped into Features, Connection, and Model cards, still saved together with Save settings. Connecting Dropbox or Google Drive now returns straight to Settings → Cloud Backup."
+    ]
+  },
+  {
     "version": "0.50.0",
     "date": "2026-10-04",
     "changes": [

@@ -73,7 +73,7 @@ can be enabled without a key (see [AI providers](ai-providers.md)):
 - Saving the AI settings applies the returned `enabled` value to the shared state, so the AI actions
   appear or disappear immediately, without a page reload.
 - Only the saved value counts. Ticking or clearing the checkbox without pressing **Save settings**
-  changes nothing outside the form, and reopening *Settings* shows the saved state again.
+  changes nothing outside the form, and reopening *Settings → AI* shows the saved state again.
 
 ## Boundaries
 

@@ -9,7 +9,8 @@ machine. **Settings → Database** shows them and lets the user rename the datab
 
 ## User-visible behaviour
 
-- **Settings → Database** sits between **Interface** and **AI**. It shows **Database name** in an
+- **Settings → Database** (`/settings/database`, in the *Data* group of the
+  [Settings center](settings-center.md)) shows **Database name** in an
   editable field with **Save name**, and **Last updated**. **Technical details** is folded by default
   and shows **Created**, **Database UUID**, and **Schema version**.
 - Saving trims the name and reports `Database name saved.` An empty name is refused by the form; the

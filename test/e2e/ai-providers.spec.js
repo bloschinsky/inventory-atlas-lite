@@ -39,7 +39,7 @@ test('configures a custom OpenAI-compatible provider and uses its model for AI f
   const categoryName = unique('Provider Cards');
   const category = await createCategory(request, categoryName);
 
-  await page.goto('/settings');
+  await page.goto('/settings/ai');
   // Headless Chromium on Linux may initialize its pointer over the folded-hover sidebar.
   await page.mouse.move(600, 400);
   const provider = page.getByLabel('Provider');

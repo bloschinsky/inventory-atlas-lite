@@ -29,6 +29,8 @@ body.app-menu-open { overflow: hidden; }
 
 /* Shared surfaces */
 .form-card { max-width: var(--app-form-width); }
+/* Settings section list: a fixed column beside the active section that stays in view while a long section scrolls. */
+.settings-nav { position: sticky; top: 1rem; width: 16rem; }
 .meta-text { color: var(--tblr-secondary); font-size: .875rem; }
 .truncate-cell { max-width: 13rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .name-cell { min-width: 13rem; }

@@ -27,7 +27,8 @@ presentation layer over the existing API, and no CDN or other runtime internet d
 - The expanded sidebar is fixed and overlays the page; only the folded width reserves space, so
   expanding never shifts the content sideways.
 - The open destination is highlighted in both the folded and the expanded state and carries
-  `aria-current="page"`. Every entry has an icon, a label, and a `title` tooltip for the folded rail.
+  `aria-current="page"`; **Settings** stays highlighted on every section of the
+  [Settings center](settings-center.md). Every entry has an icon, a label, and a `title` tooltip for the folded rail.
 
 ### Mobile navigation
 

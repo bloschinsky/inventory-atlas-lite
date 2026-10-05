@@ -3,8 +3,8 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { IconBrandDropbox, IconBrandGoogleDrive } from '@tabler/icons-vue';
-import { api, jsonOptions } from '../api.js';
-import { formatDateTime, translateError, translateNotice } from '../i18n/index.js';
+import { api, jsonOptions } from '../../api.js';
+import { formatDateTime, translateError, translateNotice } from '../../i18n/index.js';
 import CloudAppCredentials from './CloudAppCredentials.vue';
 
 const route = useRoute();
@@ -124,7 +124,7 @@ onMounted(async () => {
 
 <template>
   <section
-    class="card mt-3"
+    class="card"
     aria-labelledby="cloud-backup-title"
   >
     <div class="card-header">

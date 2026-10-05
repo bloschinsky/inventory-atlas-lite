@@ -25,7 +25,7 @@ test.afterEach(async ({ request }) => {
 });
 
 test('connects Dropbox, backs up now, schedules automatic backups, and disconnects', async ({ page, request }) => {
-  await page.goto('/settings');
+  await page.goto('/settings/cloud-backup');
   await page.mouse.move(600, 400);
   const dropbox = page.getByRole('article', { name: 'Dropbox', exact: true });
   await expect(dropbox.getByText('Not connected', { exact: true })).toBeVisible();
@@ -36,7 +36,7 @@ test('connects Dropbox, backs up now, schedules automatic backups, and disconnec
   // The browser goes to the provider and comes back through the server's OAuth callback.
   await dropbox.getByRole('button', { name: 'Connect Dropbox' }).click();
   await expect(page.getByRole('status')).toHaveText('Dropbox connected.');
-  await expect(page).toHaveURL(/\/settings$/);
+  await expect(page).toHaveURL(/\/settings\/cloud-backup$/);
   await expect(dropbox.getByText('Connected', { exact: true })).toBeVisible();
   await expect(dropbox).toContainText('Stub Dropbox User (dropbox-user@example.test)');
   await expect(dropbox).toContainText('Dropbox › Apps › (your app folder) › Backups');
@@ -95,7 +95,7 @@ test('connects Dropbox, backs up now, schedules automatic backups, and disconnec
 
 test('enters Google Drive app credentials in Settings without ever getting the secret back', async ({ page, request }) => {
   const secret = 'e2e-google-ui-secret-7890';
-  await page.goto('/settings');
+  await page.goto('/settings/cloud-backup');
   await page.mouse.move(600, 400);
   const drive = page.getByRole('article', { name: 'Google Drive' });
   await expect(drive.getByText('Not configured', { exact: true })).toBeVisible();
@@ -133,11 +133,11 @@ test('reports a cancelled Google Drive connection and keeps it disconnected', as
   const saved = await request.put('/api/cloud-backup/providers/google-drive/app', { data: { clientId: 'e2e-google-client', clientSecret: 'e2e-google-secret' } });
   expect(saved.ok()).toBeTruthy();
   await request.post(`${cloudStubURL}/_stub/deny`);
-  await page.goto('/settings');
+  await page.goto('/settings/cloud-backup');
   await page.mouse.move(600, 400);
   const drive = page.getByRole('article', { name: 'Google Drive' });
   await drive.getByRole('button', { name: 'Connect Google Drive' }).click();
   await expect(page.getByRole('region', { name: 'Cloud Backup' }).getByRole('alert')).toHaveText('Google Drive access was not granted, so nothing was connected.');
-  await expect(page).toHaveURL(/\/settings$/);
+  await expect(page).toHaveURL(/\/settings\/cloud-backup$/);
   await expect(drive.getByText('Not connected', { exact: true })).toBeVisible();
 });

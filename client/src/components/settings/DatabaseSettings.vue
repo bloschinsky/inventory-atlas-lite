@@ -1,7 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue';
-import { api, jsonOptions } from '../api.js';
-import { formatDateTime } from '../i18n/index.js';
+import { api, jsonOptions } from '../../api.js';
+import { formatDateTime } from '../../i18n/index.js';
 
 // The identity of the current database. Only the name is editable; the rest is managed by the server.
 const metadata = ref(null);
@@ -30,7 +30,7 @@ onMounted(async () => {
 
 <template>
   <section
-    class="card mb-3"
+    class="card"
     aria-labelledby="database-settings-title"
   >
     <div class="card-header">

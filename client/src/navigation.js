@@ -10,7 +10,7 @@ export const navigationLinks = [
   { to: '/scan', label: 'nav.scanQr', prefixes: [], icon: IconQrcode },
   { to: '/categories', label: 'nav.categories', prefixes: [], icon: IconTags },
   { to: '/data', label: 'nav.data', prefixes: [], icon: IconDatabase },
-  { to: '/settings', label: 'nav.settings', prefixes: [], icon: IconSettings }
+  { to: '/settings', label: 'nav.settings', prefixes: ['/settings'], icon: IconSettings }
 ];
 
 // RouterLink would mark "/" active on every route, so the active link is matched explicitly.

@@ -15,7 +15,7 @@ test('the interface is English until another language is chosen', async ({ page 
 });
 
 test('Settings switches the language at once, and the choice survives a reload', async ({ page }) => {
-  await page.goto('/settings');
+  await page.goto('/settings/interface');
   await page.mouse.move(600, 400);
   const language = page.getByLabel('Language');
   await expect(language).toHaveValue('en');

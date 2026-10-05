@@ -14,6 +14,7 @@ import DataBackup from './pages/DataBackup.vue';
 import Dashboard from './pages/Dashboard.vue';
 import AIAddItem from './pages/AIAddItem.vue';
 import Settings from './pages/Settings.vue';
+import { defaultSettingsPath, settingsSections } from './settingsSections.js';
 import ScanQr from './pages/ScanQr.vue';
 import PrintLabels from './pages/PrintLabels.vue';
 import Templates from './pages/Templates.vue';
@@ -46,7 +47,15 @@ const router = createRouter({
     { path: '/labels/print', component: PrintLabels },
     { path: '/categories', component: Categories },
     { path: '/data', component: DataBackup },
-    { path: '/settings', component: Settings }
+    {
+      path: '/settings',
+      component: Settings,
+      children: [
+        { path: '', redirect: defaultSettingsPath },
+        ...settingsSections.map(section => ({ path: section.path, component: section.component })),
+        { path: ':unknown(.*)', redirect: defaultSettingsPath }
+      ]
+    }
   ]
 });
 
