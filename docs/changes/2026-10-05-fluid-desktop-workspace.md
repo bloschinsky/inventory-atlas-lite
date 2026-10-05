@@ -1,7 +1,7 @@
 # Fluid desktop workspace
 
 - **Completed:** 2026-10-05
-- **Version:** 0.50.1
+- **Version:** 0.51.0
 
 ## Summary
 

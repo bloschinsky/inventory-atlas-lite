@@ -1,7 +1,7 @@
 # Roadmap overview
 
 This overview lists the active feature work planned for Inventory Atlas Lite. It is current as of
-2026-10-04. Each linked task file is the authoritative specification for scope, acceptance criteria,
+2026-10-05. Each linked task file is the authoritative specification for scope, acceptance criteria,
 and verification.
 
 Implemented behavior is documented separately in [`features/README.md`](features/README.md).
