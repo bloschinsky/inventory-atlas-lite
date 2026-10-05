@@ -84,3 +84,29 @@ for (const viewport of viewports) {
     expect(overflow).toBeLessThanOrEqual(0);
   });
 }
+
+test('the hero, the principles, and the final call to action are dark bands in both system modes', async ({ page }) => {
+  for (const colorScheme of ['light', 'dark']) {
+    await page.emulateMedia({ colorScheme });
+    await page.goto(landingURL);
+    for (const band of [page.locator('header'), page.getByRole('heading', { name: 'Start your inventory today' }).locator('xpath=ancestor::section')]) {
+      await expect(band).toHaveAttribute('data-bs-theme', 'dark');
+      // The ink of the bands is dark enough for the white headings on top of it.
+      const [r, g, b] = (await band.evaluate(element => getComputedStyle(element).backgroundColor)).match(/\d+/g).map(Number);
+      expect(r + g + b).toBeLessThan(150);
+    }
+  }
+});
+
+test('sections fade in as they scroll into view, and appear at once with reduced motion', async ({ page }) => {
+  await page.goto(landingURL);
+  const dashboard = page.locator('#dashboard .landing-reveal').first();
+  await expect(dashboard).toHaveCSS('opacity', '0');
+  await dashboard.scrollIntoViewIfNeeded();
+  await expect(dashboard).toHaveClass(/is-visible/);
+  await expect(dashboard).toHaveCSS('opacity', '1');
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto(landingURL);
+  await expect(page.locator('#dashboard .landing-reveal').first()).toHaveCSS('opacity', '1');
+});

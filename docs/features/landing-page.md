@@ -28,6 +28,15 @@ application, its build, and its release workflow are unchanged.
 - **Final call to action** with Get Inventory Atlas Lite, View on GitHub, and the user guide
   (`docs/HOW-TO.md`), and a footer with the version and release links.
 - There is no **Try Demo** button until a public demo exists (see *Enabling the demo button*).
+- **Look:** the navigation, the hero with the principles, the final call to action, and the footer
+  are dark ink-blue bands; the hero has blue and violet glows under a dot-grid texture that fades
+  out downwards. The showcase sections between them alternate two surfaces (white and a cool gray in
+  light mode, the two Tabler dark surfaces in dark mode). Every section label has a small gradient
+  icon (Organization, Items, Photos and QR, Find and check, Insights, Install).
+- **Reveal on scroll:** the principles, both columns of every showcase section, the install heading
+  and cards, and the final call to action fade and slide in once as they enter the viewport, with a
+  short stagger. With *reduce motion* set in the system, or without the page script, everything is
+  shown at once.
 - The page follows the visitor's light or dark system mode, works from phones to wide desktop
   screens without sideways scrolling, stacks the sections on narrow screens with full-width buttons,
   and has a skip link, semantic headings, visible focus outlines, and descriptive alt text on every
@@ -39,7 +48,9 @@ application, its build, and its release workflow are unchanged.
 
 - `landing/index.html`, `landing/src/main.js`, `App.vue`, and `FeatureSection.vue` are the page;
   `landing/src/content.js` holds its English copy, screenshot imports, and alt text, and
-  `landing/src/landing.css` a small layer built from Tabler custom properties. The page is
+  `landing/src/landing.css` a small layer on Tabler. The dark bands carry `data-bs-theme="dark"`, so
+  Tabler's own dark colors style their text and buttons in either system mode; `App.vue` runs one
+  `IntersectionObserver` that marks `.landing-reveal` elements visible. The page is
   English-only public copy, so the vue-i18n rules of the application do not apply to it.
 - `landing/site.js` holds the build-time facts shared by the build and the tests: the repository
   URL, the documentation links, the default Pages address, and `landingRelease()`.
@@ -98,7 +109,8 @@ action; nothing else changes. Update `test/e2e/landing.spec.js`, which expects n
   GitHub, and install links, the absent Try Demo control, the release text and link from the release
   history, the canonical, Open Graph, and favicon addresses under the base path, every screenshot
   loading from the base path with alt text and no failed request, and the section headings without
-  sideways scrolling at 390, 820, 1366, and 1920 pixels.
+  sideways scrolling at 390, 820, 1366, and 1920 pixels, the dark bands in both system modes, and a
+  section that is hidden until scrolled into view but shown at once with reduced motion.
 
 ## Notes and limitations
 

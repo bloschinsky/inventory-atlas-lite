@@ -4,8 +4,8 @@
   application made by landing/scripts/capture-screenshots.mjs from a fictional sample inventory.
 */
 import {
-  IconBrandDocker, IconCloudOff, IconDatabase, IconDeviceMobile, IconDownload, IconServer, IconServer2,
-  IconTerminal2
+  IconBrandDocker, IconCategory, IconChartPie, IconChecklist, IconCloudOff, IconDatabase, IconDeviceMobile, IconDownload,
+  IconQrcode, IconServer, IconServer2, IconSitemap, IconTerminal2
 } from '@tabler/icons-vue';
 import checklistRunPhone from './assets/screenshots/checklist-run-phone.webp';
 import dashboard from './assets/screenshots/dashboard.webp';
@@ -34,6 +34,7 @@ export const principles = [
 export const sections = [
   {
     id: 'hierarchy',
+    icon: IconSitemap,
     eyebrow: 'Organization',
     title: 'Everything has a place',
     text: 'Model your home the way it really is. Items sit in locations, inside containers, inside other containers — and the Hierarchy shows the whole picture.',
@@ -47,6 +48,7 @@ export const sections = [
   },
   {
     id: 'items',
+    icon: IconCategory,
     eyebrow: 'Items',
     title: 'Categories with fields that fit',
     text: 'Every category gets its own fields, so a drill can record its power source and a camera its lens mount, next to the details every item shares.',
@@ -60,6 +62,7 @@ export const sections = [
   },
   {
     id: 'photos-qr',
+    icon: IconQrcode,
     eyebrow: 'Photos and QR',
     title: 'See it, label it, scan it',
     text: 'Keep photos with each item and print QR labels for boxes and shelves. Scan a label with your phone to open the item right away.',
@@ -73,6 +76,7 @@ export const sections = [
   },
   {
     id: 'find',
+    icon: IconChecklist,
     eyebrow: 'Find and check',
     title: 'Find it fast, check it off',
     text: 'Search names, descriptions, serial numbers, and custom field values, then filter by category and condition. Checklists make packing and audits routine.',
@@ -89,6 +93,7 @@ export const sections = [
   },
   {
     id: 'dashboard',
+    icon: IconChartPie,
     eyebrow: 'Insights',
     title: 'A dashboard for your stuff — and optional AI',
     text: 'See how big the inventory is, how well it is documented, and where things are. When you want help, AI can draft items and fields for you to review.',

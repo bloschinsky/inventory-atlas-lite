@@ -1,5 +1,6 @@
 <script setup>
-import { IconBook, IconBrandGithub, IconPlayerPlay } from '@tabler/icons-vue';
+import { onBeforeUnmount, onMounted } from 'vue';
+import { IconBook, IconBrandGithub, IconPlayerPlay, IconRocket } from '@tabler/icons-vue';
 import FeatureSection from './FeatureSection.vue';
 import { links } from '../site.js';
 import { hero, info, installOptions, principles, sections } from './content.js';
@@ -8,6 +9,24 @@ import { hero, info, installOptions, principles, sections } from './content.js';
 const releaseDate = info.release.date
   ? new Intl.DateTimeFormat('en', { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(`${info.release.date}T00:00:00Z`))
   : null;
+
+/*
+  Reveal on scroll: each .landing-reveal element fades in once it enters the viewport. The hidden
+  state is enabled only here (see landing.css), so without the observer everything stays visible.
+*/
+let observer = null;
+onMounted(() => {
+  if (!('IntersectionObserver' in window)) return;
+  observer = new IntersectionObserver(entries => {
+    for (const entry of entries.filter(entry => entry.isIntersecting)) {
+      entry.target.classList.add('is-visible');
+      observer.unobserve(entry.target);
+    }
+  }, { rootMargin: '0px 0px -8% 0px' });
+  document.querySelectorAll('.landing-reveal').forEach(element => observer.observe(element));
+  document.documentElement.classList.add('landing-reveal-ready');
+});
+onBeforeUnmount(() => observer?.disconnect());
 </script>
 
 <template>
@@ -17,7 +36,8 @@ const releaseDate = info.release.date
   >Skip to content</a>
 
   <nav
-    class="landing-nav navbar"
+    class="landing-nav landing-dark navbar"
+    data-bs-theme="dark"
     aria-label="Main"
   >
     <div class="container-xl">
@@ -67,7 +87,8 @@ const releaseDate = info.release.date
   <main id="main">
     <header
       id="top"
-      class="landing-hero"
+      class="landing-hero landing-dark"
+      data-bs-theme="dark"
     >
       <div class="container-xl">
         <div class="row align-items-center g-5">
@@ -140,7 +161,8 @@ const releaseDate = info.release.date
     </header>
 
     <section
-      class="landing-principles"
+      class="landing-principles landing-dark"
+      data-bs-theme="dark"
       aria-labelledby="principles-title"
     >
       <div class="container-xl">
@@ -152,9 +174,10 @@ const releaseDate = info.release.date
         </h2>
         <div class="row g-4">
           <div
-            v-for="principle in principles"
+            v-for="(principle, index) in principles"
             :key="principle.title"
-            class="col-sm-6 col-lg-3"
+            class="col-sm-6 col-lg-3 landing-reveal"
+            :style="{ '--landing-reveal-delay': `${index * 0.08}s` }"
           >
             <div class="landing-principle">
               <component
@@ -187,8 +210,14 @@ const releaseDate = info.release.date
       aria-labelledby="install-title"
     >
       <div class="container-xl">
-        <div class="landing-section-heading">
+        <div class="landing-section-heading landing-reveal">
           <p class="landing-eyebrow">
+            <span class="landing-eyebrow-icon">
+              <IconRocket
+                class="icon"
+                aria-hidden="true"
+              />
+            </span>
             Install
           </p>
           <h2
@@ -204,9 +233,10 @@ const releaseDate = info.release.date
         </div>
         <div class="row g-4">
           <div
-            v-for="option in installOptions"
+            v-for="(option, index) in installOptions"
             :key="option.title"
-            class="col-sm-6 col-lg-3"
+            class="col-sm-6 col-lg-3 landing-reveal"
+            :style="{ '--landing-reveal-delay': `${index * 0.08}s` }"
           >
             <div class="card h-100">
               <div class="card-body d-flex flex-column">
@@ -237,10 +267,11 @@ const releaseDate = info.release.date
     </section>
 
     <section
-      class="landing-section landing-final"
+      class="landing-section landing-final landing-dark"
+      data-bs-theme="dark"
       aria-labelledby="final-title"
     >
-      <div class="container-xl text-center">
+      <div class="container-xl text-center landing-reveal">
         <h2
           id="final-title"
           class="landing-section-title"
@@ -280,7 +311,10 @@ const releaseDate = info.release.date
     </section>
   </main>
 
-  <footer class="landing-footer">
+  <footer
+    class="landing-footer landing-dark"
+    data-bs-theme="dark"
+  >
     <div class="container-xl d-flex flex-wrap justify-content-between gap-2">
       <span>Inventory Atlas Lite · by Artem Bloschinsky</span>
       <span>

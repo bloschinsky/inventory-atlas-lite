@@ -1,47 +1,78 @@
 /*
-  Landing layer on top of Tabler, the design system of the application itself. Colors come from
-  Tabler custom properties, so the page follows the visitor's light or dark system mode.
+  Landing layer on top of Tabler, the design system of the application itself. The navigation, the
+  hero with the principles, and the final call to action are dark bands: they carry
+  data-bs-theme="dark", so Tabler's own dark colors apply to their text and buttons in both system
+  modes. The showcase between them alternates two Tabler surfaces and follows the visitor's mode.
 */
 :root {
   --landing-section-space: clamp(3.5rem, 8vw, 6.5rem);
-  --landing-shot-shadow: 0 1.25rem 3rem -1.5rem rgba(var(--tblr-body-color-rgb), .35);
+  --landing-ink: #0a1630;
+  --landing-ink-raised: #10254d;
+  --landing-glow: rgba(37, 99, 235, .55);
+  --landing-accent: #93c5fd;
+  --landing-band: var(--tblr-bg-surface);
+  --landing-band-alt: var(--tblr-bg-surface-secondary);
+  --landing-shot-shadow: 0 1.5rem 3rem -1.25rem rgba(10, 22, 48, .45);
 }
+/* Tabler's light secondary surface is almost white; a cooler gray keeps the bands apart. */
+:root[data-bs-theme='light'] { --landing-band-alt: #eaeff6; }
 
 html { scroll-behavior: smooth; scroll-padding-top: 4.5rem; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 
-body { background: var(--tblr-bg-surface); overflow-wrap: anywhere; }
+body { background: var(--landing-band-alt); overflow-wrap: anywhere; }
 
 a:focus-visible, .btn:focus-visible {
   outline: 3px solid var(--tblr-primary);
   outline-offset: 3px;
   box-shadow: none;
 }
+.landing-dark a:focus-visible, .landing-dark .btn:focus-visible { outline-color: var(--landing-accent); }
 
 .landing-skip { position: absolute; top: .5rem; left: .5rem; z-index: 1100; padding: .5rem 1rem; border-radius: var(--tblr-border-radius); background: var(--tblr-bg-surface); }
+
+/* Dark bands */
+.landing-dark { color: var(--tblr-body-color); background: var(--landing-ink); }
+.landing-dark .landing-eyebrow, .landing-dark .landing-release a { color: var(--landing-accent); }
 
 /* Navigation */
 .landing-nav {
   position: sticky; top: 0; z-index: 1000;
   min-height: 4rem;
-  background: color-mix(in srgb, var(--tblr-bg-surface) 92%, transparent);
+  background: color-mix(in srgb, var(--landing-ink) 92%, transparent);
   backdrop-filter: blur(8px);
-  border-bottom: var(--tblr-border-width) solid var(--tblr-border-color);
+  border-bottom: 1px solid rgba(255, 255, 255, .08);
 }
 .landing-nav .container-xl { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-.landing-brand { display: inline-flex; align-items: center; gap: .5rem; color: var(--tblr-body-color); font-weight: 600; font-size: 1.0625rem; text-decoration: none; white-space: nowrap; }
-.landing-brand:hover { color: var(--tblr-primary); text-decoration: none; }
-.landing-brand-mark { width: 1.75rem; height: 1.75rem; color: var(--tblr-primary); }
-.landing-nav-link { color: var(--tblr-secondary); font-weight: 500; }
-.landing-nav-link:hover { color: var(--tblr-body-color); text-decoration: none; }
+.landing-brand { display: inline-flex; align-items: center; gap: .5rem; color: #fff; font-weight: 600; font-size: 1.0625rem; text-decoration: none; white-space: nowrap; }
+.landing-brand:hover { color: var(--landing-accent); text-decoration: none; }
+.landing-brand-mark { width: 1.75rem; height: 1.75rem; color: var(--landing-accent); }
+.landing-nav-link { color: rgba(255, 255, 255, .75); font-weight: 500; }
+.landing-nav-link:hover { color: #fff; text-decoration: none; }
 
-/* Hero */
+/* Hero: glows over the ink, under a dot grid; its bottom edge is plain ink, so the principles continue it. */
 .landing-hero {
-  padding-block: clamp(2.5rem, 7vw, 5.5rem) var(--landing-section-space);
-  background: linear-gradient(180deg, var(--tblr-primary-lt) 0%, var(--tblr-bg-surface) 100%);
+  position: relative;
+  isolation: isolate;
+  padding-block: clamp(2.5rem, 7vw, 5.5rem) clamp(3rem, 6vw, 4.5rem);
+  background:
+    radial-gradient(55rem 32rem at 85% 5%, var(--landing-glow), transparent 65%),
+    radial-gradient(40rem 22rem at 0% 0%, rgba(124, 58, 237, .25), transparent 70%),
+    linear-gradient(180deg, var(--landing-ink-raised) 0%, var(--landing-ink) 100%);
 }
-.landing-eyebrow { margin-bottom: .75rem; color: var(--tblr-primary); font-size: .8125rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
-.landing-title { margin-bottom: 1rem; font-size: clamp(2.25rem, 5vw, 3.5rem); font-weight: 700; line-height: 1.1; }
+.landing-hero::before {
+  content: '';
+  position: absolute; inset: 0; z-index: -1;
+  background-image: radial-gradient(rgba(255, 255, 255, .16) 1px, transparent 1.2px);
+  background-size: 22px 22px;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, .55) 60%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, .55) 60%, transparent 100%);
+  pointer-events: none;
+}
+.landing-eyebrow { display: flex; align-items: center; gap: .625rem; margin-bottom: .75rem; color: var(--tblr-primary); font-size: .8125rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.landing-eyebrow-icon { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; flex: 0 0 2.25rem; border-radius: .625rem; color: #fff; background: linear-gradient(135deg, #2563eb, #7c3aed); box-shadow: 0 .5rem 1rem -.5rem rgba(37, 99, 235, .7); }
+.landing-eyebrow-icon .icon { width: 1.25rem; height: 1.25rem; stroke-width: 1.75; }
+.landing-title { margin-bottom: 1rem; color: #fff; font-size: clamp(2.25rem, 5vw, 3.5rem); font-weight: 700; line-height: 1.1; }
 .landing-lead { margin-bottom: 2rem; color: var(--tblr-secondary); font-size: clamp(1.0625rem, 1.6vw, 1.25rem); line-height: 1.6; }
 .landing-actions { display: flex; flex-wrap: wrap; gap: .75rem; }
 .landing-actions .btn { min-height: 3rem; }
@@ -50,12 +81,14 @@ a:focus-visible, .btn:focus-visible {
 /* Screenshots */
 .landing-shot {
   display: block; width: 100%; height: auto;
-  border: var(--tblr-border-width) solid var(--tblr-border-color);
+  border: 1px solid rgba(15, 23, 42, .12);
   border-radius: var(--tblr-border-radius-lg);
-  background: var(--tblr-bg-surface);
+  background: #fff;
   box-shadow: var(--landing-shot-shadow);
 }
-.landing-shot-phone { border: .375rem solid var(--tblr-gray-800, #1f2937); border-radius: 1.5rem; }
+.landing-shot-phone { border: .375rem solid #1f2937; border-radius: 1.5rem; }
+.landing-dark .landing-shot { border-color: rgba(255, 255, 255, .14); box-shadow: 0 2rem 4rem -1.5rem rgba(0, 0, 0, .7); }
+.landing-dark .landing-shot-phone { border-color: #020617; }
 .landing-media { display: flex; align-items: flex-end; gap: 1.5rem; }
 
 /* The phone overlaps the lower left of the desktop screenshot without leaving the column. */
@@ -64,12 +97,15 @@ a:focus-visible, .btn:focus-visible {
 .landing-shot-link { display: block; flex: 1 1 0; min-width: 0; }
 .landing-shot-link-phone { flex: 0 0 30%; }
 
-/* Principles */
-.landing-principles { padding-bottom: var(--landing-section-space); }
+/* Principles continue the hero band. */
+.landing-principles { padding-bottom: var(--landing-section-space); border-bottom: 1px solid rgba(255, 255, 255, .08); }
+.landing-principle { height: 100%; padding: 1.25rem; border: 1px solid rgba(255, 255, 255, .08); border-radius: .875rem; background: rgba(255, 255, 255, .04); }
 .landing-principle-icon { width: 2.25rem; height: 2.25rem; margin-bottom: .75rem; padding: .375rem; border-radius: var(--tblr-border-radius); color: var(--tblr-primary); background: var(--tblr-primary-lt); stroke-width: 1.75; }
+.landing-dark .landing-principle-icon { color: var(--landing-accent); background: rgba(59, 130, 246, .18); }
 
-/* Showcase sections */
-.landing-section { padding-block: var(--landing-section-space); border-top: var(--tblr-border-width) solid var(--tblr-border-color); }
+/* Showcase sections alternate the two surfaces of the active mode. */
+.landing-section { padding-block: var(--landing-section-space); background: var(--landing-band-alt); }
+.landing-feature:nth-of-type(odd) { background: var(--landing-band); }
 .landing-section-heading { max-width: 44rem; margin-bottom: 2.5rem; }
 .landing-section-title { margin-bottom: 1rem; font-size: clamp(1.75rem, 3.2vw, 2.5rem); font-weight: 700; line-height: 1.2; }
 .landing-text { max-width: 40rem; color: var(--tblr-secondary); font-size: 1.0625rem; line-height: 1.65; }
@@ -77,11 +113,31 @@ a:focus-visible, .btn:focus-visible {
 .landing-points li { position: relative; margin-bottom: .75rem; padding-left: 1.75rem; line-height: 1.55; }
 .landing-points li::before { content: ''; position: absolute; left: .25rem; top: .5em; width: .625rem; height: .625rem; border-radius: 50%; background: var(--tblr-primary); }
 
-.landing-install { background: var(--tblr-bg-surface-secondary); }
+.landing-install { background: var(--landing-band); }
 .landing-note { margin: 2rem 0 0; color: var(--tblr-secondary); }
-.landing-final { background: linear-gradient(0deg, var(--tblr-primary-lt) 0%, var(--tblr-bg-surface) 100%); }
+.landing-final {
+  position: relative;
+  isolation: isolate;
+  background: radial-gradient(45rem 26rem at 50% 0%, var(--landing-glow), transparent 70%), var(--landing-ink);
+}
+.landing-final .landing-section-title { color: #fff; }
 
-.landing-footer { padding-block: 1.5rem; border-top: var(--tblr-border-width) solid var(--tblr-border-color); color: var(--tblr-secondary); font-size: .875rem; }
+.landing-footer { padding-block: 1.5rem; border-top: 1px solid rgba(255, 255, 255, .08); color: var(--tblr-secondary); font-size: .875rem; }
+
+/*
+  Reveal on scroll: App.vue marks .landing-reveal elements visible as they enter the viewport. The
+  hidden state exists only while motion is welcome and the page script is running, so content is
+  never lost without it.
+*/
+@media (prefers-reduced-motion: no-preference) {
+  .landing-reveal-ready .landing-reveal {
+    opacity: 0;
+    transform: translateY(1.5rem);
+    transition: opacity .6s ease, transform .6s ease;
+    transition-delay: var(--landing-reveal-delay, 0s);
+  }
+  .landing-reveal-ready .landing-reveal.is-visible { opacity: 1; transform: none; }
+}
 
 @media (max-width: 575.98px) {
   .landing-actions .btn { width: 100%; }

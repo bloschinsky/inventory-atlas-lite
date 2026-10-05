@@ -13,16 +13,23 @@ const titleId = computed(() => `${props.section.id}-title`);
 <template>
   <section
     :id="section.id"
-    class="landing-section"
+    class="landing-section landing-feature"
     :aria-labelledby="titleId"
   >
     <div class="container-xl">
       <div class="row align-items-center g-5">
         <div
-          class="col-lg-5"
+          class="col-lg-5 landing-reveal"
           :class="{ 'order-lg-2': reverse }"
         >
           <p class="landing-eyebrow">
+            <span class="landing-eyebrow-icon">
+              <component
+                :is="section.icon"
+                class="icon"
+                aria-hidden="true"
+              />
+            </span>
             {{ section.eyebrow }}
           </p>
           <h2
@@ -43,7 +50,10 @@ const titleId = computed(() => `${props.section.id}-title`);
             </li>
           </ul>
         </div>
-        <div class="col-lg-7">
+        <div
+          class="col-lg-7 landing-reveal"
+          style="--landing-reveal-delay: .12s"
+        >
           <div class="landing-media">
             <!-- Each screenshot links to its full-size file, so small text can be read up close. -->
             <a
