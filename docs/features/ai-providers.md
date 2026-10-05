@@ -40,9 +40,10 @@ Connection errors repeat this distinction. The application never scans the netwo
 
 ## Settings
 
-The AI card in **Settings** has **Enable AI features**, **Provider**, **Display name** (custom only),
-**Base URL**, **API key**, **Test connection**, **Model** with **Refresh models** and **Custom
-model...**, and **Image input**. Choosing a provider fills in its default base URL and clears the
+**Settings → AI** (`/settings/ai`) has three cards in one form: **Features** with **Enable AI
+features**; **Connection** with **Provider**, **Display name** (custom only), **Base URL**, **API
+key**, and **Test connection**; and **Model** with **Model**, **Refresh models**, **Custom
+model...**, and **Image input**. **Save settings** below the cards saves all of them. Choosing a provider fills in its default base URL and clears the
 previous provider's model list.
 
 - **Test connection** and **Refresh models** use the values currently in the form, before saving,

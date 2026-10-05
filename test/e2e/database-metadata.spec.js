@@ -5,7 +5,7 @@ test('the database can be renamed in Settings and shows its identity', async ({ 
   const metadata = await (await request.get('/api/database/metadata')).json();
   const name = unique('Garage');
 
-  await page.goto('/settings');
+  await page.goto('/settings/database');
   await page.mouse.move(600, 400);
   const card = page.getByRole('region', { name: 'Database' });
   const nameInput = card.getByLabel('Database name');

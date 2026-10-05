@@ -531,7 +531,7 @@ test('the cloud backup API connects, backs up, keeps secrets on the server, and 
     // Without the browser's state cookie the callback is refused and nothing is connected.
     const forged = await fetch(callbackUrl, { redirect: 'manual' });
     assert.equal(forged.status, 303);
-    assert.equal(forged.headers.get('location'), '/settings?cloud=error');
+    assert.equal(forged.headers.get('location'), '/settings/cloud-backup?cloud=error');
     state = await overview();
     assert.equal(state.providers[0].connected, false);
     assert.deepEqual(state.status.connectError.error, { code: 'CLOUD_CONNECT_UNVERIFIED', params: {} });
@@ -540,7 +540,7 @@ test('the cloud backup API connects, backs up, keeps secrets on the server, and 
     const secondCookie = second.headers.get('set-cookie').split(';')[0];
     const secondCallback = (await fetch((await second.json()).authorizationUrl, { redirect: 'manual' })).headers.get('location');
     const completed = await fetch(secondCallback, { redirect: 'manual', headers: { Cookie: secondCookie } });
-    assert.equal(completed.headers.get('location'), '/settings?cloud=connected&provider=dropbox');
+    assert.equal(completed.headers.get('location'), '/settings/cloud-backup?cloud=connected&provider=dropbox');
     state = await overview();
     assert.equal(state.providers[0].connected, true);
     assert.equal(state.providers[0].account, 'Stub Dropbox User (dropbox-user@example.test)');

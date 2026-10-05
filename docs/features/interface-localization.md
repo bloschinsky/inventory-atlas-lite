@@ -10,7 +10,7 @@ the conventions of the active language; stored values and the API are unchanged.
 
 ## User-visible behaviour
 
-- **Settings** starts with an **Interface** card holding the **Language** selector with the entries
+- **Settings → Interface** (`/settings/interface`, the section `/settings` opens) holds the **Language** selector with the entries
   **English** and **Українська**, each written in its own language.
 - Changing the selection re-renders every page, the sidebar, the mobile drawer, and open dialogs at
   once, and sets the `lang` attribute of the document. A reload keeps the choice.

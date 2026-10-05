@@ -137,11 +137,10 @@ The project stays small and readable. Do not add:
 - `client/src/qrScan.js` — local QR decoding with the bundled `jsqr` and classification of the scanned text.
 - `client/src/pages/Categories.vue` — category and custom field management, including renaming a field in place.
 - `client/src/pages/DataBackup.vue` — SQLite backup download, restore, and the Danger Zone.
+- `client/src/pages/Settings.vue` — the Settings shell: the grouped section list on desktops, the section selector on phones, and the active section; `client/src/settingsSections.js` lists the groups and sections (path, label, icon, component) used by the routes and both navigations.
+- `client/src/components/settings/` — one component per Settings section: `InterfaceSettings.vue` (language), `DatabaseSettings.vue` (editable database name, last update, folded technical details), `CloudBackupSettings.vue` (Dropbox/Google Drive connections, Backup now, the schedule, retention, and status) with `CloudAppCredentials.vue` (the masked app key/client ID and secret form of one provider), and `AiSettings.vue` (the AI form in Features, Connection, and Model cards).
 - `client/src/components/BulkReplaceValue.vue` — the Data page card that previews and applies the replacement of one exact field value on every matching item.
 - `client/src/components/ResetDatabaseDialog.vue` — impact review and confirmation of the inventory reset.
-- `client/src/components/CloudBackupSettings.vue` — the Settings card for Dropbox/Google Drive connections, Backup now, the schedule, retention, and status.
-- `client/src/components/CloudAppCredentials.vue` — the masked app key/client ID and secret form of one cloud storage provider.
-- `client/src/components/DatabaseSettings.vue` — the Settings card with the editable database name, last update, and folded technical details.
 - `client/src/style.css` — small set of application styles layered on Tabler, built only from
   Tabler custom properties so both color modes stay correct.
 - `shared/fieldDefinitions.js` — application-level custom field-definition format and validation, imported by both the client and the server.
@@ -184,6 +183,7 @@ The project stays small and readable. Do not add:
 - `test/errors.test.js` — error code coverage in both locales, the error response mapping, and error translation.
 - `test/cloud-backup.test.js` — cloud backup services, adapters, scheduler, and API against the local Dropbox/Google Drive stub in `test/e2e/cloudProviderStub.js`.
 - `test/fixtures/` — real source photos used as regression input by the Node.js tests.
+- `test/e2e/settings-navigation.spec.js` — Settings section routes and redirects, the active state, the desktop section list, and the phone section selector.
 - `test/e2e/` — Playwright browser tests, their fixtures, shared helpers, and the run launcher.
 - `playwright.config.js` — Playwright projects, isolated test ports, and the cloud provider stub, API, and Vite processes started for the suite.
 - `docs/README.md` — documentation layout and conventions.

@@ -32,7 +32,8 @@ presentation layer over the existing API, and no CDN or other runtime internet d
   surfaces keep their own limit where it helps readability, such as `.form-card`
   (`--app-form-width`, `820px`) on the item, template, checklist, AI, Settings, and Data forms.
 - The open destination is highlighted in both the folded and the expanded state and carries
-  `aria-current="page"`. Every entry has an icon, a label, and a `title` tooltip for the folded rail.
+  `aria-current="page"`; **Settings** stays highlighted on every section of the
+  [Settings center](settings-center.md). Every entry has an icon, a label, and a `title` tooltip for the folded rail.
 
 ### Mobile navigation
 

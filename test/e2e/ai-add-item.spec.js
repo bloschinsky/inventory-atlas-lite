@@ -189,7 +189,7 @@ test('configures AI while returning only a masked API key state to the browser',
       ] })
     });
   });
-  await page.goto('/settings');
+  await page.goto('/settings/ai');
   // Headless Chromium on Linux may initialize its pointer over the folded-hover sidebar.
   await page.mouse.move(600, 400);
   await expect(page.getByLabel('Model')).toHaveValue('gpt-5.6-luna');

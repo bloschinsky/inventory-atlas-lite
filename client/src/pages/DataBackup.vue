@@ -126,7 +126,7 @@ async function finishReset(result) {
           scope="global"
         >
           <template #link>
-            <RouterLink to="/settings">
+            <RouterLink to="/settings/cloud-backup">
               {{ $t('backup.cloudLink') }}
             </RouterLink>
           </template>

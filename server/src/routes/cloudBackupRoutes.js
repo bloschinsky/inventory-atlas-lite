@@ -59,9 +59,9 @@ export const createCloudBackupRoutes = ({ cloudBackupService, cloudConnectionSer
       const result = await cloudConnectionService.complete({
         state: req.query.state, cookieState: readCookie(req, STATE_COOKIE), code: req.query.code, error: req.query.error
       });
-      res.redirect(303, `/settings?cloud=connected&provider=${encodeURIComponent(result.provider)}`);
+      res.redirect(303, `/settings/cloud-backup?cloud=connected&provider=${encodeURIComponent(result.provider)}`);
     } catch {
-      res.redirect(303, '/settings?cloud=error');
+      res.redirect(303, '/settings/cloud-backup?cloud=error');
     }
   });
 

@@ -1,9 +1,12 @@
 [
   {
-    "version": "0.50.1",
+    "version": "0.51.0",
     "date": "2026-10-05",
     "changes": [
-      "On wide and Full HD screens the pages now use the whole width beside the sidebar instead of a centered column, so the Dashboard charts, the Items table, and the Hierarchy tree and graph get more room. Forms such as Add Item and Settings keep their comfortable reading width, and phones and tablets look the same as before."
+      "On wide and Full HD screens the pages now use the whole width beside the sidebar instead of a centered column, so the Dashboard charts, the Items table, and the Hierarchy tree and graph get more room. Forms such as Add Item and Settings keep their comfortable reading width, and phones and tablets look the same as before.",
+      "Settings is now split into sections instead of one long page: Interface under General, Database and Cloud Backup under Data, and AI under Services. Only the open section is shown.",
+      "On a computer the sections are listed on the left of Settings; on a phone pick one from the Section selector at the top. Every section has its own address, such as /settings/ai, that can be bookmarked or reloaded.",
+      "The AI settings are grouped into Features, Connection, and Model cards, still saved together with Save settings. Connecting Dropbox or Google Drive now returns straight to Settings → Cloud Backup."
     ]
   },
   {

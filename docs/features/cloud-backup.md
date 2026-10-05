@@ -38,7 +38,7 @@ in a file of their own and are never part of an inventory backup or an API respo
 - **Status**: last successful backup (time, provider, file), last attempt (time, manual or scheduled,
   result), its service, the last error, the retention cleanup result, and the next scheduled run in
   the server time zone.
-- **Data / Backup** points to the Settings card; the local download, restore, and reset are unchanged.
+- **Data / Backup** links to `/settings/cloud-backup`; the local download, restore, and reset are unchanged.
 
 ## Implementation overview
 
@@ -104,8 +104,8 @@ error }` next to the successful upload; a cleanup failure never turns the backup
 - `GET /api/cloud-backup/oauth/callback` accepts the callback only when the `state` matches both a
   pending connection and the browser's cookie; it is consumed before anything else, so a replayed or
   forged callback cannot store tokens. The server exchanges the code, requires a refresh token, reads
-  the account name, and redirects with `303` to `/settings?cloud=connected&provider=…` or
-  `/settings?cloud=error`. Error texts are never reflected through the URL.
+  the account name, and redirects with `303` to `/settings/cloud-backup?cloud=connected&provider=…` or
+  `/settings/cloud-backup?cloud=error`. Error texts are never reflected through the URL.
 - The redirect URI is `CLOUD_BACKUP_REDIRECT_URI` when set; otherwise it is built from the browser's
   `Origin` header (falling back to the request host) plus `/api/cloud-backup/oauth/callback`, and the
   card shows the address to register. A desktop build can supply its own callback through the same
@@ -143,7 +143,7 @@ error }` next to the successful upload; a cleanup failure never turns the backup
 | `PUT /api/cloud-backup/providers/:provider/app` | `{ clientId, clientSecret }`; a blank secret keeps the saved one for the same app; answers with the overview |
 | `DELETE /api/cloud-backup/providers/:provider/app` | Removes the app credentials entered in Settings; refused while connected or when they come from the environment |
 | `POST /api/cloud-backup/providers/:provider/connect` | Starts OAuth; returns `{ authorizationUrl }` |
-| `GET /api/cloud-backup/oauth/callback` | Completes OAuth and redirects to Settings |
+| `GET /api/cloud-backup/oauth/callback` | Completes OAuth and redirects to Settings → Cloud Backup |
 | `POST /api/cloud-backup/providers/:provider/test` | `{ message, account }` |
 | `POST /api/cloud-backup/providers/:provider/backup` | Backup now; returns the recorded attempt |
 | `DELETE /api/cloud-backup/providers/:provider` | Disconnect; returns `{ revoked }` |

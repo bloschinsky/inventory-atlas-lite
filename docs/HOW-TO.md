@@ -62,7 +62,7 @@ the English names.
    the search finds it by name.
 7. Open **Data / Backup** and press **Download backup** to get your first copy of the database.
 
-To use the AI features, open **Settings** and set up the **AI** card:
+To use the AI features, open **Settings → AI** and fill in its **Connection** and **Model** cards:
 
 1. Choose a **Provider**. Each one fills in its default **Base URL**:
 
@@ -770,9 +770,17 @@ backup first when in doubt.
    nothing on the server, so each browser and device can use a different mode.
 3. Until you press one of them, the application follows your operating system's colour scheme.
 
+### Find a setting
+
+**Settings** is split into sections: **Interface** under *General*, **Database** and **Cloud Backup**
+under *Data*, and **AI** under *Services*. On a computer the sections are listed on the left of the
+page and the open one is highlighted; on a phone choose it from the **Section** selector at the top.
+Each section has its own address, such as `/settings/ai`, so it can be bookmarked; `/settings`
+opens **Interface**.
+
 ### Change the interface language
 
-1. Open **Settings**. The first card, **Interface**, holds the **Language** selector.
+1. Open **Settings**. It opens on the **Interface** section, which holds the **Language** selector.
 2. Choose **English** or **Українська**. Every page, the navigation, and open dialogs switch at once;
    no reload is needed.
 3. The choice is stored in this browser only and survives a reload. Other browsers and devices keep
@@ -787,7 +795,7 @@ backup first when in doubt.
 
 ### Name the database
 
-1. Open **Settings**. The **Database** card shows the **Database name** (`Inventory Atlas` until you
+1. Open **Settings → Database**. The card shows the **Database name** (`Inventory Atlas` until you
    change it) and when the inventory was **Last updated**.
 2. Type a name such as `Home Inventory` or `Garage` and press **Save name**. The card reports
    `Database name saved.` A name cannot be empty, longer than 100 characters, or contain line breaks.
@@ -826,7 +834,7 @@ or through an HTTPS host name such as a Tailscale `https://<host>.<tailnet>.ts.n
 connection then keeps working from any address. Set `CLOUD_BACKUP_REDIRECT_URI` if the application
 sits behind a reverse proxy.
 
-1. Open **Settings** and scroll to **Cloud Backup**. On a card marked **Not configured**, enter the
+1. Open **Settings → Cloud Backup**. On a card marked **Not configured**, enter the
    app key and app secret (Dropbox) or the client ID and client secret (Google Drive) under
    **App credentials** and press **Save app credentials**. The secret stays on the server: afterwards
    the form only shows its last four characters, and leaving the field blank keeps it. **Remove**
@@ -834,7 +842,7 @@ sits behind a reverse proxy.
    `DROPBOX_APP_KEY`/`DROPBOX_APP_SECRET` or `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` on the server;
    those then take precedence and are shown read-only.
 2. Press **Connect Dropbox** or **Connect Google Drive**, sign in, and allow access. You return to
-   Settings with `Dropbox connected.` (or the reason it failed), and the card shows the account and the
+   **Settings → Cloud Backup** with `Dropbox connected.` (or the reason it failed), and the card shows the account and the
    folder: `Apps/<your app>/Backups` in Dropbox, `My Drive/Inventory Atlas Lite/Backups` in Google Drive.
 3. Press **Backup now** to upload a snapshot immediately. The message names the uploaded file,
    `inventory-atlas-lite-YYYY-MM-DDTHH-mm-ssZ.sqlite` (UTC). **Test connection** checks the account
@@ -1138,7 +1146,7 @@ backup, and keep the copies on a different machine than the server.
 | A photo is rejected | Only JPEG, PNG, WebP, and GIF are accepted, at most 10 files of 15 MB each per upload. |
 | Search finds nothing | The search matches the name, description, serial number, and Transferred To. Clear the category filter and check that you are on page 1. |
 | No suggestions in a text field | Suggestions come from values already saved for that same field. A newly created field starts empty. |
-| AI Add Item is missing | AI features are off. Open **Settings**, choose a provider, enter its API key if it needs one, choose a model, tick **Enable AI features**, then save. The AI actions appear immediately. |
+| AI Add Item is missing | AI features are off. Open **Settings → AI**, choose a provider, enter its API key if it needs one, choose a model, tick **Enable AI features**, then save. The AI actions appear immediately. |
 | Enable AI features cannot be ticked | OpenAI and OpenRouter need an API key and none is saved for this provider and base URL. Enter a key in the same form; the switch becomes available at once. |
 | *Could not reach Ollama/LM Studio at …* | The address is resolved on the Inventory Atlas server. In a Proxmox container or Docker, `localhost` is the container itself: use the LAN address of the computer running the model server, and make that server listen on the network. |
 | *The selected model does not support image input.* | The model cannot read photos. Choose a vision model, or describe the item instead. |

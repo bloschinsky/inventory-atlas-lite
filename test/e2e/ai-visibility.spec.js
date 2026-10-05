@@ -23,6 +23,8 @@ const aiAddFields = page => page.getByRole('button', { name: 'AI Add Fields' });
 async function openSettings(page) {
   await page.getByRole('link', { name: 'Settings', exact: true }).click();
   await page.mouse.move(600, 400);
+  await page.getByRole('navigation', { name: 'Settings sections' }).getByRole('link', { name: 'AI', exact: true }).click();
+  await expect(page).toHaveURL('/settings/ai');
 }
 
 async function openFields(page, categoryName) {
@@ -96,7 +98,7 @@ test('applies a saved Enable AI features change to the interface without a reloa
     body: JSON.stringify({ models: [{ id: 'gpt-5.6-luna', label: 'GPT-5.6 Luna' }] })
   }));
 
-  await page.goto('/settings');
+  await page.goto('/settings/ai');
   await page.mouse.move(600, 400);
   const toggle = page.getByLabel('Enable AI features');
   await expect(toggle).toBeChecked();
@@ -135,7 +137,7 @@ test('cannot enable AI features before an API key is saved', async ({ page, requ
     body: JSON.stringify({ models: [{ id: 'gpt-5.6-luna', label: 'GPT-5.6 Luna' }] })
   }));
 
-  await page.goto('/settings');
+  await page.goto('/settings/ai');
   await page.mouse.move(600, 400);
   const toggle = page.getByLabel('Enable AI features');
   await expect(toggle).not.toBeChecked();

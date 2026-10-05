@@ -744,6 +744,13 @@
     "subtitle": "Configure the interface and optional integrations for this installation.",
     "loading": "Loading settings…",
     "save": "Save settings",
+    "sections": "Settings sections",
+    "section": "Section",
+    "groups": {
+      "general": "General",
+      "data": "Data",
+      "services": "Services"
+    },
     "interface": {
       "title": "Interface",
       "language": "Language",
@@ -810,7 +817,10 @@
           "label": "Custom OpenAI-compatible",
           "help": "Any endpoint that implements the OpenAI-style /models and /chat/completions API."
         }
-      }
+      },
+      "featuresTitle": "Features",
+      "connectionTitle": "Connection",
+      "modelTitle": "Model"
     }
   },
   "cloud": {
