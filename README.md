@@ -53,6 +53,14 @@ The browser tests start their own API and Vite processes on separate ports and u
 - [`docs/features/README.md`](docs/features/README.md) — what the application currently does, one document per implemented feature.
 - [`docs/README.md`](docs/README.md) — documentation layout, active tasks, and records of completed changes.
 
+## Public landing page
+
+<https://bloschinsky.github.io/inventory-atlas-lite/> is the public product page. It is built from
+`landing/` with `npm run landing:build` and deployed to GitHub Pages by
+`.github/workflows/pages.yml`; `npm run landing:dev` serves it locally. See
+[`docs/features/landing-page.md`](docs/features/landing-page.md) for the deployment, the screenshot
+capture, and the release information it shows.
+
 ## Roadmap
 
 [`docs/ROADMAP.md`](docs/ROADMAP.md) lists the active planned features and their implementation order.

@@ -1,0 +1,80 @@
+name: Landing page
+
+# Builds landing/ and publishes it to GitHub Pages. It is independent of the Release workflow and
+# only follows it, so a new release appears on the page once it has been published.
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'landing/**'
+      - 'shared/release-history.json'
+      - 'shared/releaseHistory.js'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/pages.yml'
+  workflow_run:
+    workflows:
+      - Release
+    types:
+      - completed
+  workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build landing page
+    # After a release run, only a successful one changes what the page announces.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - name: Read the GitHub Pages address
+        id: pages
+        # Fails with "Get Pages site failed" until Settings → Pages → Source is set to GitHub Actions.
+        uses: actions/configure-pages@v6
+      - name: Find the latest published release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          tag=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName 2>/dev/null || true)
+          echo "Latest published release: ${tag:-none, the newest release-history entry is used}"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+      # The landing build needs no install scripts; they only fetch the server's background-removal model.
+      - run: npm ci --ignore-scripts
+      - name: Build the landing page
+        env:
+          LANDING_SITE_URL: ${{ steps.pages.outputs.base_url }}
+          LANDING_RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        run: npm run landing:build
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist-landing
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Inventory Atlas Lite — self-hosted inventory for physical items</title>
+    <meta name="description" content="Inventory Atlas Lite is a small self-hosted inventory app: know what you own and where it is, with locations, containers, custom fields, photos, QR labels, checklists, and a dashboard — on your own server." />
+    <link rel="canonical" href="%SITE_URL%" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="color-scheme" content="light dark" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Inventory Atlas Lite" />
+    <meta property="og:title" content="Inventory Atlas Lite — know what you own and where it is" />
+    <meta property="og:description" content="A small self-hosted inventory app for physical items. Your server, your data." />
+    <meta property="og:url" content="%SITE_URL%" />
+    <meta property="og:image" content="%SITE_URL%og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="The Inventory Atlas Lite Dashboard with item totals, photo coverage, and charts." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <!-- Follows the visitor's system color mode before the bundle paints. -->
+    <script>
+      document.documentElement.setAttribute('data-bs-theme',
+        window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

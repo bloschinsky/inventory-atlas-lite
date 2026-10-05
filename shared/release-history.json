@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.52.0",
+    "date": "2026-10-05",
+    "changes": [
+      "Inventory Atlas Lite now has a public product page at https://bloschinsky.github.io/inventory-atlas-lite/. It shows the main workflows with real screenshots, explains the installation options, and always names the latest release, so it is the easiest link to share with anyone who asks what you use to track your things. The application itself is unchanged."
+    ]
+  },
+  {
     "version": "0.51.0",
     "date": "2026-10-05",
     "changes": [

@@ -1,0 +1,89 @@
+/*
+  Landing layer on top of Tabler, the design system of the application itself. Colors come from
+  Tabler custom properties, so the page follows the visitor's light or dark system mode.
+*/
+:root {
+  --landing-section-space: clamp(3.5rem, 8vw, 6.5rem);
+  --landing-shot-shadow: 0 1.25rem 3rem -1.5rem rgba(var(--tblr-body-color-rgb), .35);
+}
+
+html { scroll-behavior: smooth; scroll-padding-top: 4.5rem; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+body { background: var(--tblr-bg-surface); overflow-wrap: anywhere; }
+
+a:focus-visible, .btn:focus-visible {
+  outline: 3px solid var(--tblr-primary);
+  outline-offset: 3px;
+  box-shadow: none;
+}
+
+.landing-skip { position: absolute; top: .5rem; left: .5rem; z-index: 1100; padding: .5rem 1rem; border-radius: var(--tblr-border-radius); background: var(--tblr-bg-surface); }
+
+/* Navigation */
+.landing-nav {
+  position: sticky; top: 0; z-index: 1000;
+  min-height: 4rem;
+  background: color-mix(in srgb, var(--tblr-bg-surface) 92%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: var(--tblr-border-width) solid var(--tblr-border-color);
+}
+.landing-nav .container-xl { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.landing-brand { display: inline-flex; align-items: center; gap: .5rem; color: var(--tblr-body-color); font-weight: 600; font-size: 1.0625rem; text-decoration: none; white-space: nowrap; }
+.landing-brand:hover { color: var(--tblr-primary); text-decoration: none; }
+.landing-brand-mark { width: 1.75rem; height: 1.75rem; color: var(--tblr-primary); }
+.landing-nav-link { color: var(--tblr-secondary); font-weight: 500; }
+.landing-nav-link:hover { color: var(--tblr-body-color); text-decoration: none; }
+
+/* Hero */
+.landing-hero {
+  padding-block: clamp(2.5rem, 7vw, 5.5rem) var(--landing-section-space);
+  background: linear-gradient(180deg, var(--tblr-primary-lt) 0%, var(--tblr-bg-surface) 100%);
+}
+.landing-eyebrow { margin-bottom: .75rem; color: var(--tblr-primary); font-size: .8125rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.landing-title { margin-bottom: 1rem; font-size: clamp(2.25rem, 5vw, 3.5rem); font-weight: 700; line-height: 1.1; }
+.landing-lead { margin-bottom: 2rem; color: var(--tblr-secondary); font-size: clamp(1.0625rem, 1.6vw, 1.25rem); line-height: 1.6; }
+.landing-actions { display: flex; flex-wrap: wrap; gap: .75rem; }
+.landing-actions .btn { min-height: 3rem; }
+.landing-release { margin: 1.5rem 0 0; color: var(--tblr-secondary); }
+
+/* Screenshots */
+.landing-shot {
+  display: block; width: 100%; height: auto;
+  border: var(--tblr-border-width) solid var(--tblr-border-color);
+  border-radius: var(--tblr-border-radius-lg);
+  background: var(--tblr-bg-surface);
+  box-shadow: var(--landing-shot-shadow);
+}
+.landing-shot-phone { border: .375rem solid var(--tblr-gray-800, #1f2937); border-radius: 1.5rem; }
+.landing-media { display: flex; align-items: flex-end; gap: 1.5rem; }
+
+/* The phone overlaps the lower left of the desktop screenshot without leaving the column. */
+.landing-hero-media { position: relative; padding: 0 0 2.5rem 14%; }
+.landing-hero-media .landing-hero-phone { position: absolute; left: 0; bottom: 0; width: 27%; }
+.landing-shot-link { display: block; flex: 1 1 0; min-width: 0; }
+.landing-shot-link-phone { flex: 0 0 30%; }
+
+/* Principles */
+.landing-principles { padding-bottom: var(--landing-section-space); }
+.landing-principle-icon { width: 2.25rem; height: 2.25rem; margin-bottom: .75rem; padding: .375rem; border-radius: var(--tblr-border-radius); color: var(--tblr-primary); background: var(--tblr-primary-lt); stroke-width: 1.75; }
+
+/* Showcase sections */
+.landing-section { padding-block: var(--landing-section-space); border-top: var(--tblr-border-width) solid var(--tblr-border-color); }
+.landing-section-heading { max-width: 44rem; margin-bottom: 2.5rem; }
+.landing-section-title { margin-bottom: 1rem; font-size: clamp(1.75rem, 3.2vw, 2.5rem); font-weight: 700; line-height: 1.2; }
+.landing-text { max-width: 40rem; color: var(--tblr-secondary); font-size: 1.0625rem; line-height: 1.65; }
+.landing-points { margin: 1.5rem 0 0; padding: 0; list-style: none; }
+.landing-points li { position: relative; margin-bottom: .75rem; padding-left: 1.75rem; line-height: 1.55; }
+.landing-points li::before { content: ''; position: absolute; left: .25rem; top: .5em; width: .625rem; height: .625rem; border-radius: 50%; background: var(--tblr-primary); }
+
+.landing-install { background: var(--tblr-bg-surface-secondary); }
+.landing-note { margin: 2rem 0 0; color: var(--tblr-secondary); }
+.landing-final { background: linear-gradient(0deg, var(--tblr-primary-lt) 0%, var(--tblr-bg-surface) 100%); }
+
+.landing-footer { padding-block: 1.5rem; border-top: var(--tblr-border-width) solid var(--tblr-border-color); color: var(--tblr-secondary); font-size: .875rem; }
+
+@media (max-width: 575.98px) {
+  .landing-actions .btn { width: 100%; }
+  .landing-media { gap: .75rem; }
+}

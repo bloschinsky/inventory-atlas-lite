@@ -1,6 +1,7 @@
 node_modules/
 server/models/*.onnx
 dist/
+dist-landing/
 data/*.sqlite
 data/*.sqlite-*
 data/backups/

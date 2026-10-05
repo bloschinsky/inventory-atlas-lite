@@ -8,3 +8,5 @@ playwright-report
 test
 test-results
 *.log
+dist-landing
+landing

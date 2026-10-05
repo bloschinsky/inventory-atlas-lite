@@ -29,7 +29,9 @@ The tag-only `.github/workflows/release.yml` workflow first validates the tag an
 and the release entry the tag must have in `shared/release-history.json`, installs dependencies, runs lint, API and shell tests, builds the client, installs Chromium, and runs
 the Playwright suite. A failed browser run retains its traces and screenshots as a seven-day workflow
 artifact. Docker publishing and Proxmox asset packaging depend on this validation job; the GitHub
-Release depends on both publishing jobs.
+Release depends on both publishing jobs. After a successful run, the separate
+`.github/workflows/pages.yml` workflow republishes the [public landing page](landing-page.md) so it
+announces the new release.
 
 Before upload, the Docker job starts the image, checks `/api/health` and its version, creates a
 category, custom field, nested item and photo, then fully recreates the container with the same

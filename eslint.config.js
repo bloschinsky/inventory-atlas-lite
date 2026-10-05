@@ -4,7 +4,7 @@ import globals from 'globals';
 
 export default [
   {
-    ignores: ['dist/**', 'node_modules/**', 'data/**']
+    ignores: ['dist/**', 'dist-landing/**', 'node_modules/**', 'data/**']
   },
   js.configs.recommended,
   ...pluginVue.configs['flat/recommended'],
@@ -16,14 +16,21 @@ export default [
     }
   },
   {
-    files: ['server/**/*.{js,mjs}', 'scripts/**/*.mjs', 'test/**/*.{js,mjs}', '*.config.js'],
+    files: ['landing/src/**/*.{js,vue}'],
+    languageOptions: {
+      // __LANDING_INFO__ is replaced at build time by the define in landing/vite.config.js.
+      globals: { ...globals.browser, __LANDING_INFO__: 'readonly' }
+    }
+  },
+  {
+    files: ['server/**/*.{js,mjs}', 'scripts/**/*.mjs', 'landing/*.js', 'test/**/*.{js,mjs}', '*.config.js'],
     languageOptions: {
       globals: globals.node
     }
   },
   {
-    // Playwright specs also contain callbacks that run inside the page.
-    files: ['test/e2e/**/*.js'],
+    // Playwright specs and the landing screenshot capture also contain callbacks that run inside the page.
+    files: ['test/e2e/**/*.js', 'landing/scripts/*.mjs'],
     languageOptions: {
       globals: { ...globals.node, ...globals.browser }
     }

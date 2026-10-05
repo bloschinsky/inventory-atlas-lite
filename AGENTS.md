@@ -185,7 +185,16 @@ The project stays small and readable. Do not add:
 - `test/fixtures/` — real source photos used as regression input by the Node.js tests.
 - `test/e2e/settings-navigation.spec.js` — Settings section routes and redirects, the active state, the desktop section list, and the phone section selector.
 - `test/e2e/` — Playwright browser tests, their fixtures, shared helpers, and the run launcher.
-- `playwright.config.js` — Playwright projects, isolated test ports, and the cloud provider stub, API, and Vite processes started for the suite.
+- `playwright.config.js` — Playwright projects, isolated test ports, and the cloud provider stub, API, Vite, and landing build/preview processes started for the suite.
+- `landing/` — the public landing page, a separate Vue/Vite/Tabler build into `dist-landing/` (ignored
+  by Git) published to GitHub Pages by `.github/workflows/pages.yml`: `vite.config.js` (base path from
+  `LANDING_SITE_URL`, release from `LANDING_RELEASE_TAG`, demo button from `LANDING_DEMO_URL`),
+  `site.js` (repository and documentation links, `landingRelease()` over the release history),
+  `src/` (the page, its English-only copy in `content.js`, and the screenshots in
+  `src/assets/screenshots/`), `public/` (favicon and Open Graph image), and `scripts/` (the
+  screenshot capture and its fictional sample inventory).
+- `test/landing.test.js` — landing release resolution, site address, and documentation link checks;
+  `test/e2e/landing.spec.js` — the built landing page under a Pages-style base path.
 - `docs/README.md` — documentation layout and conventions.
 - `docs/HOW-TO.md` — quick user guide for the current application.
 - `docs/issues/` — active tasks, feature specifications, and future work.
@@ -223,6 +232,8 @@ are mandatory for all frontend work:
 - `test/i18n.test.js` fails when the two locales do not define the same keys or a message does not
   compile, and `test/errors.test.js` fails when a code used in `server/src` or `shared` has no message;
   keep both passing.
+- These rules cover the application in `client/`. The public landing page in `landing/` is
+  English-only product copy kept in `landing/src/content.js`.
 
 ## Data model and important constraints
 
@@ -329,6 +340,9 @@ npm test
 npm run build
 npm run test:e2e
 ```
+
+`npm run test:e2e` also builds and checks the landing page. After a visible interface change, re-run
+`npm run landing:screenshots` when the landing screenshots no longer match the application.
 
 `npm run lint` checks JavaScript and Vue files with the recommended ESLint and `eslint-plugin-vue` rules. `npm test` checks the main API flow against an isolated temporary database. `npm run build` verifies that the Vue client compiles. `npm run test:e2e` runs the Playwright workflows in Chromium against an isolated application. For UI changes, also verify the relevant flow manually with `npm run dev` when the environment permits it.
 

@@ -1,6 +1,6 @@
 {
   "name": "simple-personal-inventory",
-  "version": "0.51.0",
+  "version": "0.52.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -15,7 +15,11 @@
     "lint": "eslint . --max-warnings 0",
     "start": "node server/src/index.js --production",
     "test": "node --test test/*.test.js",
-    "test:e2e": "node test/e2e/run.js"
+    "test:e2e": "node test/e2e/run.js",
+    "landing:dev": "vite --config landing/vite.config.js",
+    "landing:build": "vite build --config landing/vite.config.js",
+    "landing:preview": "vite preview --config landing/vite.config.js",
+    "landing:screenshots": "npm run build && node landing/scripts/capture-screenshots.mjs"
   },
   "dependencies": {
     "@tabler/core": "1.5.1",
