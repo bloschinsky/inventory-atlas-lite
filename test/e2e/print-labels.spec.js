@@ -207,6 +207,12 @@ test('presets change the label grid and a large selection prints on several whol
   await expect(page.getByRole('button', { name: 'Print', exact: true })).toBeHidden();
   await expect(layout).toBeHidden();
   await expect(sheets(page).first()).toBeVisible();
+  // The fluid application shell adds no margin, padding, or width limit around the sheets.
+  const shell = await page.locator('.page-wrapper, .page-body, main.page-body > .app-content').evaluateAll(nodes => nodes.map(node => {
+    const style = getComputedStyle(node);
+    return [style.marginLeft, style.marginTop, style.paddingLeft, style.paddingTop, style.maxWidth].join(' ');
+  }));
+  expect(shell).toEqual(Array(3).fill('0px 0px 0px 0px none'));
   expect(await labelsOutsideSheets(page)).toEqual([]);
   const sheetHeights = await sheets(page).evaluateAll(nodes => nodes.map(sheet => sheet.getBoundingClientRect().height));
   for (const sheetHeight of sheetHeights) expect(sheetHeight).toBeCloseTo(297 * mm, 0);

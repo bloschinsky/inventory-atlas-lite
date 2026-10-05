@@ -14,7 +14,9 @@ import WhatsNewDialog from './components/WhatsNewDialog.vue';
     <div class="page-wrapper">
       <AppMobileNav />
       <main class="page-body">
-        <div class="container-xl">
+        <!-- Fluid on purpose: the application canvas uses the full width beside the sidebar;
+             narrow surfaces such as .form-card keep their own max-width. -->
+        <div class="container-fluid app-content">
           <RouterView />
         </div>
       </main>

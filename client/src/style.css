@@ -244,7 +244,7 @@ body.app-menu-open { overflow: hidden; }
 @page labels { size: A4 portrait; margin: 0; }
 @media print {
   html:has(.label-sheets), html:has(.label-sheets) body, body:has(.label-sheets) .page, body:has(.label-sheets) .page-wrapper { background: #fff !important; color: #000 !important; }
-  body:has(.label-sheets) .page-wrapper, body:has(.label-sheets) .page-body, body:has(.label-sheets) .container-xl { margin: 0 !important; padding: 0 !important; max-width: none !important; }
+  body:has(.label-sheets) .page-wrapper, body:has(.label-sheets) .page-body, body:has(.label-sheets) .app-content { margin: 0 !important; padding: 0 !important; max-width: none !important; }
   .label-sheets { display: block; overflow: visible; padding: 0; }
   .label-sheet { box-shadow: none; break-after: page; }
   .label-sheet:last-child { break-after: auto; }

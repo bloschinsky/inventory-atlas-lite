@@ -29,7 +29,9 @@ inventory, so keep it on a trusted LAN or behind a VPN.
 - Use a current desktop or mobile browser. On a wide screen the pages and **About** sit in
   a narrow icon sidebar on the left: move the mouse over it — or move the keyboard focus into it
   with `Tab` — and it slides open over the page with the full labels. On a phone or a narrow tablet
-  the same list opens from the **☰** button in the top bar.
+  the same list opens from the **☰** button in the top bar. On a wide screen the pages use the
+  whole width beside the sidebar, so the Dashboard, the Items table, and the Hierarchy get more room;
+  forms such as Add Item and Settings stay at a comfortable reading width.
 - The application starts in the light or dark colour scheme your operating system uses. The sun and
   moon buttons switch it and your choice is remembered in the browser for the next visit; on a wide
   screen they appear at the bottom of the sidebar once you expand it, on a narrow screen they are

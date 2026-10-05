@@ -94,7 +94,8 @@ The project stays small and readable. Do not add:
 - `client/src/main.js` — starts Vue, imports Tabler's stylesheet, configures the router, and lists
   application routes.
 - `client/src/App.vue` — Tabler page shell that composes the sidebar, the mobile navigation, and the
-  page content area.
+  page content area, a fluid `.container-fluid.app-content` (pages limit narrow surfaces such as
+  `.form-card` themselves).
 - `client/src/components/AppSidebar.vue` — desktop folded-hover sidebar.
 - `client/src/components/AppMobileNav.vue` — mobile header and offcanvas navigation drawer.
 - `client/src/components/AppNavigation.vue` — navigation list shared by both of them.
