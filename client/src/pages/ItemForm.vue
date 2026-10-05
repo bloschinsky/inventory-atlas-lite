@@ -212,6 +212,7 @@ onMounted(async () => {
     </div>
     <form
       class="card"
+      data-tour="item-form"
       @submit.prevent="save"
     >
       <div class="card-body">
@@ -238,6 +239,7 @@ onMounted(async () => {
             <div class="input-group">
               <input
                 v-model="parentSearch"
+                data-tour="item-parent-search"
                 class="form-control"
                 :placeholder="$t('itemForm.parentPlaceholder')"
                 @keydown.enter.prevent="searchParents"
@@ -251,6 +253,7 @@ onMounted(async () => {
             </div>
             <ul
               v-if="parentResults.length"
+              data-tour="item-parent-results"
               class="list-group mt-2"
             >
               <li
@@ -363,6 +366,7 @@ onMounted(async () => {
         <input
           class="form-control"
           type="file"
+          data-tour="item-photos"
           :aria-label="$t('itemForm.addPhotos')"
           accept="image/*"
           multiple
@@ -381,6 +385,7 @@ onMounted(async () => {
           {{ $t('common.cancel') }}
         </button><button
           class="btn btn-primary"
+          data-tour="item-save"
           :disabled="saving || !categories.length"
         >
           {{ saving ? $t('common.saving') : $t('itemForm.save') }}

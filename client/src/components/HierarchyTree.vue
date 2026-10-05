@@ -18,7 +18,10 @@ defineEmits(['toggle', 'expand-all', 'collapse-all']);
 </script>
 
 <template>
-  <section class="card">
+  <section
+    class="card"
+    data-tour="hierarchy-tree"
+  >
     <div class="card-header flex-wrap gap-2">
       <h2 class="card-title">
         {{ $t('hierarchy.root') }}

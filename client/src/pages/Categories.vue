@@ -61,7 +61,10 @@ onMounted(() => load().catch(e => error.value = e.message));
             </button>
           </form>
         </div>
-        <div class="list-group list-group-flush">
+        <div
+          class="list-group list-group-flush"
+          data-tour="category-list"
+        >
           <div
             v-for="c in categories"
             :key="c.id"
@@ -96,7 +99,10 @@ onMounted(() => load().catch(e => error.value = e.message));
       </div>
     </div>
     <div class="col-12 col-lg-6">
-      <div class="card">
+      <div
+        class="card"
+        data-tour="category-fields"
+      >
         <div class="card-header">
           <h2 class="card-title">
             {{ selected ? $t('categories.fieldsFor', { name: selected.name }) : $t('categories.fields') }}

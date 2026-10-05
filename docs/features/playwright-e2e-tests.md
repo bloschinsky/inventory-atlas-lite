@@ -42,6 +42,7 @@ failing test makes the command exit non-zero.
   which an extra web server builds for production and previews under a Pages-style base path; see
   [Public landing page](landing-page.md). The same server builds the public demo into that site, and
   `demo.spec.js` runs it there without any API server; see [Public demo](public-demo.md).
+  `tour.spec.js` runs its guided tour there; see [Guided tour of the public demo](demo-guided-tour.md).
 - Tests locate elements by accessible role, label, and visible name, use unique record names, and
   wait for observable UI state instead of fixed sleeps. Generated reports, traces, screenshots, and
   videos are ignored by Git.

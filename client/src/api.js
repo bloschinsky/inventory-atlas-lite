@@ -1,3 +1,4 @@
+import { ref } from 'vue';
 import { translateError } from './i18n/index.js';
 
 /*
@@ -29,6 +30,17 @@ const request = async (url, options) => {
 
 // The address an <img> shows a stored photo from.
 export const photoUrl = id => (demo ? demo.photoUrl(id) : `/api/photos/${id}`);
+
+/*
+  Demo only: puts the canonical fixture back without a reload. `dataRevision` counts those resets;
+  App.vue keys the page on it, so the open page loads the fresh data. It never changes otherwise.
+*/
+export const dataRevision = ref(0);
+export async function resetDemoData() {
+  await demoReady;
+  demo.reset();
+  dataRevision.value++;
+}
 
 // A response without an error body, for example from a failing proxy, is reported by its status.
 async function failure(response) {

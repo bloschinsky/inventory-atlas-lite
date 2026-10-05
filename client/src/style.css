@@ -260,3 +260,20 @@ body.app-menu-open { overflow: hidden; }
 /* The public demo strip: one quiet line above the page content, wrapping on phones. */
 .demo-banner { background: var(--tblr-bg-surface); border-bottom: 1px solid var(--tblr-border-color); font-size: .875rem; }
 .demo-banner-text { color: var(--tblr-secondary); min-width: 0; }
+
+/* The guided tour of the public demo. The launcher and the step card float in the lower corner and
+   stay below Tabler's offcanvas and modals; on phones the card spans the width above the bottom
+   edge. The spotlight lets clicks through and marks its target with a ring and a dimmed page, so it
+   does not rely on color alone. The lock only exists while a step performs its actions. */
+.demo-tour-ready .page-body { padding-bottom: 4.5rem; }
+.demo-tour-launcher { position: fixed; right: 1rem; bottom: 1rem; z-index: 1032; border-radius: 999px; box-shadow: var(--tblr-shadow-dropdown); }
+.demo-tour-card { position: fixed; right: 1rem; bottom: 1rem; z-index: 1032; width: 23rem; max-height: calc(100vh - 2rem); overflow-y: auto; box-shadow: var(--tblr-shadow-dropdown); }
+.demo-tour-card h2:focus { outline: none; }
+.demo-tour-spotlight { position: fixed; z-index: 1030; pointer-events: none; border-radius: var(--tblr-border-radius-lg); box-shadow: 0 0 0 3px var(--tblr-primary), 0 0 0 6px var(--tblr-bg-surface), 0 0 0 100vmax rgba(var(--tblr-dark-rgb), .3); transition: top .2s, left .2s, width .2s, height .2s; }
+.demo-tour-lock { position: fixed; inset: 0; z-index: 1031; cursor: progress; }
+@media (max-width: 575.98px) {
+  .demo-tour-card { left: 1rem; width: auto; max-height: 50vh; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .demo-tour-spotlight { transition: none; }
+}

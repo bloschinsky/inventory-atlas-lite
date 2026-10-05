@@ -1,12 +1,16 @@
 <script setup>
+import { defineAsyncComponent } from 'vue';
 import AboutDialog from './components/AboutDialog.vue';
 import AppMobileNav from './components/AppMobileNav.vue';
 import AppSidebar from './components/AppSidebar.vue';
 import DemoBanner from './components/DemoBanner.vue';
 import VersionHistoryDialog from './components/VersionHistoryDialog.vue';
 import WhatsNewDialog from './components/WhatsNewDialog.vue';
+import { dataRevision } from './api.js';
 
 const demoMode = __DEMO__;
+// The guided tour belongs to the public demo only; the normal build never includes it.
+const DemoTour = __DEMO__ ? defineAsyncComponent(() => import('./components/DemoTour.vue')) : null;
 </script>
 
 <template>
@@ -21,7 +25,8 @@ const demoMode = __DEMO__;
         <!-- Fluid on purpose: the application canvas uses the full width beside the sidebar;
              narrow surfaces such as .form-card keep their own max-width. -->
         <div class="container-fluid app-content">
-          <RouterView />
+          <!-- The key only changes when the demo resets its data in place, so the page loads it again. -->
+          <RouterView :key="dataRevision" />
         </div>
       </main>
     </div>
@@ -30,4 +35,5 @@ const demoMode = __DEMO__;
   <AboutDialog />
   <VersionHistoryDialog />
   <WhatsNewDialog />
+  <DemoTour v-if="demoMode" />
 </template>

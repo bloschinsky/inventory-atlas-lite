@@ -1006,6 +1006,46 @@
     "unavailableTitle": "Not available in the public demo",
     "unavailableText": "This part needs a self-hosted server. Install Inventory Atlas Lite to use it with your own data."
   },
+  "tour": {
+    "launch": "Guided tour",
+    "label": "Guided tour",
+    "progress": "Step {current} of {total}",
+    "progressLabel": "Tour progress",
+    "back": "Back",
+    "next": "Next",
+    "close": "Close tour",
+    "working": "Showing it in the app…",
+    "failed": "This step could not be shown. Try again, or skip to the next step.",
+    "skipStep": "Skip step",
+    "explore": "Explore on your own",
+    "github": "View on GitHub",
+    "steps": {
+      "welcome": {
+        "title": "Welcome to Inventory Atlas Lite",
+        "text": "An inventory has four building blocks: locations say where things are, containers are items that hold other items, categories say what an item is, and items carry the details. Where something lives and what it is stay separate."
+      },
+      "categories": {
+        "title": "Categories with their own fields",
+        "text": "Each category adds the fields that matter for it. Photography records the lens Mount, the film Format, and when the gear was Last tested, next to the name, condition, price, and serial number every item has."
+      },
+      "placement": {
+        "title": "Where everything lives",
+        "text": "The hierarchy is the storage tree. The Camera Bag sits in Home / Office, and everything inside it inherits that location, so moving the bag moves its contents too."
+      },
+      "addItem": {
+        "title": "Add an item",
+        "text": "This is the real Add item form. The tour fills in a spare camera body: category, condition, serial number, the Camera Bag it is stored in, two Photography fields, and a photo. Next saves it."
+      },
+      "findItem": {
+        "title": "Find it again",
+        "text": "The new camera is in the Items list now. The Photography filter and a search for “Nikon” narrow the list to the matching items."
+      },
+      "dashboard": {
+        "title": "The whole inventory at a glance",
+        "text": "The Dashboard already counts the new item in its totals and photo coverage. That is the core loop: describe, place, add, and find. Everything stays in this browser tab."
+      }
+    }
+  },
   "errors": {
     "AI_API_KEY_MISSING": "Add an {provider} API key in Settings to use AI features.",
     "AI_API_KEY_REQUIRED": "Enter the {provider} API key first.",

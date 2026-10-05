@@ -93,6 +93,29 @@ test('changes stay in their own demo database, and a new one starts from the fix
   assert.deepEqual(snapshot(reset), snapshot(seeded()));
 });
 
+test('the guided tour item fits the fixture and is not part of the seeded inventory', () => {
+  const { tourItem } = fixture;
+  const visit = seeded();
+  assert.ok(fixture.photoFiles.includes(tourItem.photo), 'the tour reuses a generated demo photo');
+  assert.equal(visit.itemService.list({ search: tourItem.name }).items.length, 0);
+
+  // The values the tour types into the form are valid for the real services.
+  const category = visit.categoryService.list().find(entry => entry.name === tourItem.category);
+  const fields = visit.db.prepare('SELECT id, name FROM custom_fields WHERE category_id = ?').all(category.id);
+  const container = visit.itemService.list({ search: tourItem.container }).items.find(item => item.name === tourItem.container);
+  const created = visit.itemService.create({
+    name: tourItem.name,
+    category_id: category.id,
+    parent_item_id: container.id,
+    condition_grade: tourItem.condition,
+    serial_number: tourItem.serialNumber,
+    field_values: Object.fromEntries(Object.entries(tourItem.fields).map(([name, value]) => [fields.find(field => field.name === name).id, value]))
+  });
+  const item = visit.itemService.get(created.uuid);
+  assert.equal(item.parent.name, tourItem.container);
+  assert.equal(item.effective_location, 'Home / Office');
+});
+
 test('the sql.js adapter keeps the better-sqlite3 behavior the repositories rely on', () => {
   const db = openDemoDatabase(SQL);
   db.exec('CREATE TABLE t (id INTEGER PRIMARY KEY, name TEXT UNIQUE)');

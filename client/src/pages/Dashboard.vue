@@ -286,6 +286,7 @@ onBeforeUnmount(() => controller?.abort());
     <div
       class="row row-cards mb-3"
       :class="{ 'dashboard-is-refreshing': refreshing }"
+      data-tour="dashboard-summary"
       aria-live="polite"
     >
       <div class="col-12 col-sm-6 col-xl-3">

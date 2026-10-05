@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.54.0",
+    "date": "2026-10-05",
+    "changes": [
+      "The public demo now has a Guided tour: press the button in the lower-right corner and, in six short steps, it shows categories with their own fields, where things are stored, adding an item with a photo, finding it again, and the Dashboard, all in the real pages with the sample inventory. Press Next to let it act, Back to return, or close it at any time to explore on your own.",
+      "The tour is only part of the public demo. Your own installation works exactly as before."
+    ]
+  },
+  {
     "version": "0.53.0",
     "date": "2026-10-05",
     "changes": [

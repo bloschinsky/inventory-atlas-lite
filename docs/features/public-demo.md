@@ -22,6 +22,8 @@ unchanged: its normal build never contains any of the demo code.
   and QR codes, creating, editing, duplicating, and deleting items and photos, Hierarchy (tree and
   graph), Templates, Checklists with runs and container audits, Scan QR, Categories & Fields, Replace
   field value, the database name, the language, and the color mode.
+- A **Guided tour** button in the lower-right corner starts an optional six-step presentation of the
+  core workflow on the real pages; see [Guided tour of the public demo](demo-guided-tour.md).
 - **Reset demo**, or simply reloading the page, starts again from the canonical inventory on the
   Dashboard. Changes never reach any server or any other visitor. Browser-local preferences such as
   the language, the color mode, and the Items columns are kept, as in the application.
@@ -99,6 +101,9 @@ The demo reuses the server code instead of imitating it:
   after applying the real schema from `server/src/schema.js`, which `server/src/db.js` now imports
   as well. `client/src/demo/seed.js` loads the fixture through those services, so it always passes
   the current validation rules; only the fixed UUIDs and the creation dates are written directly.
+- `startDemoBackend()` also returns `reset()`, which seeds a fresh in-memory database without a
+  reload; `resetDemoData()` in `client/src/api.js` calls it for the guided tour and advances
+  `dataRevision`, the key `App.vue` gives the page so it loads the fresh data.
 - `client/src/main.js` uses hash routing in the demo; `client/src/components/DemoBanner.vue` is the
   strip, and `DemoUnavailable.vue` stands in for the server-only Data cards and the Settings sections
   marked `serverOnly` in `client/src/settingsSections.js`.
@@ -140,6 +145,7 @@ npm run landing:preview  # serves the landing page and the built demo at …/inv
   not-available explanations, a scan of the built files for API keys and credentials, and the phone
   layout and menu.
 - `test/e2e/landing.spec.js` checks that Try Demo points to the demo next to the install link.
+- `test/e2e/tour.spec.js` covers the guided tour; see [its document](demo-guided-tour.md#verification).
 
 ## Notes and limitations
 

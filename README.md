@@ -66,7 +66,9 @@ capture, and the release information it shows.
 <https://bloschinsky.github.io/inventory-atlas-lite/demo/> is a public demo of the real interface on an
 invented inventory. It runs entirely in the browser — the inventory route tables and services over an
 in-memory SQLite database — so it needs no server, and every change disappears on reload or with
-**Reset demo**. Backups, restore, reset, cloud backup, updates, and AI are not part of it.
+**Reset demo**. An optional **Guided tour** presents the core workflow in six steps on the real pages
+([`docs/features/demo-guided-tour.md`](docs/features/demo-guided-tour.md)). Backups, restore, reset,
+cloud backup, updates, and AI are not part of it.
 `npm run demo:dev` runs it locally, and `npm run demo:build` builds it into `dist-landing/demo/`,
 which the Pages workflow publishes with the landing page. See
 [`docs/features/public-demo.md`](docs/features/public-demo.md) for the fixture, the demo photos, and

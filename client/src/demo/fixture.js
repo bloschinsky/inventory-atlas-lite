@@ -162,3 +162,17 @@ export const checklists = [
 
 // The generated photo of every item that has one, in the order of `items`.
 export const photoFiles = items.filter(item => item.photo).map(item => item.photo);
+
+/*
+  The item the guided tour adds (./tourSteps.js): a second body for the film kit in the Camera Bag,
+  shown with the seeded camera's generated photo. It is not part of the seeded inventory.
+*/
+export const tourItem = {
+  name: 'Nikon F65 (spare body)',
+  category: 'Photography',
+  container: 'Camera Bag',
+  condition: 'good',
+  serialNumber: 'F65-3307512',
+  fields: { Mount: 'Nikon F', Format: '35mm film' },
+  photo: 'nikon-f65.webp'
+};

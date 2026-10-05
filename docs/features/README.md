@@ -46,6 +46,7 @@ document describes the current behaviour and its boundaries, not the original pl
 | [What's New after update](whats-new-after-update.md) | A one-time dialog on the first launch after an update, listing every release since the version this browser last acknowledged from the same bundled history. |
 | [Playwright browser tests](playwright-e2e-tests.md) | Chromium end-to-end coverage of the main user workflows. |
 | [Public demo](public-demo.md) | The real interface running in the browser on GitHub Pages: an invented inventory with generated photos, temporary changes, Reset demo, and server-only features explained instead of offered. |
+| [Guided tour of the public demo](demo-guided-tour.md) | An optional six-step presenter in the public demo that opens the real pages, fills and saves a demo item, filters Items, and ends on the Dashboard, with Back, Skip, Retry, and a deterministic restart. |
 | [Public landing page](landing-page.md) | A Vue and Tabler product page with real screenshots of a fictional inventory, install paths, and the latest release from the release history, built from `landing/` and deployed to GitHub Pages. |
 | [GitHub release pipeline](github-release-pipeline.md) | Validate stable tags and publish the Docker image plus legacy-compatible Proxmox assets. |
 

@@ -361,14 +361,18 @@ onMounted(async () => {
       </div>
     </div>
   </div>
-  <ItemResults
+  <div
     v-else
-    :items="result.items"
-    :columns="visibleColumns"
-    :sort="view.sort"
-    :direction="view.direction"
-    @sort="sortBy"
-  />
+    data-tour="item-results"
+  >
+    <ItemResults
+      :items="result.items"
+      :columns="visibleColumns"
+      :sort="view.sort"
+      :direction="view.direction"
+      @sort="sortBy"
+    />
+  </div>
 
   <nav
     v-if="result.pagination.pages > 1"
