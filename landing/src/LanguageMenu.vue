@@ -19,9 +19,13 @@ const root = ref(null);
 const button = ref(null);
 const options = ref([]);
 
+/*
+  The menu lives in the sticky navigation, inside the page's scroll padding, so a plain focus() would
+  scroll the page to "reveal" it; the menu is always in view, and the reading position stays.
+*/
 function focusOption(index) {
   const count = SUPPORTED_LOCALES.length;
-  options.value[(index + count) % count]?.focus();
+  options.value[(index + count) % count]?.focus({ preventScroll: true });
 }
 const focusedIndex = () => options.value.indexOf(document.activeElement);
 
@@ -34,7 +38,7 @@ async function show(index = SUPPORTED_LOCALES.indexOf(current.value)) {
 function hide(returnFocus = false) {
   open.value = false;
   document.removeEventListener('pointerdown', onOutside);
-  if (returnFocus) button.value.focus();
+  if (returnFocus) button.value.focus({ preventScroll: true });
 }
 const onOutside = event => { if (!root.value.contains(event.target)) hide(); };
 onBeforeUnmount(() => document.removeEventListener('pointerdown', onOutside));

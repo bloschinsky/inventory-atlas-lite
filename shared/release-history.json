@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.58.0",
+    "date": "2026-10-07",
+    "changes": [
+      "The product site now has a User Guide: the complete how-to in English and Ukrainian, with a table of contents, screenshots, and small diagrams. Open it with Guide in the product page's top bar or with Read the user guide.",
+      "Sections about something the public demo can show have a Try this in Demo button that opens that page of the demo in the guide's language; sections that need your own installation say so. Every heading has a link you can share."
+    ]
+  },
+  {
     "version": "0.57.0",
     "date": "2026-10-06",
     "changes": [

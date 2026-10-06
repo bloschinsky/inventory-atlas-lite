@@ -52,6 +52,13 @@ defineExpose({ open });
 </script>
 
 <template>
+  <!-- The hint every screenshot link of the page is described by. -->
+  <p
+    id="landing-viewer-hint"
+    hidden
+  >
+    {{ t('viewer.hint') }}
+  </p>
   <dialog
     ref="dialog"
     class="landing-viewer"

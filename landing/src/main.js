@@ -4,6 +4,7 @@ import '@tabler/core/dist/css/tabler.min.css';
 import '@fontsource-variable/geist';
 import './landing.css';
 import App from './App.vue';
-import { i18n } from './i18n.js';
+import { followLocale, i18n } from './i18n.js';
 
+followLocale('meta');
 createApp(App).use(i18n).mount('#app');

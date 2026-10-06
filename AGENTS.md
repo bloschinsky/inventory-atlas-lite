@@ -11,7 +11,8 @@ This is an MVP without authentication, intended for use on a trusted local netwo
 - Use English throughout the project.
 - Write all documentation, code comments, commit messages, identifiers, user-facing copy, test descriptions, and configuration notes in English.
   The only exceptions are the Ukrainian translations: the interface in `client/src/i18n/locales/uk.json`, the landing page in
-  `landing/src/locales/uk.json`, and the `uk` texts of the public demo inventory in `client/src/demo/fixture.js`.
+  `landing/src/locales/uk.json`, the `uk` texts of the public demo inventory in `client/src/demo/fixture.js`, and the
+  Ukrainian user guide in `docs/HOW-TO.uk.md`.
 - When editing existing text, keep terminology consistent with the surrounding English content.
 
 ## Stack and architecture
@@ -206,23 +207,40 @@ The project stays small and readable. Do not add:
 - `test/e2e/settings-navigation.spec.js` — Settings section routes and redirects, the active state, the desktop section list, and the phone section selector.
 - `test/e2e/` — Playwright browser tests, their fixtures, shared helpers, and the run launcher.
 - `playwright.config.js` — Playwright projects, isolated test ports, and the cloud provider stub, API, Vite, and landing and demo build/preview processes started for the suite.
-- `landing/` — the public landing page, a separate Vue/Vite/Tabler build into `dist-landing/` (ignored
-  by Git) published to GitHub Pages by `.github/workflows/pages.yml`: `vite.config.js` (base path from
-  `LANDING_SITE_URL`, release from `LANDING_RELEASE_TAG`, demo button from `LANDING_DEMO_URL`; it
-  fails without a full screenshot set per locale), `site.js` (repository and documentation links,
-  `landingRelease()` over the release history), `screenshots.js` (the screenshot names and their
-  per-locale files), `src/` (the page; `content.js` holds its language-neutral structure — section
-  ids, icons, screenshot names, links, and the Try Demo address with `?lang=` — and
-  `locales/en.json` and `uk.json` all its copy, loaded by `i18n.js` over the application's
-  `client/src/i18n/core.js`; `LanguageMenu.vue` is the language dropdown, `ScreenshotLightbox.vue` the
-  screenshot viewer, the bundled Geist typeface is imported in `main.js`, and the screenshots are in
+- `landing/` — the public landing page and user guide, a separate two-page Vue/Vite/Tabler build into
+  `dist-landing/` (ignored by Git) published to GitHub Pages by `.github/workflows/pages.yml`:
+  `index.html` and `guide/index.html` (the pages), `vite.config.js` (base path from
+  `LANDING_SITE_URL`, release from `LANDING_RELEASE_TAG`, demo buttons from `LANDING_DEMO_URL`, and
+  the `virtual:guide` modules; it fails without a full screenshot set per locale, on a guide
+  translation that drifted from `docs/HOW-TO.md`, or on invalid guide presentation metadata),
+  `site.js` (repository and documentation links, the guide source file of each locale,
+  `landingRelease()` over the release history), `screenshots.js` (the screenshot names, sizes, and
+  per-locale files), `guideSource.js` (renders `docs/HOW-TO.md` and `docs/HOW-TO.<locale>.md` with
+  markdown-it at build time into sections with stable ids, checks their structural parity, and reads
+  the demo's routes), `guidePresentation.js` (the guide's presentation layer by section id:
+  screenshot, diagrams, demo route, self-hosted note — never guide text), `src/` (`content.js` holds
+  the landing's language-neutral structure — section ids, icons, screenshot names, links, the page
+  addresses, and the demo address with `?lang=` and a route — and `locales/en.json` and `uk.json` all
+  the copy of both pages, loaded by `i18n.js` over the application's `client/src/i18n/core.js`;
+  `main.js`/`App.vue`/`FeatureSection.vue` are the product page and `guide.js`/`GuidePage.vue` the
+  guide with `GuideToc.vue`, `GuideExtras.vue`, and `GuideDiagram.vue`; both pages share
+  `SiteNav.vue`, `SiteFooter.vue`, `LanguageMenu.vue` (the language dropdown), `ScreenshotFigure.vue`,
+  `ScreenshotLightbox.vue` (the screenshot viewer, wired by `screenshotViewer.js`), and
+  `landing.css`; the bundled Geist typeface is imported in each entry, and the screenshots are in
   `src/assets/screenshots/<locale>/`), `public/` (favicon and Open Graph image), and `scripts/`
   (`capture-screenshots.mjs`, which photographs the built public demo in every locale).
 - `test/landing.test.js` — landing release resolution, site address, documentation links, landing
-  message parity and compilation, and the screenshot set of every locale;
+  message parity and compilation, the screenshot set and sizes of every locale, and the user guide:
+  its sources, the same section ids in every language, structural drift that fails the build, safe
+  Markdown rendering and links, valid presentation metadata and demo routes, and no guide text copied
+  into the landing sources;
   `test/e2e/landing.spec.js` — the built landing page under a Pages-style base path, in English and
   Ukrainian: the language dropdown, persistence, metadata, localized screenshots, and Try Demo's
-  `?lang=`.
+  `?lang=`;
+  `test/e2e/guide.spec.js` — the built user guide under the base path: the landing links, metadata,
+  accessibility, anchors and reloads, the desktop and phone tables of contents, screenshots and the
+  viewer, diagrams, tables and code on phones, Try this in Demo and the self-hosted notes, the language
+  change that keeps the section, the language across landing, guide, and demo, and every viewport.
 - `test/demo.test.js` — the public demo data layer in Node: deterministic fixture, seeded content,
   the same structure in every locale and the Ukrainian texts, isolation of changes, the sql.js
   adapter, the demo photo and private-data checks, the fixture template and checklist the tour opens,
@@ -236,7 +254,9 @@ The project stays small and readable. Do not add:
   change during the tour, reduced motion, the compact phone presenter, and its absence from the
   self-hosted app.
 - `docs/README.md` — documentation layout and conventions.
-- `docs/HOW-TO.md` — quick user guide for the current application.
+- `docs/HOW-TO.md` — quick user guide for the current application, the canonical English text of the
+  public user guide.
+- `docs/HOW-TO.uk.md` — its Ukrainian translation, the Ukrainian public user guide.
 - `docs/issues/` — active tasks, feature specifications, and future work.
 - `docs/features/` — permanent documents for implemented features, with `README.md` as their index.
 - `docs/changes/` — dated records of completed repository changes.
@@ -322,6 +342,14 @@ are mandatory for all frontend work:
 `docs/HOW-TO.md` is the canonical quick user guide for the current application. Keep it true.
 
 - Every new user-facing feature must update the guide before the task is considered complete.
+- The guide is also the public user guide on the landing site (`landing/guide/`), rendered from the
+  Markdown at build time. Every change to `docs/HOW-TO.md` updates its translation
+  `docs/HOW-TO.uk.md` in the same change: the same headings at the same levels and in the same order,
+  the same section numbers, and the same tables and code blocks per section; only the prose is free.
+  The landing build and `test/landing.test.js` fail on any drift and name the section. Section ids
+  come from the English headings, so renaming an English heading changes a public anchor: update
+  `landing/guidePresentation.js`, which the build checks, and the guide's in-page links.
+- Never copy guide text into the landing sources; the Markdown is its only source.
 - Any change to navigation, labels, workflows, validation, limits, backup behavior, security assumptions, or visible limitations must update the affected section in the same change. Removed or renamed features must be removed or renamed there too.
 - Verify every instruction against actual working behavior. Never document planned functionality as implemented.
 - This is an additional step, not a replacement for the permanent feature document in `docs/features/`.

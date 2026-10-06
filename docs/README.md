@@ -10,6 +10,11 @@ Markdown files directly in `docs/` are user-facing guides that are too long for 
 keeps a short summary and links to them.
 
 - [`HOW-TO.md`](HOW-TO.md) — the canonical quick user guide: what the application does and how to use it.
+  The public [user guide](https://bloschinsky.github.io/inventory-atlas-lite/guide/) on the landing site is
+  rendered from it.
+- [`HOW-TO.uk.md`](HOW-TO.uk.md) — its Ukrainian translation, kept structurally identical (same
+  headings, numbers, tables, and code blocks); the landing build fails on drift. Ukrainian is allowed
+  here only, like the other Ukrainian translations listed in `AGENTS.md`.
 - [`proxmox.md`](proxmox.md) — installing and maintaining Inventory Atlas Lite on Proxmox VE.
 - [`../README.md`](../README.md) — Docker installation and the official release procedure.
 

@@ -11,6 +11,10 @@ import { links } from '../site.js';
 
 export const info = __LANDING_INFO__;
 
+// The two public pages under the site's base path: the product page and the user guide.
+export const homeUrl = import.meta.env.BASE_URL;
+export const guideUrl = `${import.meta.env.BASE_URL}guide/`;
+
 /*
   One screenshot set per locale. The URLs of every set are known up front, but a browser downloads an
   image only when the page shows it, which is only ever the set of the active language.
@@ -46,11 +50,12 @@ export const installOptions = [
 
 /*
   Try Demo opens the demo in the page language: ?lang= is the explicit choice the demo applies before
-  its saved preference, and the hash route is the demo's start page.
+  its saved preference, and the hash route is the demo page to open — the Dashboard, its start page,
+  unless a guide section opens the page it describes.
 */
-export function demoLink(locale) {
+export function demoLink(locale, route = '/dashboard') {
   const url = new URL(info.demoUrl, window.location.href);
   url.searchParams.set('lang', locale);
-  url.hash = '#/dashboard';
+  url.hash = `#${route}`;
   return url.href;
 }

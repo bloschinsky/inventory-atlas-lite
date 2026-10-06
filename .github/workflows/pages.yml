@@ -8,6 +8,9 @@ on:
       - master
     paths:
       - 'landing/**'
+      # The public user guide is rendered from the user documentation.
+      - 'docs/HOW-TO.md'
+      - 'docs/HOW-TO.*.md'
       # The public demo is the application client running its server code in the browser.
       - 'client/**'
       - 'server/src/**'

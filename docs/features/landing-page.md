@@ -64,8 +64,9 @@ its guided tour, and the screenshots on the page.
 - **Install:** four cards — GitHub Release, Docker, Proxmox VE, Node.js — each linking to the existing
   README or `docs/proxmox.md` instructions instead of repeating them, and a note that there are no
   user accounts, so the application belongs on a trusted network or VPN.
-- **Final call to action** with Get Inventory Atlas Lite, View on GitHub, and the user guide
-  (`docs/HOW-TO.md`), and a footer with the version and release links.
+- **Final call to action** with Get Inventory Atlas Lite, View on GitHub, and **Read the user guide**,
+  which opens the site's [public user guide](public-user-guide.md) page, and a footer with the version
+  and release links. The navigation links Features, **Guide**, and Install on wide screens.
 - **Try Demo** in the hero opens the [public demo](public-demo.md), the real application running in
   the browser on an invented inventory, in a new tab (`target="_blank"`,
   `rel="noopener noreferrer"`), so the landing stays open behind it. Its address names the page
@@ -123,15 +124,23 @@ its guided tour, and the screenshots on the page.
   `aria-expanded`) and a Tabler `.dropdown-menu` of `menuitemradio` items (`aria-checked`, `lang`)
   built from `SUPPORTED_LOCALES`, so a new locale appears without a component change. It uses no
   Bootstrap script.
-- `demoLink(locale)` in `content.js` builds the Try Demo address from `LANDING_DEMO_URL`:
-  `?lang=<locale>` plus the `#/dashboard` hash route, which works with the demo's hash routing on
-  GitHub Pages.
+- `demoLink(locale, route)` in `content.js` builds the Try Demo address from `LANDING_DEMO_URL`:
+  `?lang=<locale>` plus a hash route — `#/dashboard` for Try Demo, the described page for the
+  guide's Try this in Demo — which works with the demo's hash routing on GitHub Pages.
+- The site has two pages, the product page and the [public user guide](public-user-guide.md)
+  (`landing/guide/index.html`), which share the navigation (`SiteNav.vue`), the footer
+  (`SiteFooter.vue`), the captioned screenshot figure (`ScreenshotFigure.vue`), the viewer, the
+  language menu, `landing.css`, and the messages; `homeUrl` and `guideUrl` in `content.js` are
+  their addresses under the base path, and `followLocale()` in `i18n.js` sets each page's metadata.
+  Screenshots carry their pixel size from `screenshotSizes` in `landing/screenshots.js`.
 - `landing/src/ScreenshotLightbox.vue` is the viewer: one native modal `<dialog>` for the whole page,
   which gives the top layer, an inert page behind it, focus containment, and Escape without a
   gallery library or Bootstrap's script (the landing loads Tabler's CSS only). The component adds the
   gallery, the arrow keys, the backdrop click, the scroll lock (`landing-viewer-open` on `<html>`),
-  and the focus return. `App.vue` provides `openScreenshot(gallery, index, event)` to the hero and
-  to `FeatureSection.vue`; it leaves modified clicks to the plain link.
+  and the focus return. `provideScreenshotViewer()` in `screenshotViewer.js` gives a page
+  `openScreenshot(gallery, index, event)` for its own links and every `ScreenshotFigure.vue` below
+  it; it leaves modified clicks to the plain link. The language menu moves focus with
+  `preventScroll`, so opening it never scrolls the page under the sticky navigation.
 - The font is `@fontsource-variable/geist` (SIL Open Font License 1.1), a development dependency
   imported in `landing/src/main.js`; Vite bundles its WOFF2 files (Latin, Latin Extended, Cyrillic,
   and Vietnamese subsets, loaded by `unicode-range` only when needed) into `dist-landing/assets/`
@@ -244,6 +253,7 @@ local build without the variable renders no Try Demo button.
 3. Add the locale's text to every localized value of the demo inventory in
    `client/src/demo/fixture.js`; `createDemoFixture()` fails on a missing one.
 4. Run `npm run landing:screenshots -- --locale=<locale>` for its screenshot set.
+5. Add `docs/HOW-TO.<locale>.md` for the [public user guide](public-user-guide.md#adding-another-locale).
 
 The dropdown, the Try Demo address, the screenshot lookup, the demo seed, and the guided tour need no
 change.

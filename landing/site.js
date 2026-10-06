@@ -16,9 +16,16 @@ export const links = {
   releases: `${repositoryUrl}/releases`,
   docker: `${repositoryUrl}#docker`,
   proxmox: `${repositoryUrl}/blob/master/docs/proxmox.md`,
-  manual: `${repositoryUrl}#manual-production-run`,
-  guide: `${repositoryUrl}/blob/master/docs/HOW-TO.md`
+  manual: `${repositoryUrl}#manual-production-run`
 };
+
+/*
+  The user guide in every language: docs/HOW-TO.md is the canonical English guide, and every other
+  supported locale has its translation in docs/HOW-TO.<locale>.md. The public guide page is rendered
+  from these files (landing/guideSource.js) and links to its own source on GitHub.
+*/
+export const guideSourceFile = locale => (locale === 'en' ? 'docs/HOW-TO.md' : `docs/HOW-TO.${locale}.md`);
+export const guideSourceUrl = locale => `${repositoryUrl}/blob/master/${guideSourceFile(locale)}`;
 
 // The GitHub Pages address of the repository; the Pages workflow passes the real one.
 export const defaultSiteUrl = 'https://bloschinsky.github.io/inventory-atlas-lite/';

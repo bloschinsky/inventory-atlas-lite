@@ -49,7 +49,9 @@ The browser tests start their own API and Vite processes on separate ports and u
 
 ## Project documentation
 
-- [`docs/HOW-TO.md`](docs/HOW-TO.md) — quick how-to: first setup and the common inventory workflows.
+- [`docs/HOW-TO.md`](docs/HOW-TO.md) — quick how-to: first setup and the common inventory workflows,
+  also published with screenshots as the [User Guide](https://bloschinsky.github.io/inventory-atlas-lite/guide/)
+  in English and Ukrainian ([`docs/HOW-TO.uk.md`](docs/HOW-TO.uk.md)).
 - [`docs/features/README.md`](docs/features/README.md) — what the application currently does, one document per implemented feature.
 - [`docs/README.md`](docs/README.md) — documentation layout, active tasks, and records of completed changes.
 

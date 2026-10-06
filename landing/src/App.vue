@@ -1,12 +1,14 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, provide, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { IconBook, IconBrandGithub, IconExternalLink, IconPlayerPlay, IconRocket } from '@tabler/icons-vue';
 import FeatureSection from './FeatureSection.vue';
-import LanguageMenu from './LanguageMenu.vue';
 import ScreenshotLightbox from './ScreenshotLightbox.vue';
+import SiteFooter from './SiteFooter.vue';
+import SiteNav from './SiteNav.vue';
 import { links } from '../site.js';
-import { demoLink, facts, hero, info, installOptions, screenshotUrl, sections } from './content.js';
+import { demoLink, facts, guideUrl, hero, info, installOptions, screenshotUrl, sections } from './content.js';
+import { provideScreenshotViewer } from './screenshotViewer.js';
 
 const { locale, t } = useI18n();
 
@@ -16,17 +18,8 @@ const releaseDate = computed(() => (info.release.date
   : null));
 const demoUrl = computed(() => (info.demoUrl ? demoLink(locale.value) : null));
 
-/*
-  Screenshot links open the viewer with the screenshots of their section. A modified click (new tab,
-  new window, download) keeps the plain link to the full-size file, as without the page script.
-*/
-const viewer = ref(null);
-function openScreenshot(gallery, index, event) {
-  if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
-  event.preventDefault();
-  viewer.value.open(gallery, index, event.currentTarget);
-}
-provide('openScreenshot', openScreenshot);
+// Screenshot links open the viewer with the screenshots of their section.
+const { viewer, openScreenshot } = provideScreenshotViewer();
 
 /*
   Reveal on scroll: each .landing-reveal element fades in once it enters the viewport. The hidden
@@ -53,55 +46,20 @@ onBeforeUnmount(() => observer?.disconnect());
     href="#main"
   >{{ t('nav.skip') }}</a>
 
-  <nav
-    class="landing-nav landing-dark navbar"
-    data-bs-theme="dark"
-    :aria-label="t('nav.label')"
-  >
-    <div class="container-xl">
-      <a
-        class="landing-brand"
-        href="#top"
-      >
-        <svg
-          class="landing-brand-mark"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-          focusable="false"
-        >
-          <path
-            d="M12 2.5 21 7v10l-9 4.5L3 17V7l9-4.5Z M3 7l9 4.5L21 7M12 11.5V21"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.8"
-            stroke-linejoin="round"
-          />
-        </svg>
-        Inventory Atlas Lite
-      </a>
-      <div class="d-flex align-items-center gap-2 gap-md-3">
-        <a
-          class="landing-nav-link d-none d-md-inline"
-          href="#hierarchy"
-        >{{ t('nav.features') }}</a>
-        <a
-          class="landing-nav-link d-none d-md-inline"
-          href="#install"
-        >{{ t('nav.install') }}</a>
-        <LanguageMenu />
-        <a
-          class="btn btn-outline-secondary"
-          :href="links.github"
-        >
-          <IconBrandGithub
-            class="icon"
-            aria-hidden="true"
-          />
-          <span class="landing-nav-label">GitHub</span>
-        </a>
-      </div>
-    </div>
-  </nav>
+  <SiteNav home="#top">
+    <a
+      class="landing-nav-link d-none d-md-inline"
+      href="#hierarchy"
+    >{{ t('nav.features') }}</a>
+    <a
+      class="landing-nav-link d-none d-md-inline"
+      :href="guideUrl"
+    >{{ t('nav.guide') }}</a>
+    <a
+      class="landing-nav-link d-none d-md-inline"
+      href="#install"
+    >{{ t('nav.install') }}</a>
+  </SiteNav>
 
   <main id="main">
     <header
@@ -317,7 +275,7 @@ onBeforeUnmount(() => observer?.disconnect());
           </a>
           <a
             class="btn btn-ghost-secondary btn-lg"
-            :href="links.guide"
+            :href="guideUrl"
           >
             <IconBook
               class="icon"
@@ -330,27 +288,6 @@ onBeforeUnmount(() => observer?.disconnect());
     </section>
   </main>
 
-  <footer
-    class="landing-footer landing-dark"
-    data-bs-theme="dark"
-  >
-    <div class="container-xl d-flex flex-wrap justify-content-between gap-2">
-      <span>{{ t('footer.byline') }}</span>
-      <span>
-        <a :href="info.release.url">{{ t('footer.version', { version: info.release.version }) }}</a>
-        ·
-        <a :href="links.releases">{{ t('footer.releases') }}</a>
-        ·
-        <a :href="links.github">{{ t('footer.source') }}</a>
-      </span>
-    </div>
-  </footer>
-
-  <p
-    id="landing-viewer-hint"
-    hidden
-  >
-    {{ t('viewer.hint') }}
-  </p>
+  <SiteFooter />
   <ScreenshotLightbox ref="viewer" />
 </template>

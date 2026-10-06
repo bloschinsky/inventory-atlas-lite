@@ -1,7 +1,7 @@
 <script setup>
-import { computed, inject } from 'vue';
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { screenshotUrl } from './content.js';
+import ScreenshotFigure from './ScreenshotFigure.vue';
 
 const props = defineProps({
   section: { type: Object, required: true },
@@ -11,12 +11,11 @@ const props = defineProps({
   reverse: { type: Boolean, default: false }
 });
 
-const { locale, t, tm, rt } = useI18n();
+const { t, tm, rt } = useI18n();
 const titleId = computed(() => `${props.section.id}-title`);
 const step = computed(() => String(props.number).padStart(2, '0'));
 const copy = key => t(`sections.${props.section.id}.${key}`);
 const points = computed(() => tm(`sections.${props.section.id}.points`).map(point => rt(point)));
-const openScreenshot = inject('openScreenshot');
 </script>
 
 <template>
@@ -68,33 +67,13 @@ const openScreenshot = inject('openScreenshot');
           style="--landing-reveal-delay: .12s"
         >
           <div class="landing-media">
-            <!-- Each screenshot opens in the viewer; the link to the full-size file is the no-script fallback. -->
-            <figure
+            <ScreenshotFigure
               v-for="(image, index) in section.media"
               :key="image.name"
-              class="landing-figure"
-              :class="{ 'landing-figure-phone': image.phone }"
-            >
-              <a
-                class="landing-shot-link"
-                :href="screenshotUrl(locale, image.name)"
-                aria-haspopup="dialog"
-                aria-describedby="landing-viewer-hint"
-                @click="openScreenshot(section.media, index, $event)"
-              >
-                <img
-                  class="landing-shot"
-                  :class="{ 'landing-shot-phone': image.phone }"
-                  :src="screenshotUrl(locale, image.name)"
-                  :alt="t(`screenshots.${image.name}.alt`)"
-                  loading="lazy"
-                  decoding="async"
-                >
-              </a>
-              <figcaption class="landing-caption">
-                {{ t(`screenshots.${image.name}.caption`) }}
-              </figcaption>
-            </figure>
+              :image="image"
+              :gallery="section.media"
+              :index="index"
+            />
           </div>
         </div>
       </div>

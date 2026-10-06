@@ -31,13 +31,18 @@ export function setLocale(value) {
   }
 }
 
-// The document language, title, and sharing descriptions follow the page language.
+/*
+  The document language, title, and sharing descriptions follow the page language. Each page has its
+  own metadata messages: `meta` for the product page, `guide.meta` for the user guide.
+*/
 const setMeta = (selector, value) => document.querySelector(selector)?.setAttribute('content', value);
-watch(locale, value => {
-  document.documentElement.lang = value;
-  document.title = t('meta.title');
-  setMeta('meta[name="description"]', t('meta.description'));
-  setMeta('meta[property="og:title"]', t('meta.ogTitle'));
-  setMeta('meta[property="og:description"]', t('meta.ogDescription'));
-  setMeta('meta[property="og:image:alt"]', t('meta.ogImageAlt'));
-}, { immediate: true });
+export function followLocale(meta) {
+  watch(locale, value => {
+    document.documentElement.lang = value;
+    document.title = t(`${meta}.title`);
+    setMeta('meta[name="description"]', t(`${meta}.description`));
+    setMeta('meta[property="og:title"]', t(`${meta}.ogTitle`));
+    setMeta('meta[property="og:description"]', t(`${meta}.ogDescription`));
+    setMeta('meta[property="og:image:alt"]', t(`${meta}.ogImageAlt`));
+  }, { immediate: true });
+}

@@ -48,6 +48,7 @@ document describes the current behaviour and its boundaries, not the original pl
 | [Public demo](public-demo.md) | The real interface running in the browser on GitHub Pages: an invented inventory in English and Ukrainian (one structure of semantic keys with localized text, chosen by `?lang=` or the saved language and seeded again on a language change) with generated photos, temporary changes, Reset demo, and server-only features explained instead of offered. |
 | [Guided tour of the public demo](demo-guided-tour.md) | An optional manual-first presentation in the public demo: eight chapters of scenes on the real pages (Dashboard, Categories, Hierarchy with Graph View, a narrated Add item, Items filter/sort/search, Templates, Checklists, and the real changes) that each wait for a contextual action button, with optional Auto Play and Pause/Resume, an inverse-theme presenter with a compact phone layout, Replay chapter, and idempotent Back/Next, in English and Ukrainian on the inventory of the same language, identifying entities by semantic key. |
 | [Public landing page](landing-page.md) | A Vue and Tabler product page in English and Ukrainian (vue-i18n, a language dropdown sharing the application's locale preference, Try Demo in the chosen language) in the bundled Geist typeface with a technical facts rail, a numbered product story, captioned real screenshots of the public demo per language in an in-page viewer, install paths, and the latest release from the release history, built from `landing/` and deployed to GitHub Pages. |
+| [Public user guide](public-user-guide.md) | The landing site's second page, `guide/`: `docs/HOW-TO.md` and its structurally checked Ukrainian translation `docs/HOW-TO.uk.md` rendered at build time with markdown-it into numbered sections with stable anchors, a sticky table of contents (an On this page panel on phones), localized screenshots in the viewer, text diagrams, Try this in Demo links in the guide's language, and self-hosted notes for server-only features. |
 | [GitHub release pipeline](github-release-pipeline.md) | Validate stable tags and publish the Docker image plus legacy-compatible Proxmox assets. |
 
 These documents describe feature boundaries and implementation. For how a user operates the
@@ -55,7 +56,9 @@ application, see the [quick how-to](../HOW-TO.md).
 
 Related documentation:
 
-- [`../HOW-TO.md`](../HOW-TO.md) — quick user guide for the current application.
+- [`../HOW-TO.md`](../HOW-TO.md) — quick user guide for the current application, and
+  [`../HOW-TO.uk.md`](../HOW-TO.uk.md), its Ukrainian translation; both are published as the
+  [public user guide](public-user-guide.md).
 - [`../issues/`](../issues/) — active task specifications for work that is not finished yet.
 - [`../changes/`](../changes/) — dated records of completed repository changes.
 - [`../proxmox.md`](../proxmox.md) — installing and maintaining the application on Proxmox VE.

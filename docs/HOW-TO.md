@@ -46,6 +46,15 @@ inventory, and its guided tour in that language, and the demo address carries it
 which discards your demo changes and closes an open guided tour. Your own installation never
 changes or translates your data when you change the language.
 
+This guide is also published on the product site as the
+[User Guide](https://bloschinsky.github.io/inventory-atlas-lite/guide/) (**Guide** in the product
+page's top bar, or **Read the user guide**), in English and Ukrainian with the same language menu. It
+adds a table of contents — **On this page** on a phone — screenshots, small diagrams, and
+**Try this in Demo** buttons that open the page a section describes in the demo, in the guide's
+language. Sections about features that need a real installation say *Requires a self-hosted
+installation* instead. Every heading has a link to copy, and the address keeps the section through a
+reload and a language change.
+
 ## 2. Before you start
 
 - Open the address of your installation in a browser, for example `http://192.168.1.145:3000`. A

@@ -10,6 +10,7 @@
     "skip": "Skip to content",
     "label": "Main",
     "features": "Features",
+    "guide": "Guide",
     "install": "Install",
     "language": "Language",
     "languageCurrent": "Language: {language}"
@@ -153,5 +154,46 @@
     "previous": "Previous screenshot",
     "next": "Next screenshot",
     "close": "Close"
+  },
+  "guide": {
+    "meta": {
+      "title": "User Guide — Inventory Atlas Lite",
+      "description": "The Inventory Atlas Lite user guide: setup, categories and custom fields, items and photos, containers and the hierarchy, QR labels, checklists, backups, and limitations.",
+      "ogTitle": "Inventory Atlas Lite User Guide",
+      "ogDescription": "How to set up and use Inventory Atlas Lite, the self-hosted inventory for physical items.",
+      "ogImageAlt": "The Inventory Atlas Lite Dashboard with item totals, photo coverage, and charts."
+    },
+    "eyebrow": "User guide",
+    "source": "View source on GitHub",
+    "demo": "Try this in Demo",
+    "selfHosted": "Requires a self-hosted installation.",
+    "anchor": "Link to “{title}”",
+    "toc": { "title": "On this page", "label": "Guide contents" },
+    "diagrams": {
+      "containment": {
+        "title": "Where things are: a location, a container, an item",
+        "steps": [
+          { "term": "Location", "text": "Free text such as Garage" },
+          { "term": "Container", "text": "An item that holds others, such as Box A" },
+          { "term": "Item", "text": "Stored inside the box and shown in the Garage" }
+        ]
+      },
+      "fields": {
+        "title": "What things are: a category, its fields, the values",
+        "steps": [
+          { "term": "Category", "text": "A group such as Cameras" },
+          { "term": "Custom fields", "text": "Brand (text), Release year (number)" },
+          { "term": "Item values", "text": "Each camera fills them in: Olympus, 1963" }
+        ]
+      },
+      "backup": {
+        "title": "One file holds everything",
+        "steps": [
+          { "term": "Inventory and photos", "text": "Items, fields, templates, checklists, and the original photo bytes" },
+          { "term": "SQLite database", "text": "A single database file on your server" },
+          { "term": "Download backup", "text": "A consistent snapshot you can restore or move" }
+        ]
+      }
+    }
   }
 }
