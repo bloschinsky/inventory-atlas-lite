@@ -1013,11 +1013,14 @@
     "progress": "Chapter {current} of {total}",
     "progressLabel": "Tour progress",
     "sceneProgress": "Scene {current} of {total}",
+    "progressShort": "{current}/{total}",
+    "autoplay": "Auto Play",
+    "skip": "Skip chapter",
     "back": "Back",
     "next": "Next",
     "close": "Close tour",
     "playing": "Showing it in the app…",
-    "paused": "Paused. Press Resume to continue.",
+    "paused": "Auto Play is paused. Press Resume to continue.",
     "pause": "Pause",
     "resume": "Resume",
     "replay": "Replay chapter",
@@ -1033,15 +1036,26 @@
           "condition": "Condition breakdown shows how many Items have each Condition, from Excellent to Broken.",
           "fields": "Field coverage shows how many Items have each detail filled in. Use it to find incomplete Items.",
           "locations": "Items by location shows where your Items are. Each bar is one Location."
+        },
+        "continue": {
+          "categories": "Show Items by category",
+          "condition": "Show Condition breakdown",
+          "fields": "Show Field coverage",
+          "locations": "Show Items by location"
         }
       },
       "categories": {
         "title": "Categories & Fields",
         "scenes": {
           "overview": "Categories define what an Item is. Each Category can have its own Fields.",
-          "select": "Select the {category} Category.",
           "fields": "{category} has three Fields: {fields}. Other Categories have other Fields.",
           "location": "A Category tells what an Item is. A Location tells where the Item is."
+        },
+        "actions": {
+          "overview": "Select {category}"
+        },
+        "continue": {
+          "location": "Compare with Location"
         }
       },
       "hierarchy": {
@@ -1050,8 +1064,14 @@
           "overview": "Hierarchy shows the same Items as a structure. Group by and View change how the structure looks.",
           "location": "Group by Location shows where each Item is. {container} is in {location}, and the Items in {container} get the same Location.",
           "category": "Group by Category shows what each Item is. The same Items are now under their Categories.",
-          "tree": "Tree View lists each group with its Items. Open {category} to see its Items.",
+          "tree": "Tree View lists each group with its Items. {category} now shows its Items.",
           "graph": "Graph View shows the same Hierarchy as linked nodes. Use it to see nested Items at a glance."
+        },
+        "actions": {
+          "overview": "Show Location grouping",
+          "location": "Group by Category",
+          "category": "Open {category}",
+          "tree": "Open Graph View"
         }
       },
       "addItem": {
@@ -1065,34 +1085,64 @@
           "fields": "Fill in the {category} Fields. Only {category} Items have these Fields.",
           "photo": "Add a photo. A photo makes the Item easy to recognize.",
           "save": "Save the Item. The new Item is now part of the Hierarchy and the Dashboard."
+        },
+        "actions": {
+          "name": "Enter the name",
+          "category": "Select {category}",
+          "condition": "Set the Condition",
+          "serial": "Add the serial number",
+          "placement": "Place in {container}",
+          "fields": "Fill in the Fields",
+          "photo": "Add a photo",
+          "save": "Save the Item"
         }
       },
       "items": {
         "title": "Find Items",
         "scenes": {
           "overview": "The Items list shows all your Items. Search, filter, and sort the list here.",
-          "filter": "Filter by the {category} Category. The list shows only {category} Items.",
-          "sort": "Sort the list by Condition. The order of the Items changes.",
-          "search": "Search for {search}. The list shows only the matching Items.",
+          "filter": "The Category filter is {category}. The list shows only {category} Items.",
+          "sort": "The list is now sorted by Condition. The order of the Items changed.",
+          "search": "The search is {search}. The list shows only the matching Items.",
           "result": "The search finds {name}. Open an Item to see all its details."
+        },
+        "actions": {
+          "overview": "Filter by {category}",
+          "filter": "Sort by Condition",
+          "sort": "Search for {search}"
+        },
+        "continue": {
+          "result": "Show the matching Item"
         }
       },
       "templates": {
         "title": "Templates",
         "scenes": {
           "list": "Templates keep the values of Items that you add often.",
-          "open": "Open the {template} Template.",
+          "open": "The {template} Template is open.",
           "values": "The Template sets the Category, the name, New, and {templateField}. Each new Item from the Template gets these values.",
           "use": "Select Use on the Templates page to add an Item from the Template. All Items from one Template start the same."
+        },
+        "actions": {
+          "list": "Open {template}"
+        },
+        "continue": {
+          "values": "Show the preset Fields",
+          "use": "Show how to use it"
         }
       },
       "checklists": {
         "title": "Checklists",
         "scenes": {
           "list": "Checklists are lists of Items for a task. Use Checklists to pack, to move, or to check equipment.",
-          "open": "Open the {checklist} Checklist. The Checklist names the Items to pack.",
-          "check": "Start the Checklist and mark {camera} as Packed. Each change is saved at once.",
+          "open": "The {checklist} Checklist names the Items to pack.",
+          "run": "Mark {camera} as Packed. Each change is saved at once.",
           "uses": "The progress shows how many Items are checked. Complete the Checklist when all Items are checked."
+        },
+        "actions": {
+          "list": "Open {checklist}",
+          "open": "Start the Checklist",
+          "run": "Mark as Packed"
         }
       },
       "result": {
@@ -1105,6 +1155,13 @@
           "condition": "Condition breakdown, {name}: {before} → {after}.",
           "location": "Items by location, {name}: {before} → {after}.",
           "explore": "The tour is complete. Explore the demo on your own, or reset the demo to start again."
+        },
+        "continue": {
+          "total": "Show Total items",
+          "category": "Show the Category change",
+          "condition": "Show the Condition change",
+          "location": "Show the Location change",
+          "explore": "Finish the tour"
         }
       }
     }

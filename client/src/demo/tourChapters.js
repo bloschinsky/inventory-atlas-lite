@@ -6,8 +6,9 @@ import { findByText, findHook } from './tourActions.js';
 import tourPhotoUrl from './photos/nikon-f65.webp?url';
 
 /*
-  The guided tour of the public demo: eight chapters in order, each a short series of scenes the
-  presenter plays on its own. Next and Back move between chapters; nobody presses a button per scene.
+  The guided tour of the public demo: eight chapters in order, each a short series of scenes. A scene
+  explains one thing and waits; its contextual action button (or Auto Play) performs the scene's
+  action on the real interface, and the next scene appears. Next and Back move between chapters.
 
   A chapter is plain data:
   - `id` — stable; its title is `tour.chapters.<id>.title` in the locale files;
@@ -18,11 +19,18 @@ import tourPhotoUrl from './photos/nikon-f65.webp?url';
   A scene is plain data too:
   - `id` — stable; its copy is `tour.chapters.<chapter>.scenes.<id>`;
   - `target` — optional spotlight target at the scene's start: a `data-tour` hook, or `#<id>` of a
-    labelled form control; the scene fails when the page does not show it in time;
-  - `action(context)` — optional deterministic actions on the real interface;
+    labelled form control, or a function of `data` that returns one; the scene fails when the page
+    does not show it in time;
+  - `action(context)` — optional deterministic actions on the real interface, run when the visitor
+    presses the scene's action button; its label is `tour.chapters.<chapter>.actions.<id>`;
   - `hold` — the viewing time after the action, a TIMING key of ./tourActions.js (default `view`);
   - `skip(data)` — optional; true leaves the scene out of this run;
   - `params(data, t)` — optional values for the scene's copy.
+
+  A scene without an action still waits: its button only shows the next scene, so its label names
+  that next scene, `tour.chapters.<chapter>.continue.<next id>` (see actionLabelKey). The last scene
+  of a chapter has no button unless it has an action; once it is shown, Next opens the next chapter.
+  Prefer an action that the next scene's copy then explains, and a label that says what will happen.
 
   `context` holds the actions of ./tourActions.js bound to the running chapter, `spotlight(target)` to
   move the spotlight during an action, `data` (the tour's own state), and the `router`. Every chapter
@@ -108,6 +116,9 @@ function resetItemsSort() {
 // Whether the Items results show the row (or phone card) of the item with this row id.
 const rowShown = (id, shown = true) => () => Boolean(findHook('item-results')) && Boolean(findHook(`item-row-${id}`)) === shown;
 
+// The state buttons of the shown checklist run item.
+const runStates = () => [...(findHook('checklist-run-item')?.querySelectorAll('[aria-pressed]') ?? [])];
+
 // The tour item, or the seeded camera when the visitor skipped Add an Item before it saved.
 const resultName = ({ itemId, fixture }) => (itemId ? fixture.tourItem.name : byKey(fixture.items, SEEDED_CAMERA).name);
 
@@ -161,23 +172,17 @@ export const tourChapters = [
     id: 'categories',
     route: () => '/categories',
     scenes: [
-      { id: 'overview', target: 'category-list' },
       {
-        id: 'select',
+        id: 'overview',
         target: 'category-list',
-        action: async ({ data: { fixture }, waitForHook, waitForText, click }) => {
-          const row = (await waitForText(await waitForHook('category-list'), 'strong', tourCategory(fixture).name)).closest('[role="button"]');
+        action: async ({ data: { fixture }, waitForHook, waitForText, waitFor, click }) => {
+          const category = tourCategory(fixture);
+          const row = (await waitForText(await waitForHook('category-list'), 'strong', category.name)).closest('[role="button"]');
           if (!row.classList.contains('active')) await click(row);
+          await waitFor(() => category.fields.every(field => findHook('category-fields')?.textContent.includes(field.name)), 'category-fields');
         }
       },
-      {
-        id: 'fields',
-        target: 'category-fields',
-        action: ({ data: { fixture }, waitFor }) => waitFor(
-          () => tourCategory(fixture).fields.every(field => findHook('category-fields')?.textContent.includes(field.name)),
-          'category-fields'
-        )
-      },
+      { id: 'fields', target: 'category-fields' },
       { id: 'location', target: 'category-fields' }
     ]
   },
@@ -185,29 +190,29 @@ export const tourChapters = [
     id: 'hierarchy',
     route: () => '/hierarchy',
     scenes: [
-      { id: 'overview', target: 'hierarchy-controls' },
       {
-        id: 'location',
-        target: 'hierarchy-tree',
+        id: 'overview',
+        target: 'hierarchy-controls',
         action: async context => {
           const { fixture } = context.data;
           const container = tourContainer(fixture);
+          await context.spotlight('hierarchy-tree');
           await expandBranch(context, container.location);
           await expandBranch(context, container.name);
           await context.waitForText(findHook('hierarchy-tree'), 'a', byKey(fixture.items, SEEDED_CAMERA).name);
         }
       },
       {
-        id: 'category',
-        target: 'hierarchy-group',
+        id: 'location',
+        target: 'hierarchy-tree',
         action: async context => {
+          await context.spotlight('hierarchy-group');
           await switchHierarchy(context, 'group', 'category');
           await context.spotlight('hierarchy-tree');
-        },
-        hold: 'longView'
+        }
       },
       {
-        id: 'tree',
+        id: 'category',
         target: 'hierarchy-tree',
         action: async context => {
           const { fixture } = context.data;
@@ -216,15 +221,16 @@ export const tourChapters = [
         }
       },
       {
-        id: 'graph',
-        target: 'hierarchy-view',
+        id: 'tree',
+        target: 'hierarchy-tree',
         action: async context => {
+          await context.spotlight('hierarchy-view');
           await switchHierarchy(context, 'view', 'graph');
           await context.spotlight('hierarchy-graph');
           await context.waitFor(() => findHook('hierarchy-graph').querySelector('.vue-flow__node'), 'hierarchy-graph-nodes');
-        },
-        hold: 'longView'
-      }
+        }
+      },
+      { id: 'graph', target: 'hierarchy-graph' }
     ]
   },
   {
@@ -291,17 +297,19 @@ export const tourChapters = [
   },
   {
     id: 'items',
+    // The search ends on the tour item, or on the seeded camera when the visitor skipped Add an Item.
     route: async data => {
       resetItemsSort();
       data.itemId = (await findTourItem(data.fixture))?.id ?? null;
+      data.resultId = data.itemId ?? await seededItemId(SEEDED_CAMERA);
       return '/items';
     },
     scenes: [
-      { id: 'overview', target: 'item-results' },
       {
-        id: 'filter',
-        target: 'item-filters',
+        id: 'overview',
+        target: 'item-results',
         action: async ({ data, waitFor, choose, spotlight }) => {
+          await spotlight('item-filters');
           const category = document.getElementById('items-category');
           const categoryName = tourCategory(data.fixture).name;
           await waitFor(() => [...category.options].some(option => option.textContent.trim() === categoryName), 'items-category');
@@ -311,7 +319,7 @@ export const tourChapters = [
         }
       },
       {
-        id: 'sort',
+        id: 'filter',
         target: 'item-results',
         // Wide screens sort from the table header, phones from the Sort select.
         action: async ({ waitFor, click, choose }) => {
@@ -325,33 +333,25 @@ export const tourChapters = [
         }
       },
       {
-        id: 'search',
-        target: '#items-search',
+        id: 'sort',
+        target: 'item-results',
         action: async ({ type, waitFor, spotlight }) => {
+          await spotlight('#items-search');
           await type(document.getElementById('items-search'), ITEMS_SEARCH);
           await waitFor(rowShown(await seededItemId(HIDDEN_BY_SEARCH), false), 'items-searched');
           await spotlight('item-results');
         }
       },
-      {
-        id: 'result',
-        target: 'item-results',
-        params: data => ({ name: resultName(data) }),
-        action: async ({ data, waitFor, spotlight }) => {
-          const id = data.itemId ?? await seededItemId(SEEDED_CAMERA);
-          await waitFor(rowShown(id), `item-row-${id}`);
-          await spotlight(`item-row-${id}`);
-        }
-      }
+      { id: 'search', target: 'item-results' },
+      { id: 'result', target: data => `item-row-${data.resultId}`, params: data => ({ name: resultName(data) }) }
     ]
   },
   {
     id: 'templates',
     route: () => '/templates',
     scenes: [
-      { id: 'list', target: 'template-list' },
       {
-        id: 'open',
+        id: 'list',
         target: 'template-list',
         action: async ({ data, waitForHook, waitForText, waitFor, click, spotlight }) => {
           const { name } = byKey(data.fixture.templates, TOUR_TEMPLATE);
@@ -361,14 +361,8 @@ export const tourChapters = [
           await spotlight('template-form');
         }
       },
-      {
-        id: 'values',
-        target: 'item-custom-fields',
-        action: ({ data: { fixture }, waitForLabel }) => {
-          const template = byKey(fixture.templates, TOUR_TEMPLATE);
-          return waitForLabel(findHook('item-custom-fields'), fieldName(fixture, template.category, Object.keys(template.fields)[0]));
-        }
-      },
+      { id: 'open', target: 'template-form' },
+      { id: 'values', target: 'item-custom-fields' },
       { id: 'use', target: 'template-form' }
     ]
   },
@@ -376,9 +370,8 @@ export const tourChapters = [
     id: 'checklists',
     route: () => '/checklists',
     scenes: [
-      { id: 'list', target: 'checklist-list' },
       {
-        id: 'open',
+        id: 'list',
         target: 'checklist-list',
         action: async ({ data, waitForHook, waitFor, click, spotlight }) => {
           const { name } = byKey(data.fixture.checklists, TOUR_CHECKLIST);
@@ -389,7 +382,7 @@ export const tourChapters = [
         }
       },
       {
-        id: 'check',
+        id: 'open',
         target: 'checklist-items',
         // An open run of an earlier chapter run is continued, never started a second time.
         action: async ({ waitFor, click, spotlight }) => {
@@ -397,15 +390,21 @@ export const tourChapters = [
           await spotlight(runButton);
           await click(findHook(runButton));
           await spotlight('checklist-run-item');
-          // Checked (Packed in a packing checklist), Missing, and back to unchecked, in this order.
-          const states = () => [...(findHook('checklist-run-item')?.querySelectorAll('[aria-pressed]') ?? [])];
-          const pressed = index => states()[index]?.getAttribute('aria-pressed') === 'true';
-          await waitFor(() => states().length === 3, 'checklist-run-actions');
+          await waitFor(() => runStates().length === 3, 'checklist-run-actions');
+        }
+      },
+      {
+        id: 'run',
+        target: 'checklist-run-item',
+        // Checked (Packed in a packing checklist), Missing, and back to unchecked, in this order.
+        action: async ({ waitFor, click }) => {
+          const pressed = index => runStates()[index]?.getAttribute('aria-pressed') === 'true';
+          await waitFor(() => runStates().length === 3, 'checklist-run-actions');
           if (pressed(0)) {
-            await click(states()[2]);
+            await click(runStates()[2]);
             await waitFor(() => pressed(2), 'checklist-run-unchecked');
           }
-          await click(states()[0]);
+          await click(runStates()[0]);
           await waitFor(() => pressed(0), 'checklist-run-checked');
         }
       },
@@ -457,3 +456,14 @@ export const tourChapters = [
     ]
   }
 ];
+
+/*
+  The i18n key of the action button of the shown scene (`ids` are the scene ids of this run): the
+  scene's own action, or else the next scene it shows; null for a last scene without an action.
+*/
+export function actionLabelKey(chapter, ids, position) {
+  const scene = chapter.scenes.find(entry => entry.id === ids[position]);
+  if (scene?.action) return `tour.chapters.${chapter.id}.actions.${scene.id}`;
+  const next = ids[position + 1];
+  return next ? `tour.chapters.${chapter.id}.continue.${next}` : null;
+}

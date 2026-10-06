@@ -24,7 +24,7 @@ of the demo code.
   graph), Templates, Checklists with runs and container audits, Scan QR, Categories & Fields, Replace
   field value, the database name, the language, and the color mode.
 - A **Guided tour** button in the lower-right corner starts an optional presentation in eight
-  automated chapters on the real pages; see [Guided tour of the public demo](demo-guided-tour.md).
+  chapters on the real pages, one contextual action per scene or optional Auto Play; see [Guided tour of the public demo](demo-guided-tour.md).
 - **Reset demo**, or simply reloading the page, starts again from the canonical inventory on the
   Dashboard. Changes never reach any server or any other visitor. Browser-local preferences such as
   the language, the color mode, and the Items columns are kept, as in the application.

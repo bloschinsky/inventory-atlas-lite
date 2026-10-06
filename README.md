@@ -67,8 +67,8 @@ the languages, the screenshot capture, and the release information it shows.
 <https://bloschinsky.github.io/inventory-atlas-lite/demo/> is a public demo of the real interface on an
 invented inventory, in English or Ukrainian (`?lang=uk`) with the sample data in the same language. It runs entirely in the browser — the inventory route tables and services over an
 in-memory SQLite database — so it needs no server, and every change disappears on reload or with
-**Reset demo**. An optional **Guided tour** presents the product in eight automated chapters on the real
-pages ([`docs/features/demo-guided-tour.md`](docs/features/demo-guided-tour.md)). Backups, restore, reset,
+**Reset demo**. An optional **Guided tour** presents the product in eight chapters on the real pages,
+one scene action at a time or with optional Auto Play ([`docs/features/demo-guided-tour.md`](docs/features/demo-guided-tour.md)). Backups, restore, reset,
 cloud backup, updates, and AI are not part of it.
 `npm run demo:dev` runs it locally, and `npm run demo:build` builds it into `dist-landing/demo/`,
 which the Pages workflow publishes with the landing page. See

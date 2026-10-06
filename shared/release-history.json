@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.57.0",
+    "date": "2026-10-06",
+    "changes": [
+      "The Guided tour of the public demo now waits for you. Each scene explains one thing, and its button says what will happen next, such as Group by Category, Search for Nikon, or Save the Item; press it to make the real page do it. When a chapter is complete, press Next.",
+      "Prefer to watch? Turn on Auto Play to have the tour press the scene buttons for you after a short reading time, with Pause and Resume. On phones the tour card is now a slim strip at the bottom of the screen, so you can see the page it talks about."
+    ]
+  },
+  {
     "version": "0.56.0",
     "date": "2026-10-06",
     "changes": [

@@ -272,6 +272,33 @@ test('the guided tour copy stays short, direct, and consistent in both languages
   }
 });
 
+/*
+  The contextual action labels of the presenter: `actions.<scene>` names what a scene's action does,
+  and `continue.<scene>` the scene an action-less scene shows next (see actionLabelKey() in
+  client/src/demo/tourChapters.js). Each one is a short, specific command in both languages.
+*/
+test('the guided tour action labels are short, specific, and in both languages', () => {
+  const labels = locale => Object.entries(locale.tour.chapters).flatMap(([chapter, entry]) => ['actions', 'continue']
+    .flatMap(group => Object.entries(entry[group] ?? {}).map(([scene, text]) => ({ id: `${chapter}.${group}.${scene}`, chapter, group, scene, text }))));
+  const english = labels(en);
+  assert.deepEqual(labels(uk).map(entry => entry.id), english.map(entry => entry.id));
+  assert.ok(english.length >= 30, 'the scenes have their own labels');
+  for (const { id, chapter, group, scene, text } of [...english, ...labels(uk)]) {
+    const scenes = Object.keys(en.tour.chapters[chapter].scenes);
+    assert.ok(scenes.includes(scene), `${id} names a scene of its chapter`);
+    if (group === 'continue') assert.notEqual(scene, scenes[0], `${id}: the first scene is never shown by Continue`);
+    assert.ok(text.split(/\s+/).length <= 5 && text.length <= 40, `${id} is one short label`);
+    assert.doesNotMatch(text, /[.!?]$/, `${id} is a command, not a sentence`);
+    assert.doesNotMatch(text, /^(continue|go|do it|see more|ok|далі|продовжити)$/i, `${id} says what will happen`);
+  }
+  // Each English label starts with a verb, and none of them is used twice in a chapter.
+  for (const { id, text } of english) assert.match(text, /^(Show|Select|Compare|Group|Open|Enter|Set|Add|Place|Fill|Save|Filter|Sort|Search|Start|Mark|Finish) /, id);
+  for (const chapter of Object.keys(en.tour.chapters)) {
+    const texts = english.filter(entry => entry.chapter === chapter).map(entry => entry.text);
+    assert.equal(new Set(texts).size, texts.length, `${chapter} has distinct labels`);
+  }
+});
+
 test('the sql.js adapter keeps the better-sqlite3 behavior the repositories rely on', () => {
   const db = openDemoDatabase(SQL);
   db.exec('CREATE TABLE t (id INTEGER PRIMARY KEY, name TEXT UNIQUE)');

@@ -5,14 +5,15 @@
 
   `createTourActions(signal, gate)` binds every action to one chapter run: once the visitor moves on,
   replays, or closes the tour, the next wait of that run stops it instead of touching the new page,
-  and `gate()` holds a paused presentation before its next action.
+  and `gate()` holds a paused Auto Play presentation before its next action.
 */
 
 export const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /*
   The presentation timing, in milliseconds, in one place. Reduced motion drops the decorative beats
-  and the typing cadence, but keeps the reading time of every scene (`view` and `longView`).
+  and the typing cadence, but keeps the reading time of every scene (`view`, `longView`, and `read`).
+  A scene waits for its action button without any time limit; only Auto Play uses `read`.
 */
 export const TIMING = {
   // A minor beat: after a click, a choice, or a scroll.
@@ -23,6 +24,8 @@ export const TIMING = {
   view: 1300,
   // Key moments that need a longer look, such as the Graph View.
   longView: 2600,
+  // Auto Play only: the reading time of a waiting scene before Auto Play presses its action.
+  read: 4000,
   // The typing cadence: `typeChunk` characters every `typeDelay`.
   typeDelay: 70,
   typeChunk: 2

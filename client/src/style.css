@@ -262,24 +262,57 @@ body.app-menu-open { overflow: hidden; }
 .demo-banner-text { color: var(--tblr-secondary); min-width: 0; }
 
 /* The guided tour of the public demo. The launcher and the chapter card float in the lower corner
-   and stay below Tabler's offcanvas and modals; on phones the card spans the width above the bottom
-   edge and scrolls inside when needed. The card carries the inverse color mode (data-bs-theme), so
-   its Tabler tokens are the opposite of the page's. The spotlight lets clicks through and marks its
-   target with a ring and a dimmed page, so it does not rely on color alone. The lock only exists
-   while a chapter plays its scenes and is not paused. */
+   and stay below Tabler's offcanvas and modals. The card is a small grid: identity, progress, title,
+   scene copy, and scene dots on desktops; on phones a compact strip across the bottom edge with one
+   header line (chapter number, title, dots, Close), a thin progress bar, and the copy, which scrolls
+   inside the card so the controls row always stays visible. The card carries the inverse color mode
+   (data-bs-theme), so its Tabler tokens are the opposite of the page's. While the tour is open the
+   page keeps room at its end, so a target can always scroll above the card. The spotlight lets
+   clicks through and marks its target with a ring and a dimmed page, so it does not rely on color
+   alone. The lock only exists while the tour itself changes the page. */
 .demo-tour-ready .page-body { padding-bottom: 4.5rem; }
+.demo-tour-open .page-body { padding-bottom: 40vh; }
 .demo-tour-launcher { position: fixed; right: 1rem; bottom: 1rem; z-index: 1032; border-radius: 999px; box-shadow: var(--tblr-shadow-dropdown); }
 .demo-tour-card { position: fixed; right: 1rem; bottom: 1rem; z-index: 1032; width: 24rem; max-height: calc(100vh - 2rem); overflow-y: auto; color: var(--tblr-body-color); background: var(--tblr-bg-surface); border-color: var(--tblr-border-color); box-shadow: var(--tblr-shadow-dropdown); }
 .demo-tour-card h2:focus { outline: none; }
-.demo-tour-text { min-height: 3em; }
-.demo-tour-scenes { display: flex; gap: .3rem; margin: 0; padding: 0; list-style: none; }
-.demo-tour-scenes li { width: .5rem; height: .5rem; border-radius: 50%; border: 1px solid var(--tblr-secondary); }
-.demo-tour-scenes .demo-tour-scene-done { background: var(--tblr-secondary); }
+.demo-tour-body {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: .5rem; align-items: center;
+  grid-template-areas: "avatar identity close" "progress progress progress" "title title title" "text text text" "dots dots status" "failure failure failure";
+}
+.demo-tour-avatar { grid-area: avatar; }
+.demo-tour-identity { grid-area: identity; }
+.demo-tour-close { grid-area: close; justify-self: end; }
+.demo-tour-progress { grid-area: progress; }
+.demo-tour-title { grid-area: title; }
+.demo-tour-counter { display: none; }
+.demo-tour-text { grid-area: text; min-height: 3em; }
+.demo-tour-status { grid-area: status; justify-self: end; }
+.demo-tour-failure { grid-area: failure; }
+.demo-tour-scenes { grid-area: dots; display: flex; gap: .3rem; margin: 0; padding: 0; list-style: none; }
+.demo-tour-scenes li { width: .5rem; height: .5rem; border-radius: 50%; border: 1px solid var(--tblr-secondary); transition: width .2s ease; }
+.demo-tour-scenes .demo-tour-scene-done { border-color: var(--tblr-primary); background: var(--tblr-primary); opacity: .55; }
 .demo-tour-scenes .demo-tour-scene-current { width: 1.25rem; border-radius: 999px; border-color: var(--tblr-primary); background: var(--tblr-primary); }
+.demo-tour-controls { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.demo-tour-primary { flex: 1 1 0; min-width: 8rem; white-space: normal; }
 .demo-tour-spotlight { position: fixed; z-index: 1030; pointer-events: none; border-radius: var(--tblr-border-radius-lg); box-shadow: 0 0 0 3px var(--tblr-primary), 0 0 0 6px var(--tblr-bg-surface), 0 0 0 100vmax rgba(var(--tblr-dark-rgb), .3); transition: top .35s ease, left .35s ease, width .35s ease, height .35s ease; }
 .demo-tour-lock { position: fixed; inset: 0; z-index: 1031; cursor: progress; }
 @media (max-width: 575.98px) {
-  .demo-tour-card { left: 1rem; width: auto; max-height: 50vh; }
+  .demo-tour-card {
+    left: .5rem; right: .5rem; bottom: calc(.5rem + env(safe-area-inset-bottom)); width: auto;
+    max-height: max(35dvh, 14rem); display: flex; flex-direction: column; overflow: hidden;
+  }
+  .demo-tour-body {
+    flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: .625rem .75rem; gap: .375rem .5rem;
+    grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: "title dots close" "progress progress progress" "text text text" "failure failure failure";
+  }
+  .demo-tour-avatar, .demo-tour-identity, .demo-tour-status { display: none; }
+  .demo-tour-counter { display: inline; color: var(--tblr-secondary); font-weight: var(--tblr-font-weight-normal); }
+  .demo-tour-title { font-size: 1rem; line-height: 1.3; }
+  .demo-tour-progress { height: 2px; }
+  .demo-tour-text { min-height: 0; }
+  .demo-tour-controls { flex: none; padding: .5rem .75rem; gap: .25rem; }
+  .demo-tour-controls .btn-icon { width: 2.25rem; min-width: 2.25rem; height: 2.25rem; padding: 0; }
+  .demo-tour-primary { flex: 1 1 0; min-width: 6rem; line-height: 1.2; }
 }
 @media (prefers-reduced-motion: reduce) {
   .demo-tour-spotlight, .demo-tour-scenes li { transition: none; }

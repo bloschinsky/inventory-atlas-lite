@@ -113,9 +113,12 @@ The project stays small and readable. Do not add:
   services in the interface language, and `photos/` holds its generated item photos. `client/src/components/DemoBanner.vue` and `DemoUnavailable.vue` are the
   demo strip and the stand-in for server-only features. The demo's guided tour: `tourChapters.js`
   (the ordered, data-driven chapters and their scenes, which name fixture entities by key and fill
-  their copy's placeholders from the fixture of the tour's language), `tour.js` (the chapter engine: playback,
-  Pause, Replay, abort), `tourActions.js` (`TIMING` and the DOM actions a scene performs), and
-  `client/src/components/DemoTour.vue` (launcher, inverse-theme card, spotlight); it finds the UI
+  their copy's placeholders from the fixture of the tour's language; `actionLabelKey()` names each
+  scene's contextual action button), `tour.js` (the manual-first chapter engine: scenes wait for
+  their action button, `advance()` is shared by that button and Auto Play; Pause, Replay, abort),
+  `tourActions.js` (`TIMING` and the DOM actions a scene performs), and
+  `client/src/components/DemoTour.vue` (launcher, inverse-theme card with the compact phone layout,
+  spotlight); it finds the UI
   through `data-tour` attributes, and `backend.js` `reset(locale)` gives it a fresh fixture. A
   language change in the demo seeds it again in the new language (`DemoBanner.vue`) and closes the tour.
 - `client/src/i18n/index.js` — the `vue-i18n` instance, the browser-local language preference, and display formatting in the active locale.
@@ -223,13 +226,14 @@ The project stays small and readable. Do not add:
 - `test/demo.test.js` — the public demo data layer in Node: deterministic fixture, seeded content,
   the same structure in every locale and the Ukrainian texts, isolation of changes, the sql.js
   adapter, the demo photo and private-data checks, the fixture template and checklist the tour opens,
-  and the guided tour's copy rules;
+  and the guided tour's copy and action label rules;
   `test/e2e/demo.spec.js` — the built demo inside the landing build: no server requests, photos,
   temporary changes and Reset demo, reloaded deep links, unavailable features, no bundled secrets,
   `?lang=` and the language change that seeds the demo again;
-  `test/e2e/tour.spec.js` — the demo's guided tour: every chapter and its scenes, idempotent
-  Replay/Back/Next, Pause/Resume, close, failing scenes, the inverse theme, the tour on the Ukrainian
-  inventory, a language change during the tour, reduced motion, phones, and its absence from the
+  `test/e2e/tour.spec.js` — the demo's guided tour: every chapter pressed scene by scene, scenes
+  that wait for their action, Auto Play with Pause/Resume, idempotent Replay/Back/Next, close,
+  failing scenes, the inverse theme, the keyboard, the tour on the Ukrainian inventory, a language
+  change during the tour, reduced motion, the compact phone presenter, and its absence from the
   self-hosted app.
 - `docs/README.md` — documentation layout and conventions.
 - `docs/HOW-TO.md` — quick user guide for the current application.
