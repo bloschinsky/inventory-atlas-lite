@@ -13,7 +13,14 @@ export const SUPPORTED_LOCALES = [
   { code: 'uk', name: 'Українська' }
 ];
 
-export const resolveLocale = value => (SUPPORTED_LOCALES.some(locale => locale.code === value) ? value : DEFAULT_LOCALE);
+const isSupported = value => SUPPORTED_LOCALES.some(locale => locale.code === value);
+export const resolveLocale = value => (isSupported(value) ? value : DEFAULT_LOCALE);
+
+/*
+  The first supported locale among the candidates, in priority order, or English. The public demo
+  passes its address's ?lang= first and the saved preference second; an unsupported value is skipped.
+*/
+export const pickLocale = (...candidates) => candidates.find(isSupported) ?? DEFAULT_LOCALE;
 
 // Ukrainian messages list their plural forms as "one | few | many", in the order CLDR names them.
 const UKRAINIAN_FORMS = { one: 0, few: 1, many: 2, other: 1 };

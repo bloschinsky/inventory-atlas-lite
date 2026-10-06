@@ -10,7 +10,7 @@ import { appInfo } from '../build-info.js';
 import { theme } from '../theme.js';
 import { createTourController, tour } from '../demo/tour.js';
 import { resolveTarget } from '../demo/tourActions.js';
-import { tourChapters } from '../demo/tourChapters.js';
+import { copyParams, tourChapters } from '../demo/tourChapters.js';
 
 /*
   The presenter of the public demo's guided tour: a small launcher that never blocks free
@@ -19,14 +19,15 @@ import { tourChapters } from '../demo/tourChapters.js';
   spotlight lets clicks through; only the transparent lock covers the page, and only while a chapter
   plays and is not paused. The card sits above both, so Pause, Close, and Escape always work.
 */
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const router = useRouter();
 const { start, next, back, replay, pause, resume, close } = createTourController(router);
 const total = tourChapters.length;
 const chapter = computed(() => tourChapters[tour.chapter]);
 const scene = computed(() => chapter.value.scenes.find(entry => entry.id === tour.scenes[tour.scene]));
-const sceneText = computed(() => scene.value
-  ? t(`tour.chapters.${chapter.value.id}.scenes.${scene.value.id}`, scene.value.params?.(tour.data, t) ?? {})
+// The copy names the fixture entities in the tour's language, never as fixed English text.
+const sceneText = computed(() => scene.value && tour.data.fixture
+  ? t(`tour.chapters.${chapter.value.id}.scenes.${scene.value.id}`, { ...copyParams(tour.data), ...scene.value.params?.(tour.data, t) })
   : '');
 const last = computed(() => tour.chapter === total - 1);
 const playing = computed(() => tour.status === 'playing');
@@ -76,6 +77,12 @@ watch(() => tour.active, active => {
   if (active) track();
   else spot.value = null;
 });
+
+/*
+  A language change seeds the demo again in the new language (DemoBanner.vue), so the running tour
+  and its baseline no longer match the data: the tour closes, and Guided tour starts it afresh.
+*/
+watch(locale, () => { if (tour.active) finish(); });
 
 // While a chapter plays it moves the focus through the page's fields, so Escape stops the tour from anywhere.
 const escape = event => { if (event.key === 'Escape' && tour.active && playing.value) finish(); };

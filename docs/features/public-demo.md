@@ -6,8 +6,9 @@ The public demo is the real Inventory Atlas Lite interface running entirely in t
 browser, published with the landing page on GitHub Pages at
 <https://bloschinsky.github.io/inventory-atlas-lite/demo/>. It needs no Express server, no SQLite
 file, no API key, and no cloud credential. It opens on a curated, invented inventory, lets visitors
-try the everyday workflows, and forgets every change on reload. The self-hosted application is
-unchanged: its normal build never contains any of the demo code.
+try the everyday workflows, and forgets every change on reload. The demo and its inventory are in
+English and Ukrainian. The self-hosted application is unchanged: its normal build never contains any
+of the demo code.
 
 ## User-visible behaviour
 
@@ -35,10 +36,46 @@ unchanged: its normal build never contains any of the demo code.
 - Page addresses live in the URL hash (for example `…/demo/#/items`), so every demo page can be
   bookmarked, opened directly, and reloaded on GitHub Pages.
 
+## Languages
+
+- **Which language opens:** the `lang` query parameter of the demo address
+  (`…/demo/?lang=uk#/dashboard`) first, then the language saved in this browser under
+  `inventory-atlas.locale`, then English. An unsupported value (`?lang=fr`) is skipped. The
+  landing page's **Try Demo** passes its own language this way, and it saves the visitor's choice
+  under the same key, which the demo on the same site also reads.
+- **The inventory is in the same language as the interface.** In Ukrainian the database is *Демо
+  Inventory Atlas*, the locations are *Дім / Кабінет*, *Дім / Комора*, *Майстерня*, and *Туристичне
+  спорядження*, the categories, field names, item names, descriptions, condition notes, natural-
+  language field values, the template, and the checklists are Ukrainian, while product names
+  (*Nikon F65*, *Nikkor*), standards (*USB-C*, *HDMI*), units (*mAh*, *W*, *TB*, *V*), serial numbers,
+  dates, prices, and numbers stay as they are.
+- **Changing the language** in **Settings → Interface** seeds the demo again in the new language and
+  reloads the open page's data, so the interface and the sample data never mix two languages; the
+  strip confirms *Demo data was reset in English.* / *Демо-дані оновлено українською мовою.* Changes
+  made before the switch are discarded, as with Reset demo. The address's `lang` follows the
+  choice, so a reload or a copied link opens the same language. An open guided tour closes, and
+  starts afresh in the new language. Only the demo does this: in the self-hosted application a
+  language change never touches the inventory.
+
 ## The canonical inventory
 
-`client/src/demo/fixture.js` is the single definition of the demo data. Every name, value, and serial
-number is invented.
+`client/src/demo/fixture.js` is the single definition of the demo data, for every language. Every
+name, value, and serial number is invented.
+
+- **One inventory, localized text.** Every category, field, location, item, template, and checklist
+  has a stable semantic `key` (`photography`, `mount`, `home-office`, `camera-bag`, `film-roll`,
+  `weekend-photo-walk`, …). Relations (category, `parent`, `location`, checklist items, field
+  values) refer to keys, and the non-text values — UUIDs, dates, prices, serial numbers, numbers,
+  booleans, Condition grades, photo files — are written once. A display text is either one string
+  (a proper name, a standard, a value with a unit) or an object with one string per supported
+  locale: `{ en: 'Camera Bag', uk: 'Сумка для камери' }`.
+- `createDemoFixture(locale)` resolves that text for one language and returns the same keys and
+  structure for every language; `byKey(list, key)` and `demoItemUuid(key)` find entities. It
+  throws on a missing translation, so a new locale cannot ship a half-translated demo, and gives an
+  unsupported locale the English inventory.
+- The English inventory, described below, and the Ukrainian one are the same inventory: the same
+  ids, UUIDs, relations, photos, and Dashboard figures.
+
 
 - **Categories and custom fields:** Storage (Material, Labeled), Photography (Mount, Format, Last
   tested), Electronics (Capacity, Connector, Warranty until), Tools (Power source, Voltage), Travel &
@@ -101,9 +138,17 @@ The demo reuses the server code instead of imitating it:
   after applying the real schema from `server/src/schema.js`, which `server/src/db.js` now imports
   as well. `client/src/demo/seed.js` loads the fixture through those services, so it always passes
   the current validation rules; only the fixed UUIDs and the creation dates are written directly.
-- `startDemoBackend()` also returns `reset()`, which seeds a fresh in-memory database without a
-  reload; `resetDemoData()` in `client/src/api.js` calls it for the guided tour and advances
-  `dataRevision`, the key `App.vue` gives the page so it loads the fresh data.
+- `startDemoBackend(locale)` seeds the fixture in the interface language and also returns
+  `reset(locale)`, which seeds a fresh in-memory database without a reload; `resetDemoData()` in
+  `client/src/api.js` calls it in the active language for the guided tour and a language change and
+  advances `dataRevision`, the key `App.vue` gives the page so it loads the fresh data.
+  `seedDemoInventory(services, photos, locale)` in `seed.js` maps category and field keys to the ids
+  it creates.
+- `client/src/i18n/index.js` picks the demo's first language with `pickLocale()` from
+  `client/src/i18n/core.js` (`?lang=`, then the saved preference, then English), and in the demo
+  `setLocale()` also writes `lang` into the address with `history.replaceState()`, which leaves the
+  hash route alone. `DemoBanner.vue` watches the locale, calls `resetDemoData()`, and shows the
+  notice; `DemoTour.vue` closes an open tour on the same change.
 - `client/src/main.js` uses hash routing in the demo; `client/src/components/DemoBanner.vue` is the
   strip, and `DemoUnavailable.vue` stands in for the server-only Data cards and the Settings sections
   marked `serverOnly` in `client/src/settingsSections.js`.
@@ -134,7 +179,10 @@ npm run landing:preview  # serves the landing page and the built demo at …/inv
 ## Verification
 
 - `test/demo.test.js` runs the demo data layer in Node: deterministic seeding (two seeds are
-  identical, fixed UUIDs and ids), the categories, locations, containers, fields, and photos, search,
+  identical, fixed UUIDs and ids), the same keys, ids, UUIDs, relations, photos, values, and
+  Dashboard figures in every language, the Ukrainian names, locations, fields, template, checklist,
+  and database name with proper names, serials, standards, and units kept, English for an
+  unsupported locale, the categories, locations, containers, fields, and photos, search,
   the category filter, the Dashboard, a completed checklist with Last verified, changes that stay in
   one demo database while a new one starts from the fixture, the sql.js adapter (bindings,
   constraint codes, savepoints, foreign keys), and the photo and private-data checks above.
@@ -143,13 +191,16 @@ npm run landing:preview  # serves the landing page and the built demo at …/inv
   site and none to `/api`, item details with a loaded photo, every photo served from the demo assets,
   creating and editing items and Reset demo restoring the fixture, a reloaded deep link, the
   not-available explanations, a scan of the built files for API keys and credentials, and the phone
-  layout and menu.
-- `test/e2e/landing.spec.js` checks that Try Demo points to the demo next to the install link.
+  layout and menu. In every language it checks that `?lang=uk` opens the Ukrainian interface and
+  inventory over a saved English choice and survives a reload of a deep link, that `?lang=fr` falls
+  back to English, and that a language change in Settings seeds the demo again (the visitor's item
+  is gone, the database name and items are Ukrainian, the notice shows, and the address and the
+  saved preference follow) and back to English.
+- `test/e2e/landing.spec.js` checks that Try Demo points to the demo in the landing language next
+  to the install link, and that the Ukrainian landing opens the Ukrainian demo in a new tab.
 - `test/e2e/tour.spec.js` covers the guided tour; see [its document](demo-guided-tour.md#verification).
 
 ## Notes and limitations
 
-- The demo is English-first like the application: the language switch works, but the fixture data is
-  English, as user data is never translated.
 - The first load downloads the SQLite WebAssembly module (about 320 KB compressed) once.
 - Templates and checklists created in the demo vanish on reload like everything else.

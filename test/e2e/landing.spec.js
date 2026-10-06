@@ -49,7 +49,7 @@ test('the hero offers real install, repository, and demo destinations', async ({
   // Try Demo is an extra path next to the install one, never a replacement for it, and opens the
   // demo in a new tab that it announces to every visitor.
   const demo = hero.getByRole('link', { name: 'Try Demo (opens in a new tab)' });
-  await expect(demo).toHaveAttribute('href', demoURL);
+  await expect(demo).toHaveAttribute('href', `${demoURL}?lang=en#/dashboard`);
   await expect(demo).toHaveAttribute('target', '_blank');
   await expect(demo).toHaveAttribute('rel', 'noopener noreferrer');
   await expect(demo.locator('svg.landing-external')).toBeVisible();
@@ -318,4 +318,172 @@ test('sections fade in as they scroll into view, and appear at once with reduced
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto(landingURL);
   await expect(page.locator('#dashboard .landing-reveal').first()).toHaveCSS('opacity', '1');
+});
+
+test.describe('in every language', () => {
+  const STORAGE_KEY = 'inventory-atlas.locale';
+  const uk = JSON.parse(fs.readFileSync(new URL('../../landing/src/locales/uk.json', import.meta.url), 'utf8'));
+  const languageButton = page => page.getByRole('navigation').getByRole('button', { name: /^(Language|Мова):/ });
+  const menu = page => page.getByRole('menu', { name: /^(Language|Мова)$/ });
+  const screenshotLocales = page => page.locator('main img').evaluateAll(images =>
+    [...new Set(images.map(image => new URL(image.getAttribute('src'), window.location.href).pathname.match(/\/screenshots\/([^/]+)\//)?.[1]))]);
+
+  async function chooseUkrainian(page) {
+    await languageButton(page).click();
+    await expect(menu(page)).toBeVisible();
+    await menu(page).getByRole('menuitemradio', { name: 'Українська' }).click();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'uk');
+  }
+
+  test('English is the default, and the dropdown offers every language by its own name', async ({ page }) => {
+    await page.goto(landingURL);
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    await expect(page.getByRole('heading', { level: 2, name: 'Everything has a place' })).toBeVisible();
+    expect(await screenshotLocales(page)).toEqual(['en']);
+    expect(await page.evaluate(key => localStorage.getItem(key), STORAGE_KEY)).toBeNull();
+
+    const button = languageButton(page);
+    await expect(button).toHaveAccessibleName('Language: English');
+    await expect(button).toHaveAttribute('aria-haspopup', 'menu');
+    await expect(button).toHaveAttribute('aria-expanded', 'false');
+    await button.click();
+    await expect(button).toHaveAttribute('aria-expanded', 'true');
+    const options = menu(page).getByRole('menuitemradio');
+    await expect(options).toHaveText(['English', 'Українська']);
+    await expect(options.first()).toHaveAttribute('aria-checked', 'true');
+    await expect(options.first()).toBeFocused();
+    // No flags: each language is named in text, in its own language.
+    await expect(options.nth(1)).toHaveAttribute('lang', 'uk');
+    await expect(menu(page).locator('img')).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await expect(menu(page)).toBeHidden();
+    await expect(button).toBeFocused();
+  });
+
+  test('Ukrainian translates the page at once, with its own screenshots and metadata, and survives a reload', async ({ page }) => {
+    await page.goto(landingURL);
+    const englishShot = await page.locator('#hierarchy img').getAttribute('src');
+    // Keyboard only: the arrow keys open the menu and move to the language, Enter picks it.
+    await languageButton(page).focus();
+    await page.keyboard.press('ArrowDown');
+    await expect(menu(page).getByRole('menuitemradio', { name: 'English' })).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+
+    await expect(page.locator('html')).toHaveAttribute('lang', 'uk');
+    await expect(menu(page)).toBeHidden();
+    await expect(languageButton(page)).toHaveAccessibleName('Мова: Українська');
+    await expect(languageButton(page)).toBeFocused();
+    await expect(page.getByRole('navigation', { name: 'Головна' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Inventory Atlas Lite' })).toBeVisible();
+    for (const id of ['hierarchy', 'items', 'photos-qr', 'find', 'dashboard']) {
+      await expect(page.getByRole('heading', { level: 2, name: uk.sections[id].title })).toBeAttached();
+    }
+    await expect(page.locator('#hierarchy .landing-eyebrow')).toHaveText(`01 / ${uk.sections.hierarchy.verb}`);
+    await expect(page.getByRole('region', { name: uk.facts.title }).getByRole('term')).toHaveText(Object.values(uk.facts.items).map(fact => fact.term));
+    await expect(page.locator('header').getByRole('link', { name: uk.hero.get })).toHaveAttribute('href', links.get);
+    await expect(page.getByTestId('release')).toContainText(`${uk.hero.release} v${release.version}`);
+    await expect(page.getByRole('link', { name: uk.install.options.docker.label })).toHaveAttribute('href', links.docker);
+    await expect(page).toHaveTitle(uk.meta.title);
+    await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', uk.meta.description);
+    await expect(page.locator('meta[property="og:title"]')).toHaveAttribute('content', uk.meta.ogTitle);
+    await expect(page.locator('meta[property="og:image:alt"]')).toHaveAttribute('content', uk.meta.ogImageAlt);
+    expect(await page.evaluate(key => localStorage.getItem(key), STORAGE_KEY)).toBe('uk');
+    // No English sentence is left on the page, visible or for assistive technology.
+    for (const english of ['Everything has a place', 'Skip to content', 'Opens a larger view', 'Your server, your data', 'Latest release']) {
+      await expect(page.getByText(english)).toHaveCount(0);
+    }
+
+    // The Ukrainian screenshots, with Ukrainian captions and descriptions, from the base path.
+    const figure = page.locator('#hierarchy').getByRole('figure');
+    await expect(figure).toHaveAccessibleName(uk.screenshots.hierarchy.caption);
+    await expect(figure.getByRole('img')).toHaveAttribute('alt', uk.screenshots.hierarchy.alt);
+    expect(await figure.getByRole('img').getAttribute('src')).not.toBe(englishShot);
+    expect(await screenshotLocales(page)).toEqual(['uk']);
+    for (const image of await page.locator('main img').all()) {
+      await image.scrollIntoViewIfNeeded();
+      expect(new URL(await image.evaluate(element => element.currentSrc)).pathname.startsWith(`${basePath}assets/screenshots/uk/`)).toBe(true);
+      await expect.poll(() => image.evaluate(element => element.complete && element.naturalWidth)).toBeGreaterThan(0);
+    }
+
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'uk');
+    await expect(page.getByRole('heading', { level: 2, name: uk.sections.hierarchy.title })).toBeAttached();
+    expect(await screenshotLocales(page)).toEqual(['uk']);
+
+    await languageButton(page).click();
+    await menu(page).getByRole('menuitemradio', { name: 'English' }).click();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    await expect(page.getByRole('heading', { level: 2, name: 'Everything has a place' })).toBeAttached();
+  });
+
+  test('the Ukrainian screenshot viewer has Ukrainian captions, descriptions, and controls', async ({ page }) => {
+    await page.goto(landingURL);
+    await chooseUkrainian(page);
+    await page.locator('#find').getByRole('link', { name: uk.screenshots['items-search'].alt }).click();
+    const viewer = page.getByRole('dialog');
+    await expect(viewer).toHaveAccessibleName(uk.screenshots['items-search'].caption);
+    await viewer.getByRole('button', { name: uk.viewer.next }).click();
+    await expect(viewer).toHaveAccessibleName(uk.screenshots['checklist-run-phone'].caption);
+    const image = viewer.getByRole('img', { name: uk.screenshots['checklist-run-phone'].alt });
+    await expect.poll(() => image.evaluate(element => element.complete && element.naturalWidth)).toBeGreaterThan(0);
+    expect(new URL(await image.evaluate(element => element.currentSrc)).pathname).toContain('/screenshots/uk/');
+    await viewer.getByRole('button', { name: uk.viewer.previous }).click();
+    await expect(viewer).toHaveAccessibleName(uk.screenshots['items-search'].caption);
+    await viewer.getByRole('button', { name: uk.viewer.close }).click();
+    await expect(viewer).toBeHidden();
+  });
+
+  test('Try Demo opens the demo in the landing language, in a new tab', async ({ page }) => {
+    await page.goto(landingURL);
+    await chooseUkrainian(page);
+    const demo = page.locator('header').getByRole('link', { name: `${uk.hero.demo} ${uk.hero.newTab}` });
+    await expect(demo).toHaveAttribute('href', `${demoURL}?lang=uk#/dashboard`);
+    await expect(demo).toHaveAttribute('target', '_blank');
+
+    const [tab] = await Promise.all([page.context().waitForEvent('page'), demo.click()]);
+    await expect(tab.locator('html')).toHaveAttribute('lang', 'uk');
+    await expect(tab.getByRole('heading', { name: 'Панель', level: 1 })).toBeVisible();
+    await expect(tab.getByRole('complementary', { name: 'Демо-режим' })).toBeVisible();
+    await tab.close();
+
+    await languageButton(page).click();
+    await menu(page).getByRole('menuitemradio', { name: 'English' }).click();
+    await expect(page.locator('header').getByRole('link', { name: 'Try Demo (opens in a new tab)' })).toHaveAttribute('href', `${demoURL}?lang=en#/dashboard`);
+  });
+
+  test('a blocked storage still switches the language for the page', async ({ page }) => {
+    await page.addInitScript(() => {
+      const blocked = () => { throw new DOMException('Blocked', 'SecurityError'); };
+      Object.defineProperty(window, 'localStorage', { get: blocked });
+    });
+    await page.goto(landingURL);
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    await chooseUkrainian(page);
+    await expect(page.getByRole('heading', { level: 2, name: uk.sections.hierarchy.title })).toBeAttached();
+    await expect(page.locator('header').getByRole('link', { name: new RegExp(uk.hero.demo) })).toHaveAttribute('href', `${demoURL}?lang=uk#/dashboard`);
+  });
+
+  for (const viewport of phones) {
+    test(`the Ukrainian landing fits a ${viewport.width} px phone with the language menu`, async ({ page }) => {
+      await page.setViewportSize(viewport);
+      await page.addInitScript(key => localStorage.setItem(key, 'uk'), STORAGE_KEY);
+      await page.goto(landingURL);
+      const nav = await page.getByRole('navigation', { name: 'Головна' }).boundingBox();
+      expect(nav.height).toBeLessThanOrEqual(72);
+      await languageButton(page).click();
+      const box = await menu(page).boundingBox();
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(viewport.width);
+      await expect(menu(page).getByRole('menuitemradio', { name: 'Українська' })).toHaveAttribute('aria-checked', 'true');
+      await page.mouse.click(10, viewport.height - 10);
+      await expect(menu(page)).toBeHidden();
+      for (const id of ['hierarchy', 'find', 'install']) {
+        const heading = page.locator(`#${id} h2`);
+        await heading.scrollIntoViewIfNeeded();
+        await expect(heading).toBeVisible();
+      }
+      expect(await sidewaysOverflow(page)).toBeLessThanOrEqual(0);
+    });
+  }
 });

@@ -16,7 +16,11 @@ the conventions of the active language; stored values and the API are unchanged.
   once, and sets the `lang` attribute of the document. A reload keeps the choice.
 - The preference is stored in `localStorage` under `inventory-atlas.locale`. It is never sent to the
   server or written to SQLite, so every browser and device keeps its own language. A blocked storage
-  only loses the persistence; the switch still works for the open page.
+  only loses the persistence; the switch still works for the open page. The public
+  [landing page](landing-page.md) and the [public demo](public-demo.md) share this key and the
+  locale rules of `client/src/i18n/core.js`; the demo also accepts `?lang=` in its address. Only the
+  demo, whose sample inventory is written in every language, reloads its data on a language change;
+  the self-hosted application never translates, replaces, or resets the inventory.
 - Translated: navigation, page headers, Dashboard, the items list and cards, item details, the item
   form, AI Add Item, categories and fields, Batch Add Fields/AI Add Fields, Batch Add Items, QR code,
   QR scanner, label printing, Settings (AI and Cloud Backup), Data / Backup, the reset dialog, About,

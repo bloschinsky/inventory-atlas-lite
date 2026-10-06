@@ -10,7 +10,8 @@ This is an MVP without authentication, intended for use on a trusted local netwo
 
 - Use English throughout the project.
 - Write all documentation, code comments, commit messages, identifiers, user-facing copy, test descriptions, and configuration notes in English.
-  The only exception is the Ukrainian interface translation in `client/src/i18n/locales/uk.json`.
+  The only exceptions are the Ukrainian translations: the interface in `client/src/i18n/locales/uk.json`, the landing page in
+  `landing/src/locales/uk.json`, and the `uk` texts of the public demo inventory in `client/src/demo/fixture.js`.
 - When editing existing text, keep terminology consistent with the surrounding English content.
 
 ## Stack and architecture
@@ -107,15 +108,18 @@ The project stays small and readable. Do not add:
   `dist-landing/demo/`): `backend.js` dispatches API requests to the real route tables over
   `services.js` (the inventory repositories and services on an in-memory sql.js database adapted by
   `sqlite.js`), `express.js` is the Router stand-in the demo build aliases `express` to, `fixture.js`
-  is the canonical demo inventory that `seed.js` loads through the services, and `photos/` holds its
-  generated item photos. `client/src/components/DemoBanner.vue` and `DemoUnavailable.vue` are the
+  is the canonical demo inventory — one structure of semantic keys with its display text in every
+  supported locale, resolved by `createDemoFixture(locale)` — that `seed.js` loads through the
+  services in the interface language, and `photos/` holds its generated item photos. `client/src/components/DemoBanner.vue` and `DemoUnavailable.vue` are the
   demo strip and the stand-in for server-only features. The demo's guided tour: `tourChapters.js`
-  (the ordered, data-driven chapters and their scenes), `tour.js` (the chapter engine: playback,
+  (the ordered, data-driven chapters and their scenes, which name fixture entities by key and fill
+  their copy's placeholders from the fixture of the tour's language), `tour.js` (the chapter engine: playback,
   Pause, Replay, abort), `tourActions.js` (`TIMING` and the DOM actions a scene performs), and
   `client/src/components/DemoTour.vue` (launcher, inverse-theme card, spotlight); it finds the UI
-  through `data-tour` attributes, and `backend.js` `reset()` gives it a fresh fixture.
+  through `data-tour` attributes, and `backend.js` `reset(locale)` gives it a fresh fixture. A
+  language change in the demo seeds it again in the new language (`DemoBanner.vue`) and closes the tour.
 - `client/src/i18n/index.js` — the `vue-i18n` instance, the browser-local language preference, and display formatting in the active locale.
-- `client/src/i18n/core.js` — supported locales, vue-i18n options (English default and fallback, Ukrainian plural rule), and the `Intl` date, number, money, and file-size formatters.
+- `client/src/i18n/core.js` — supported locales, the shared locale storage key, `pickLocale()` (the demo's `?lang=`, then the saved choice, then English), vue-i18n options (English default and fallback, Ukrainian plural rule), and the `Intl` date, number, money, and file-size formatters; the landing page reuses it.
 - `client/src/i18n/locales/` — `en.json` and `uk.json`, the interface messages grouped by feature.
 - `client/src/update.js` — shared state and polling of the update panel in the About dialog.
 - `client/src/whatsNew.js` — the last acknowledged version in browser storage and the unseen releases shown after an update; `client/src/components/WhatsNewDialog.vue` renders them.
@@ -201,22 +205,32 @@ The project stays small and readable. Do not add:
 - `playwright.config.js` — Playwright projects, isolated test ports, and the cloud provider stub, API, Vite, and landing and demo build/preview processes started for the suite.
 - `landing/` — the public landing page, a separate Vue/Vite/Tabler build into `dist-landing/` (ignored
   by Git) published to GitHub Pages by `.github/workflows/pages.yml`: `vite.config.js` (base path from
-  `LANDING_SITE_URL`, release from `LANDING_RELEASE_TAG`, demo button from `LANDING_DEMO_URL`),
-  `site.js` (repository and documentation links, `landingRelease()` over the release history),
-  `src/` (the page, its English-only copy in `content.js`, the screenshot viewer
-  `ScreenshotLightbox.vue`, the bundled Geist typeface imported in `main.js`, and the screenshots in
-  `src/assets/screenshots/`), `public/` (favicon and Open Graph image), and `scripts/` (the
-  screenshot capture and its fictional sample inventory).
-- `test/landing.test.js` — landing release resolution, site address, and documentation link checks;
-  `test/e2e/landing.spec.js` — the built landing page under a Pages-style base path.
+  `LANDING_SITE_URL`, release from `LANDING_RELEASE_TAG`, demo button from `LANDING_DEMO_URL`; it
+  fails without a full screenshot set per locale), `site.js` (repository and documentation links,
+  `landingRelease()` over the release history), `screenshots.js` (the screenshot names and their
+  per-locale files), `src/` (the page; `content.js` holds its language-neutral structure — section
+  ids, icons, screenshot names, links, and the Try Demo address with `?lang=` — and
+  `locales/en.json` and `uk.json` all its copy, loaded by `i18n.js` over the application's
+  `client/src/i18n/core.js`; `LanguageMenu.vue` is the language dropdown, `ScreenshotLightbox.vue` the
+  screenshot viewer, the bundled Geist typeface is imported in `main.js`, and the screenshots are in
+  `src/assets/screenshots/<locale>/`), `public/` (favicon and Open Graph image), and `scripts/`
+  (`capture-screenshots.mjs`, which photographs the built public demo in every locale).
+- `test/landing.test.js` — landing release resolution, site address, documentation links, landing
+  message parity and compilation, and the screenshot set of every locale;
+  `test/e2e/landing.spec.js` — the built landing page under a Pages-style base path, in English and
+  Ukrainian: the language dropdown, persistence, metadata, localized screenshots, and Try Demo's
+  `?lang=`.
 - `test/demo.test.js` — the public demo data layer in Node: deterministic fixture, seeded content,
-  isolation of changes, the sql.js adapter, the demo photo and private-data checks, the fixture
-  template and checklist the tour opens, and the guided tour's copy rules;
+  the same structure in every locale and the Ukrainian texts, isolation of changes, the sql.js
+  adapter, the demo photo and private-data checks, the fixture template and checklist the tour opens,
+  and the guided tour's copy rules;
   `test/e2e/demo.spec.js` — the built demo inside the landing build: no server requests, photos,
-  temporary changes and Reset demo, reloaded deep links, unavailable features, no bundled secrets;
+  temporary changes and Reset demo, reloaded deep links, unavailable features, no bundled secrets,
+  `?lang=` and the language change that seeds the demo again;
   `test/e2e/tour.spec.js` — the demo's guided tour: every chapter and its scenes, idempotent
-  Replay/Back/Next, Pause/Resume, close, failing scenes, the inverse theme, Ukrainian, reduced motion,
-  phones, and its absence from the self-hosted app.
+  Replay/Back/Next, Pause/Resume, close, failing scenes, the inverse theme, the tour on the Ukrainian
+  inventory, a language change during the tour, reduced motion, phones, and its absence from the
+  self-hosted app.
 - `docs/README.md` — documentation layout and conventions.
 - `docs/HOW-TO.md` — quick user guide for the current application.
 - `docs/issues/` — active tasks, feature specifications, and future work.
@@ -254,8 +268,11 @@ are mandatory for all frontend work:
 - `test/i18n.test.js` fails when the two locales do not define the same keys or a message does not
   compile, and `test/errors.test.js` fails when a code used in `server/src` or `shared` has no message;
   keep both passing.
-- These rules cover the application in `client/`. The public landing page in `landing/` is
-  English-only product copy kept in `landing/src/content.js`.
+- These rules cover the application in `client/` and the public landing page in `landing/`, whose
+  copy lives in `landing/src/locales/<locale>.json` (its own messages, the application's locale codes,
+  rules, and storage key). The public demo inventory in `client/src/demo/fixture.js` is invented sample
+  data, not user data: it carries its display text for every supported locale under stable semantic
+  keys, and the guided tour identifies entities by those keys, never by English text.
 
 ## Data model and important constraints
 

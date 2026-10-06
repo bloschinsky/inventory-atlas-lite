@@ -1,6 +1,6 @@
 import { api } from '../api.js';
 import { DEFAULT_ITEM_SORT, ITEMS_VIEW_STORAGE_KEY } from '../itemColumns.js';
-import { checklists, templates, tourItem } from './fixture.js';
+import { byKey, demoItemUuid } from './fixture.js';
 import { findByText, findHook } from './tourActions.js';
 // The generated photo the fixture names as tourItem.photo.
 import tourPhotoUrl from './photos/nikon-f65.webp?url';
@@ -28,17 +28,55 @@ import tourPhotoUrl from './photos/nikon-f65.webp?url';
   move the spotlight during an action, `data` (the tour's own state), and the `router`. Every chapter
   can play again after Back, Next, or Replay without creating anything twice: the tour item is created
   once and only edited afterwards, and the checklist run is continued instead of started again.
+
+  The chapters never identify an entity by English text. They name fixture entities by semantic key;
+  `data.fixture` (./fixture.js in the tour's language, set when the tour starts) turns a key into the
+  name the page shows, and seeded items are found by their fixed UUID and then by their row id. The
+  same chapters therefore play on the demo inventory of every language.
 */
 
+// Search text that is the same in every language: a brand in the names of the photo kit.
 const ITEMS_SEARCH = 'Nikon';
-const SEEDED_CAMERA = 'Nikon F65';
-const [tourTemplate] = templates;
-const [tourChecklist] = checklists;
+const SEEDED_CAMERA = 'nikon-f65';
+const HIDDEN_BY_FILTER = 'cordless-drill';
+// The one Photography item without "Nikon" in any of its values.
+const HIDDEN_BY_SEARCH = 'film-rolls';
+const TOUR_TEMPLATE = 'film-roll';
+const TOUR_CHECKLIST = 'weekend-photo-walk';
 
-// The tour item, when an earlier chapter run (or the visitor) saved it: found by its unique name.
-async function findTourItem() {
-  const { items } = await api(`/api/items?search=${encodeURIComponent(tourItem.name)}`);
-  return items.find(item => item.name === tourItem.name) ?? null;
+const tourCategory = fixture => byKey(fixture.categories, fixture.tourItem.category);
+const tourContainer = fixture => byKey(fixture.items, fixture.tourItem.container);
+const fieldName = (fixture, categoryKey, key) => byKey(byKey(fixture.categories, categoryKey).fields, key).name;
+
+/*
+  The fixture names every scene's copy may use, in the tour's language: `{category}`, `{fields}`,
+  `{container}`, `{location}`, `{camera}`, `{template}`, `{templateField}`, and `{checklist}`, and
+  the `{search}` text. A scene's own `params` add to them.
+*/
+export function copyParams({ fixture }) {
+  const category = tourCategory(fixture);
+  const container = tourContainer(fixture);
+  const template = byKey(fixture.templates, TOUR_TEMPLATE);
+  return {
+    search: ITEMS_SEARCH,
+    templateField: fieldName(fixture, template.category, Object.keys(template.fields)[0]),
+    category: category.name,
+    fields: new Intl.ListFormat(fixture.locale, { type: 'conjunction' }).format(category.fields.map(field => field.name)),
+    container: container.name,
+    location: container.location,
+    camera: byKey(fixture.items, SEEDED_CAMERA).name,
+    template: template.name,
+    checklist: byKey(fixture.checklists, TOUR_CHECKLIST).name
+  };
+}
+
+// The row id of a seeded item, found by its fixed UUID.
+const seededItemId = async key => (await api(`/api/items/${demoItemUuid(key)}`)).id;
+
+// The tour item, when an earlier chapter run (or the visitor) saved it: found by its unique serial number.
+async function findTourItem({ tourItem }) {
+  const { items } = await api(`/api/items?search=${encodeURIComponent(tourItem.serialNumber)}`);
+  return items.find(item => item.serial_number === tourItem.serialNumber) ?? null;
 }
 
 const rowNamed = (root, name) => findByText(root, 'span, a', name)?.closest('li');
@@ -67,12 +105,11 @@ function resetItemsSort() {
   }
 }
 
-const resultsShow = (name, shown = true) => () => {
-  const results = findHook('item-results');
-  return results && Boolean(findByText(results, 'a', name)) === shown;
-};
+// Whether the Items results show the row (or phone card) of the item with this row id.
+const rowShown = (id, shown = true) => () => Boolean(findHook('item-results')) && Boolean(findHook(`item-row-${id}`)) === shown;
 
-const resultName = data => (data.itemId ? tourItem.name : SEEDED_CAMERA);
+// The tour item, or the seeded camera when the visitor skipped Add an Item before it saved.
+const resultName = ({ itemId, fixture }) => (itemId ? fixture.tourItem.name : byKey(fixture.items, SEEDED_CAMERA).name);
 
 async function saveItem({ data, router, click, waitFor, waitForHook }) {
   const form = await waitForHook('item-form');
@@ -86,7 +123,7 @@ async function saveItem({ data, router, click, waitFor, waitForHook }) {
   }, 'item-saved');
 }
 
-async function attachTourPhoto({ waitFor, waitForHook, attachFile }) {
+async function attachTourPhoto({ data: { fixture: { tourItem } }, waitFor, waitForHook, attachFile }) {
   const form = await waitForHook('item-form');
   const shown = () => form.querySelector(`img[alt="${tourItem.photo}"]`);
   // The edited tour item already has its photo; uploading it again would add a second copy.
@@ -128,15 +165,18 @@ export const tourChapters = [
       {
         id: 'select',
         target: 'category-list',
-        action: async ({ waitForHook, waitForText, click }) => {
-          const row = (await waitForText(await waitForHook('category-list'), 'strong', tourItem.category)).closest('[role="button"]');
+        action: async ({ data: { fixture }, waitForHook, waitForText, click }) => {
+          const row = (await waitForText(await waitForHook('category-list'), 'strong', tourCategory(fixture).name)).closest('[role="button"]');
           if (!row.classList.contains('active')) await click(row);
         }
       },
       {
         id: 'fields',
         target: 'category-fields',
-        action: ({ waitFor }) => waitFor(() => findHook('category-fields')?.textContent.includes(Object.keys(tourItem.fields)[0]), 'category-fields')
+        action: ({ data: { fixture }, waitFor }) => waitFor(
+          () => tourCategory(fixture).fields.every(field => findHook('category-fields')?.textContent.includes(field.name)),
+          'category-fields'
+        )
       },
       { id: 'location', target: 'category-fields' }
     ]
@@ -150,9 +190,11 @@ export const tourChapters = [
         id: 'location',
         target: 'hierarchy-tree',
         action: async context => {
-          await expandBranch(context, 'Home / Office');
-          await expandBranch(context, tourItem.container);
-          await context.waitForText(findHook('hierarchy-tree'), 'a', SEEDED_CAMERA);
+          const { fixture } = context.data;
+          const container = tourContainer(fixture);
+          await expandBranch(context, container.location);
+          await expandBranch(context, container.name);
+          await context.waitForText(findHook('hierarchy-tree'), 'a', byKey(fixture.items, SEEDED_CAMERA).name);
         }
       },
       {
@@ -168,8 +210,9 @@ export const tourChapters = [
         id: 'tree',
         target: 'hierarchy-tree',
         action: async context => {
-          await expandBranch(context, tourItem.category);
-          await context.waitForText(findHook('hierarchy-tree'), 'a', SEEDED_CAMERA);
+          const { fixture } = context.data;
+          await expandBranch(context, tourCategory(fixture).name);
+          await context.waitForText(findHook('hierarchy-tree'), 'a', byKey(fixture.items, SEEDED_CAMERA).name);
         }
       },
       {
@@ -188,45 +231,55 @@ export const tourChapters = [
     id: 'addItem',
     // The tour item is edited once it exists, so Back, Next, and Replay never add a second one.
     route: async data => {
-      data.itemId = (await findTourItem())?.id ?? null;
+      data.itemId = (await findTourItem(data.fixture))?.id ?? null;
       return data.itemId ? `/items/${data.itemId}/edit` : '/items/new';
     },
     prepare: async ({ data, waitFor, waitForHook }) => {
       await waitForHook('item-form');
       const name = document.getElementById('item-name');
       const category = document.getElementById('item-category');
-      await waitFor(() => [...category.options].some(option => option.textContent.trim() === tourItem.category), 'item-category');
-      if (data.itemId) await waitFor(() => name.value === tourItem.name, 'item-form');
+      const categoryName = tourCategory(data.fixture).name;
+      await waitFor(() => [...category.options].some(option => option.textContent.trim() === categoryName), 'item-category');
+      if (data.itemId) await waitFor(() => name.value === data.fixture.tourItem.name, 'item-form');
     },
     scenes: [
-      { id: 'name', target: '#item-name', action: ({ type }) => type(document.getElementById('item-name'), tourItem.name) },
-      { id: 'category', target: '#item-category', action: ({ choose }) => choose(document.getElementById('item-category'), tourItem.category, { byText: true }) },
+      { id: 'name', target: '#item-name', action: ({ data, type }) => type(document.getElementById('item-name'), data.fixture.tourItem.name) },
+      {
+        id: 'category',
+        target: '#item-category',
+        action: ({ data, choose }) => choose(document.getElementById('item-category'), tourCategory(data.fixture).name, { byText: true })
+      },
       {
         id: 'condition',
         target: '#item-condition-grade',
-        action: ({ choose }) => choose(document.getElementById('item-condition-grade'), tourItem.condition)
+        action: ({ data, choose }) => choose(document.getElementById('item-condition-grade'), data.fixture.tourItem.condition)
       },
-      { id: 'serial', target: '#item-serial-number', action: ({ type }) => type(document.getElementById('item-serial-number'), tourItem.serialNumber) },
+      {
+        id: 'serial',
+        target: '#item-serial-number',
+        action: ({ data, type }) => type(document.getElementById('item-serial-number'), data.fixture.tourItem.serialNumber)
+      },
       {
         id: 'placement',
         target: 'item-parent',
         // Stored inside: the same search and pick a visitor makes, unless the item is already there.
-        action: async ({ type, click, waitForHook, waitForText }) => {
-          if (findByText(findHook('item-parent'), 'span', tourItem.container)) return;
+        action: async ({ data, type, click, waitForHook, waitForText }) => {
+          const container = tourContainer(data.fixture).name;
+          if (findByText(findHook('item-parent'), 'span', container)) return;
           const search = await waitForHook('item-parent-search');
-          await type(search, tourItem.container);
+          await type(search, container);
           search.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
           const candidates = await waitForHook('item-parent-results');
-          await click((await waitForText(candidates, 'span', tourItem.container)).closest('li'));
-          await waitForText(findHook('item-parent'), 'span', tourItem.container);
+          await click((await waitForText(candidates, 'span', container)).closest('li'));
+          await waitForText(findHook('item-parent'), 'span', container);
         }
       },
       {
         id: 'fields',
         target: 'item-custom-fields',
-        action: async ({ waitForLabel, type }) => {
-          for (const [label, value] of Object.entries(tourItem.fields)) {
-            const input = await waitForLabel(findHook('item-custom-fields'), label);
+        action: async ({ data: { fixture }, waitForLabel, type }) => {
+          for (const [key, value] of Object.entries(fixture.tourItem.fields)) {
+            const input = await waitForLabel(findHook('item-custom-fields'), fieldName(fixture, fixture.tourItem.category, key));
             await type(input, value);
             input.blur();
           }
@@ -240,7 +293,7 @@ export const tourChapters = [
     id: 'items',
     route: async data => {
       resetItemsSort();
-      data.itemId = (await findTourItem())?.id ?? null;
+      data.itemId = (await findTourItem(data.fixture))?.id ?? null;
       return '/items';
     },
     scenes: [
@@ -248,11 +301,12 @@ export const tourChapters = [
       {
         id: 'filter',
         target: 'item-filters',
-        action: async ({ waitFor, choose, spotlight }) => {
+        action: async ({ data, waitFor, choose, spotlight }) => {
           const category = document.getElementById('items-category');
-          await waitFor(() => [...category.options].some(option => option.textContent.trim() === tourItem.category), 'items-category');
-          await choose(category, tourItem.category, { byText: true });
-          await waitFor(resultsShow('Cordless drill', false), 'items-filtered');
+          const categoryName = tourCategory(data.fixture).name;
+          await waitFor(() => [...category.options].some(option => option.textContent.trim() === categoryName), 'items-category');
+          await choose(category, categoryName, { byText: true });
+          await waitFor(rowShown(await seededItemId(HIDDEN_BY_FILTER), false), 'items-filtered');
           await spotlight('item-results');
         }
       },
@@ -275,21 +329,18 @@ export const tourChapters = [
         target: '#items-search',
         action: async ({ type, waitFor, spotlight }) => {
           await type(document.getElementById('items-search'), ITEMS_SEARCH);
-          // The film rolls are the one Photography item without "Nikon" in any of its values.
-          await waitFor(resultsShow('Film rolls (5 pack)', false), 'items-searched');
+          await waitFor(rowShown(await seededItemId(HIDDEN_BY_SEARCH), false), 'items-searched');
           await spotlight('item-results');
         }
       },
       {
         id: 'result',
         target: 'item-results',
-        // The tour item, or the seeded camera when the visitor skipped Add an Item before it saved.
         params: data => ({ name: resultName(data) }),
         action: async ({ data, waitFor, spotlight }) => {
-          const name = resultName(data);
-          await waitFor(resultsShow(name), name);
-          const row = await waitFor(() => findByText(findHook('item-results'), 'a', name)?.closest('[data-tour^="item-row"]'), name);
-          await spotlight(row.dataset.tour);
+          const id = data.itemId ?? await seededItemId(SEEDED_CAMERA);
+          await waitFor(rowShown(id), `item-row-${id}`);
+          await spotlight(`item-row-${id}`);
         }
       }
     ]
@@ -302,17 +353,21 @@ export const tourChapters = [
       {
         id: 'open',
         target: 'template-list',
-        action: async ({ waitForHook, waitForText, waitFor, click, spotlight }) => {
-          const row = (await waitForText(await waitForHook('template-list'), 'td', tourTemplate.name)).closest('tr');
+        action: async ({ data, waitForHook, waitForText, waitFor, click, spotlight }) => {
+          const { name } = byKey(data.fixture.templates, TOUR_TEMPLATE);
+          const row = (await waitForText(await waitForHook('template-list'), 'td', name)).closest('tr');
           await click(row.querySelector('a[href$="/edit"]'));
-          await waitFor(() => document.getElementById('template-name')?.value === tourTemplate.name, 'template-form');
+          await waitFor(() => document.getElementById('template-name')?.value === name, 'template-form');
           await spotlight('template-form');
         }
       },
       {
         id: 'values',
         target: 'item-custom-fields',
-        action: ({ waitForLabel }) => waitForLabel(findHook('item-custom-fields'), Object.keys(tourTemplate.fields)[0])
+        action: ({ data: { fixture }, waitForLabel }) => {
+          const template = byKey(fixture.templates, TOUR_TEMPLATE);
+          return waitForLabel(findHook('item-custom-fields'), fieldName(fixture, template.category, Object.keys(template.fields)[0]));
+        }
       },
       { id: 'use', target: 'template-form' }
     ]
@@ -325,8 +380,9 @@ export const tourChapters = [
       {
         id: 'open',
         target: 'checklist-list',
-        action: async ({ waitForHook, waitFor, click, spotlight }) => {
-          const card = await waitFor(() => findHook('checklist-list').querySelector(`article[aria-label="${tourChecklist.name}"]`), tourChecklist.name);
+        action: async ({ data, waitForHook, waitFor, click, spotlight }) => {
+          const { name } = byKey(data.fixture.checklists, TOUR_CHECKLIST);
+          const card = await waitFor(() => findHook('checklist-list').querySelector(`article[aria-label="${name}"]`), name);
           await click(card.querySelector('h2 a'));
           await waitForHook('checklist-items');
           await spotlight('checklist-items');
@@ -361,7 +417,7 @@ export const tourChapters = [
     route: () => '/dashboard',
     // The real changes since the tour started: only what the visitor's tour actually changed is presented.
     prepare: async ({ data }) => {
-      const [after, item] = await Promise.all([api('/api/dashboard'), findTourItem()]);
+      const [after, item] = await Promise.all([api('/api/dashboard'), findTourItem(data.fixture)]);
       const before = data.baseline;
       data.itemId = item?.id ?? null;
       data.changes = {
@@ -372,7 +428,7 @@ export const tourChapters = [
       };
     },
     scenes: [
-      { id: 'changed', target: 'dashboard-summary', skip: data => !data.itemId, params: () => ({ name: tourItem.name, category: tourItem.category, container: tourItem.container }) },
+      { id: 'changed', target: 'dashboard-summary', skip: data => !data.itemId, params: data => ({ name: data.fixture.tourItem.name }) },
       { id: 'unchanged', target: 'dashboard-summary', skip: data => Boolean(data.itemId) },
       { id: 'total', target: 'dashboard-summary', skip: data => !data.changes.total, params: data => data.changes.total },
       {

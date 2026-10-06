@@ -1,13 +1,16 @@
 <script setup>
 import { computed, nextTick, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { IconChevronLeft, IconChevronRight, IconX } from '@tabler/icons-vue';
+import { screenshotUrl } from './content.js';
 
 /*
   The screenshot viewer: one native modal <dialog> for the whole page. The browser gives it the top
   layer, the inert page behind it, focus containment, and Escape; this component adds the gallery of
   the section that opened it, Previous/Next with the arrow keys, closing on the backdrop, and focus
-  back on the screenshot that opened it.
+  back on the screenshot that opened it. The caption, the alt text, and the image follow the page language.
 */
+const { locale, t } = useI18n();
 const dialog = ref(null);
 const images = ref([]);
 const index = ref(0);
@@ -67,14 +70,14 @@ defineExpose({ open });
           id="landing-viewer-title"
           class="landing-viewer-title"
         >
-          {{ image.caption }}
+          {{ t(`screenshots.${image.name}.caption`) }}
         </h2>
         <div class="landing-viewer-controls">
           <template v-if="images.length > 1">
             <button
               type="button"
               class="btn btn-icon btn-ghost-secondary"
-              aria-label="Previous screenshot"
+              :aria-label="t('viewer.previous')"
               @click="step(-1)"
             >
               <IconChevronLeft
@@ -86,7 +89,7 @@ defineExpose({ open });
             <button
               type="button"
               class="btn btn-icon btn-ghost-secondary"
-              aria-label="Next screenshot"
+              :aria-label="t('viewer.next')"
               @click="step(1)"
             >
               <IconChevronRight
@@ -98,7 +101,7 @@ defineExpose({ open });
           <button
             type="button"
             class="btn btn-icon btn-ghost-secondary"
-            aria-label="Close"
+            :aria-label="t('viewer.close')"
             autofocus
             @click="dialog.close()"
           >
@@ -111,11 +114,11 @@ defineExpose({ open });
       </div>
       <div class="landing-viewer-stage">
         <img
-          :key="image.src"
+          :key="image.name"
           class="landing-viewer-image"
           :class="{ 'landing-viewer-image-phone': image.phone }"
-          :src="image.src"
-          :alt="image.alt"
+          :src="screenshotUrl(locale, image.name)"
+          :alt="t(`screenshots.${image.name}.alt`)"
         >
       </div>
     </div>

@@ -120,3 +120,25 @@ test('Ukrainian formats dates and money but never translates or changes the item
   const after = await (await request.get(`/api/items/${item.id}`)).json();
   expect(after).toEqual(before);
 });
+
+test('a language change in the self-hosted application never resets or replaces the inventory', async ({ page, request }) => {
+  const category = await createCategory(request, unique('Archive'));
+  const item = await createItem(request, { name: unique('Ledger 2019'), category_id: category.id, description: 'Kept as entered' });
+  const before = await (await request.get(`/api/items/${item.id}`)).json();
+  const total = async () => (await (await request.get('/api/dashboard')).json()).totalItems;
+  const count = await total();
+
+  await page.goto('/settings/interface');
+  await page.mouse.move(600, 400);
+  await page.getByLabel('Language').selectOption('uk');
+  await expect(heading(page)).toHaveText('Налаштування');
+  // Only the public demo seeds its sample data again on a language change.
+  await expect(page.getByRole('complementary', { name: 'Демо-режим' })).toHaveCount(0);
+  expect(new URL(page.url()).searchParams.has('lang')).toBe(false);
+
+  await page.goto(`/items/${item.id}`);
+  await expect(heading(page)).toHaveText(item.name);
+  await expect(detail(page, 'Опис')).toHaveText('Kept as entered');
+  expect(await (await request.get(`/api/items/${item.id}`)).json()).toEqual(before);
+  expect(await total()).toBe(count);
+});

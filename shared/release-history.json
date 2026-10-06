@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.56.0",
+    "date": "2026-10-06",
+    "changes": [
+      "The product page and the public demo now speak English and Ukrainian. Choose the language in the product page’s new language menu: the whole page, its screenshots, and its descriptions switch at once, and Try Demo opens the demo, its sample inventory, and its Guided tour in the same language.",
+      "In the public demo, changing the language in Settings reloads the sample inventory in that language. Your own installation never changes or translates your data when you change the language."
+    ]
+  },
+  {
     "version": "0.55.0",
     "date": "2026-10-06",
     "changes": [

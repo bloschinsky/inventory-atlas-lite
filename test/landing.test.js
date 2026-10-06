@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createI18n } from 'vue-i18n';
+import { SUPPORTED_LOCALES, createI18nOptions } from '../client/src/i18n/core.js';
+import { screenshotFile, screenshotNames } from '../landing/screenshots.js';
 import { defaultSiteUrl, landingRelease, links, repositoryUrl, siteUrl } from '../landing/site.js';
 import { readReleaseHistory } from '../shared/releaseHistory.js';
 
@@ -62,5 +65,56 @@ test('every landing link leads to an existing part of the repository documentati
     const prefix = `${repositoryUrl}/blob/master/`;
     assert.ok(links[name].startsWith(prefix));
     assert.ok(fs.existsSync(path.join(root, links[name].slice(prefix.length))), `${links[name]} does not exist`);
+  }
+});
+
+// The landing messages: one file per supported locale, with exactly the same keys.
+const landingMessages = Object.fromEntries(SUPPORTED_LOCALES.map(({ code }) => [code, JSON.parse(read(`landing/src/locales/${code}.json`))]));
+const flatten = (value, prefix = '') => Object.entries(value).flatMap(([key, child]) =>
+  child && typeof child === 'object' ? flatten(child, `${prefix}${key}.`) : [[`${prefix}${key}`, child]]);
+
+test('every landing language defines the same messages, and each one compiles', t => {
+  const english = new Map(flatten(landingMessages.en));
+  const warnings = [];
+  t.mock.method(console, 'warn', message => warnings.push(message));
+  for (const [code, messages] of Object.entries(landingMessages)) {
+    const entries = new Map(flatten(messages));
+    assert.deepEqual([...entries.keys()].sort(), [...english.keys()].sort(), `${code} has the English keys`);
+    const { t: translate } = createI18n(createI18nOptions({ locale: code, messages: landingMessages })).global;
+    for (const [key, value] of entries) {
+      assert.ok(typeof value === 'string' && value.trim(), `${code}: ${key} is empty`);
+      const rendered = translate(key, { language: '<language>', version: '<version>' });
+      assert.ok(rendered && rendered !== key && !rendered.includes('{'), `${code}: ${key} did not render`);
+    }
+  }
+  assert.deepEqual(warnings, []);
+});
+
+test('the Ukrainian landing translates its copy and keeps the product and technical names', () => {
+  const english = new Map(flatten(landingMessages.en));
+  const unchanged = [...new Map(flatten(landingMessages.uk))].filter(([key, value]) => english.get(key) === value).map(([key]) => key);
+  // Only proper names stay the same in both languages.
+  assert.deepEqual(unchanged.sort(), [
+    'facts.items.docker.term', 'facts.items.proxmox.term', 'facts.items.sqlite.term',
+    'install.options.docker.title', 'install.options.node.title', 'install.options.proxmox.title', 'install.options.release.title'
+  ]);
+  for (const name of ['Inventory Atlas Lite', 'GitHub', 'Docker', 'Proxmox', 'Node.js']) {
+    assert.ok(JSON.stringify(landingMessages.uk).includes(name), `the Ukrainian copy keeps ${name}`);
+  }
+});
+
+test('every landing language has its whole, optimized screenshot set', () => {
+  // The screenshot captions and descriptions name exactly the captured screenshots.
+  assert.deepEqual(Object.keys(landingMessages.en.screenshots).sort(), [...screenshotNames].sort());
+  for (const { code } of SUPPORTED_LOCALES) {
+    for (const name of screenshotNames) {
+      const file = path.join(root, screenshotFile(code, name));
+      assert.ok(fs.existsSync(file), `${screenshotFile(code, name)} exists`);
+      const bytes = fs.readFileSync(file);
+      assert.equal(bytes.toString('latin1', 8, 12), 'WEBP', `${code}/${name} is a WebP image`);
+      assert.ok(bytes.length < 200 * 1024, `${code}/${name} is optimized for the web`);
+    }
+    const dir = path.dirname(path.join(root, screenshotFile(code, 'items')));
+    assert.deepEqual(fs.readdirSync(dir).sort(), screenshotNames.map(name => `${name}.webp`).sort(), `${code} has no stray screenshots`);
   }
 });

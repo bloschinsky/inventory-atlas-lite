@@ -18,9 +18,10 @@ import { createDemoServices } from './services.js';
 
 /*
   The backend of the public demo, inside the browser: the real inventory route tables and services
-  over an in-memory database seeded with the canonical fixture. Every reload starts from that fixture
-  again, and so does `reset()`, which the guided tour calls in place; nothing ever leaves the page. Any other API path, such as backups, restore, reset, cloud
-  backup, updates, or AI, answers DEMO_UNAVAILABLE.
+  over an in-memory database seeded with the canonical fixture in the interface language. Every
+  reload starts from that fixture again, and so does `reset(locale)`, which the guided tour and a
+  language change call in place; nothing ever leaves the page. Any other API path, such as backups,
+  restore, reset, cloud backup, updates, or AI, answers DEMO_UNAVAILABLE.
 */
 
 const photoUrls = import.meta.glob('./photos/*.webp', { query: '?url', import: 'default', eager: true });
@@ -75,22 +76,22 @@ const createRouters = services => [
   createPhotoRoutes({ ...services, imageUpload })
 ];
 
-export async function startDemoBackend() {
+export async function startDemoBackend(locale) {
   const [SQL, photos] = await Promise.all([initSqlJs({ locateFile: () => wasmUrl }), loadPhotos()]);
   let services;
   let routers;
   // <img> elements cannot go through fetch(), so each stored photo gets one object URL.
   const objectUrls = new Map();
 
-  // A new in-memory database seeded with the canonical fixture, the same state a reload starts from.
-  function reset() {
+  // A new in-memory database seeded with the canonical fixture in `language`, the state a reload starts from.
+  function reset(language) {
     for (const url of objectUrls.values()) URL.revokeObjectURL(url);
     objectUrls.clear();
     services = createDemoServices(SQL);
-    seedDemoInventory(services, photos);
+    seedDemoInventory(services, photos, language);
     routers = createRouters(services);
   }
-  reset();
+  reset(locale);
 
   async function handle(url, options = {}) {
     const { pathname, searchParams } = new URL(url, window.location.href);

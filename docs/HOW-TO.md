@@ -34,6 +34,14 @@ your own. Starting it again begins from the sample inventory. Download Backup, R
 Settings → Cloud Backup and AI, and Check for updates need a real installation and say *Not
 available in the public demo* instead.
 
+The product page and the demo speak English and Ukrainian. Pick the language in the product page's
+language menu (the language icon in the top bar); **Try Demo** then opens the demo, its sample
+inventory, and its guided tour in that language, and the demo address carries it as `?lang=uk` or
+`?lang=en`, so a shared demo link opens in the same language. In the demo, changing the language in
+**Settings → Interface** reloads the sample inventory in the new language — the strip confirms it —
+which discards your demo changes and closes an open guided tour. Your own installation never
+changes or translates your data when you change the language.
+
 ## 2. Before you start
 
 - Open the address of your installation in a browser, for example `http://192.168.1.145:3000`. A
@@ -802,7 +810,9 @@ opens **Interface**.
    `$49.99` in English, `18 лист. 2024 р.` and `49,99 USD` in Ukrainian. The stored values do not
    change.
 5. Only the interface is translated. Item, category, and field names, descriptions, locations, and
-   every other value you entered are shown exactly as saved. Error messages, such as a refused
+   every other value you entered are shown exactly as saved; changing the language never changes,
+   replaces, or resets your inventory. (Only the public demo, whose invented sample inventory exists in
+   both languages, reloads it in the new language.) Error messages, such as a refused
    deletion or an invalid backup file, follow the chosen language too; the release notes in
    **Version History** and **What's New** stay in English.
 

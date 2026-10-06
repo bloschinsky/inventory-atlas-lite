@@ -57,14 +57,15 @@ The browser tests start their own API and Vite processes on separate ports and u
 
 <https://bloschinsky.github.io/inventory-atlas-lite/> is the public product page. It is built from
 `landing/` with `npm run landing:build` and deployed to GitHub Pages by
-`.github/workflows/pages.yml`; `npm run landing:dev` serves it locally. See
-[`docs/features/landing-page.md`](docs/features/landing-page.md) for the deployment, the screenshot
-capture, and the release information it shows.
+`.github/workflows/pages.yml`; `npm run landing:dev` serves it locally. The page is in English and
+Ukrainian, with a screenshot set per language that `npm run landing:screenshots` captures from the
+public demo. See [`docs/features/landing-page.md`](docs/features/landing-page.md) for the deployment,
+the languages, the screenshot capture, and the release information it shows.
 
 ## Public demo
 
 <https://bloschinsky.github.io/inventory-atlas-lite/demo/> is a public demo of the real interface on an
-invented inventory. It runs entirely in the browser — the inventory route tables and services over an
+invented inventory, in English or Ukrainian (`?lang=uk`) with the sample data in the same language. It runs entirely in the browser — the inventory route tables and services over an
 in-memory SQLite database — so it needs no server, and every change disappears on reload or with
 **Reset demo**. An optional **Guided tour** presents the product in eight automated chapters on the real
 pages ([`docs/features/demo-guided-tour.md`](docs/features/demo-guided-tour.md)). Backups, restore, reset,

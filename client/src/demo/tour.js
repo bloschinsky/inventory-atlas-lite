@@ -1,6 +1,8 @@
 import { nextTick, reactive } from 'vue';
 import { api, reloadDemoPage, resetDemoData } from '../api.js';
+import { i18n } from '../i18n/index.js';
 import { labelSelection } from '../labelSelection.js';
+import { createDemoFixture } from './fixture.js';
 import { createTourActions, resolveTarget, scrollToElement } from './tourActions.js';
 import { tourChapters } from './tourChapters.js';
 
@@ -25,7 +27,10 @@ export const tour = reactive({
   // The spotlight target of the shown scene (see resolveTarget), never an element the page may replace.
   target: null,
   failure: null,
-  // `baseline` is the Dashboard when the tour started; chapters keep what they need between them here.
+  /*
+    `fixture` is the demo inventory in the language the tour started in, and `baseline` the Dashboard
+    at that moment; chapters keep what they need between them here.
+  */
   data: {}
 });
 
@@ -98,11 +103,15 @@ async function play(router, index) {
 }
 
 export function createTourController(router) {
-  // Start always begins from the canonical fixture, so every tour, and every restart, is the same.
+  /*
+    Start always begins from the canonical fixture in the active language, so every tour, and every
+    restart, is the same. A language change closes the tour (DemoTour.vue), because it seeds the
+    demo again in the new language.
+  */
   async function start() {
     const signal = begin();
     Object.assign(tour, { active: true, chapter: 0, scenes: tourChapters[0].scenes.map(scene => scene.id), scene: 0, status: 'playing', paused: false, target: null, failure: null });
-    tour.data = {};
+    tour.data = { fixture: createDemoFixture(i18n.global.locale.value) };
     labelSelection.clear();
     try {
       await resetDemoData();

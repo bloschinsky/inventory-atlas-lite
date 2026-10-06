@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
-import { checklists, items, templates, tourItem } from '../../client/src/demo/fixture.js';
+import { byKey, createDemoFixture } from '../../client/src/demo/fixture.js';
 import en from '../../client/src/i18n/locales/en.json' with { type: 'json' };
+import uk from '../../client/src/i18n/locales/uk.json' with { type: 'json' };
 import { demoURL } from './environment.js';
 
 /*
@@ -10,9 +11,34 @@ import { demoURL } from './environment.js';
   its actions left behind. The checks wait for observable states, never for fixed times.
 */
 const chapters = ['dashboard', 'categories', 'hierarchy', 'addItem', 'items', 'templates', 'checklists', 'result'];
+const { checklists, items, templates, tourItem, categories } = createDemoFixture('en');
+const photographyFields = byKey(categories, tourItem.category).fields;
+const container = byKey(items, tourItem.container);
+
+/*
+  The scene copy as the presenter shows it: the fixture names the copy refers to by placeholder
+  (see copyParams() in client/src/demo/tourChapters.js), in the language of the fixture.
+*/
+const copyParams = fixture => {
+  const category = byKey(fixture.categories, fixture.tourItem.category);
+  const bag = byKey(fixture.items, fixture.tourItem.container);
+  const template = byKey(fixture.templates, 'film-roll');
+  return {
+    category: category.name,
+    fields: new Intl.ListFormat(fixture.locale, { type: 'conjunction' }).format(category.fields.map(field => field.name)),
+    container: bag.name,
+    location: bag.location,
+    camera: byKey(fixture.items, 'nikon-f65').name,
+    template: template.name,
+    templateField: byKey(category.fields, Object.keys(template.fields)[0]).name,
+    checklist: byKey(fixture.checklists, 'weekend-photo-walk').name,
+    search: 'Nikon'
+  };
+};
+const fill = (text, params) => text.replace(/\{(\w+)\}/g, (match, name) => (name in params ? String(params[name]) : match));
 const copy = en.tour.chapters;
 const title = id => copy[id].title;
-const scene = (chapter, id) => copy[chapter].scenes[id];
+const scene = (chapter, id, params = {}) => fill(copy[chapter].scenes[id], { ...copyParams(createDemoFixture('en')), ...params });
 // A full chapter plays for several seconds; Add item types every value visibly.
 const PLAY = { timeout: 45_000 };
 
@@ -30,7 +56,7 @@ const locationOf = item => item.location ?? (item.parent ? locationOf(items.find
 const count = test => items.filter(test).length;
 const photography = count(item => item.category === tourItem.category);
 const good = count(item => item.condition_grade === tourItem.condition);
-const camerasLocation = locationOf(items.find(item => item.name === tourItem.container));
+const camerasLocation = locationOf(container);
 const atCamerasLocation = count(item => locationOf(item) === camerasLocation);
 
 async function open(page, hash = '#/dashboard') {
@@ -103,7 +129,7 @@ test('the presentation plays eight chapters on the real demo and ends on the rea
   await expect(card(page)).toContainText(scene('categories', 'overview'));
   await expect(page.locator('[data-tour="category-fields"]')).not.toContainText('Fields for Photography');
   await expectScenes(page, 'categories', ['select', 'fields', 'location']);
-  for (const field of ['Fields for Photography', 'Mount', 'Format', 'Last tested']) await expect(page.locator('[data-tour="category-fields"]')).toContainText(field);
+  for (const field of ['Fields for Photography', ...photographyFields.map(entry => entry.name)]) await expect(page.locator('[data-tour="category-fields"]')).toContainText(field);
   await expectPlayed(page);
 
   await goTo(page, 2);
@@ -127,11 +153,11 @@ test('the presentation plays eight chapters on the real demo and ends on the rea
   await expectScenes(page, 'addItem', ['name']);
   await expect(page.getByLabel('Name *')).toHaveValue(tourItem.name, PLAY);
   await expectScenes(page, 'addItem', ['category', 'condition', 'serial', 'placement', 'fields', 'photo']);
-  await expect(page.getByLabel('Category *').locator('option:checked')).toHaveText(tourItem.category);
+  await expect(page.getByLabel('Category *').locator('option:checked')).toHaveText('Photography');
   await expect(page.getByLabel('Condition', { exact: true })).toHaveValue(tourItem.condition);
   await expect(page.getByLabel('Serial Number')).toHaveValue(tourItem.serialNumber);
-  await expect(page.locator('[data-tour="item-parent"]').getByText(tourItem.container, { exact: true })).toBeVisible();
-  await expect(page.getByLabel('Mount')).toHaveValue(tourItem.fields.Mount);
+  await expect(page.locator('[data-tour="item-parent"]').getByText(container.name, { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Mount')).toHaveValue(tourItem.fields.mount);
   await expect(page.getByRole('img', { name: tourItem.photo })).toBeVisible(PLAY);
   await expectScenes(page, 'addItem', ['save']);
   await expect(page).toHaveURL(/#\/items\/\d+$/, PLAY);
@@ -141,13 +167,13 @@ test('the presentation plays eight chapters on the real demo and ends on the rea
   await goTo(page, 4);
   await expect(page).toHaveURL(/#\/items$/);
   await expectScenes(page, 'items', ['overview', 'filter']);
-  await expect(page.getByLabel('Category', { exact: true }).locator('option:checked')).toHaveText(tourItem.category);
+  await expect(page.getByLabel('Category', { exact: true }).locator('option:checked')).toHaveText('Photography');
   await expect(visibleLinks(page, 'Cordless drill')).toHaveCount(0);
   await expectScenes(page, 'items', ['sort']);
   await expect(page.getByRole('columnheader', { name: 'Condition' })).toHaveAttribute('aria-sort', 'ascending', PLAY);
   await expectScenes(page, 'items', ['search']);
   await expect(page.getByLabel('Search')).toHaveValue('Nikon', PLAY);
-  await expect(card(page)).toContainText(scene('items', 'result').replace('{name}', tourItem.name), PLAY);
+  await expect(card(page)).toContainText(scene('items', 'result', { name: tourItem.name }), PLAY);
   await expect(visibleLinks(page, tourItem.name)).toHaveCount(1);
   await expect(visibleLinks(page, 'Nikon F65')).toHaveCount(1);
   await expect(visibleLinks(page, 'Film rolls (5 pack)')).toHaveCount(0);
@@ -159,7 +185,7 @@ test('the presentation plays eight chapters on the real demo and ends on the rea
   await expectScenes(page, 'templates', ['list', 'open', 'values', 'use']);
   await expect(page).toHaveURL(/#\/templates\/\d+\/edit$/);
   await expect(page.getByLabel('Template name *')).toHaveValue(templates[0].name);
-  await expect(page.getByLabel('Format')).toHaveValue(templates[0].fields.Format);
+  await expect(page.getByLabel('Format')).toHaveValue(templates[0].fields.format);
   await expectPlayed(page);
 
   await goTo(page, 6);
@@ -175,9 +201,9 @@ test('the presentation plays eight chapters on the real demo and ends on the rea
   await goTo(page, 7);
   await expect(page).toHaveURL(/#\/dashboard$/);
   const changes = [
-    scene('result', 'changed').replace('{name}', tourItem.name).replace('{category}', tourItem.category).replace('{container}', tourItem.container),
+    scene('result', 'changed', { name: tourItem.name }),
     `Total items: ${items.length} → ${items.length + 1}.`,
-    `Items by category, ${tourItem.category}: ${photography} → ${photography + 1}.`,
+    `Items by category, Photography: ${photography} → ${photography + 1}.`,
     `Condition breakdown, Good: ${good} → ${good + 1}.`,
     `Items by location, ${camerasLocation}: ${atCamerasLocation} → ${atCamerasLocation + 1}.`,
     scene('result', 'explore')
@@ -204,7 +230,7 @@ test('the presentation plays eight chapters on the real demo and ends on the rea
   await visibleLinks(page, tourItem.name).click();
   await expect(page.getByRole('heading', { name: tourItem.name })).toBeVisible();
   await expect(page.getByText(tourItem.serialNumber)).toBeVisible();
-  await expect(page.getByRole('link', { name: tourItem.container }).first()).toBeVisible();
+  await expect(page.getByRole('link', { name: container.name }).first()).toBeVisible();
   const photo = page.getByRole('img', { name: new RegExp(tourItem.photo.replace('.', '\\.')) }).first();
   await expect(photo).toBeVisible();
   expect(await photo.evaluate(image => image.complete && image.naturalWidth > 0)).toBe(true);
@@ -304,7 +330,7 @@ test('closing the tour stops its playback, and Escape and Reset demo still work'
   await expect(card(page)).toHaveCount(0);
   await expect(lock(page)).toHaveCount(0);
   await page.getByLabel('Description').fill('Visitor text');
-  await expect(page.getByLabel('Category *').locator('option:checked')).not.toHaveText(tourItem.category);
+  await expect(page.getByLabel('Category *').locator('option:checked')).not.toHaveText('Photography');
   await expect(page).toHaveURL(/#\/items\/new$/);
 
   await page.getByRole('button', { name: 'Reset demo' }).click();
@@ -402,6 +428,103 @@ test('the tour speaks Ukrainian when the interface does', async ({ page }) => {
   await page.getByRole('button', { name: 'Закрити екскурсію' }).click();
   await expect(page.getByRole('button', { name: 'Екскурсія' })).toBeVisible();
 });
+
+test.describe('on the Ukrainian demo', () => {
+  const ukrainian = createDemoFixture('uk');
+  const ukCopy = uk.tour.chapters;
+  const ukScene = (chapter, id, params = {}) => fill(ukCopy[chapter].scenes[id], { ...copyParams(ukrainian), ...params });
+  const ukCard = page => page.getByRole('dialog', { name: /./ }).filter({ hasText: 'Екскурсія' });
+  const ukCategory = byKey(ukrainian.categories, ukrainian.tourItem.category);
+  const ukContainer = byKey(ukrainian.items, ukrainian.tourItem.container);
+  const ukPlayed = async page => {
+    await expect(ukCard(page).getByRole('button', { name: 'Пауза' })).toHaveCount(0, PLAY);
+    await expect(ukCard(page).getByRole('alert')).toHaveCount(0);
+  };
+  const ukGoTo = async (page, index) => {
+    const current = Number((await ukCard(page).textContent()).match(/Розділ (\d+) з/)[1]) - 1;
+    for (let chapter = current + 1; chapter <= index; chapter++) {
+      await ukCard(page).getByRole('button', { name: 'Далі' }).click();
+      await expect(ukCard(page)).toContainText(`Розділ ${chapter + 1} з ${chapters.length}`);
+    }
+  };
+
+  test('the tour plays on the Ukrainian inventory, adds a Ukrainian item once, and reports the real changes', async ({ page }) => {
+    test.setTimeout(300_000);
+    await open(page, '?lang=uk#/dashboard');
+    await page.getByRole('button', { name: 'Екскурсія' }).click();
+    await expect(page.getByRole('dialog', { name: ukCopy.dashboard.title })).toContainText('Розділ 1 з 8');
+
+    await ukGoTo(page, 1);
+    await expect(ukCard(page)).toContainText(ukScene('categories', 'fields'), PLAY);
+    for (const field of ukCategory.fields) await expect(page.locator('[data-tour="category-fields"]')).toContainText(field.name);
+    await ukPlayed(page);
+
+    await ukGoTo(page, 2);
+    await expect(ukCard(page)).toContainText(ukScene('hierarchy', 'location'), PLAY);
+    await expect(page.locator('[data-tour="hierarchy-tree"]').getByRole('link', { name: 'Nikon F65', exact: true })).toBeVisible();
+    await ukGoTo(page, 3);
+
+    // Add an Item fills the form with the Ukrainian fixture values, found by key, and saves once.
+    await expect(page).toHaveURL(/#\/items\/new$/);
+    await expect(page.getByLabel('Назва *')).toHaveValue(ukrainian.tourItem.name, PLAY);
+    await expect(ukCard(page)).toContainText(ukScene('addItem', 'placement'), PLAY);
+    await expect(page.getByLabel(ukCategory.fields[0].name)).toHaveValue(ukrainian.tourItem.fields.mount, PLAY);
+    await expect(page.getByLabel(ukCategory.fields[1].name)).toHaveValue(ukrainian.tourItem.fields.format, PLAY);
+    await expect(page).toHaveURL(/#\/items\/\d+$/, PLAY);
+    await expect(page.getByRole('heading', { name: ukrainian.tourItem.name })).toBeVisible();
+    await ukPlayed(page);
+    const details = page.url();
+
+    // Replay edits the same item instead of adding a second one.
+    await ukCard(page).getByRole('button', { name: 'Повторити розділ' }).click();
+    await expect(page).toHaveURL(/#\/items\/\d+\/edit$/);
+    await expect(page).toHaveURL(details, PLAY);
+    await ukPlayed(page);
+
+    await ukGoTo(page, 4);
+    await expect(ukCard(page)).toContainText(ukScene('items', 'filter'), PLAY);
+    await expect(page.getByLabel('Категорія', { exact: true }).locator('option:checked')).toHaveText(ukCategory.name);
+    await expect(ukCard(page)).toContainText(ukScene('items', 'result', { name: ukrainian.tourItem.name }), PLAY);
+    await expect(visibleLinks(page, ukrainian.tourItem.name)).toHaveCount(1);
+    await ukPlayed(page);
+
+    await ukGoTo(page, 7);
+    await expect(ukCard(page)).toContainText(ukScene('result', 'changed', { name: ukrainian.tourItem.name }), PLAY);
+    await expect(ukCard(page)).toContainText(`Предмети за категоріями, ${ukCategory.name}: ${photography} → ${photography + 1}.`, PLAY);
+    await expect(ukCard(page)).toContainText(`Предмети за місцем, ${ukContainer.location}: ${atCamerasLocation} → ${atCamerasLocation + 1}.`, PLAY);
+    await ukPlayed(page);
+    await expect(ukCard(page)).not.toContainText('{');
+  });
+
+  test('a language change closes the tour and seeds the demo again, and the tour then starts in the new language', async ({ page }) => {
+    test.setTimeout(180_000);
+    await open(page);
+    await startTour(page);
+    await goTo(page, 3);
+    await expect(page.getByLabel('Name *')).toHaveValue(tourItem.name, PLAY);
+    await card(page).getByRole('button', { name: 'Pause' }).click();
+    await page.getByRole('link', { name: 'Settings', exact: true }).click();
+    await page.mouse.move(600, 400);
+    await page.getByLabel('Language').selectOption('uk');
+
+    // Nothing of the English run is left: no card, no spotlight, no lock, no half-saved English item.
+    await expect(ukCard(page)).toHaveCount(0);
+    await expect(spotlight(page)).toHaveCount(0);
+    await expect(lock(page)).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Екскурсія' })).toBeVisible();
+    await expect(page.getByRole('complementary', { name: 'Демо-режим' })).toContainText('Демо-дані оновлено українською мовою.');
+    await page.getByRole('link', { name: 'Панель', exact: true }).click();
+    await page.mouse.move(600, 400);
+    await expect(page.getByRole('region', { name: 'Усього предметів' })).toContainText(String(items.length));
+
+    await page.getByRole('button', { name: 'Екскурсія' }).click();
+    await expect(page.getByRole('dialog', { name: ukCopy.dashboard.title })).toContainText('Розділ 1 з 8');
+    await ukGoTo(page, 1);
+    await expect(ukCard(page)).toContainText(ukScene('categories', 'select'), PLAY);
+    await ukPlayed(page);
+  });
+});
+
 
 test.describe('with reduced motion', () => {
   test.use({ reducedMotion: 'reduce' });

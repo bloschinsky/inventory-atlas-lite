@@ -1002,6 +1002,7 @@
     "label": "Demo mode",
     "text": "Sample data in this browser tab. Changes are not saved and disappear on reload.",
     "reset": "Reset demo",
+    "languageReset": "Demo data was reset in English.",
     "get": "Get Inventory Atlas Lite",
     "unavailableTitle": "Not available in the public demo",
     "unavailableText": "This part needs a self-hosted server. Install Inventory Atlas Lite to use it with your own data."
@@ -1038,8 +1039,8 @@
         "title": "Categories & Fields",
         "scenes": {
           "overview": "Categories define what an Item is. Each Category can have its own Fields.",
-          "select": "Select the Photography Category.",
-          "fields": "Photography has three Fields: Mount, Format, and Last tested. Other Categories have other Fields.",
+          "select": "Select the {category} Category.",
+          "fields": "{category} has three Fields: {fields}. Other Categories have other Fields.",
           "location": "A Category tells what an Item is. A Location tells where the Item is."
         }
       },
@@ -1047,9 +1048,9 @@
         "title": "Hierarchy",
         "scenes": {
           "overview": "Hierarchy shows the same Items as a structure. Group by and View change how the structure looks.",
-          "location": "Group by Location shows where each Item is. Camera Bag is in Home / Office, and the Items in Camera Bag get the same Location.",
+          "location": "Group by Location shows where each Item is. {container} is in {location}, and the Items in {container} get the same Location.",
           "category": "Group by Category shows what each Item is. The same Items are now under their Categories.",
-          "tree": "Tree View lists each group with its Items. Open Photography to see its Items.",
+          "tree": "Tree View lists each group with its Items. Open {category} to see its Items.",
           "graph": "Graph View shows the same Hierarchy as linked nodes. Use it to see nested Items at a glance."
         }
       },
@@ -1057,11 +1058,11 @@
         "title": "Add an Item",
         "scenes": {
           "name": "The tour fills in the real Add item form. Every Item starts with a name.",
-          "category": "Select the Photography Category. The Category sets which Fields the Item has.",
+          "category": "Select the {category} Category. The Category sets which Fields the Item has.",
           "condition": "Set the Condition to Good. The New switch stays off, because this camera is used.",
           "serial": "Add the serial number. The serial number tells two identical cameras apart.",
-          "placement": "Set Stored inside to Camera Bag. An Item can be inside another Item, such as a bag or a box.",
-          "fields": "Fill in the Photography Fields. Only Photography Items have these Fields.",
+          "placement": "Set Stored inside to {container}. An Item can be inside another Item, such as a bag or a box.",
+          "fields": "Fill in the {category} Fields. Only {category} Items have these Fields.",
           "photo": "Add a photo. A photo makes the Item easy to recognize.",
           "save": "Save the Item. The new Item is now part of the Hierarchy and the Dashboard."
         }
@@ -1070,9 +1071,9 @@
         "title": "Find Items",
         "scenes": {
           "overview": "The Items list shows all your Items. Search, filter, and sort the list here.",
-          "filter": "Filter by the Photography Category. The list shows only Photography Items.",
+          "filter": "Filter by the {category} Category. The list shows only {category} Items.",
           "sort": "Sort the list by Condition. The order of the Items changes.",
-          "search": "Search for Nikon. The list shows only the matching Items.",
+          "search": "Search for {search}. The list shows only the matching Items.",
           "result": "The search finds {name}. Open an Item to see all its details."
         }
       },
@@ -1080,8 +1081,8 @@
         "title": "Templates",
         "scenes": {
           "list": "Templates keep the values of Items that you add often.",
-          "open": "Open the 35mm film roll Template.",
-          "values": "The Template sets the Category, the name, New, and Format. Each new Item from the Template gets these values.",
+          "open": "Open the {template} Template.",
+          "values": "The Template sets the Category, the name, New, and {templateField}. Each new Item from the Template gets these values.",
           "use": "Select Use on the Templates page to add an Item from the Template. All Items from one Template start the same."
         }
       },
@@ -1089,8 +1090,8 @@
         "title": "Checklists",
         "scenes": {
           "list": "Checklists are lists of Items for a task. Use Checklists to pack, to move, or to check equipment.",
-          "open": "Open the Weekend photo walk Checklist. The Checklist names the Items to pack.",
-          "check": "Start the Checklist and mark Nikon F65 as Packed. Each change is saved at once.",
+          "open": "Open the {checklist} Checklist. The Checklist names the Items to pack.",
+          "check": "Start the Checklist and mark {camera} as Packed. Each change is saved at once.",
           "uses": "The progress shows how many Items are checked. Complete the Checklist when all Items are checked."
         }
       },

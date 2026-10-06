@@ -64,8 +64,13 @@ bundles it.
   says *This chapter could not be shown* in an alert, the spotlight and lock are removed, and the
   page stays usable. **Replay chapter** retries it and **Next** skips it. The console gets
   `[demo tour] chapter "<id>", scene "<id>" failed: …`.
-- English and Ukrainian, following the demo's language setting. Settings, Cloud Backup, and Data
-  Backup are deliberately not part of the tour: the static demo cannot show their real behaviour.
+- English and Ukrainian, following the demo's language: the presenter copy and the demo inventory it
+  works on are in the same language, so the tour selects *Фототехніка*, opens *Сумка для камери*,
+  and adds *Nikon F65 (запасний корпус)* in Ukrainian. Changing the language while the tour is open
+  closes it — the demo is seeded again in the new language (see
+  [Languages](public-demo.md#languages)), so the tour's baseline no longer applies — and **Guided
+  tour** then starts it afresh in the new language. Settings, Cloud Backup, and Data Backup are
+  deliberately not part of the tour: the static demo cannot show their real behaviour.
 
 ### Timing and reduced motion
 
@@ -100,9 +105,22 @@ top of the screen (form fields to its middle), so the card below does not cover 
   (type, choose, click, attach a file, wait for a hook or text), each bound to the running chapter's
   `AbortSignal` and pause gate.
 - `client/src/components/DemoTour.vue` — the launcher, the card, the spotlight, and the lock.
-- `client/src/demo/fixture.js` — `tourItem`, the item the tour adds; the template and checklist the
-  Templates and Checklists chapters open are the fixture's first `templates` and `checklists`
-  entries (*35mm film roll* and *Weekend photo walk*).
+- `client/src/demo/fixture.js` — `tourItem`, the item the tour adds (its category and container are
+  keys), and the template (`film-roll`) and checklist (`weekend-photo-walk`) the Templates and
+  Checklists chapters open.
+
+### Stable semantic keys
+
+The tour never identifies an entity by English text. `tourChapters.js` names fixture entities by
+semantic key (`photography`, `camera-bag`, `nikon-f65`, `cordless-drill`, `film-rolls`,
+`film-roll`, `weekend-photo-walk`, the `mount` and `format` fields); `tour.data.fixture` —
+`createDemoFixture(locale)` for the language the tour started in — turns a key into the name the page
+shows, at the moment a scene needs it. Seeded items are found by their fixed UUID
+(`demoItemUuid(key)`) and then by their row hook `item-row-<id>`, and the tour item by its unique
+serial number. The `data-tour` hooks stay language-neutral. Scene copy names fixture entities through
+placeholders (`{category}`, `{fields}`, `{container}`, `{location}`, `{camera}`, `{template}`,
+`{templateField}`, `{checklist}`, `{search}`) that `copyParams()` fills from the same fixture, so
+one set of chapters, with no per-language branch, plays on the inventory of every language.
 - `client/src/api.js` — `resetDemoData()` (a fresh seeded database) and `reloadDemoPage()`, which
   both advance `dataRevision`; `App.vue` keys the routed page on it, so the page mounts again.
 - `client/src/App.vue` — mounts `DemoTour` only when `__DEMO__` is set, through a dynamic import, so
@@ -163,9 +181,9 @@ Starting the tour calls `resetDemoData()`, clears the Items selection, forgets t
 stores the Dashboard as `data.baseline`, so each tour begins on the same fixture with the same
 numeric ids (the tour item is always item 23).
 
-- **Add an Item:** `route()` looks the tour item up by its unique name. If it exists, the chapter
-  opens its edit form, types the same values again, skips the Stored inside search when Camera Bag
-  is already set, skips the photo when it is already shown, and saves the edit. Back, Next, and
+- **Add an Item:** `route()` looks the tour item up by its unique serial number. If it exists, the
+  chapter opens its edit form, types the same values again, skips the Stored inside search when the
+  container is already set, skips the photo when it is already shown, and saves the edit. Back, Next, and
   Replay therefore never create a second item or upload a second photo.
 - **Find Items:** `route()` resets the Items sort to Name in the stored table view, so the Condition
   sort is a visible change on every replay; the page mounts again with empty filters.
@@ -231,8 +249,10 @@ banned synonyms or filler words, no vague opening pronoun, and every canonical t
 
 Ukrainian copy keeps the same qualities — short sentences, one idea at a time, direct verbs, stable
 terms (предмет, категорія, поле, місце, ієрархія, шаблон, чек-лист, панель, стан), and the same
-information density — without a literal translation of the English. Demo data (category, item, and
-field names) stays English in both languages, as user data is never translated.
+information density — without a literal translation of the English. Fixture names reach the copy
+only through placeholders, quoted with «» in Ukrainian, so the copy reads the same whatever
+inventory language fills them; `test/demo.test.js` fails when a scene names a fixture entity
+directly.
 
 ### Demo assets
 
@@ -255,7 +275,7 @@ node test/e2e/run.js tour.spec.js demo.spec.js # the demo browser tests against 
 
 ## Verification
 
-- `test/e2e/tour.spec.js` (10 tests) runs the built demo under the Pages-style base path: all eight
+- `test/e2e/tour.spec.js` (12 tests) runs the built demo under the Pages-style base path: all eight
   chapters with their scene copy, spotlight targets, and results (every Dashboard area; the
   Categories overview before Photography's Fields; Location and Category grouping, Tree View, and
   Graph View; the narrated form saved once with the generated photo; filter, Condition sort, Nikon
@@ -264,10 +284,14 @@ node test/e2e/run.js tour.spec.js demo.spec.js # the demo browser tests against 
   photo, or checklist run, and Reset demo restoring the checklist; Pause without a lock and Resume;
   Close and Escape stopping playback; a failing scene naming its chapter and scene with Replay and
   Next; the inverse card in both color modes; Ukrainian; reduced motion; the whole tour on a phone;
-  and no tour in the self-hosted application.
-- `test/demo.test.js` checks that the tour item uses a demo photo, is not seeded, and saves through
-  the real services into the Camera Bag; that the fixture's template and checklist fit their
-  chapters; and the copy rules above.
+  and no tour in the self-hosted application. On the Ukrainian demo (`?lang=uk`) it plays the
+  Categories, Hierarchy, Add an Item (with Replay editing the same item), Find Items, and final
+  chapters with the Ukrainian scene copy and fixture values, and a language change during a paused
+  tour closes it, seeds the Ukrainian inventory, and lets the tour start again in Ukrainian.
+- `test/demo.test.js` checks, in every language, that the tour item uses a demo photo, is not
+  seeded, saves through the real services into the Camera Bag, and is found again by its serial
+  number; that the fixture's template and checklist fit their chapters; and the copy rules above,
+  including no fixture name in the copy.
 - `test/i18n.test.js` keeps the English and Ukrainian tour strings in parity.
 
 ## Notes and limitations

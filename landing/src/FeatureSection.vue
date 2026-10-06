@@ -1,5 +1,7 @@
 <script setup>
 import { computed, inject } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { screenshotUrl } from './content.js';
 
 const props = defineProps({
   section: { type: Object, required: true },
@@ -9,8 +11,11 @@ const props = defineProps({
   reverse: { type: Boolean, default: false }
 });
 
+const { locale, t, tm, rt } = useI18n();
 const titleId = computed(() => `${props.section.id}-title`);
 const step = computed(() => String(props.number).padStart(2, '0'));
+const copy = key => t(`sections.${props.section.id}.${key}`);
+const points = computed(() => tm(`sections.${props.section.id}.points`).map(point => rt(point)));
 const openScreenshot = inject('openScreenshot');
 </script>
 
@@ -37,21 +42,21 @@ const openScreenshot = inject('openScreenshot');
             <span class="landing-story">
               <span class="landing-story-number">{{ step }}</span>
               <span aria-hidden="true"> / </span>
-              {{ section.verb }}
+              {{ copy('verb') }}
             </span>
           </p>
           <h2
             :id="titleId"
             class="landing-section-title"
           >
-            {{ section.title }}
+            {{ copy('title') }}
           </h2>
           <p class="landing-text">
-            {{ section.text }}
+            {{ copy('text') }}
           </p>
           <ul class="landing-points">
             <li
-              v-for="point in section.points"
+              v-for="point in points"
               :key="point"
             >
               {{ point }}
@@ -66,13 +71,13 @@ const openScreenshot = inject('openScreenshot');
             <!-- Each screenshot opens in the viewer; the link to the full-size file is the no-script fallback. -->
             <figure
               v-for="(image, index) in section.media"
-              :key="image.src"
+              :key="image.name"
               class="landing-figure"
               :class="{ 'landing-figure-phone': image.phone }"
             >
               <a
                 class="landing-shot-link"
-                :href="image.src"
+                :href="screenshotUrl(locale, image.name)"
                 aria-haspopup="dialog"
                 aria-describedby="landing-viewer-hint"
                 @click="openScreenshot(section.media, index, $event)"
@@ -80,14 +85,14 @@ const openScreenshot = inject('openScreenshot');
                 <img
                   class="landing-shot"
                   :class="{ 'landing-shot-phone': image.phone }"
-                  :src="image.src"
-                  :alt="image.alt"
+                  :src="screenshotUrl(locale, image.name)"
+                  :alt="t(`screenshots.${image.name}.alt`)"
                   loading="lazy"
                   decoding="async"
                 >
               </a>
               <figcaption class="landing-caption">
-                {{ image.caption }}
+                {{ t(`screenshots.${image.name}.caption`) }}
               </figcaption>
             </figure>
           </div>

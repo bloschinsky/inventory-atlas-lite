@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import { expect, test } from '@playwright/test';
-import { demoUuid, items, photoFiles } from '../../client/src/demo/fixture.js';
+import { byKey, createDemoFixture, demoItemUuid, photoFiles } from '../../client/src/demo/fixture.js';
 import { demoURL } from './environment.js';
 
 /*
@@ -8,7 +8,9 @@ import { demoURL } from './environment.js';
   same Pages-style base path (see playwright.config.js). No API server is involved: every request a
   demo page makes must stay inside the static site.
 */
-const uuidOf = key => demoUuid(items.findIndex(item => item.key === key) + 1);
+const { items } = createDemoFixture('en');
+const ukrainian = createDemoFixture('uk');
+const uuidOf = demoItemUuid;
 const search = page => page.getByPlaceholder('Search name, description, serial number, transferred to or text fields…');
 
 // Every request of a demo page, so a test can prove that nothing reached a server API.
@@ -146,5 +148,83 @@ test.describe('on a phone', () => {
     await page.getByRole('dialog', { name: 'Main navigation' }).getByRole('link', { name: 'Hierarchy' }).click();
     await expect(page).toHaveURL(`${demoURL}#/hierarchy`);
     await expect(page.getByRole('heading', { name: 'Hierarchy', level: 1 })).toBeVisible();
+  });
+});
+
+test.describe('in every language', () => {
+  const STORAGE_KEY = 'inventory-atlas.locale';
+  const banner = page => page.getByRole('complementary', { name: /^(Demo mode|Демо-режим)$/ });
+
+  test('?lang= opens the demo in that language, with the demo inventory in it, over the saved choice', async ({ page }) => {
+    await page.addInitScript(key => localStorage.setItem(key, 'en'), STORAGE_KEY);
+    await open(page, '?lang=uk#/hierarchy');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'uk');
+    await expect(page.getByRole('heading', { name: 'Ієрархія', level: 1 })).toBeVisible();
+    for (const location of Object.values(ukrainian.locations)) await expect(page.getByText(location, { exact: true }).first()).toBeVisible();
+    await expect(page.getByText('Home / Office', { exact: true })).toHaveCount(0);
+
+    // A reload of a shared deep link keeps its language.
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'Ієрархія', level: 1 })).toBeVisible();
+    await open(page, `?lang=uk#/items/${uuidOf('nikon-f65')}`);
+    await expect(page.getByRole('heading', { name: 'Nikon F65' })).toBeVisible();
+    await expect(page.getByText('F65-2481937')).toBeVisible();
+    await expect(page.getByRole('link', { name: byKey(ukrainian.items, 'camera-bag').name }).first()).toBeVisible();
+    await expect(page.getByText(byKey(ukrainian.categories, 'photography').fields[1].name, { exact: true })).toBeVisible();
+
+    await open(page, '?lang=en#/dashboard');
+    await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible();
+  });
+
+  test('an unsupported ?lang= falls back safely to English', async ({ page }) => {
+    await open(page, '?lang=fr#/items');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    await expect(page.getByRole('heading', { name: 'Items', level: 1 })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Camera Bag', exact: true }).first()).toBeVisible();
+  });
+
+  test('a language change seeds the demo again in the new language, without mixing two', async ({ page }) => {
+    await open(page, '#/items/new');
+    await page.getByLabel('Name *').fill('Visitor lantern');
+    await page.getByLabel('Category *').selectOption({ label: 'Travel & Outdoor' });
+    await page.getByRole('button', { name: 'Save item' }).click();
+    await expect(page.getByRole('heading', { name: 'Visitor lantern' })).toBeVisible();
+
+    // In the same page, so the visitor's change is still in the demo database.
+    await page.getByRole('link', { name: 'Settings', exact: true }).click();
+    await page.mouse.move(600, 400);
+    await page.getByLabel('Language').selectOption('uk');
+    await expect(banner(page)).toContainText('Демо-дані оновлено українською мовою.');
+    await expect(page.getByRole('heading', { name: 'Налаштування', level: 1 })).toBeVisible();
+    // The address names the shown language, so a reload or a copied link opens it again.
+    expect(new URL(page.url()).searchParams.get('lang')).toBe('uk');
+    expect(await page.evaluate(key => localStorage.getItem(key), STORAGE_KEY)).toBe('uk');
+
+    await page.getByRole('link', { name: 'Предмети', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Предмети', level: 1 })).toBeVisible();
+    for (const key of ['camera-bag', 'cordless-drill']) {
+      await expect(page.getByRole('link', { name: byKey(ukrainian.items, key).name, exact: true }).first()).toBeVisible();
+    }
+    await expect(page.getByRole('link', { name: 'Camera Bag', exact: true })).toHaveCount(0);
+    await page.getByLabel('Пошук').fill('Visitor');
+    await expect(page.getByText('Немає відповідних предметів')).toBeVisible();
+    await page.getByRole('link', { name: 'Налаштування', exact: true }).click();
+    await page.mouse.move(600, 400);
+    await page.getByRole('link', { name: 'База даних' }).click();
+    await expect(page.getByLabel('Назва бази даних')).toHaveValue(ukrainian.databaseName);
+
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'uk');
+    await page.mouse.move(600, 400);
+
+    await open(page, `?lang=uk#/items/${uuidOf('cordless-drill')}`);
+    await expect(page.getByRole('heading', { name: byKey(ukrainian.items, 'cordless-drill').name })).toBeVisible();
+    await open(page, '?lang=uk#/settings/interface');
+    await page.getByLabel('Мова').selectOption('en');
+    await expect(banner(page)).toContainText('Demo data was reset in English.');
+    await page.getByRole('link', { name: 'Items', exact: true }).click();
+    await expect(page.getByRole('link', { name: 'Camera Bag', exact: true }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: byKey(ukrainian.items, 'camera-bag').name, exact: true })).toHaveCount(0);
+    expect(new URL(page.url()).searchParams.get('lang')).toBe('en');
   });
 });

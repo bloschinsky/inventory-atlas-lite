@@ -1,30 +1,32 @@
-import * as fixture from './fixture.js';
+import { createDemoFixture, demoUuid } from './fixture.js';
 
 const PHOTO_TYPE = 'image/webp';
 
 /*
-  Loads the canonical demo inventory through the regular services, in a fixed order, so the numeric
-  ids are always the same too. `photos` maps a photo file name to its bytes. Only the values the API
-  never accepts from a client are written directly afterwards: the fixed UUIDs and the dates.
+  Loads the canonical demo inventory in one language through the regular services, in a fixed
+  order, so the numeric ids are always the same too, whatever the language. `photos` maps a photo
+  file name to its bytes. Only the values the API never accepts from a client are written directly
+  afterwards: the fixed UUIDs and the dates. Returns the item ids by item key.
 */
-export function seedDemoInventory(services, photos) {
+export function seedDemoInventory(services, photos, locale) {
   const { db, categoryService, customFieldService, itemService, photoService, itemTemplateService, checklistService,
     checklistRunService, databaseMetadataService } = services;
-  databaseMetadataService.rename({ name: fixture.DEMO_DATABASE_NAME });
+  const fixture = createDemoFixture(locale);
+  databaseMetadataService.rename({ name: fixture.databaseName });
 
   const categories = new Map();
   for (const definition of fixture.categories) {
     const category = categoryService.create({ name: definition.name });
-    const fields = new Map(definition.fields.map(field => [field.name, customFieldService.create(category.id, field).id]));
-    categories.set(definition.name, { id: category.id, fields });
+    const fields = new Map(definition.fields.map(({ key, name, type }) => [key, customFieldService.create(category.id, { name, type }).id]));
+    categories.set(definition.key, { id: category.id, fields });
   }
   const values = (category, fields = {}) => Object.fromEntries(Object.entries(fields)
-    .map(([name, value]) => [category.fields.get(name), value]));
+    .map(([key, value]) => [category.fields.get(key), value]));
 
   const ids = new Map();
   fixture.items.forEach((definition, index) => {
-    const { key, category: categoryName, parent, fields, photo, addedDaysAgo, ...attributes } = definition;
-    const category = categories.get(categoryName);
+    const { key, category: categoryKey, parent, fields, photo, addedDaysAgo, ...attributes } = definition;
+    const category = categories.get(categoryKey);
     const item = itemService.create({
       ...attributes,
       category_id: category.id,
@@ -34,15 +36,15 @@ export function seedDemoInventory(services, photos) {
     ids.set(key, item.id);
     db.prepare(`
       UPDATE items SET uuid = ?, created_at = datetime('now', ?), updated_at = datetime('now', ?) WHERE id = ?
-    `).run(fixture.demoUuid(index + 1), `-${addedDaysAgo} days`, `-${addedDaysAgo} days`, item.id);
+    `).run(demoUuid(index + 1), `-${addedDaysAgo} days`, `-${addedDaysAgo} days`, item.id);
     if (photo) {
       if (!photos.has(photo)) throw new Error(`The demo photo ${photo} is missing.`);
       photoService.addToItem(item.id, [{ originalname: photo, mimetype: PHOTO_TYPE, buffer: photos.get(photo) }]);
     }
   });
 
-  for (const { category: categoryName, fields, ...attributes } of fixture.templates) {
-    const category = categories.get(categoryName);
+  for (const { category: categoryKey, fields, ...attributes } of fixture.templates) {
+    const category = categories.get(categoryKey);
     itemTemplateService.create({ ...attributes, category_id: category.id, field_values: values(category, fields) });
   }
 

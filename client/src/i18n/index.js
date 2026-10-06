@@ -8,6 +8,8 @@ export { SUPPORTED_LOCALES } from './core.js';
 /*
   The interface language is a preference of this browser only, in the same style as theme.js: it is
   kept in localStorage and never sent to the server. Without a saved choice the interface is English.
+  The public demo also reads it from its address (?lang=), which the landing's Try Demo link and
+  shared demo links carry; that explicit choice wins over the saved one.
 */
 const readStoredLocale = () => {
   try {
@@ -16,9 +18,10 @@ const readStoredLocale = () => {
     return null; // Storage can be blocked; the default language still works.
   }
 };
+const readAddressLocale = () => (__DEMO__ ? new URLSearchParams(window.location.search).get('lang') : null);
 
 export const i18n = createI18n(core.createI18nOptions({
-  locale: readStoredLocale(),
+  locale: core.pickLocale(readAddressLocale(), readStoredLocale()),
   messages: { en, uk },
   warn: import.meta.env.DEV
 }));
@@ -34,6 +37,12 @@ export function setLocale(value) {
     localStorage.setItem(core.LOCALE_STORAGE_KEY, locale.value);
   } catch {
     // A blocked storage only costs the persistence, not the switch itself.
+  }
+  // The demo address keeps naming the shown language, so a reload or a copied link opens it again.
+  if (__DEMO__) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('lang', locale.value);
+    window.history.replaceState(window.history.state, '', url);
   }
 }
 

@@ -1,15 +1,20 @@
 <script setup>
-import { onBeforeUnmount, onMounted, provide, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, provide, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { IconBook, IconBrandGithub, IconExternalLink, IconPlayerPlay, IconRocket } from '@tabler/icons-vue';
 import FeatureSection from './FeatureSection.vue';
+import LanguageMenu from './LanguageMenu.vue';
 import ScreenshotLightbox from './ScreenshotLightbox.vue';
 import { links } from '../site.js';
-import { facts, hero, info, installOptions, sections } from './content.js';
+import { demoLink, facts, hero, info, installOptions, screenshotUrl, sections } from './content.js';
+
+const { locale, t } = useI18n();
 
 // The history stores calendar dates; UTC keeps the day from shifting in the visitor's time zone.
-const releaseDate = info.release.date
-  ? new Intl.DateTimeFormat('en', { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(`${info.release.date}T00:00:00Z`))
-  : null;
+const releaseDate = computed(() => (info.release.date
+  ? new Intl.DateTimeFormat(locale.value, { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(`${info.release.date}T00:00:00Z`))
+  : null));
+const demoUrl = computed(() => (info.demoUrl ? demoLink(locale.value) : null));
 
 /*
   Screenshot links open the viewer with the screenshots of their section. A modified click (new tab,
@@ -46,12 +51,12 @@ onBeforeUnmount(() => observer?.disconnect());
   <a
     class="visually-hidden-focusable landing-skip"
     href="#main"
-  >Skip to content</a>
+  >{{ t('nav.skip') }}</a>
 
   <nav
     class="landing-nav landing-dark navbar"
     data-bs-theme="dark"
-    aria-label="Main"
+    :aria-label="t('nav.label')"
   >
     <div class="container-xl">
       <a
@@ -74,15 +79,16 @@ onBeforeUnmount(() => observer?.disconnect());
         </svg>
         Inventory Atlas Lite
       </a>
-      <div class="d-flex align-items-center gap-3">
+      <div class="d-flex align-items-center gap-2 gap-md-3">
         <a
           class="landing-nav-link d-none d-md-inline"
           href="#hierarchy"
-        >Features</a>
+        >{{ t('nav.features') }}</a>
         <a
           class="landing-nav-link d-none d-md-inline"
           href="#install"
-        >Install</a>
+        >{{ t('nav.install') }}</a>
+        <LanguageMenu />
         <a
           class="btn btn-outline-secondary"
           :href="links.github"
@@ -107,20 +113,19 @@ onBeforeUnmount(() => observer?.disconnect());
         <div class="row align-items-center g-5">
           <div class="col-lg-5">
             <p class="landing-eyebrow">
-              Self-hosted inventory for physical items
+              {{ t('hero.eyebrow') }}
             </p>
             <h1 class="landing-title">
               Inventory Atlas Lite
             </h1>
             <p class="landing-lead">
-              Know what you own and where it is. A deliberately small inventory app that runs on your
-              own server and keeps every item, field, and photo in a database you control.
+              {{ t('hero.lead') }}
             </p>
             <div class="landing-actions">
               <a
                 class="btn btn-primary btn-lg"
                 :href="links.get"
-              >Get Inventory Atlas Lite</a>
+              >{{ t('hero.get') }}</a>
               <a
                 class="btn btn-outline-secondary btn-lg"
                 :href="links.github"
@@ -129,12 +134,12 @@ onBeforeUnmount(() => observer?.disconnect());
                   class="icon"
                   aria-hidden="true"
                 />
-                View on GitHub
+                {{ t('hero.github') }}
               </a>
               <a
-                v-if="info.demoUrl"
+                v-if="demoUrl"
                 class="btn btn-outline-primary btn-lg"
-                :href="info.demoUrl"
+                :href="demoUrl"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -142,8 +147,8 @@ onBeforeUnmount(() => observer?.disconnect());
                   class="icon"
                   aria-hidden="true"
                 />
-                Try Demo
-                <span class="visually-hidden">(opens in a new tab)</span>
+                {{ t('hero.demo') }}
+                <span class="visually-hidden">{{ t('hero.newTab') }}</span>
                 <IconExternalLink
                   class="icon icon-end landing-external"
                   aria-hidden="true"
@@ -154,7 +159,7 @@ onBeforeUnmount(() => observer?.disconnect());
               class="landing-release"
               data-testid="release"
             >
-              Latest release
+              {{ t('hero.release') }}
               <a :href="info.release.url">v{{ info.release.version }}</a>
               <template v-if="releaseDate">
                 · {{ releaseDate }}
@@ -165,10 +170,10 @@ onBeforeUnmount(() => observer?.disconnect());
             <div class="landing-hero-media">
               <a
                 v-for="(image, index) in hero"
-                :key="image.src"
+                :key="image.name"
                 class="landing-shot-link"
                 :class="{ 'landing-hero-phone': image.phone }"
-                :href="image.src"
+                :href="screenshotUrl(locale, image.name)"
                 aria-haspopup="dialog"
                 aria-describedby="landing-viewer-hint"
                 @click="openScreenshot(hero, index, $event)"
@@ -176,8 +181,8 @@ onBeforeUnmount(() => observer?.disconnect());
                 <img
                   class="landing-shot"
                   :class="{ 'landing-shot-phone': image.phone }"
-                  :src="image.src"
-                  :alt="image.alt"
+                  :src="screenshotUrl(locale, image.name)"
+                  :alt="t(`screenshots.${image.name}.alt`)"
                   :fetchpriority="image.phone ? null : 'high'"
                 >
               </a>
@@ -197,16 +202,16 @@ onBeforeUnmount(() => observer?.disconnect());
           id="facts-title"
           class="visually-hidden"
         >
-          Your server, your data
+          {{ t('facts.title') }}
         </h2>
         <dl class="landing-facts landing-reveal">
           <div
             v-for="fact in facts"
-            :key="fact.term"
+            :key="fact"
             class="landing-fact"
           >
-            <dt>{{ fact.term }}</dt>
-            <dd>{{ fact.text }}</dd>
+            <dt>{{ t(`facts.items.${fact}.term`) }}</dt>
+            <dd>{{ t(`facts.items.${fact}.text`) }}</dd>
           </div>
         </dl>
       </div>
@@ -234,23 +239,22 @@ onBeforeUnmount(() => observer?.disconnect());
                 aria-hidden="true"
               />
             </span>
-            Install
+            {{ t('install.eyebrow') }}
           </p>
           <h2
             id="install-title"
             class="landing-section-title"
           >
-            Choose how to run it
+            {{ t('install.title') }}
           </h2>
           <p class="landing-text">
-            Inventory Atlas Lite is self-hosted software, not a hosted service. Pick the path that fits
-            your setup; the repository documentation has the full instructions.
+            {{ t('install.text') }}
           </p>
         </div>
         <div class="row g-4">
           <div
             v-for="(option, index) in installOptions"
-            :key="option.title"
+            :key="option.id"
             class="col-sm-6 col-lg-3 landing-reveal"
             :style="{ '--landing-reveal-delay': `${index * 0.08}s` }"
           >
@@ -262,22 +266,21 @@ onBeforeUnmount(() => observer?.disconnect());
                   aria-hidden="true"
                 />
                 <h3 class="card-title mb-2">
-                  {{ option.title }}
+                  {{ t(`install.options.${option.id}.title`) }}
                 </h3>
                 <p class="text-secondary">
-                  {{ option.text }}
+                  {{ t(`install.options.${option.id}.text`) }}
                 </p>
                 <a
                   class="mt-auto"
                   :href="option.link"
-                >{{ option.label }}</a>
+                >{{ t(`install.options.${option.id}.label`) }}</a>
               </div>
             </div>
           </div>
         </div>
         <p class="landing-note">
-          There are no user accounts: keep Inventory Atlas Lite on a trusted home network or reach it
-          through a VPN such as Tailscale.
+          {{ t('install.note') }}
         </p>
       </div>
     </section>
@@ -292,16 +295,16 @@ onBeforeUnmount(() => observer?.disconnect());
           id="final-title"
           class="landing-section-title"
         >
-          Start your inventory today
+          {{ t('final.title') }}
         </h2>
         <p class="landing-text mx-auto">
-          Install it on your own hardware, add the first few items, and find them again in seconds.
+          {{ t('final.text') }}
         </p>
         <div class="landing-actions justify-content-center">
           <a
             class="btn btn-primary btn-lg"
             :href="links.get"
-          >Get Inventory Atlas Lite</a>
+          >{{ t('hero.get') }}</a>
           <a
             class="btn btn-outline-secondary btn-lg"
             :href="links.github"
@@ -310,7 +313,7 @@ onBeforeUnmount(() => observer?.disconnect());
               class="icon"
               aria-hidden="true"
             />
-            View on GitHub
+            {{ t('hero.github') }}
           </a>
           <a
             class="btn btn-ghost-secondary btn-lg"
@@ -320,7 +323,7 @@ onBeforeUnmount(() => observer?.disconnect());
               class="icon"
               aria-hidden="true"
             />
-            Read the user guide
+            {{ t('final.guide') }}
           </a>
         </div>
       </div>
@@ -332,13 +335,13 @@ onBeforeUnmount(() => observer?.disconnect());
     data-bs-theme="dark"
   >
     <div class="container-xl d-flex flex-wrap justify-content-between gap-2">
-      <span>Inventory Atlas Lite · by Artem Bloschinsky</span>
+      <span>{{ t('footer.byline') }}</span>
       <span>
-        <a :href="info.release.url">Version {{ info.release.version }}</a>
+        <a :href="info.release.url">{{ t('footer.version', { version: info.release.version }) }}</a>
         ·
-        <a :href="links.releases">All releases</a>
+        <a :href="links.releases">{{ t('footer.releases') }}</a>
         ·
-        <a :href="links.github">Source on GitHub</a>
+        <a :href="links.github">{{ t('footer.source') }}</a>
       </span>
     </div>
   </footer>
@@ -347,7 +350,7 @@ onBeforeUnmount(() => observer?.disconnect());
     id="landing-viewer-hint"
     hidden
   >
-    Opens a larger view
+    {{ t('viewer.hint') }}
   </p>
   <ScreenshotLightbox ref="viewer" />
 </template>

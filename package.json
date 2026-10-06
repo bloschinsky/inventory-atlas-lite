@@ -1,6 +1,6 @@
 {
   "name": "simple-personal-inventory",
-  "version": "0.55.0",
+  "version": "0.56.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -21,7 +21,7 @@
     "landing:preview": "vite preview --config landing/vite.config.js",
     "demo:dev": "vite --mode demo",
     "demo:build": "vite build --mode demo",
-    "landing:screenshots": "npm run build && node landing/scripts/capture-screenshots.mjs"
+    "landing:screenshots": "vite build --mode demo && node landing/scripts/capture-screenshots.mjs"
   },
   "dependencies": {
     "@tabler/core": "1.5.1",

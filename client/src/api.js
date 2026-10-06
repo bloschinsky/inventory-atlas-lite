@@ -1,5 +1,5 @@
 import { ref } from 'vue';
-import { translateError } from './i18n/index.js';
+import { i18n, translateError } from './i18n/index.js';
 
 /*
   A failed API request. The server answers { error: { code, params } }; the message is translated
@@ -20,7 +20,7 @@ export class ApiError extends Error {
   demo backend in ./demo/; the normal build never includes it and always talks to the server.
 */
 let demo = null;
-const demoReady = __DEMO__ ? import('./demo/backend.js').then(async ({ startDemoBackend }) => { demo = await startDemoBackend(); }) : null;
+const demoReady = __DEMO__ ? import('./demo/backend.js').then(async ({ startDemoBackend }) => { demo = await startDemoBackend(i18n.global.locale.value); }) : null;
 
 const request = async (url, options) => {
   if (!demoReady) return fetch(url, options);
@@ -32,14 +32,15 @@ const request = async (url, options) => {
 export const photoUrl = id => (demo ? demo.photoUrl(id) : `/api/photos/${id}`);
 
 /*
-  Demo only: puts the canonical fixture back without a reload. `dataRevision` counts those resets;
-  App.vue keys the page on it, so the open page loads the fresh data. Otherwise only the demo's
-  guided tour changes it, through `reloadDemoPage()`, to replay a chapter on a freshly mounted page.
+  Demo only: puts the canonical fixture back without a reload, in the active interface language.
+  `dataRevision` counts those resets; App.vue keys the page on it, so the open page loads the fresh
+  data. Otherwise only the demo's guided tour changes it, through `reloadDemoPage()`, to replay a
+  chapter on a freshly mounted page.
 */
 export const dataRevision = ref(0);
 export async function resetDemoData() {
   await demoReady;
-  demo.reset();
+  demo.reset(i18n.global.locale.value);
   dataRevision.value++;
 }
 export const reloadDemoPage = () => { dataRevision.value++; };

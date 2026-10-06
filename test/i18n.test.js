@@ -5,7 +5,7 @@ import path from 'node:path';
 import { createI18n } from 'vue-i18n';
 import {
   DEFAULT_LOCALE, SUPPORTED_LOCALES, createI18nOptions, formatDate, formatDateTime, formatFileSize, formatMoney,
-  formatNumber, resolveLocale
+  formatNumber, pickLocale, resolveLocale
 } from '../client/src/i18n/core.js';
 
 const localesDir = path.resolve(import.meta.dirname, '../client/src/i18n/locales');
@@ -29,6 +29,14 @@ test('English is the default and the fallback for a missing or unsupported saved
   assert.equal(options.locale, 'en');
   assert.equal(options.fallbackLocale, 'en');
   assert.equal(translator(null).t('nav.items'), 'Items');
+});
+
+test('the first supported candidate wins: the demo address before the saved choice, then English', () => {
+  assert.equal(pickLocale('uk', 'en'), 'uk', 'an explicit ?lang= overrides the saved language');
+  assert.equal(pickLocale(null, 'uk'), 'uk', 'without ?lang= the saved language applies');
+  assert.equal(pickLocale('fr', 'uk'), 'uk', 'an unsupported ?lang= is skipped');
+  assert.equal(pickLocale('fr', null), 'en', 'nothing usable falls back to English');
+  assert.equal(pickLocale(), 'en');
 });
 
 test('English and Ukrainian define exactly the same keys, with a value for every one', () => {

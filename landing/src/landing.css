@@ -59,10 +59,14 @@ a:focus-visible, .btn:focus-visible {
   border-bottom: 1px solid rgba(255, 255, 255, .08);
 }
 .landing-nav .container-xl { display: flex; flex-wrap: nowrap; align-items: center; justify-content: space-between; gap: 1rem; }
-/* On the narrowest phones the GitHub button keeps its icon and its accessible name only. */
-@media (max-width: 399.98px) {
-  .landing-nav-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/*
+  On phones the language and GitHub buttons keep their icons and their accessible names only, so the
+  navigation stays on one row in every language; the language menu itself names every language.
+*/
+@media (max-width: 575.98px) {
+  .landing-nav-label, .landing-language-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }
+.landing-nav .dropdown-menu { min-width: 11rem; }
 .landing-brand { display: inline-flex; align-items: center; gap: .5rem; color: #fff; font-weight: 650; font-size: 1.0625rem; letter-spacing: -.01em; text-decoration: none; white-space: nowrap; }
 .landing-brand:hover { color: var(--landing-accent); text-decoration: none; }
 .landing-brand-mark { width: 1.75rem; height: 1.75rem; color: var(--landing-accent); }

@@ -1,0 +1,157 @@
+{
+  "meta": {
+    "title": "Inventory Atlas Lite — self-hosted inventory for physical items",
+    "description": "Inventory Atlas Lite is a small self-hosted inventory app: know what you own and where it is, with locations, containers, custom fields, photos, QR labels, checklists, and a dashboard — on your own server.",
+    "ogTitle": "Inventory Atlas Lite — know what you own and where it is",
+    "ogDescription": "A small self-hosted inventory app for physical items. Your server, your data.",
+    "ogImageAlt": "The Inventory Atlas Lite Dashboard with item totals, photo coverage, and charts."
+  },
+  "nav": {
+    "skip": "Skip to content",
+    "label": "Main",
+    "features": "Features",
+    "install": "Install",
+    "language": "Language",
+    "languageCurrent": "Language: {language}"
+  },
+  "hero": {
+    "eyebrow": "Self-hosted inventory for physical items",
+    "lead": "Know what you own and where it is. A deliberately small inventory app that runs on your own server and keeps every item, field, and photo in a database you control.",
+    "get": "Get Inventory Atlas Lite",
+    "github": "View on GitHub",
+    "demo": "Try Demo",
+    "newTab": "(opens in a new tab)",
+    "release": "Latest release"
+  },
+  "facts": {
+    "title": "Your server, your data",
+    "items": {
+      "selfHosted": { "term": "Self-hosted", "text": "Runs on your own hardware" },
+      "sqlite": { "term": "SQLite", "text": "Items and photos in one file" },
+      "docker": { "term": "Docker", "text": "Ready-made container image" },
+      "proxmox": { "term": "Proxmox", "text": "One-command LXC install" },
+      "noAccounts": { "term": "No accounts", "text": "Made for a trusted LAN or VPN" },
+      "localFirst": { "term": "Local-first", "text": "AI and cloud backup are optional" }
+    }
+  },
+  "sections": {
+    "hierarchy": {
+      "verb": "Organize",
+      "title": "Everything has a place",
+      "text": "Model your home the way it really is. Items sit in locations, inside containers, inside other containers — and the Hierarchy shows the whole picture.",
+      "points": [
+        "Location → container → item, nested as deep as you need.",
+        "Contained items show the location of their outermost container.",
+        "Browse a searchable tree or an interactive graph, by location or by category.",
+        "Move a whole selection into another container in one step."
+      ]
+    },
+    "items": {
+      "verb": "Describe",
+      "title": "Categories with fields that fit",
+      "text": "Every category gets its own fields, so a drill can record its power source and a camera its lens mount, next to the details every item shares.",
+      "points": [
+        "Text, number, date, and yes/no custom fields per category.",
+        "Condition grades, New or Used, purchase date and price, serial numbers.",
+        "Templates, Duplicate, and Batch Add from JSON for quick data entry.",
+        "Choose and sort the columns of the Items list, including custom fields."
+      ]
+    },
+    "photos-qr": {
+      "verb": "Label",
+      "title": "See it, label it, scan it",
+      "text": "Keep photos with each item and print QR labels for boxes and shelves. Scan a label with your phone to open the item right away.",
+      "points": [
+        "Several photos per item, in your order, with the cover photo you choose.",
+        "QR labels on A4 sheets in three layouts, with the details you pick.",
+        "The in-app scanner reads labels with the camera or from an image, locally.",
+        "Optional local background removal for clean product photos."
+      ]
+    },
+    "find": {
+      "verb": "Find",
+      "title": "Find it fast, check it off",
+      "text": "Search names, descriptions, serial numbers, and custom field values, then filter by category and condition. Checklists make packing and audits routine.",
+      "points": [
+        "Instant search and filters across the whole inventory.",
+        "Packing and Verification checklists with a phone-first run page.",
+        "Audit a container to confirm everything inside is still there.",
+        "Completed checks record when each item was last verified."
+      ]
+    },
+    "dashboard": {
+      "verb": "Understand",
+      "title": "A dashboard for your stuff — and optional AI",
+      "text": "See how big the inventory is, how well it is documented, and where things are. When you want help, AI can draft items and fields for you to review.",
+      "points": [
+        "Totals, photo coverage, placement status, and recent additions.",
+        "Breakdowns by category, condition, and location.",
+        "AI Add Item drafts an item from a photo or a description — optional, off by default.",
+        "Works with OpenAI, OpenRouter, or a local Ollama or LM Studio model."
+      ]
+    }
+  },
+  "screenshots": {
+    "items": {
+      "caption": "Items · List view",
+      "alt": "The Items list of Inventory Atlas Lite: item photos, categories, condition badges, locations, and the containers items are stored inside."
+    },
+    "item-phone": {
+      "caption": "Item details · Phone",
+      "alt": "An item page on a phone, showing the photo of a Nikon F65 film camera and the Edit, Duplicate, and QR Code actions."
+    },
+    "hierarchy": {
+      "caption": "Hierarchy · Grouped by location",
+      "alt": "The Hierarchy tree grouped by location: Home / Office, Home / Storage, Workshop, and Travel gear, with the containers and the items inside them."
+    },
+    "item-details": {
+      "caption": "Item details · Custom fields",
+      "alt": "An item page for a cordless drill with its photo, condition, purchase details, serial number, the Tools category fields, and the Tool Cabinet it is stored in."
+    },
+    "labels": {
+      "caption": "Print Labels · A4 QR sheet",
+      "alt": "The Print Labels page with six QR labels on an A4 sheet and options for the layout and the details shown on each label."
+    },
+    "items-search": {
+      "caption": "Items · Search and filters",
+      "alt": "The Items list filtered by the search “Nikon”, showing the Nikon F65 camera, its Nikkor lens, and the flash."
+    },
+    "checklist-run-phone": {
+      "caption": "Checklist run · Phone",
+      "alt": "A packing checklist run on a phone: four of five items checked, three Packed and one Missing, with Packed, Missing, and Pending buttons for each item."
+    },
+    "dashboard": {
+      "caption": "Dashboard · Inventory overview",
+      "alt": "The Dashboard with total items, photo coverage, placement status, items added in the last 30 days, items by category, and the condition breakdown."
+    }
+  },
+  "install": {
+    "eyebrow": "Install",
+    "title": "Choose how to run it",
+    "text": "Inventory Atlas Lite is self-hosted software, not a hosted service. Pick the path that fits your setup; the repository documentation has the full instructions.",
+    "note": "There are no user accounts: keep Inventory Atlas Lite on a trusted home network or reach it through a VPN such as Tailscale.",
+    "options": {
+      "release": { "title": "GitHub Release", "text": "Every stable version is published with release notes, a checksummed source archive, and a Docker image.", "label": "Browse releases" },
+      "docker": { "title": "Docker", "text": "Run the image from GitHub Container Registry with your data on a named volume.", "label": "Docker instructions" },
+      "proxmox": { "title": "Proxmox VE", "text": "One command on a Proxmox node creates an unprivileged LXC and installs the latest release.", "label": "Proxmox guide" },
+      "node": { "title": "Node.js", "text": "Build and start it with Node.js on any machine you already run.", "label": "Manual setup" }
+    }
+  },
+  "final": {
+    "title": "Start your inventory today",
+    "text": "Install it on your own hardware, add the first few items, and find them again in seconds.",
+    "guide": "Read the user guide"
+  },
+  "footer": {
+    "byline": "Inventory Atlas Lite · by Artem Bloschinsky",
+    "version": "Version {version}",
+    "releases": "All releases",
+    "source": "Source on GitHub"
+  },
+  "viewer": {
+    "hint": "Opens a larger view",
+    "previous": "Previous screenshot",
+    "next": "Next screenshot",
+    "close": "Close"
+  }
+}
