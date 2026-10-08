@@ -419,6 +419,9 @@ npm run test:e2e
 
 ## Git
 
+- Start every new task from the project issues on its own branch created from an up-to-date `master`, unless the user explicitly says to work on the current branch.
+- Name the branch `<type>/<number>-<short-task-name>`, where `<type>` is `feature`, `bugfix`, or `techdebt`, `<number>` is the task number (the GitHub issue number, or the number in the `docs/issues/` task file name), and `<short-task-name>` is the task name in lowercase kebab case (for example, `feature/23-local-network-access`). If the task has no number or its type is unclear, ask the user before creating the branch.
+- Title the pull request with the same parts: `<type>: #<number> <Task name>` (for example, `feature: #23 Local network access`).
 - After updating the version when applicable and writing the completion record, create a local Git commit with a short, meaningful message written in English.
 - When a completed feature updates the project version, create a new local tag named `v<version>` on the resulting feature commit immediately after committing (for example, version `0.10.0` uses tag `v0.10.0`).
 - Commit only files that belong to the current task; do not include unrelated or pre-existing user changes.
