@@ -90,7 +90,7 @@ test('a fresh database stores the grade and the notes in separate columns and re
     assert.equal(columns.includes('condition'), false);
     assert.ok(CURRENT_SCHEMA[table].includes('condition_grade') && CURRENT_SCHEMA[table].includes('condition_notes'));
   }
-  assert.equal(SCHEMA_VERSION, 7);
+  assert.equal(SCHEMA_VERSION, 8);
   // The CHECK keeps the stored grade to the fixed keys even for writes that bypass the services.
   for (const grade of CONDITION_GRADES) {
     db.prepare('INSERT INTO items (uuid, name, category_id, condition_grade) VALUES (?, ?, 1, ?)').run(`uuid-${grade}`, grade, grade);

@@ -4,7 +4,7 @@ import { coverPhotoIdSql } from './itemPhotoRepository.js';
 // deleting the checklist it came from never changes it.
 const SUMMARY = `
   SELECT r.id, r.checklist_id, r.checklist_name_snapshot, r.mode, r.status, r.started_at, r.completed_at, r.source,
-    r.source_container_item_id, r.source_container_name_snapshot, r.audit_scope,
+    r.source_container_item_id, r.source_container_name_snapshot, r.audit_scope, r.skipped_retired_count,
     COUNT(ri.id) AS total,
     COALESCE(SUM(ri.status = 'confirmed'), 0) AS confirmed,
     COALESCE(SUM(ri.status = 'missing'), 0) AS missing,
@@ -31,28 +31,39 @@ export class ChecklistRunRepository {
     `).run({ id: container.id, name: container.name, scope }).lastInsertRowid;
   }
 
-  // The run's own copy of the checklist as it is now: every entry still linked to an item, in order,
-  // under the item's current name. Returns how many entries were copied.
+  /*
+    The run's own copy of the checklist as it is now: every entry still linked to an active item, in
+    order, under the item's current name. Retired items are left out and only counted on the run.
+    Returns how many entries were copied.
+  */
   copyEntries(runId, checklistId) {
-    return this.db.prepare(`
+    const copied = this.db.prepare(`
       INSERT INTO checklist_run_items (run_id, item_id, item_name_snapshot, position)
       SELECT ?, i.id, i.name, ROW_NUMBER() OVER (ORDER BY ci.sort_order, ci.id) - 1
-      FROM checklist_items ci JOIN items i ON i.id = ci.item_id WHERE ci.checklist_id = ?
+      FROM checklist_items ci JOIN items i ON i.id = ci.item_id WHERE ci.checklist_id = ? AND i.lifecycle_status = 'active'
     `).run(runId, checklistId).changes;
+    this.db.prepare(`
+      UPDATE checklist_runs SET skipped_retired_count = (
+        SELECT COUNT(*) FROM checklist_items ci JOIN items i ON i.id = ci.item_id
+        WHERE ci.checklist_id = ? AND i.lifecycle_status = 'retired'
+      ) WHERE id = ?
+    `).run(checklistId, runId);
+    return copied;
   }
 
   /*
     The run's own copy of what the container holds now: its direct children, or every descendant for
     a nested audit, never the container itself. Each descendant follows its own container, siblings in
     name order. An item is copied once even over a damaged row that forms a cycle, and the depth guard
-    ends such a walk. Returns how many items were copied.
+    ends such a walk. Only active items are copied. Returns how many items were copied.
   */
   copyContainerContents(runId, containerId, nested) {
     return this.db.prepare(`
       WITH RECURSIVE contents(id, name, depth, sort_path) AS (
-        SELECT id, name, 1, lower(name) || char(1) || printf('%010d', id) FROM items WHERE parent_item_id = @containerId
+        SELECT id, name, 1, lower(name) || char(1) || printf('%010d', id) FROM items
+        WHERE parent_item_id = @containerId AND lifecycle_status = 'active'
         UNION ALL SELECT i.id, i.name, c.depth + 1, c.sort_path || char(2) || lower(i.name) || char(1) || printf('%010d', i.id)
-        FROM items i JOIN contents c ON i.parent_item_id = c.id WHERE @nested AND c.depth < 100
+        FROM items i JOIN contents c ON i.parent_item_id = c.id WHERE @nested AND c.depth < 100 AND i.lifecycle_status = 'active'
       ), unique_contents AS (
         SELECT id, name, MIN(sort_path) AS sort_path FROM contents WHERE id != @containerId GROUP BY id
       )
@@ -65,10 +76,12 @@ export class ChecklistRunRepository {
     return this.db.prepare('SELECT * FROM checklist_runs WHERE id = ?').get(id);
   }
 
-  // The item link and photo are read live only to offer Open item and a thumbnail; the name never is.
+  // The item link, photo, and lifecycle status are read live only to offer Open item, a thumbnail, and
+  // the Retired mark; the name never is.
   listItems(runId) {
     return this.db.prepare(`
       SELECT ri.id, ri.item_id, ri.item_name_snapshot, ri.position, ri.status, ri.checked_at, ri.note, i.uuid AS item_uuid,
+        i.lifecycle_status = 'retired' AS retired,
         ${coverPhotoIdSql('ri.item_id')} AS thumbnail_id
       FROM checklist_run_items ri LEFT JOIN items i ON i.id = ri.item_id
       WHERE ri.run_id = ? ORDER BY ri.position, ri.id

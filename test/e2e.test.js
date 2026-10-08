@@ -354,7 +354,7 @@ test('bulk move previews and moves selection roots through the API as one operat
     const moved = await request('/api/items/bulk-parent', json('PATCH', { item_ids: [boxA.uuid, camera.uuid], parent_item_id: boxB.id }));
     assert.deepEqual(moved, {
       selected_count: 2, root_count: 1, moved_count: 1, unchanged_count: 0,
-      parent: { id: boxB.id, uuid: boxB.uuid, name: 'Box B' }, moved_root_ids: [boxA.id]
+      parent: { id: boxB.id, uuid: boxB.uuid, name: 'Box B', lifecycle_status: 'active' }, moved_root_ids: [boxA.id]
     });
     assert.equal((await request(`/api/items/${boxA.id}`)).parent.name, 'Box B');
     assert.equal((await request(`/api/items/${camera.id}`)).parent.name, 'Box A');

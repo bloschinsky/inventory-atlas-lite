@@ -131,6 +131,7 @@ export class DashboardService {
       scope: { categoryId, categoryName: category?.name || null },
       categories: this.categories.listNames(),
       totalItems: total,
+      retiredItems: this.dashboard.retiredCount(categoryId),
       photoCoverage: {
         withPhotos: metrics.withPhotos,
         withoutPhotos: total - metrics.withPhotos,

@@ -68,7 +68,7 @@ test('the hierarchy endpoint returns lightweight flat nodes with inherited locat
   const byName = Object.fromEntries(items.map(item => [item.name, item]));
   assert.deepEqual(byName['Nikon F80'], {
     id: camera.id, uuid: camera.uuid, name: 'Nikon F80', parent_id: bag.id, category_id: camera.category_id,
-    category_name: 'Storage', thumbnail_id: firstPhoto, children_count: 0, effective_location: 'KP Garage'
+    category_name: 'Storage', thumbnail_id: firstPhoto, children_count: 0, effective_location: 'KP Garage', lifecycle_status: 'active'
   });
   assert.equal(byName['Box A'].children_count, 1);
   assert.equal(byName['Box A'].parent_id, null);

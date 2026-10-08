@@ -144,6 +144,14 @@ Category: Inventory → Category → category-root items → same-category neste
   instead of drawing the graph and freezing the browser. Group nodes count toward it.
 - The graph is read-only: nodes cannot be dragged, connected, or deleted, and nothing is written.
 
+### Item lifecycle
+
+The page loads the active items by default. A third switch, **Inventory** (Active | All | Retired), is
+kept in the address as `?lifecycle=all|retired` and sent to `GET /api/items/hierarchy?lifecycle=…`;
+it works with both groupings and both views. A container and its contents always share one lifecycle
+status, so every view is a complete forest. Retired items carry `lifecycle_status` and say **Retired**
+first in their secondary line. See [Item lifecycle](item-lifecycle.md).
+
 ## Implementation overview
 
 - `GET /api/items/hierarchy` answers `{ items: [...] }`, one flat node per item with `id`, `uuid`,

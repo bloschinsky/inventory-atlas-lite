@@ -1,12 +1,12 @@
 import { Router } from 'express';
 
-export const createItemRoutes = ({ itemService, bulkReplaceService }) => {
+export const createItemRoutes = ({ itemService, bulkReplaceService, itemLifecycleService }) => {
   const router = Router();
 
   router.get('/api/items', (req, res) => res.json(itemService.list(req.query)));
   // Registered before /api/items/:id so the literal paths are not read as item identifiers.
   router.get('/api/items/columns', (req, res) => res.json(itemService.columns()));
-  router.get('/api/items/hierarchy', (req, res) => res.json(itemService.hierarchy()));
+  router.get('/api/items/hierarchy', (req, res) => res.json(itemService.hierarchy(req.query)));
   router.get('/api/items/parent-candidates', (req, res) => res.json(itemService.parentCandidates(req.query)));
   router.get('/api/items/transferred-to-suggestions', (req, res) => res.json(itemService.transferredToSuggestions(req.query)));
   router.get('/api/items/bulk-replace/fields', (req, res) => res.json(bulkReplaceService.fields()));
@@ -28,6 +28,8 @@ export const createItemRoutes = ({ itemService, bulkReplaceService }) => {
   router.patch('/api/items/bulk-parent', (req, res) => res.json(itemService.bulkMove(req.body)));
   router.post('/api/items', (req, res) => res.status(201).json(itemService.create(req.body)));
   router.put('/api/items/:id', (req, res) => res.json(itemService.update(req.params.id, req.body)));
+  // Retire or restore an item together with everything stored in it; never a deletion.
+  router.patch('/api/items/:id/lifecycle', (req, res) => res.json(itemLifecycleService.change(req.params.id, req.body)));
   router.delete('/api/items/:id', (req, res) => {
     itemService.remove(req.params.id);
     res.status(204).end();

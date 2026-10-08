@@ -45,6 +45,7 @@ import { CustomFieldService } from './services/customFieldService.js';
 import { DashboardService } from './services/dashboardService.js';
 import { DatabaseMetadataService } from './services/databaseMetadataService.js';
 import { ImageService } from './services/imageService.js';
+import { ItemLifecycleService } from './services/itemLifecycleService.js';
 import { ItemService } from './services/itemService.js';
 import { ItemTemplateService } from './services/itemTemplateService.js';
 import { PhotoService } from './services/photoService.js';
@@ -127,6 +128,7 @@ export function createApp({ production = false } = {}) {
   const categoryService = new CategoryService(categoryRepository);
   const customFieldService = new CustomFieldService(customFieldRepository, categoryService);
   const itemService = new ItemService({ itemRepository, customFieldRepository, itemPhotoRepository, categoryRepository });
+  const itemLifecycleService = new ItemLifecycleService({ itemRepository, itemService });
   const bulkReplaceService = new BulkReplaceService({ bulkReplaceRepository });
   const databaseMetadataService = new DatabaseMetadataService({ databaseMetadataRepository: new DatabaseMetadataRepository(db) });
   const itemTemplateService = new ItemTemplateService({ itemTemplateRepository, categoryRepository, customFieldRepository });
@@ -179,7 +181,7 @@ export function createApp({ production = false } = {}) {
   app.use(createDashboardRoutes({ dashboardService }));
   app.use(createDatabaseMetadataRoutes({ databaseMetadataService }));
   app.use(createFieldRoutes({ customFieldService, aiFieldService }));
-  app.use(createItemRoutes({ itemService, bulkReplaceService }));
+  app.use(createItemRoutes({ itemService, bulkReplaceService, itemLifecycleService }));
   app.use(createItemTemplateRoutes({ itemTemplateService }));
   app.use(createChecklistRoutes({ checklistService, checklistRunService }));
   app.use(createPhotoRoutes({ photoService, imageUpload }));

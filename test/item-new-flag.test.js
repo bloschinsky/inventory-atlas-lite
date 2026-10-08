@@ -85,7 +85,7 @@ test('a fresh database has a non-null New flag on items and an optional one on t
   assert.deepEqual({ type: templates.type, notnull: templates.notnull, dflt_value: templates.dflt_value }, { type: 'INTEGER', notnull: 0, dflt_value: null });
   assert.ok(CURRENT_SCHEMA.items.includes('is_new'));
   assert.ok(CURRENT_SCHEMA.item_templates.includes('is_new'));
-  assert.equal(SCHEMA_VERSION, 7);
+  assert.equal(SCHEMA_VERSION, 8);
   // The CHECK keeps the stored flag to 0 or 1 even for writes that bypass the services.
   assert.throws(() => db.prepare("INSERT INTO items (uuid, name, category_id, is_new) VALUES ('x', 'X', 1, 2)").run(), /CHECK/);
 });

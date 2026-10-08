@@ -51,7 +51,11 @@ defineEmits(['toggle', 'expand-all', 'collapse-all']);
         v-for="row in rows"
         :key="row.key"
         class="list-group-item hierarchy-row"
-        :class="{ 'hierarchy-row-location': row.type === 'location', 'hierarchy-row-category': row.type === 'category' }"
+        :class="{
+          'hierarchy-row-location': row.type === 'location',
+          'hierarchy-row-category': row.type === 'category',
+          'item-retired': row.item?.lifecycle_status === 'retired'
+        }"
         :style="{ '--hierarchy-depth': row.depth }"
       >
         <button

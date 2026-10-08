@@ -118,6 +118,25 @@ test('search, filters, the hierarchy, the dashboard, and checklists work on the 
   assert.ok(itemService.get(demoItemUuid('cordless-drill')).last_verified_at, 'a completed verification run sets Last verified');
 });
 
+test('the demo retires and restores a container with its contents through the shared lifecycle service', () => {
+  const { itemService, itemLifecycleService, dashboardService } = seeded();
+  const nodes = itemService.hierarchy().items;
+  const container = nodes.find(node => node.parent_id !== null && node.children_count > 0) ?? nodes.find(node => node.children_count > 0);
+  const subtree = itemService.get(container.uuid).descendant_count + 1;
+  const retired = itemLifecycleService.change(container.uuid, { status: 'retired', reason: 'gifted', include_contents: true });
+  assert.equal(retired.affected_count, subtree);
+  assert.equal(retired.item.parent, null);
+  assert.equal(itemService.list({ lifecycle: 'retired' }).pagination.total, subtree);
+  assert.equal(dashboardService.overview({}).totalItems, fixture.items.length - subtree);
+  assert.equal(dashboardService.overview({}).retiredItems, subtree);
+  assert.equal(itemService.hierarchy({ lifecycle: 'retired' }).items.length, subtree);
+
+  const restored = itemLifecycleService.change(container.uuid, { status: 'active' });
+  assert.equal(restored.affected_count, subtree);
+  assert.equal(itemService.list({ lifecycle: 'retired' }).pagination.total, 0);
+  assert.equal(itemService.list().pagination.total, fixture.items.length);
+});
+
 test('changes stay in their own demo database, and a new one starts from the fixture again', () => {
   const visit = seeded();
   const category = visit.categoryService.list()[0];

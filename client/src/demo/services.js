@@ -16,6 +16,7 @@ import { ChecklistService } from '../../../server/src/services/checklistService.
 import { CustomFieldService } from '../../../server/src/services/customFieldService.js';
 import { DashboardService } from '../../../server/src/services/dashboardService.js';
 import { DatabaseMetadataService } from '../../../server/src/services/databaseMetadataService.js';
+import { ItemLifecycleService } from '../../../server/src/services/itemLifecycleService.js';
 import { ItemService } from '../../../server/src/services/itemService.js';
 import { ItemTemplateService } from '../../../server/src/services/itemTemplateService.js';
 import { PhotoService } from '../../../server/src/services/photoService.js';
@@ -37,12 +38,14 @@ export function createDemoServices(SQL) {
   const checklistRepository = new ChecklistRepository(db);
   const checklistRunRepository = new ChecklistRunRepository(db);
   const categoryService = new CategoryService(categoryRepository);
+  const itemService = new ItemService({ itemRepository, customFieldRepository, itemPhotoRepository, categoryRepository });
 
   return {
     db,
     categoryService,
     customFieldService: new CustomFieldService(customFieldRepository, categoryService),
-    itemService: new ItemService({ itemRepository, customFieldRepository, itemPhotoRepository, categoryRepository }),
+    itemService,
+    itemLifecycleService: new ItemLifecycleService({ itemRepository, itemService }),
     bulkReplaceService: new BulkReplaceService({ bulkReplaceRepository: new BulkReplaceRepository(db) }),
     databaseMetadataService: new DatabaseMetadataService({ databaseMetadataRepository: new DatabaseMetadataRepository(db) }),
     itemTemplateService: new ItemTemplateService({

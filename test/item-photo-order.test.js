@@ -88,7 +88,7 @@ test('existing photos migrate in id order per item, so every cover stays the sam
   const db = legacyDatabase();
   applySchema(db);
   assert.equal(Number(db.pragma('user_version', { simple: true })), SCHEMA_VERSION);
-  assert.equal(SCHEMA_VERSION, 7);
+  assert.equal(SCHEMA_VERSION, 8);
   const rows = db.prepare('SELECT item_id, filename, sort_order FROM item_photos ORDER BY item_id, sort_order').all();
   assert.deepEqual(rows.map(row => [row.item_id, row.filename, row.sort_order]), [
     [1, 'zenit-front.png', 0], [1, 'zenit-back.png', 1], [1, 'zenit-lens.png', 2],

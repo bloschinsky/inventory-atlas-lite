@@ -131,6 +131,9 @@ The project stays small and readable. Do not add:
 - `client/src/pages/ItemsList.vue` — item list, search, filtering, column choice, sorting, and pagination.
 - `client/src/components/ItemResults.vue` — the item table and phone cards, rendered from the visible column list.
 - `client/src/components/ItemNewStatusBadge.vue` — the read-only New/Used badge of the core New flag, shared by the item table, cards, and details.
+- `client/src/components/ItemLifecycleBadge.vue` — the neutral Retired (and, on details, Active) badge of the item lifecycle;
+  `RetireItemDialog.vue` (reason, date, recipient, note, and the contents choice of a container) and
+  `RestoreItemDialog.vue` (restore on its own at a location or inside an active container) are its two transitions.
 - `client/src/itemColumns.js` — Items view column labels, cell text formatting, and its preference storage key.
 - `client/src/conditionGrades.js` — the interface mapping of the Condition grades (label key, badge class, chart color, best-first order); `client/src/components/ConditionGradeBadge.vue` is the shared grade badge and `ConditionHelpDialog.vue` the Condition grading help opened from the item form.
 - `client/src/useTablePreferences.js` — reusable browser-local table view state: visible columns, sort, reset, and reconciliation with the current columns.
@@ -169,6 +172,7 @@ The project stays small and readable. Do not add:
 - `shared/aiProviders.js` — AI provider presets (default base URLs, key requirements) and base-URL validation, shared by Settings and the server.
 - `shared/itemColumns.js` — Items view core columns, default sort, and the stable custom column key, shared by the client and the server.
 - `shared/conditionGrades.js` — the fixed Condition grade keys in rank order, shared by the client and the server.
+- `shared/itemLifecycle.js` — the lifecycle statuses, retirement reasons, list views (`active`, `all`, `retired`), and text limits, shared by the client and the server.
 - `shared/itemQr.js` — canonical `ial:item:v1:<uuid>` QR payload with its encoder and strict decoder.
 - `shared/checklists.js` — checklist modes, run item states, the note limit, and the run count rule, shared by the client and the server.
 - `shared/semver.js` — semantic version parsing and comparison, used by the updater and the What's New dialog.
@@ -177,7 +181,7 @@ The project stays small and readable. Do not add:
 - `server/src/index.js` — process entry point: port and production flag, the HTTP listener, and shutdown.
 - `server/src/app.js` — composition root: builds every repository, service, upload, and route table and assembles the Express app, including production static serving.
 - `server/src/routes/` — thin Express route tables; they parse the request, call one service, and shape the response.
-- `server/src/services/` — application and business logic, independent of Express request and response objects. `itemColumns.js` builds the Items column catalog and merges same-name, same-type custom fields; `bulkReplaceService.js` previews and applies exact-value replacement over the column whitelist of `repositories/bulkReplaceRepository.js`; `databaseMetadataService.js` exposes the database identity and renames it through `repositories/databaseMetadataRepository.js`; `checklistService.js` owns checklist definitions and membership and `checklistRunService.js` the runs (server-side snapshots, container audits, state changes by run item or inventory item, completion with Last verified) over `repositories/checklistRepository.js` and `checklistRunRepository.js`; `itemService.js` owns the containment rule (`assertCanContain`) shared by the item form and Bulk Move, which reduces a selection to its roots before moving it.
+- `server/src/services/` — application and business logic, independent of Express request and response objects. `itemColumns.js` builds the Items column catalog and merges same-name, same-type custom fields; `bulkReplaceService.js` previews and applies exact-value replacement over the column whitelist of `repositories/bulkReplaceRepository.js`; `databaseMetadataService.js` exposes the database identity and renames it through `repositories/databaseMetadataRepository.js`; `checklistService.js` owns checklist definitions and membership and `checklistRunService.js` the runs (server-side snapshots, container audits, state changes by run item or inventory item, completion with Last verified) over `repositories/checklistRepository.js` and `checklistRunRepository.js`; `itemService.js` owns the containment rule (`assertCanContain`) shared by the item form and Bulk Move, which reduces a selection to its roots before moving it, and the lifecycle rule that a container and its contents share one status; `itemLifecycleService.js` retires and restores an item with its whole subtree in one transaction (`PATCH /api/items/:id/lifecycle`).
 - `server/src/repositories/` — all SQL and row mapping for the inventory tables.
 - `server/src/integrations/` — adapters for external or heavy dependencies: the AI providers (`openAiProvider.js`, `openAiCompatibleProvider.js`, and their shared `aiProviderHttp.js` transport), the GitHub release API, the local background-removal model, and the cloud storage providers (`dropboxStorageProvider.js`, `googleDriveStorageProvider.js`, and their shared `cloudStorageHttp.js` transport). AI features call `services/aiProviderService.js`, never an adapter directly; cloud backup reaches the storage adapters only through `services/cloudConnectionService.js`, and their OAuth app credentials come from `services/cloudAppSettingsService.js`.
 - `server/src/restore/` — restore and reset configuration, staged-upload sessions, the SQLite file checks, and `databaseMaintenance.js`: the shared maintenance lock, safety backup, atomic swap, and rollback used by the restore and reset services.
@@ -190,6 +194,7 @@ The project stays small and readable. Do not add:
 - `test/services.test.js` — service-level regression tests that run without HTTP against a temporary database.
 - `test/custom-field-rename.test.js` — custom field rename: unchanged ids, types, categories, and item and template values, name validation and conflicts, column split and merge, Batch Add names, and the `PATCH /api/fields/:id` contract.
 - `test/item-photo-order.test.js` — persisted photo order and the cover photo: the schema and the version 7 migration, restore validation, ordered uploads, reorder validation and atomicity, deletion, the shared cover thumbnail, and the `PUT /api/items/:id/photos/order` contract.
+- `test/item-lifecycle.test.js` — the item lifecycle: schema and the version 8 migration, restore of an older backup, retire and restore of leaves and subtrees with their snapshots, atomicity, invalid and repeated transitions, the containment guards, server-side list and hierarchy filters, the Dashboard, checklists, and the HTTP API.
 - `test/item-new-flag.test.js` — the core New flag: schema and the version 6 migration, restore validation, strict boolean validation, list sorting, the column catalog, template defaults, and batch import.
 - `test/condition-grading.test.js` — Condition grade and Condition Notes: schema, the version 7 migration that keeps old text as notes, restore, grade validation, rank sorting, the filter, templates, duplicates, batch import, and the Dashboard.
 - `test/serverProcess.js` — starts and stops the real server for the API tests on a free port chosen by the operating system (`PORT=0`), reading the bound port from its listening line.
@@ -205,6 +210,7 @@ The project stays small and readable. Do not add:
 - `test/cloud-backup.test.js` — cloud backup services, adapters, scheduler, and API against the local Dropbox/Google Drive stub in `test/e2e/cloudProviderStub.js`.
 - `test/fixtures/` — real source photos used as regression input by the Node.js tests.
 - `test/e2e/settings-navigation.spec.js` — Settings section routes and redirects, the active state, the desktop section list, and the phone section selector.
+- `test/e2e/lifecycle.spec.js` — Retire and Restore from the item page, the Active / All / Retired views of Items and Hierarchy, the container contents choice, checklists with retired items, the Dashboard link, phones, and Ukrainian.
 - `test/e2e/` — Playwright browser tests, their fixtures, shared helpers, and the run launcher.
 - `playwright.config.js` — Playwright projects, isolated test ports, and the cloud provider stub, API, Vite, and landing and demo build/preview processes started for the suite.
 - `landing/` — the public landing page and user guide, a separate two-page Vue/Vite/Tabler build into
@@ -243,7 +249,7 @@ The project stays small and readable. Do not add:
   change that keeps the section, the language across landing, guide, and demo, and every viewport.
 - `test/demo.test.js` — the public demo data layer in Node: deterministic fixture, seeded content,
   the same structure in every locale and the Ukrainian texts, isolation of changes, the sql.js
-  adapter, the demo photo and private-data checks, the fixture template and checklist the tour opens,
+  adapter, the demo photo and private-data checks, the fixture template and checklist the tour opens, retiring and restoring through the shared lifecycle service,
   and the guided tour's copy and action label rules;
   `test/e2e/demo.spec.js` — the built demo inside the landing build: no server requests, photos,
   temporary changes and Reset demo, reloaded deep links, unavailable features, no bundled secrets,
@@ -302,7 +308,7 @@ are mandatory for all frontend work:
 
 - `categories` group items; a category used by any item cannot be deleted.
 - `custom_fields` belong to a category and have the type `text`, `number`, `date`, or `boolean`.
-- `items` have a UUID, category, basic text attributes, a non-null `is_new` flag (`0`/`1`, a boolean in the API), a nullable `condition_grade` limited by a `CHECK` to `broken`, `poor`, `fair`, `good`, or `excellent`, the free-text `condition_notes`, and timestamps. New, the grade, and the notes are independent; `item_templates` has the same three columns. `item_templates.is_new` is nullable: `NULL` means the template sets no New default.
+- `items` have a UUID, category, basic text attributes, a non-null `is_new` flag (`0`/`1`, a boolean in the API), a nullable `condition_grade` limited by a `CHECK` to `broken`, `poor`, `fair`, `good`, or `excellent`, the free-text `condition_notes`, and timestamps. New, the grade, and the notes are independent; `item_templates` has the same three columns. `items.lifecycle_status` is `active` or `retired` (`CHECK`), with the retirement columns (`retired_at`, `retired_reason` limited by a `CHECK`, recipient, note, and text snapshots of the last effective location and the former container). A container and everything inside it always share one lifecycle status, and every list, count, hierarchy, Dashboard figure, parent candidate, and new checklist run defaults to active items. `item_templates.is_new` is nullable: `NULL` means the template sets no New default.
 - `item_field_values` store custom field values as text; booleans are normalized to `"1"` or `"0"`.
 - `item_templates` and `item_template_field_values` store user-defined presets for new items. A template is never an item; deleting its category sets `category_id` to NULL, and template values of deleted fields are ignored when read.
 - `database_metadata` holds exactly one row: the database UUID, name, `created_at`, `last_updated_at`, and a mirror of `PRAGMA user_version` (the schema version source of truth). Triggers advance `last_updated_at` on every write to the tables in `TRACKED_TABLES` in `server/src/db.js`; a new inventory table must be added there.

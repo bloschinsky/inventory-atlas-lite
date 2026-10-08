@@ -226,3 +226,19 @@ test.describe('on a phone', () => {
     await expect(page).toHaveURL(`/items/${item.uuid}`);
   });
 });
+
+test('a retired item code still opens the item, marked Retired', async ({ page, request }) => {
+  const category = await createCategory(request, unique('Sold gear'));
+  const item = await createItem(request, { name: unique('Sold camera'), category_id: category.id });
+  const retired = await request.patch(`/api/items/${item.id}/lifecycle`, { data: { status: 'retired', reason: 'sold' } });
+  expect(retired.ok()).toBeTruthy();
+  await page.addInitScript(() => {
+    navigator.mediaDevices.getUserMedia = async () => { throw new DOMException('Denied', 'NotAllowedError'); };
+  });
+
+  await openScanner(page);
+  await scanImageFile(page, qrFile(`ial:item:v1:${item.uuid}`));
+  await expect(page).toHaveURL(`/items/${item.uuid}`);
+  await expect(page.getByRole('heading', { name: item.name })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Restore to inventory' })).toBeVisible();
+});

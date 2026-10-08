@@ -1166,6 +1166,91 @@
       }
     }
   },
+  "lifecycle": {
+    "statuses": {
+      "active": "Active",
+      "retired": "Retired"
+    },
+    "reasons": {
+      "sold": "Sold",
+      "gifted": "Gifted",
+      "lost": "Lost",
+      "stolen": "Stolen",
+      "disposed": "Disposed of",
+      "consumed": "Used up",
+      "other": "Other"
+    },
+    "fields": {
+      "status": "Status",
+      "reason": "Reason",
+      "retiredAt": "Retired on",
+      "recipient": "Recipient or context",
+      "note": "Note",
+      "lastLocation": "Last location",
+      "formerContainer": "Former container"
+    },
+    "filter": {
+      "label": "Inventory",
+      "active": "Active",
+      "all": "All",
+      "retired": "Retired",
+      "noRetired": "No retired items",
+      "empty": {
+        "active": "No active items",
+        "all": "No items yet",
+        "retired": "No retired items"
+      }
+    },
+    "noLocation": "no location",
+    "noContainer": "no container",
+    "details": {
+      "title": "Retirement"
+    },
+    "retire": {
+      "action": "Retire item",
+      "title": "Retire {name}",
+      "intro": "A retired item leaves the active inventory but keeps its photos, details, and QR code. Nothing is deleted, and you can restore it later. A loan is not a retirement.",
+      "contents": "This container holds {n} active item. | This container holds {n} active items.",
+      "contentOptions": {
+        "retire": "Retire the container and the {n} item inside it | Retire the container and all {n} items inside it",
+        "move": "Move the contents out first"
+      },
+      "contentHelp": {
+        "retire": "Everything inside is retired with the same details and stays nested inside the container.",
+        "move": "Nothing is retired now. Move the contents to another place, then retire the container."
+      },
+      "chooseReason": "Choose a reason",
+      "recipientPlaceholder": "Buyer, recipient, or where it went",
+      "confirm": "Retire",
+      "saving": "Retiring…",
+      "moveFirst": "Move contents first",
+      "moveFirstNotice": "Nothing was retired. Open each item under Contents and move it to another place, or select them in the Items list and use Move to…, then retire this container.",
+      "done": "{name} is retired. | {name} and the {n} items inside it are retired."
+    },
+    "restore": {
+      "action": "Restore to inventory",
+      "title": "Restore {name}",
+      "intro": "The item returns to the active inventory with its details, photos, and QR code unchanged. Choose where it goes now: it is never put back into its former container automatically.",
+      "contents": "The {n} item inside it is restored too and stays inside it. | The {n} items inside it are restored too and stay inside it.",
+      "before": "Before it was retired: {location}, {container}.",
+      "placement": "Place",
+      "placements": {
+        "own": "On its own, at a location",
+        "container": "Inside an active container"
+      },
+      "locationHelp": "The item’s own saved location. Leave it empty if it has none.",
+      "noCandidates": "No matching active item can hold it.",
+      "saving": "Restoring…",
+      "done": "{name} is back in the inventory. | {name} and the {n} items inside it are back in the inventory."
+    },
+    "checklists": {
+      "retiredWarning": "{n} item on this checklist is retired. New runs leave it out. | {n} items on this checklist are retired. New runs leave them out.",
+      "skipped": "{n} retired item from the checklist was left out of this run. | {n} retired items from the checklist were left out of this run."
+    },
+    "dashboard": {
+      "retired": "{n} retired item is not counted | {n} retired items are not counted"
+    }
+  },
   "errors": {
     "AI_API_KEY_MISSING": "Add an {provider} API key in Settings to use AI features.",
     "AI_API_KEY_REQUIRED": "Enter the {provider} API key first.",
@@ -1425,7 +1510,19 @@
     "CHECKLIST_RUN_COMPLETED": "This run is completed and can no longer be changed.",
     "CHECKLIST_RUN_ITEM_NOT_FOUND": "This item is not part of the run.",
     "CHECKLIST_RUN_NOT_FOUND": "Checklist run not found.",
-    "CHECKLIST_RUN_STATUS_INVALID": "Unknown checklist item state."
+    "CHECKLIST_RUN_STATUS_INVALID": "Unknown checklist item state.",
+    "ITEM_LIFECYCLE_STATUS_INVALID": "Choose whether to retire or restore the item.",
+    "ITEM_LIFECYCLE_FILTER_INVALID": "Unknown inventory view. Choose Active, All, or Retired.",
+    "ITEM_ALREADY_RETIRED": "This item is already retired. Reload the page to see its current state.",
+    "ITEM_NOT_RETIRED": "This item is not retired. Reload the page to see its current state.",
+    "ITEM_RETIRE_HAS_CONTENTS": "This container holds {count} active item. Choose whether to retire it too or move it out first. | This container holds {count} active items. Choose whether to retire them too or move them out first.",
+    "ITEM_RETIREMENT_REASON_REQUIRED": "Choose why the item left the inventory.",
+    "ITEM_RETIREMENT_REASON_INVALID": "Unknown retirement reason.",
+    "ITEM_RETIRED_AT_INVALID": "Enter a valid retirement date and time that is not in the future.",
+    "ITEM_RETIREMENT_RECIPIENT_TOO_LONG": "Recipient or context must be {max} characters or fewer.",
+    "ITEM_RETIREMENT_NOTE_TOO_LONG": "The note must be {max} characters or fewer.",
+    "ITEM_PARENT_LIFECYCLE_MISMATCH": "An active item can only be stored inside an active container, and a retired item only inside a retired one.",
+    "BULK_MOVE_RETIRED_ITEMS": "{count} selected item is retired and cannot be moved. Remove it from the selection. | {count} selected items are retired and cannot be moved. Remove them from the selection."
   },
   "notices": {
     "AI_CONNECTED": "Connected to {provider}. {count} model is available. | Connected to {provider}. {count} models are available.",
