@@ -78,7 +78,9 @@ const secondBattery = { en: 'Second battery holds about half its charge.', uk: '
 /*
   Containers come first, so every `parent` names an item that already exists. Only a top-level item
   has a `location` (a key of `locations`); the items inside a container inherit the container's.
-  `fields` are keyed by field key.
+  `fields` are keyed by field key. `previously` gives the item a short activity history: it is added
+  with that `location` or `parent` and moved to its own one `daysAgo` days ago through the regular
+  services, so its History (and that of everything inside it) shows a real recorded move.
 */
 const items = [
   {
@@ -98,6 +100,7 @@ const items = [
   },
   {
     key: 'camping-box', name: { en: 'Camping Box', uk: 'Туристичний ящик' }, category: 'storage', location: 'travel-gear', addedDaysAgo: 55,
+    previously: { location: 'home-storage', daysAgo: 21 },
     description: { en: 'Stackable box packed for weekend trips.', uk: 'Ящик, що ставиться в стос, зібраний для поїздок на вихідні.' },
     fields: { material: { en: 'Plastic', uk: 'Пластик' }, labeled: true }
   },
@@ -122,7 +125,7 @@ const items = [
   },
   {
     key: 'speedlight', name: { en: 'Speedlight flash', uk: 'Спалах Speedlight' }, category: 'photography', parent: 'camera-bag', addedDaysAgo: 24,
-    photo: 'speedlight.webp', description: { en: 'Hot-shoe flash with a tilting head.', uk: 'Накамерний спалах із поворотною головкою.' },
+    previously: { parent: 'electronics-drawer', daysAgo: 15 }, photo: 'speedlight.webp', description: { en: 'Hot-shoe flash with a tilting head.', uk: 'Накамерний спалах із поворотною головкою.' },
     condition_grade: 'fair', condition_notes: { en: 'Battery door latch is loose.', uk: 'Засувка батарейного відсіку розхиталася.' },
     purchase_date: '2022-02-11', purchase_price: { amount: '45.00', currency: 'EUR' }, fields: { mount: 'Nikon F' }
   },
@@ -234,6 +237,11 @@ const checklists = [
   }
 ];
 
+// Temporary loans, lent and returned through the transfer service, so a History shows a closed loan.
+const loans = [
+  { item: 'cordless-drill', recipient: { en: 'Volodia', uk: 'Володя' }, daysAgo: 10, expectedReturnDaysAgo: 3, returnedDaysAgo: 4 }
+];
+
 /*
   The item the guided tour adds (./tourChapters.js): a second body for the film kit in the Camera Bag,
   shown with the seeded camera's generated photo. It is not part of the seeded inventory; its serial
@@ -290,8 +298,12 @@ export function createDemoFixture(requested = DEFAULT_LOCALE) {
     items: items.map(item => ({
       ...texts(item, `item ${item.key}`),
       ...(item.location && { location: text(locations[item.location], `location ${item.location}`) }),
+      ...(item.previously?.location && {
+        previously: { ...item.previously, location: text(locations[item.previously.location], `location ${item.previously.location}`) }
+      }),
       fields: values(item.fields, `item ${item.key}`)
     })),
+    loans: loans.map(loan => ({ ...loan, recipient: text(loan.recipient, `the loan of ${loan.item}`) })),
     templates: templates.map(template => ({ ...texts(template, `template ${template.key}`), fields: values(template.fields, `template ${template.key}`) })),
     checklists: checklists.map(checklist => texts(checklist, `checklist ${checklist.key}`)),
     tourItem: { ...tourItem, name: text(tourItem.name, 'the tour item'), fields: values(tourItem.fields, 'the tour item') }

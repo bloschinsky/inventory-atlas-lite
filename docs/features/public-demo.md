@@ -95,6 +95,11 @@ name, value, and serial number is invented.
 - **Template:** *35mm film roll*. **Checklists:** *Weekend photo walk* (packing) and *Workshop check*
   (verification), which has one completed run, so its items show Last verified and the checklist
   history is not empty.
+- **Activity history:** the Camping Box moved from *Home / Storage* 21 days ago (its contents record
+  the move with it), the Speedlight flash moved from the Electronics Drawer into the Camera Bag 15
+  days ago, and the Cordless drill was lent to Volodia 10 days ago and returned 4 days ago. The seed
+  performs these through the services (`previously` on a fixture item, `loans`) and only sets the
+  move dates back afterwards. See [Item activity history](item-activity-history.md).
 - Items have the fixed UUIDs `d3e00000-0000-4000-8000-000000000001` … `…000000000022` in fixture
   order, and the seed always creates the same numeric ids, so links, tests, and a guided tour can rely
   on them. Their creation dates are set relative to the visit (`addedDaysAgo`), so the Dashboard's

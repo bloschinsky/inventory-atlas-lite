@@ -179,6 +179,26 @@ test('the Ukrainian demo translates the invented text and keeps names, serials, 
   assert.equal(services.itemService.list({ search: 'Nikon' }).items.length, 3);
 });
 
+test('the demo has a small recorded activity history in every language', () => {
+  for (const locale of locales) {
+    const { itemService } = seeded(locale);
+    const { items, loans } = createDemoFixture(locale);
+    const history = key => itemService.activity(demoItemUuid(key), {}).events;
+    const [radioMove] = history('handheld-radio');
+    // The Camping Box moved, and its contents moved with it.
+    assert.deepEqual([radioMove.type, radioMove.from, radioMove.to, radioMove.via_item.name],
+      ['location_changed', byKey(items, 'archive-box').location, byKey(items, 'camping-box').location, byKey(items, 'camping-box').name]);
+    assert.ok(Date.parse(radioMove.occurred_at) < Date.now() - 20 * 24 * 60 * 60 * 1000, 'the move is dated in the past');
+    assert.deepEqual(history('speedlight').map(event => [event.type, event.from_item.name, event.to_item.name]),
+      [['container_changed', byKey(items, 'electronics-drawer').name, byKey(items, 'camera-bag').name]]);
+    const drill = history('cordless-drill');
+    assert.deepEqual(drill.map(event => event.type), ['returned', 'transferred']);
+    assert.equal(drill[0].transfer.recipient, loans[0].recipient);
+    assert.equal(itemService.get(demoItemUuid('cordless-drill')).transferred_to, null);
+    assert.deepEqual(history('nikon-f65'), [], 'items without curated activity have no fabricated history');
+  }
+});
+
 test('an unsupported language gets the English demo', () => {
   assert.deepEqual(createDemoFixture('de'), fixture);
   assert.deepEqual(createDemoFixture(), fixture);

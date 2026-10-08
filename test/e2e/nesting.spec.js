@@ -64,6 +64,8 @@ test('displays the location inherited from the container and restores the own on
   await page.mouse.move(600, 400);
   await expect(page.getByLabel('Location', { exact: true })).toHaveValue(ownLocation);
   await page.getByRole('button', { name: 'Clear' }).click();
+  // Taking it out asks where it is now; its own saved location is one explicit choice.
+  await page.getByRole('radio', { name: `Its own saved location: ${ownLocation}` }).check();
   await page.getByRole('button', { name: 'Save item' }).click();
   await expect(page.getByRole('heading', { name: lensName })).toBeVisible();
   await expect(detail(page, 'Location')).toContainText(ownLocation);

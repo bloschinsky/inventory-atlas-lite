@@ -35,8 +35,9 @@ const listedItemResponse = row => {
 export const MAX_LABELS_PER_PRINT = 500;
 
 export class ItemService {
-  constructor({ itemRepository, customFieldRepository, itemPhotoRepository, categoryRepository }) {
+  constructor({ itemRepository, customFieldRepository, itemPhotoRepository, categoryRepository, itemHistoryService }) {
     this.items = itemRepository;
+    this.history = itemHistoryService;
     this.fields = customFieldRepository;
     this.photos = itemPhotoRepository;
     this.categories = categoryRepository;
@@ -156,7 +157,13 @@ export class ItemService {
     item.children = this.items.listChildren(item.id);
     // What a nested audit of this container would check: every item below it, not the item itself.
     item.descendant_count = item.children.length ? this.items.listSubtreeIds([item.id]).filter(id => id !== item.id).length : 0;
+    item.open_transfer = this.history.openTransfer(item.id);
     return this.present(item);
+  }
+
+  // One page of the item's activity history, by numeric id or UUID like every item route.
+  activity(id, query) {
+    return this.history.list(this.requireItem(id).id, query);
   }
 
   resolveParentId(raw, itemId = null) {
@@ -235,7 +242,7 @@ export class ItemService {
       const roots = this.selectionRoots(selected);
       this.assertCanContain(parent.id, roots.map(root => root.id));
       const moved = roots.filter(root => root.parent_item_id !== parent.id).map(root => root.id);
-      if (moved.length) this.items.setParent(moved, parent.id);
+      if (moved.length) this.history.track('bulk_move', moved, () => this.items.setParent(moved, parent.id));
       return {
         selected_count: selected.length,
         root_count: roots.length,
@@ -302,8 +309,11 @@ export class ItemService {
     const updatedId = this.items.transaction(() => {
       const current = this.requireItem(id);
       const { values, attributes } = this.readAttributes(body, current.id);
-      this.items.update(current.id, attributes);
-      for (const [fieldId, value] of values) this.items.saveFieldValue(current.id, fieldId, value);
+      // History compares the item and everything inside it before and after the save.
+      this.history.track('item_update', [current.id], () => {
+        this.items.update(current.id, attributes);
+        for (const [fieldId, value] of values) this.items.saveFieldValue(current.id, fieldId, value);
+      });
       return current.id;
     });
     return this.present(this.items.findDetailed(updatedId));
@@ -313,6 +323,10 @@ export class ItemService {
     const item = this.requireItem(id);
     const contained = this.items.countChildren(item.id);
     if (contained) throw httpError(409, 'ITEM_HAS_CHILDREN', { count: contained });
-    this.items.deleteById(item.id);
+    // A permanent delete removes the item's own history and loans with it, in one transaction.
+    this.items.transaction(() => {
+      this.history.forgetItem(item.id);
+      this.items.deleteById(item.id);
+    });
   }
 }

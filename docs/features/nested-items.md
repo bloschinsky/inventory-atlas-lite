@@ -10,6 +10,11 @@ separate container, room, or shelf entity.
 
 - **Add/Edit item** has an optional **Stored inside** field. It searches existing items by name and
   shows the selected parent as a badge that can be cleared, which returns the item to the top level.
+  Clearing the container of an edited item shows *Where is this item now?*: the container's location,
+  the item's own saved location (when it differs), Another location, or No location. One choice is
+  required before Save, so a stale own location is never silently taken as the new physical place.
+- Every container change and every effective-location change it causes, including those of all
+  descendants of a moved container, is recorded in the [Item activity history](item-activity-history.md).
 - The selector never offers the edited item itself or anything already stored inside it.
 - **Item details** shows `Stored inside` with a link to the parent, and a **Contents** section
   listing the direct children with their thumbnails and links.

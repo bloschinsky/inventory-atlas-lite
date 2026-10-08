@@ -656,9 +656,52 @@ enables the live camera.
    **Items** list shows the same badge with the item.
 4. To remove the note, clear **Transferred To** and save. The badge disappears.
 
-The field is only a note: it does not change **Location**, **Stored inside**, or anything else, and it
-keeps no history of earlier transfers. Search for the value on **Items** to list everything
-transferred to the same person.
+The field is only a note: it does not change **Location**, **Stored inside**, or anything else. Every
+change of it is listed in the item's **History** as *Transferred To changed*, but it never starts or
+ends a loan; use **Transfer** for that (see the next section). Search for the value on **Items** to
+list everything transferred to the same person.
+
+### Lend an item and mark it as returned
+
+1. Open the item and press **Transfer** next to **Edit**.
+2. Enter the **Recipient** (suggestions come from earlier Transferred To values). **Transferred on**
+   is now unless you change it; it cannot be in the future. **Expected return** and **Note** are
+   optional. Press **Transfer**.
+3. The item page shows a **Loan** card: *On loan to …*, since when, the expected return, the note,
+   and an **Overdue** badge once the expected return day has passed. **Transferred To** now holds the
+   recipient, so the badge and the Items search work as before. **Location** and **Stored inside**
+   do not change.
+4. When the item is back, press **Mark as returned** on the **Loan** card, adjust **Returned on** if
+   it came back earlier, add a note if you like, and press **Mark as returned**. The loan is closed,
+   **Transferred To** is cleared (unless you had changed it by hand to someone else), and **History**
+   shows how long the loan lasted.
+
+An item has at most one open loan, so **Transfer** is hidden while one is open. A new loan cannot
+start before the previous one was returned. Loans are history, so they cannot be edited or deleted;
+to correct a mistaken loan, mark it as returned with a note. Selling or giving an item away is not a
+loan: record it in **Transferred To** instead.
+
+### See the history of an item
+
+The item page has a **History** card with the five most recent changes; **View full history** opens
+all of them, newest first, with **All**, **Locations**, and **Transfers** filters and **Load more**.
+History is recorded by the server when a change is saved, from the moment History was installed;
+nothing earlier is invented.
+
+- **Location changed** — the location you see for the item changed, from → to. This includes moves
+  of a container it is in, at any depth: such entries say *Moved together with …*, linking to the
+  container that moved. Editing the own saved location of an item that shows its container's location
+  is not a move, because what you see stays the same; neither are changes of letter case or spaces.
+- **Container changed** — **Stored inside** changed, from → to, even when the location stays the same.
+  The items inside it keep their container, so they get no entry unless their location changed.
+- **Transferred To changed**, **Lent to …**, **Returned from …** — the recipient note and the loans
+  of the previous section, with their dates, notes, and the actual duration of returned loans.
+
+Changes saved together, such as a new container and the location it brings, are one entry. **Bulk
+move** and **Bulk replace** entries come from **Move to…** and **Replace a field value on many items**
+(Location and Transferred To only). Other edits — name, Condition, photos, fields — are not History.
+Entries keep the names and locations as they were, so they stay readable after renames; a container
+deleted since then is marked *(deleted)*. Deleting an item permanently deletes its own history.
 
 ### Put an item inside another item
 
@@ -667,7 +710,10 @@ transferred to the same person.
    *Search an item to store this one in…* and press **Search** or Enter.
 3. Click the result you want. It appears as a badge above the search box.
 4. Press **Clear** next to the badge to take the item out of its container and make it top-level
-   again.
+   again. The form then asks *Where is this item now?*: choose where it was (the container's
+   location), its own saved location (if it differs), **Another location** (then type it in
+   **Location**), or **No location**. Saving is not possible until you choose, so an old saved
+   location never silently becomes the item's place.
 5. Save. The item page now shows a **Storage** card with **Stored inside** linking to the container,
    and the container's page lists the item under **Contents**. **Location** on the item page now
    shows the container's location with a short note that it is inherited.

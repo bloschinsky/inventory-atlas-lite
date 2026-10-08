@@ -15,7 +15,9 @@ const { CategoryRepository } = await import('../server/src/repositories/category
 const { CustomFieldRepository } = await import('../server/src/repositories/customFieldRepository.js');
 const { DashboardRepository } = await import('../server/src/repositories/dashboardRepository.js');
 const { ItemPhotoRepository } = await import('../server/src/repositories/itemPhotoRepository.js');
+const { ItemHistoryRepository } = await import('../server/src/repositories/itemHistoryRepository.js');
 const { ItemRepository } = await import('../server/src/repositories/itemRepository.js');
+const { ItemHistoryService } = await import('../server/src/services/itemHistoryService.js');
 const { ItemTemplateRepository } = await import('../server/src/repositories/itemTemplateRepository.js');
 const { CategoryService } = await import('../server/src/services/categoryService.js');
 const { DashboardService } = await import('../server/src/services/dashboardService.js');
@@ -36,6 +38,7 @@ const build = (db = new Database(':memory:')) => {
     category: categoryService.create({ name: 'Cameras' }),
     categoryService,
     itemService: new ItemService({
+    itemHistoryService: new ItemHistoryService({ itemHistoryRepository: new ItemHistoryRepository(db) }),
       itemRepository: new ItemRepository(db), customFieldRepository, itemPhotoRepository: new ItemPhotoRepository(db), categoryRepository
     }),
     itemTemplateService: new ItemTemplateService({ itemTemplateRepository: new ItemTemplateRepository(db), categoryRepository, customFieldRepository }),
@@ -90,7 +93,7 @@ test('a fresh database stores the grade and the notes in separate columns and re
     assert.equal(columns.includes('condition'), false);
     assert.ok(CURRENT_SCHEMA[table].includes('condition_grade') && CURRENT_SCHEMA[table].includes('condition_notes'));
   }
-  assert.equal(SCHEMA_VERSION, 7);
+  assert.equal(SCHEMA_VERSION, 8);
   // The CHECK keeps the stored grade to the fixed keys even for writes that bypass the services.
   for (const grade of CONDITION_GRADES) {
     db.prepare('INSERT INTO items (uuid, name, category_id, condition_grade) VALUES (?, ?, 1, ?)').run(`uuid-${grade}`, grade, grade);

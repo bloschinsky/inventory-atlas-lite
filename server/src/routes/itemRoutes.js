@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-export const createItemRoutes = ({ itemService, bulkReplaceService }) => {
+export const createItemRoutes = ({ itemService, bulkReplaceService, itemTransferService }) => {
   const router = Router();
 
   router.get('/api/items', (req, res) => res.json(itemService.list(req.query)));
@@ -16,6 +16,13 @@ export const createItemRoutes = ({ itemService, bulkReplaceService }) => {
     res.json(bulkReplaceService.values(type === 'core' ? { type, key: id } : { type, fieldId: id }, req.query));
   });
   router.get('/api/items/:id', (req, res) => res.json(itemService.get(req.params.id)));
+  // ?type=all|location|transfer|lifecycle&limit=1..50&cursor=<last event id of the previous page>
+  router.get('/api/items/:id/history', (req, res) => res.json(itemService.activity(req.params.id, req.query)));
+  // A temporary loan starts here and ends with the return of exactly that loan.
+  router.post('/api/items/:id/transfers', (req, res) => res.status(201).json(itemTransferService.start(req.params.id, req.body)));
+  router.post('/api/items/:id/transfers/:transferId/return', (req, res) => {
+    res.json(itemTransferService.markReturned(req.params.id, req.params.transferId, req.body));
+  });
   // A POST because a print job can name hundreds of UUIDs, more than a query string should carry.
   router.post('/api/items/labels', (req, res) => res.json(itemService.labels(req.body)));
   // One atomic create for a whole reviewed import document; the browser never sends N separate creates.

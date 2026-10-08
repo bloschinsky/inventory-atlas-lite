@@ -14,7 +14,9 @@ const { applySchema } = await import('../server/src/db.js');
 const { CategoryRepository } = await import('../server/src/repositories/categoryRepository.js');
 const { CustomFieldRepository } = await import('../server/src/repositories/customFieldRepository.js');
 const { ItemPhotoRepository } = await import('../server/src/repositories/itemPhotoRepository.js');
+const { ItemHistoryRepository } = await import('../server/src/repositories/itemHistoryRepository.js');
 const { ItemRepository } = await import('../server/src/repositories/itemRepository.js');
+const { ItemHistoryService } = await import('../server/src/services/itemHistoryService.js');
 const { ItemTemplateRepository } = await import('../server/src/repositories/itemTemplateRepository.js');
 const { CategoryService } = await import('../server/src/services/categoryService.js');
 const { CustomFieldService } = await import('../server/src/services/customFieldService.js');
@@ -34,6 +36,7 @@ const build = () => {
     categoryService,
     customFieldService: new CustomFieldService(customFieldRepository, categoryService),
     itemService: new ItemService({
+    itemHistoryService: new ItemHistoryService({ itemHistoryRepository: new ItemHistoryRepository(db) }),
       itemRepository: new ItemRepository(db), customFieldRepository, itemPhotoRepository: new ItemPhotoRepository(db), categoryRepository
     }),
     itemTemplateService: new ItemTemplateService({ itemTemplateRepository: new ItemTemplateRepository(db), categoryRepository, customFieldRepository })

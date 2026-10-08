@@ -10,6 +10,7 @@ import { ChecklistRunRepository } from './repositories/checklistRunRepository.js
 import { CustomFieldRepository } from './repositories/customFieldRepository.js';
 import { DashboardRepository } from './repositories/dashboardRepository.js';
 import { DatabaseMetadataRepository } from './repositories/databaseMetadataRepository.js';
+import { ItemHistoryRepository } from './repositories/itemHistoryRepository.js';
 import { ItemPhotoRepository } from './repositories/itemPhotoRepository.js';
 import { ItemRepository } from './repositories/itemRepository.js';
 import { ItemTemplateRepository } from './repositories/itemTemplateRepository.js';
@@ -45,7 +46,9 @@ import { CustomFieldService } from './services/customFieldService.js';
 import { DashboardService } from './services/dashboardService.js';
 import { DatabaseMetadataService } from './services/databaseMetadataService.js';
 import { ImageService } from './services/imageService.js';
+import { ItemHistoryService } from './services/itemHistoryService.js';
 import { ItemService } from './services/itemService.js';
+import { ItemTransferService } from './services/itemTransferService.js';
 import { ItemTemplateService } from './services/itemTemplateService.js';
 import { PhotoService } from './services/photoService.js';
 import { ResetService } from './services/resetService.js';
@@ -88,6 +91,7 @@ export function createApp({ production = false } = {}) {
   const bulkReplaceRepository = new BulkReplaceRepository(db);
   const checklistRepository = new ChecklistRepository(db);
   const checklistRunRepository = new ChecklistRunRepository(db);
+  const itemHistoryRepository = new ItemHistoryRepository(db);
 
   // Restore and reset both replace the active database, so they share one maintenance state.
   const maintenance = new DatabaseMaintenance({
@@ -126,8 +130,10 @@ export function createApp({ production = false } = {}) {
   });
   const categoryService = new CategoryService(categoryRepository);
   const customFieldService = new CustomFieldService(customFieldRepository, categoryService);
-  const itemService = new ItemService({ itemRepository, customFieldRepository, itemPhotoRepository, categoryRepository });
-  const bulkReplaceService = new BulkReplaceService({ bulkReplaceRepository });
+  const itemHistoryService = new ItemHistoryService({ itemHistoryRepository });
+  const itemService = new ItemService({ itemRepository, customFieldRepository, itemPhotoRepository, categoryRepository, itemHistoryService });
+  const itemTransferService = new ItemTransferService({ itemRepository, itemHistoryRepository, itemHistoryService });
+  const bulkReplaceService = new BulkReplaceService({ bulkReplaceRepository, itemHistoryService });
   const databaseMetadataService = new DatabaseMetadataService({ databaseMetadataRepository: new DatabaseMetadataRepository(db) });
   const itemTemplateService = new ItemTemplateService({ itemTemplateRepository, categoryRepository, customFieldRepository });
   const checklistService = new ChecklistService({ checklistRepository, checklistRunRepository, itemRepository });
@@ -179,7 +185,7 @@ export function createApp({ production = false } = {}) {
   app.use(createDashboardRoutes({ dashboardService }));
   app.use(createDatabaseMetadataRoutes({ databaseMetadataService }));
   app.use(createFieldRoutes({ customFieldService, aiFieldService }));
-  app.use(createItemRoutes({ itemService, bulkReplaceService }));
+  app.use(createItemRoutes({ itemService, bulkReplaceService, itemTransferService }));
   app.use(createItemTemplateRoutes({ itemTemplateService }));
   app.use(createChecklistRoutes({ checklistService, checklistRunService }));
   app.use(createPhotoRoutes({ photoService, imageUpload }));

@@ -14,11 +14,12 @@ import { CONDITION_GRADES } from '../../shared/conditionGrades.js';
   added the checklist tables; version 5 added items.last_verified_at and the container audit columns of
   checklist_runs; version 6 added items.is_new and item_templates.is_new; version 7 added
   item_photos.sort_order, renamed the free-text condition of items and templates to condition_notes,
-  and added the structured condition_grade.
+  and added the structured condition_grade; version 8 added the item activity history tables
+  (item_operations, item_events, item_transfers).
   user_version stays the source of truth: database_metadata.schema_version mirrors it and is written
   in the same transaction, so the two never disagree.
 */
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 
 export const DEFAULT_DATABASE_NAME = 'Inventory Atlas';
 
@@ -28,7 +29,15 @@ export const DEFAULT_DATABASE_NAME = 'Inventory Atlas';
   moves the timestamp, and no service has to remember to do it. A new inventory table joins this list.
 */
 export const TRACKED_TABLES = ['categories', 'custom_fields', 'items', 'item_field_values', 'item_photos',
-  'item_templates', 'item_template_field_values', 'checklists', 'checklist_items', 'checklist_runs', 'checklist_run_items'];
+  'item_templates', 'item_template_field_values', 'checklists', 'checklist_items', 'checklist_runs', 'checklist_run_items',
+  'item_operations', 'item_events', 'item_transfers'];
+
+// The kinds of user action that group history events, and the kinds of event one item can record.
+// Lifecycle (retire/restore) is part of the vocabulary so the inventory lifecycle can write it later
+// without another table rebuild.
+export const ITEM_OPERATION_TYPES = ['item_update', 'bulk_move', 'bulk_replace', 'transfer', 'return', 'retire', 'restore'];
+export const ITEM_EVENT_TYPES = ['location_changed', 'container_changed', 'recipient_changed', 'transferred', 'returned', 'retired', 'restored'];
+const keyList = keys => keys.map(key => `'${key}'`).join(', ');
 
 // Only a fixed grade key, or NULL for an unset Condition, can be stored, whatever writes the row.
 const CONDITION_GRADE_CHECK = `CHECK (condition_grade IN (${CONDITION_GRADES.map(grade => `'${grade}'`).join(', ')}))`;
@@ -63,7 +72,11 @@ export const CURRENT_SCHEMA = {
   checklist_items: ['id', 'checklist_id', 'item_id', 'item_name_snapshot', 'sort_order', 'created_at'],
   checklist_runs: ['id', 'checklist_id', 'checklist_name_snapshot', 'mode', 'status', 'started_at', 'completed_at', 'created_at',
     'source', 'source_container_item_id', 'source_container_name_snapshot', 'audit_scope'],
-  checklist_run_items: ['id', 'run_id', 'item_id', 'item_name_snapshot', 'position', 'status', 'checked_at', 'note']
+  checklist_run_items: ['id', 'run_id', 'item_id', 'item_name_snapshot', 'position', 'status', 'checked_at', 'note'],
+  item_operations: ['id', 'type', 'created_at'],
+  item_events: ['id', 'operation_id', 'item_id', 'event_type', 'occurred_at', 'from_value', 'to_value', 'from_item_id',
+    'from_item_name', 'to_item_id', 'to_item_name', 'via_item_id', 'via_item_name', 'transfer_id'],
+  item_transfers: ['id', 'item_id', 'recipient', 'transferred_at', 'expected_return_on', 'returned_at', 'note', 'return_note', 'created_at']
 };
 
 /*
@@ -249,6 +262,51 @@ export const applySchema = connection => connection.transaction(() => {
       checked_at TEXT,
       note TEXT
     );
+    -- Item activity history: one operation per confirmed user action, and one compact event per
+    -- meaningful change of one item. Events keep exact snapshots (location text, container and
+    -- recipient names) instead of links, so they stay readable after renames, moves, and deletions.
+    -- Permanently deleting an item deletes its own events and loans with it; other items' events
+    -- that name it keep their snapshot. History is append-only and kept indefinitely.
+    CREATE TABLE IF NOT EXISTS item_operations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      type TEXT NOT NULL CHECK(type IN (${keyList(ITEM_OPERATION_TYPES)})),
+      created_at TEXT NOT NULL
+    );
+    -- from_/to_value hold the effective location or the recipient; from_/to_item_* the direct container;
+    -- via_item_* the moved container a descendant travelled with; transfer_id the loan period.
+    CREATE TABLE IF NOT EXISTS item_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      operation_id INTEGER NOT NULL REFERENCES item_operations(id) ON DELETE CASCADE,
+      item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+      event_type TEXT NOT NULL CHECK(event_type IN (${keyList(ITEM_EVENT_TYPES)})),
+      occurred_at TEXT NOT NULL,
+      from_value TEXT,
+      to_value TEXT,
+      from_item_id INTEGER,
+      from_item_name TEXT,
+      to_item_id INTEGER,
+      to_item_name TEXT,
+      via_item_id INTEGER,
+      via_item_name TEXT,
+      transfer_id INTEGER
+    );
+    -- One row per temporary loan; returned_at stays NULL while it is open.
+    CREATE TABLE IF NOT EXISTS item_transfers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+      recipient TEXT NOT NULL,
+      transferred_at TEXT NOT NULL,
+      expected_return_on TEXT,
+      returned_at TEXT,
+      note TEXT,
+      return_note TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_item_events_item ON item_events(item_id, occurred_at DESC, id DESC);
+    CREATE INDEX IF NOT EXISTS idx_item_events_operation ON item_events(operation_id);
+    CREATE INDEX IF NOT EXISTS idx_item_transfers_item ON item_transfers(item_id, transferred_at);
+    -- At most one open loan per item, whatever writes the row.
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_item_transfers_open ON item_transfers(item_id) WHERE returned_at IS NULL;
     CREATE INDEX IF NOT EXISTS idx_items_category ON items(category_id);
     CREATE INDEX IF NOT EXISTS idx_items_name ON items(name COLLATE NOCASE);
     CREATE INDEX IF NOT EXISTS idx_photos_item ON item_photos(item_id);

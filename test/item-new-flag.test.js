@@ -14,7 +14,9 @@ const { validateStagedDatabase } = await import('../server/src/restore/databaseF
 const { CategoryRepository } = await import('../server/src/repositories/categoryRepository.js');
 const { CustomFieldRepository } = await import('../server/src/repositories/customFieldRepository.js');
 const { ItemPhotoRepository } = await import('../server/src/repositories/itemPhotoRepository.js');
+const { ItemHistoryRepository } = await import('../server/src/repositories/itemHistoryRepository.js');
 const { ItemRepository } = await import('../server/src/repositories/itemRepository.js');
+const { ItemHistoryService } = await import('../server/src/services/itemHistoryService.js');
 const { ItemTemplateRepository } = await import('../server/src/repositories/itemTemplateRepository.js');
 const { CategoryService } = await import('../server/src/services/categoryService.js');
 const { ItemService } = await import('../server/src/services/itemService.js');
@@ -32,6 +34,7 @@ const build = (db = new Database(':memory:')) => {
     db,
     category: categoryService.create({ name: 'Cameras' }),
     itemService: new ItemService({
+    itemHistoryService: new ItemHistoryService({ itemHistoryRepository: new ItemHistoryRepository(db) }),
       itemRepository: new ItemRepository(db), customFieldRepository, itemPhotoRepository: new ItemPhotoRepository(db), categoryRepository
     }),
     itemTemplateService: new ItemTemplateService({ itemTemplateRepository: new ItemTemplateRepository(db), categoryRepository, customFieldRepository })
@@ -85,7 +88,7 @@ test('a fresh database has a non-null New flag on items and an optional one on t
   assert.deepEqual({ type: templates.type, notnull: templates.notnull, dflt_value: templates.dflt_value }, { type: 'INTEGER', notnull: 0, dflt_value: null });
   assert.ok(CURRENT_SCHEMA.items.includes('is_new'));
   assert.ok(CURRENT_SCHEMA.item_templates.includes('is_new'));
-  assert.equal(SCHEMA_VERSION, 7);
+  assert.equal(SCHEMA_VERSION, 8);
   // The CHECK keeps the stored flag to 0 or 1 even for writes that bypass the services.
   assert.throws(() => db.prepare("INSERT INTO items (uuid, name, category_id, is_new) VALUES ('x', 'X', 1, 2)").run(), /CHECK/);
 });

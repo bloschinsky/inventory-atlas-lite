@@ -290,6 +290,11 @@ export class ItemRepository {
       attributes.serialNumber, attributes.transferredTo, attributes.parentId, id);
   }
 
+  // A loan writes only the current recipient; every other column stays as it is.
+  setTransferredTo(id, value) {
+    this.db.prepare('UPDATE items SET transferred_to = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(value, id);
+  }
+
   // Distinct saved destinations, most used first. Case and surrounding whitespace do not split them.
   listTransferredToSuggestions(search, limit) {
     return this.db.prepare(`

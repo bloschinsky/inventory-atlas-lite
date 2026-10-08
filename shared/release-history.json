@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.59.0",
+    "date": "2026-10-09",
+    "changes": [
+      "Every item now has a History: where it moved, which container held it, and every change of Transferred To. Moving a box records the move for everything inside it too, marked Moved together with the box. Open the History card on an item page, or View full history to filter Locations and Transfers.",
+      "Lend an item with Transfer: choose the recipient, the date, and an optional expected return. The item page shows the open loan, Overdue once it is late, and Mark as returned; History keeps every loan with how long it lasted.",
+      "Taking an item out of its container now asks where it is: where it was, its own saved location, another location, or no location."
+    ]
+  },
+  {
     "version": "0.58.0",
     "date": "2026-10-07",
     "changes": [

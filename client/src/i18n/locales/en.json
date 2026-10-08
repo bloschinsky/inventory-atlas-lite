@@ -386,7 +386,77 @@
     "movePhotoLeft": "Move photo {name} left",
     "movePhotoRight": "Move photo {name} right",
     "unsavedPhoto": "Not saved",
-    "photoOrderHelp": "The first photo is the cover shown in lists and opened first. Use the arrows to change the order."
+    "photoOrderHelp": "The first photo is the cover shown in lists and opened first. Use the arrows to change the order.",
+    "detach": {
+      "title": "Where is this item now?",
+      "help": "It is no longer stored inside {name}, so it stops inheriting that location. Choose where it physically is.",
+      "keep": "Where it was: {location}",
+      "saved": "Its own saved location: {location}",
+      "other": "Another location — enter it in Location",
+      "none": "No location"
+    }
+  },
+  "history": {
+    "title": "History",
+    "viewAll": "View full history",
+    "backToItem": "Back to item",
+    "filter": "Show",
+    "filters": {
+      "all": "All",
+      "location": "Locations",
+      "transfer": "Transfers"
+    },
+    "loading": "Loading history…",
+    "empty": "No changes recorded yet.",
+    "emptyFiltered": "No changes of this kind recorded yet.",
+    "trackingNote": "History records moves, container changes, and transfers from the moment they happen. Changes made before History was installed are not shown.",
+    "loadMore": "Load more",
+    "noLocation": "No location",
+    "topLevel": "Top level",
+    "nobody": "Nobody",
+    "deletedItem": "{name} (deleted)",
+    "movedWith": "Moved together with {name}",
+    "events": {
+      "location_changed": "Location changed",
+      "container_changed": "Container changed",
+      "recipient_changed": "Transferred To changed",
+      "transferred": "Lent to {name}",
+      "returned": "Returned from {name}",
+      "retired": "Retired",
+      "restored": "Restored"
+    },
+    "operations": {
+      "bulk_move": "Bulk move",
+      "bulk_replace": "Bulk replace"
+    },
+    "expectedReturn": "Expected back {date}",
+    "returnedAfter": "Returned after {duration}",
+    "stillOnLoan": "Still on loan",
+    "duration": {
+      "minutes": "{n} minute | {n} minutes",
+      "hours": "{n} hour | {n} hours",
+      "days": "{n} day | {n} days"
+    }
+  },
+  "transfer": {
+    "action": "Transfer",
+    "title": "Transfer {name}",
+    "intro": "A temporary loan with an explicit start and return. The item's location and container stay as they are.",
+    "recipient": "Recipient",
+    "recipientPlaceholder": "Person or destination",
+    "transferredAt": "Transferred on",
+    "expectedReturn": "Expected return",
+    "note": "Note",
+    "submit": "Transfer",
+    "saving": "Saving…",
+    "loan": "Loan",
+    "onLoanTo": "On loan to {name}",
+    "since": "Since {date}",
+    "overdue": "Overdue",
+    "markReturned": "Mark as returned",
+    "returnTitle": "Mark {name} as returned",
+    "returnIntro": "Closes the loan to {name}. Its duration is measured from the transfer to this return.",
+    "returnedAt": "Returned on"
   },
   "templates": {
     "title": "Templates",
@@ -1425,7 +1495,21 @@
     "CHECKLIST_RUN_COMPLETED": "This run is completed and can no longer be changed.",
     "CHECKLIST_RUN_ITEM_NOT_FOUND": "This item is not part of the run.",
     "CHECKLIST_RUN_NOT_FOUND": "Checklist run not found.",
-    "CHECKLIST_RUN_STATUS_INVALID": "Unknown checklist item state."
+    "CHECKLIST_RUN_STATUS_INVALID": "Unknown checklist item state.",
+    "INVALID_HISTORY_FILTER": "Choose All, Locations, or Transfers as the history filter.",
+    "INVALID_HISTORY_CURSOR": "The history page is no longer valid. Reload the history.",
+    "TRANSFER_RECIPIENT_REQUIRED": "Enter who receives the item.",
+    "INVALID_TRANSFER_DATE": "Enter a valid date and time.",
+    "TRANSFER_DATE_IN_FUTURE": "The date and time cannot be in the future.",
+    "INVALID_EXPECTED_RETURN_DATE": "Enter a valid expected return date.",
+    "EXPECTED_RETURN_BEFORE_TRANSFER": "The expected return cannot be before the transfer.",
+    "INVALID_TRANSFER_NOTE": "The note must be text.",
+    "TRANSFER_NOTE_TOO_LONG": "The note can be at most {max} characters long.",
+    "TRANSFER_ALREADY_OPEN": "This item is already on loan. Mark it as returned before transferring it again.",
+    "TRANSFER_OVERLAPS_PREVIOUS": "The transfer cannot start before the previous loan was returned.",
+    "TRANSFER_NOT_FOUND": "Loan not found.",
+    "TRANSFER_ALREADY_RETURNED": "This loan is already marked as returned.",
+    "RETURN_BEFORE_TRANSFER": "The return cannot be before the transfer."
   },
   "notices": {
     "AI_CONNECTED": "Connected to {provider}. {count} model is available. | Connected to {provider}. {count} models are available.",

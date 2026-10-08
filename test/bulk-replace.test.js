@@ -13,7 +13,9 @@ const { BulkReplaceRepository } = await import('../server/src/repositories/bulkR
 const { CategoryRepository } = await import('../server/src/repositories/categoryRepository.js');
 const { CustomFieldRepository } = await import('../server/src/repositories/customFieldRepository.js');
 const { ItemPhotoRepository } = await import('../server/src/repositories/itemPhotoRepository.js');
+const { ItemHistoryRepository } = await import('../server/src/repositories/itemHistoryRepository.js');
 const { ItemRepository } = await import('../server/src/repositories/itemRepository.js');
+const { ItemHistoryService } = await import('../server/src/services/itemHistoryService.js');
 const { BulkReplaceService } = await import('../server/src/services/bulkReplaceService.js');
 const { CategoryService } = await import('../server/src/services/categoryService.js');
 const { CustomFieldService } = await import('../server/src/services/customFieldService.js');
@@ -29,6 +31,7 @@ const build = () => {
   const bulkReplaceRepository = new BulkReplaceRepository(db);
   const category = categoryService.create({ name: 'Gear' });
   const itemService = new ItemService({
+    itemHistoryService: new ItemHistoryService({ itemHistoryRepository: new ItemHistoryRepository(db) }),
     itemRepository: new ItemRepository(db), customFieldRepository, itemPhotoRepository: new ItemPhotoRepository(db), categoryRepository
   });
   return {
@@ -38,7 +41,7 @@ const build = () => {
     customFieldService: new CustomFieldService(customFieldRepository, categoryService),
     itemService,
     bulkReplaceRepository,
-    bulkReplaceService: new BulkReplaceService({ bulkReplaceRepository }),
+    bulkReplaceService: new BulkReplaceService({ bulkReplaceRepository, itemHistoryService: new ItemHistoryService({ itemHistoryRepository: new ItemHistoryRepository(db) }) }),
     // Items of the default category; `raw` columns are written as stored, bypassing the input trimming.
     add: (name, attributes = {}, raw = {}) => {
       const item = itemService.create({ name, category_id: category.id, ...attributes });

@@ -100,6 +100,9 @@ body.app-menu-open { overflow: hidden; }
 
 /* Condition Notes keep the line breaks they were typed with. */
 .condition-notes { white-space: pre-line; }
+/* Item history: the changes of one action stack inside its timeline card; loan notes keep their lines. */
+.app-history-event + .app-history-event { margin-top: .5rem; padding-top: .5rem; border-top: 1px solid var(--tblr-border-color); }
+.app-history-note { white-space: pre-line; }
 /*
   Condition grade badges: a tint of the grade's Tabler color behind text mixed from the same color and
   the body text color. The body color is dark in light mode and light in dark mode, so the label keeps

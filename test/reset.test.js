@@ -54,6 +54,8 @@ async function seedInventory() {
   const checklist = await request('/api/checklists', json('POST', { name: 'Lens kit', mode: 'packing', items: [{ item_id: lens.id }] }));
   const run = await request(`/api/checklists/${checklist.id}/runs`, { method: 'POST' });
   await request(`/api/checklist-runs/${run.id}/items/${run.items[0].id}`, json('PATCH', { status: 'confirmed' }));
+  // A loan fills the activity history tables.
+  await request(`/api/items/${lens.id}/transfers`, json('POST', { recipient: 'Vasyl' }));
   return { category };
 }
 
@@ -189,7 +191,7 @@ test('a reset swaps in a fresh current-schema database and keeps settings and ba
     inspect(activePath, connection => {
       assert.deepEqual(schema(connection), freshSchema);
       assert.equal(connection.pragma('integrity_check', { simple: true }), 'ok');
-      assert.equal(Number(connection.pragma('user_version', { simple: true })), 7);
+      assert.equal(Number(connection.pragma('user_version', { simple: true })), 8);
       const { database_metadata: metadataRows, ...inventoryCounts } = rowCounts(connection);
       assert.equal(metadataRows, 1);
       assert.ok(Object.values(inventoryCounts).every(count => count === 0));
@@ -213,7 +215,8 @@ test('a reset swaps in a fresh current-schema database and keeps settings and ba
       assert.equal(connection.pragma('integrity_check', { simple: true }), 'ok');
       assert.deepEqual(rowCounts(connection), {
         categories: 1, checklist_items: 1, checklist_run_items: 1, checklist_runs: 1, checklists: 1, custom_fields: 1,
-        database_metadata: 1, item_field_values: 1, item_photos: 1, item_template_field_values: 1, item_templates: 1, items: 2
+        database_metadata: 1, item_events: 1, item_field_values: 1, item_operations: 1, item_photos: 1, item_template_field_values: 1,
+        item_templates: 1, item_transfers: 1, items: 2
       });
       // The pre-reset backup keeps the identity of the database it preserves.
       assert.equal(connection.prepare('SELECT database_uuid FROM database_metadata').get().database_uuid, previousMetadata.database_uuid);

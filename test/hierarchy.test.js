@@ -16,7 +16,9 @@ const { applySchema } = await import('../server/src/db.js');
 const { CategoryRepository } = await import('../server/src/repositories/categoryRepository.js');
 const { CustomFieldRepository } = await import('../server/src/repositories/customFieldRepository.js');
 const { ItemPhotoRepository } = await import('../server/src/repositories/itemPhotoRepository.js');
+const { ItemHistoryRepository } = await import('../server/src/repositories/itemHistoryRepository.js');
 const { ItemRepository } = await import('../server/src/repositories/itemRepository.js');
+const { ItemHistoryService } = await import('../server/src/services/itemHistoryService.js');
 const { ItemService } = await import('../server/src/services/itemService.js');
 
 const build = () => {
@@ -25,6 +27,7 @@ const build = () => {
   applySchema(db);
   const categoryRepository = new CategoryRepository(db);
   const itemService = new ItemService({
+    itemHistoryService: new ItemHistoryService({ itemHistoryRepository: new ItemHistoryRepository(db) }),
     itemRepository: new ItemRepository(db),
     customFieldRepository: new CustomFieldRepository(db),
     itemPhotoRepository: new ItemPhotoRepository(db),
