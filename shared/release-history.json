@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.62.0",
+    "date": "2026-10-09",
+    "changes": [
+      "The OpenAI model list in Settings → AI now shows every GPT model your API key can use, so new GPT generations appear without waiting for an Inventory Atlas update. Recommended and latest models come first, then previous generations, and Show all models reveals the rest; speech, embedding, image-generation, moderation, and realtime models are left out.",
+      "Below the model list you see the exact model ID and whether vision and structured output are supported, not supported, or unknown. Models verified with Inventory Atlas are marked, and unverified models are never presented as verified.",
+      "The OpenAI model list is remembered for 24 hours, and Refresh models always loads a new one. Refreshing never changes your saved model: a model the provider no longer lists stays selected and is clearly marked, and a failed refresh keeps the last list with the time it was checked."
+    ]
+  },
+  {
     "version": "0.61.0",
     "date": "2026-10-09",
     "changes": [

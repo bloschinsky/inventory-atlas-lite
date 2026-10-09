@@ -1,4 +1,6 @@
+import { AppError, errorBody } from '../../../shared/appError.js';
 import { httpError } from '../httpError.js';
+import { ModelListCache } from './modelListCache.js';
 
 /*
   The provider-neutral entry point of every AI feature. It resolves the configured provider through
@@ -6,21 +8,53 @@ import { httpError } from '../httpError.js';
   test, and structured generation. Features describe what they need; they never see provider HTTP.
 */
 export class AiProviderService {
-  constructor({ aiSettingsService, createProvider }) {
+  constructor({ aiSettingsService, createProvider, modelListCache = new ModelListCache(), now = Date.now }) {
     this.settingsService = aiSettingsService;
     this.createProvider = createProvider;
+    this.modelListCache = modelListCache;
+    this.now = now;
   }
 
-  // `form` holds unsaved Settings values; without it the saved configuration is used.
-  async listModels(form) {
-    return this.createProvider(this.settingsService.connection(form)).listModels();
+  // Only the OpenAI list is cached: the other providers keep listing live, as they always have.
+  static cachesModels(connection) {
+    return connection.provider === 'openai';
   }
 
+  async fetchModels(connection) {
+    const { models, providerCount } = await this.createProvider(connection).listModels();
+    const list = { models, providerCount, fetchedAt: new Date(this.now()).toISOString() };
+    if (AiProviderService.cachesModels(connection)) this.modelListCache.set(connection, list);
+    return list;
+  }
+
+  /*
+    `form` holds unsaved Settings values; without it the saved configuration is used. A cached list
+    younger than a day is answered without contacting the provider unless `refresh` asks for a new
+    one. When the provider fails, an earlier list of the same connection is still answered, marked
+    `stale` and carrying the error, so the selector keeps its choices without hiding the failure.
+  */
+  async listModels(form, { refresh = false } = {}) {
+    const connection = this.settingsService.connection(form);
+    const cached = AiProviderService.cachesModels(connection) ? this.modelListCache.get(connection) : null;
+    if (cached?.fresh && !refresh) return { ...cached.list, cached: true, stale: false };
+    try {
+      return { ...(await this.fetchModels(connection)), cached: false, stale: false };
+    } catch (error) {
+      if (!cached || !(error instanceof AppError) || error.listUnsupported) throw error;
+      return { ...cached.list, cached: true, stale: true, error: errorBody(error) };
+    }
+  }
+
+  // Always asks the provider. OpenAI reports how many models it returned and how many are offered.
   async testConnection(form) {
     const connection = this.settingsService.connection(form);
     try {
-      const models = await this.createProvider(connection).listModels();
-      return { notice: { code: 'AI_CONNECTED', params: { provider: connection.label, count: models.length } }, models };
+      const list = await this.fetchModels(connection);
+      const { models, providerCount } = list;
+      const notice = AiProviderService.cachesModels(connection)
+        ? { code: 'AI_CONNECTED_CANDIDATES', params: { provider: connection.label, count: providerCount, offered: models.length } }
+        : { code: 'AI_CONNECTED', params: { provider: connection.label, count: models.length } };
+      return { notice, ...list };
     } catch (error) {
       // The endpoint answered, so it is reachable; it just cannot say which models it has.
       if (error.listUnsupported) return { notice: { code: 'AI_CONNECTED_NO_MODEL_LIST', params: { provider: connection.label } }, models: [] };

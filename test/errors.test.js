@@ -28,7 +28,7 @@ const NOT_CODES = new Set([
   'DROPBOX_APP_KEY', 'DROPBOX_APP_SECRET', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'CLOUD_BACKUP_REDIRECT_URI',
   'CLOUD_BACKUP_TEST_ENDPOINT'
 ]);
-const NOTICE_CODES = new Set(['AI_CONNECTED', 'AI_CONNECTED_NO_MODEL_LIST', 'CLOUD_CONNECTED']);
+const NOTICE_CODES = new Set(['AI_CONNECTED', 'AI_CONNECTED_CANDIDATES', 'AI_CONNECTED_NO_MODEL_LIST', 'CLOUD_CONNECTED']);
 
 test('every code the backend can send has an English and a Ukrainian message', () => {
   const codes = new Set([...sourceFiles(path.join(root, 'server/src')), ...sourceFiles(path.join(root, 'shared'))]

@@ -12,7 +12,7 @@ every answer are the same for all providers.
 
 | Provider | Default base URL | API key | Notes |
 | --- | --- | --- | --- |
-| OpenAI | `https://api.openai.com/v1` | Required | Native Responses API with strict JSON-schema output. Only the recommended models available to the key are listed (GPT-5.6 Luna, Terra, Sol). |
+| OpenAI | `https://api.openai.com/v1` | Required | Native Responses API with strict JSON-schema output. Every relevant model available to the key is discovered, grouped, and ranked newest first; see [OpenAI model discovery](#openai-model-discovery). |
 | OpenRouter | `https://openrouter.ai/api/v1` | Required | The model list is loaded from OpenRouter and shows which models are text only. |
 | Ollama | `http://localhost:11434/v1` | Optional | For photos choose a vision model such as `llava` or `qwen2.5vl`. |
 | LM Studio | `http://localhost:1234/v1` | Optional | A key is needed only when authentication is enabled in the LM Studio server. |
@@ -20,7 +20,8 @@ every answer are the same for all providers.
 
 Every preset's base URL can be overridden, for example to reach Ollama on another computer. The
 presets are defined once in `shared/aiProviders.js`, which both the Settings page and the server
-import; there is no hard-coded model catalogue for any provider other than OpenAI's curated three.
+import; there is no hard-coded model catalogue for any provider. OpenAI keeps only name rules for
+grouping and a short list of models verified with this application.
 
 ### `localhost` is the server, not the browser
 
@@ -49,11 +50,60 @@ previous provider's model list.
 - **Test connection** and **Refresh models** use the values currently in the form, before saving,
   through `POST /api/ai/test` and `POST /api/ai/models`. `GET /api/ai/models` still lists the models
   of the saved configuration.
-- A model list that cannot be loaded never blocks the provider: the saved or typed model ID stays in
-  use through **Custom model...**, and a warning explains why the list is missing. An endpoint that
+- A model list that cannot be loaded never blocks the provider: the saved model stays selected,
+  **Custom model...** accepts any ID, and a warning explains why the list is missing. An endpoint that
   does not implement `/models` is reported as reachable but unlisted by the connection test.
 - Listed models keep the provider's own IDs and names. A model the provider reports as text-only is
   labelled *(text only)*.
+- The configured model is always an option of the selector. A model the current list does not
+  contain is shown as *(not in the provider's list)* with a warning; neither loading nor refreshing
+  the list ever changes or saves the model. Below the selector the exact **Model ID**, *Vision*, and
+  *Structured output* (*Supported*, *Not supported*, or *Unknown*) describe the chosen model, and a
+  manual **Image input** setting is noted as taking precedence.
+- A list is shown only for the connection it was loaded for: after the provider, the base URL, or the
+  typed key changes, the selector offers just the configured model and asks for **Refresh models**.
+- A live region under the selector reports loading, the time the list was checked, and the number of
+  models offered.
+
+## OpenAI model discovery
+
+OpenAI's `/models` returns everything a key may call, without modalities, structured-output support,
+or prices. `server/src/integrations/openAiModelCatalog.js` turns it into the selector's choices:
+
+- **Availability** comes only from the listing. Any ID of the form `gpt-<major>[.<minor>][letter][-variant]`
+  is a GPT model, so `gpt-6.1-sol` or a later generation appears without a code change. IDs are
+  deduplicated, non-string or malformed IDs are dropped, and every kept ID is sent back exactly.
+- **Excluded families**: IDs with an embedding, moderation, speech (`tts`, `whisper`, `transcribe`,
+  `audio`), `realtime`, image or video generation (`image`, `dall-e`, `sora`), or legacy completion
+  (`davinci`, `babbage`) token are never offered.
+- **Ranking**: GPT versions compare numerically (6.10 > 6.9 > 6.1 > 6 = 6.0 > 5.6), then verified
+  models, then the provider's `created` time (newest first), then the ID, so ties are stable.
+- **Groups**: *Recommended / Latest* holds up to six models of the newest generation plus every
+  verified model; *Previous generations* adds up to three models per older generation while the
+  compact view has fewer than nine entries; *Other models* holds the rest — further variants, dated
+  snapshots such as `gpt-4-0613`, `o`-series, fine-tuned, and unknown IDs — and appears through
+  **Show all models**. When nothing is recommended, all candidates are shown with a note.
+- **Capabilities**: the models verified with AI Add Item and AI Add Fields (`gpt-5.6-luna`,
+  `gpt-5.6-terra`, `gpt-5.6-sol`) report image input and structured output as supported and are
+  labelled *(verified)*. Every other model reports both as unknown (`null`); a name is never taken as
+  proof. No prices or tiers are shown.
+- **Cache**: `server/src/services/modelListCache.js` keeps the OpenAI list in memory for 24 hours per
+  connection. Its key is an HMAC of the provider, base URL, and API key under a random per-process
+  secret, so the key is not stored and another key, address, or provider never shares an entry; at
+  most eight entries are kept. Opening Settings uses a fresh entry; **Refresh models**
+  (`POST /api/ai/models` with `refresh: true`) and **Test connection** always ask OpenAI. When a
+  request fails and an earlier list of the same connection exists, it is answered with `stale: true`
+  and the error, and Settings shows it with the time it was checked. Other providers are not cached.
+- `GET`/`POST /api/ai/models` answer `{ models, providerCount, fetchedAt, cached, stale }` (and
+  `error` when stale). Each OpenAI model is `{ id, label, group, verified, imageInput,
+  structuredOutput, created }`; other providers keep `{ id, label, imageInput, structuredOutput }`.
+- **Test connection** for OpenAI says how many models were returned and how many are candidates
+  (*Connected to OpenAI. It returned 57 models; candidates for AI features: 12.*).
+- Listing and testing never run inference, so they cost nothing. Saved models and the default
+  `gpt-5.6-luna` are unchanged; no model is switched or upgraded automatically.
+- Generation is unchanged for any model: the Responses API with `store: false`, strict
+  `json_schema` output, `detail: "original"` images, and no temperature or reasoning parameters a new
+  generation might reject. A refusal is reported once, never retried with another model.
 - **Image input** is *Detect automatically*, *Supported by this model*, or *Not supported (text
   only)*; see [Model capabilities](#model-capabilities).
 - Plain `http://` is accepted because Ollama and LM Studio normally run without TLS. For an address
@@ -73,7 +123,7 @@ conservatively:
 - **Text** is assumed for every model; AI Add Fields and a description-only AI Add Item need nothing
   else.
 - **Image input**: an explicit *Supported* or *Not supported* in Settings always wins. With *Detect
-  automatically*, OpenAI models are treated as vision-capable, OpenRouter's published
+  automatically*, OpenAI's verified models are vision-capable, OpenRouter's published
   `architecture.input_modalities` decides for its models, and every other model is unknown.
 - **Structured output**: OpenAI always uses strict JSON-schema output. For other providers,
   OpenRouter's `supported_parameters` tells whether a model accepts `response_format`; elsewhere it
@@ -102,9 +152,10 @@ AiFieldService ────────┴→ AiProviderService → createProvid
 - `server/src/services/aiProviderService.js` is the provider-neutral entry point. It requires usable
   settings, applies the image-input rule, calls `generateStructuredData()`, and logs the purpose,
   provider, model, duration, success, and token usage — never the key, the prompt, or the image.
-  It also implements the model list and the connection test.
+  It also implements the model list with its cache and the connection test.
 - `server/src/integrations/openAiProvider.js` keeps the previous OpenAI behaviour: the Responses API,
-  `store: false`, strict `json_schema` output, the original image detail, and the curated model list.
+  `store: false`, strict `json_schema` output, and the original image detail. Its model list and
+  capabilities come from `openAiModelCatalog.js`.
 - `server/src/integrations/openAiCompatibleProvider.js` serves the other four presets. It sends a
   system message with the instructions and the JSON schema, the user content as text or as text plus
   an `image_url` data URL, and a `json_schema` `response_format`. When the endpoint rejects that
@@ -164,7 +215,18 @@ sent to the browser.
   With a mocked provider it checks AI Add Fields, AI Add Item text and vision flows, rejection of a
   text-only model without a provider call, the Settings override in both directions, and rejection of
   invalid structured answers by the existing validation.
+- `test/openai-model-discovery.test.js` covers OpenAI discovery with a mocked list of GPT-5.6, GPT-6,
+  GPT-6.1, GPT-6.9, GPT-6.10, and a later GPT-9.2 model next to irrelevant and unknown IDs: numeric
+  version order, the groups, exclusions, deduplication, unknown capabilities, the 24-hour cache per
+  connection with Refresh, expiry, and no key in the cache, the stale answer after a failure, the
+  connection-test counts, uncached other providers, and a newly discovered model receiving a photo
+  at original detail with a single, clearly reported refusal.
 - `test/e2e.test.js` keeps the OpenAI API flows, now with the base URL pointed at the local stub.
+- `test/e2e/openai-model-selector.spec.js` drives the selector against a local `/models` stub behind
+  the real server: the groups, **Show all models**, the verified and unknown capability lines, the
+  Image input note, saving the exact ID, the connection-test counts, the cached list on reload,
+  **Refresh models** with a new generation, a saved model no longer listed, a failed refresh, another
+  key's list, the no-recommendation state, and a Ukrainian phone layout in dark mode.
 - `test/e2e/ai-providers.spec.js` walks the Settings flow against a local OpenAI-compatible stub:
   preset base URLs, a custom provider with display name, base URL, and key, **Test connection**,
   **Refresh models** with a text-only label, selecting and saving a model, and AI Add Fields using
@@ -175,8 +237,9 @@ sent to the browser.
 
 - Only OpenAI-style HTTP APIs are supported; there is no native Anthropic, Gemini, or Ollama API
   adapter.
-- Capability detection relies on provider metadata where it exists (OpenAI's curated models and
-  OpenRouter); for other servers use the **Image input** setting.
+- Capability detection relies on provider metadata where it exists (OpenRouter) and on the models
+  verified with this application (OpenAI); otherwise it is unknown, so use the **Image input**
+  setting.
 - One provider is configured at a time; there is no per-feature provider or fallback chain.
 - Structured output from small local models can still be malformed. Such answers are rejected with a
   clear message and never stored.

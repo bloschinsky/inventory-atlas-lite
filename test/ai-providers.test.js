@@ -164,11 +164,11 @@ test('the compatible adapter lists models with capabilities and authenticates on
       { id: 'local-model' }
     ] } });
     const openRouter = new OpenAiCompatibleProvider({ label: 'OpenRouter', baseUrl: stub.baseUrl, apiKey: 'sk-or-key' });
-    assert.deepEqual(await openRouter.listModels(), [
+    assert.deepEqual(await openRouter.listModels(), { providerCount: 4, models: [
       { id: 'local-model', label: 'local-model', imageInput: null, structuredOutput: null },
       { id: 'mistral/text-only', label: 'Mistral: Text Only', imageInput: false, structuredOutput: false },
       { id: 'openai/gpt-4o-mini', label: 'OpenAI: GPT-4o-mini', imageInput: true, structuredOutput: true }
-    ]);
+    ] });
     assert.deepEqual(stub.requests.at(-1), { method: 'GET', path: '/v1/models', authorization: 'Bearer sk-or-key', body: null });
     assert.deepEqual(await openRouter.modelCapabilities('mistral/text-only'), { imageInput: false, structuredOutput: false });
     assert.deepEqual(await openRouter.modelCapabilities('not-listed'), { imageInput: null, structuredOutput: null });
@@ -280,15 +280,15 @@ test('the compatible adapter generates structured data and normalizes provider f
   assert.throws(() => parseJsonText('no json here'));
 });
 
-test('the OpenAI adapter keeps the Responses API, strict schema output, and the recommended models', async () => {
+test('the OpenAI adapter keeps the Responses API, strict schema output, and the verified models', async () => {
   const stub = await startStub();
   const provider = new OpenAiProvider({ label: 'OpenAI', baseUrl: stub.baseUrl, apiKey: 'sk-openai-test' });
   try {
     stub.reply = () => ({ body: { data: [{ id: 'gpt-5.6-sol' }, { id: 'gpt-5.6-luna' }, { id: 'whisper-1' }] } });
-    assert.deepEqual(await provider.listModels(), [
-      { id: 'gpt-5.6-luna', label: 'GPT-5.6 Luna', imageInput: true },
-      { id: 'gpt-5.6-sol', label: 'GPT-5.6 Sol', imageInput: true }
-    ]);
+    assert.deepEqual(await provider.listModels(), { providerCount: 3, models: [
+      { id: 'gpt-5.6-luna', label: 'GPT-5.6 Luna', group: 'recommended', verified: true, imageInput: true, structuredOutput: true, created: null },
+      { id: 'gpt-5.6-sol', label: 'GPT-5.6 Sol', group: 'recommended', verified: true, imageInput: true, structuredOutput: true, created: null }
+    ] });
 
     stub.reply = () => ({ body: { output_text: '{"ok":true}', usage: { input_tokens: 3 } } });
     const result = await provider.generateStructuredData({
