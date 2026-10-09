@@ -81,6 +81,13 @@ together. Failure hides stale metrics and presents a retry action. Empty invento
 states keep the zero KPI cards and the zero gauge and sparkline, show text empty states for the other
 charts, and guide the user to **Add item**.
 
+### Active inventory
+
+Every figure — the totals, coverage, placement, the 30-day activity, and the category, Condition, and
+location distributions — counts only active items. `retiredItems` reports the retired items of the same
+category scope, shown on the total card as *N retired items are not counted* with a link to the Retired
+Items list. See [Item lifecycle](item-lifecycle.md).
+
 ## Charts, theme, and accessibility
 
 - ApexCharts 7.0.0 comes from the copy Tabler ships in `@tabler/core/dist/libs/apexcharts`; no

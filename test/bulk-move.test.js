@@ -63,7 +63,7 @@ test('unrelated leaf items and containers move into one destination', () => {
 
   assert.deepEqual(result, {
     selected_count: 5, root_count: 5, moved_count: 5, unchanged_count: 0,
-    parent: { id: target.id, uuid: target.uuid, name: 'Box B4' },
+    parent: { id: target.id, uuid: target.uuid, name: 'Box B4', lifecycle_status: 'active' },
     moved_root_ids: ids([...leaves, ...containers])
   });
   for (const item of [...leaves, ...containers]) assert.equal(parentOf(item), target.id);

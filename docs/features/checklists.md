@@ -125,6 +125,14 @@ Checklist run        one use, copied from the checklist when it starts,
   with `checklist_id = NULL` and remain readable through their snapshots, listed under **Runs of
   deleted checklists**.
 
+### Retired items
+
+A retired item stays on its checklists, marked **Retired**, and the checklist page warns how many of
+its items are retired. New runs copy only active items and record the others in
+`checklist_runs.skipped_retired_count`, which the run page reports; container audits copy only active
+contents. Runs that already contain an item keep it, with `retired: true` on its run item. See
+[Item lifecycle](item-lifecycle.md).
+
 ## Storage and API
 
 - Schema version 4 adds four tables, created for new databases and added in place to existing ones by

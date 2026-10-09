@@ -21,6 +21,7 @@ const { ItemRepository } = await import('../server/src/repositories/itemReposito
 const { BulkReplaceService } = await import('../server/src/services/bulkReplaceService.js');
 const { CategoryService } = await import('../server/src/services/categoryService.js');
 const { ItemHistoryService, detectChanges } = await import('../server/src/services/itemHistoryService.js');
+const { ItemLifecycleService } = await import('../server/src/services/itemLifecycleService.js');
 const { ItemService } = await import('../server/src/services/itemService.js');
 const { ItemTransferService } = await import('../server/src/services/itemTransferService.js');
 
@@ -54,6 +55,7 @@ const build = ({ db = new Database(':memory:') } = {}) => {
     db, clock, category, itemService, itemHistoryService, itemHistoryRepository, itemRepository, add, edit, events, count,
     transfers: new ItemTransferService({ itemRepository, itemHistoryRepository, itemHistoryService }),
     bulkReplace: new BulkReplaceService({ bulkReplaceRepository: new BulkReplaceRepository(db), itemHistoryService }),
+    lifecycle: new ItemLifecycleService({ itemRepository, itemService, itemHistoryService }),
     row: item => db.prepare('SELECT * FROM items WHERE id = ?').get(item.id)
   };
 };
@@ -314,6 +316,67 @@ test('loan validation: recipient, dates, notes, and the loan a return names', ()
   assert.equal(row(camera).transferred_to, 'Anna and Petro');
 });
 
+test('a return or a new loan in the same minute as the moment before it is not refused', () => {
+  const { add, transfers } = build();
+  const camera = add('Camera');
+  const loan = transfers.start(camera.id, { recipient: 'Anna', transferred_at: '2026-10-08T12:00:30.000Z' });
+  failure(() => transfers.markReturned(camera.id, loan.id, { returned_at: '2026-10-08T11:59:59.000Z' }), 400, 'RETURN_BEFORE_TRANSFER');
+  // The date-time field has no seconds: 12:00 is the minute of the transfer, so it is the transfer itself.
+  assert.equal(transfers.markReturned(camera.id, loan.id, { returned_at: '2026-10-08T12:00:00.000Z' }).returned_at, '2026-10-08T12:00:30.000Z');
+  assert.equal(transfers.start(camera.id, { recipient: 'Petro', transferred_at: '2026-10-08T12:00:00.000Z' }).transferred_at, '2026-10-08T12:00:30.000Z');
+});
+
+test('retiring and restoring a subtree records one lifecycle event per item with its context', () => {
+  const { add, events, lifecycle, count } = build();
+  const shelf = add('Shelf', null, { location: 'Garage' });
+  const box = add('Box', shelf, { location: 'Attic' });
+  const camera = add('Camera', box);
+  const desk = add('Desk', null, { location: 'Office' });
+
+  lifecycle.change(box.id, { status: 'retired', reason: 'gifted', retired_at: '2026-10-05T10:00:00.000Z', include_contents: true });
+  assert.deepEqual(events(box).map(summary), [['retired', 'Garage', 'gifted']]);
+  const [retired] = events(box);
+  assert.equal(retired.operation_type, 'retire');
+  assert.equal(retired.occurred_at, '2026-10-05T10:00:00.000Z');
+  assert.deepEqual(retired.from_item, { id: shelf.id, name: 'Shelf', exists: true });
+  assert.equal(retired.via_item, null);
+  // The contents keep their container and name the item they were retired with.
+  const [inside] = events(camera);
+  assert.deepEqual(summary(inside), ['retired', 'Garage', 'gifted']);
+  assert.equal(inside.from_item, null);
+  assert.deepEqual(inside.via_item, { id: box.id, name: 'Box', exists: true });
+  assert.equal(inside.operation_id, retired.operation_id);
+  // No location or container events are added for the detachment.
+  assert.equal(count('item_events'), 2);
+  assert.deepEqual(events(box, { type: 'location' }), []);
+
+  lifecycle.change(box.id, { status: 'active', parent_item_id: desk.id });
+  const [restored] = events(box);
+  assert.deepEqual([restored.type, restored.operation_type, restored.to, restored.to_item.name], ['restored', 'restore', 'Office', 'Desk']);
+  assert.deepEqual(events(camera, { type: 'lifecycle' }).map(event => [event.type, event.to, event.via_item?.name]),
+    [['restored', 'Office', 'Box'], ['retired', 'gifted', 'Box']]);
+  // Moves after the restoration are recorded as usual.
+  failure(() => lifecycle.change(box.id, { status: 'active' }), 409, 'ITEM_NOT_RETIRED');
+  assert.equal(count('item_operations'), 2);
+});
+
+test('an item on loan is not retired, and a retired item cannot be lent', () => {
+  const { add, events, lifecycle, transfers, row, count } = build();
+  const box = add('Box', null, { location: 'Garage' });
+  const drill = add('Drill', box);
+
+  const loan = transfers.start(drill.id, { recipient: 'Volodia', transferred_at: '2026-10-01T09:00:00.000Z' });
+  failure(() => lifecycle.change(box.id, { status: 'retired', reason: 'sold', include_contents: true }), 409, 'ITEM_RETIRE_HAS_OPEN_LOAN');
+  failure(() => lifecycle.change(drill.id, { status: 'retired', reason: 'lost' }), 409, 'ITEM_RETIRE_HAS_OPEN_LOAN');
+  assert.equal(row(box).lifecycle_status, 'active');
+  assert.equal(count('item_events'), 1);
+
+  transfers.markReturned(drill.id, loan.id, { returned_at: '2026-10-02T09:00:00.000Z' });
+  lifecycle.change(drill.id, { status: 'retired', reason: 'lost', retired_at: '2026-10-03T09:00:00.000Z' });
+  failure(() => transfers.start(drill.id, { recipient: 'Olena' }), 409, 'TRANSFER_ITEM_RETIRED');
+  assert.deepEqual(events(drill).map(event => event.type), ['retired', 'returned', 'transferred']);
+});
+
 test('history pages are newest first, stable across equal timestamps, and filterable', () => {
   const { add, edit, events, itemService, transfers, clock } = build();
   const camera = add('Camera', null, { location: 'L0' });
@@ -383,7 +446,7 @@ test('detectChanges names the highest changed item above one reached from severa
   ]);
 });
 
-test('an older database gains the history tables without any fabricated events', () => {
+test('a version 8 database gains the history tables without any fabricated events', () => {
   const db = new Database(':memory:');
   db.pragma('foreign_keys = ON');
   applySchema(db);
@@ -391,7 +454,7 @@ test('an older database gains the history tables without any fabricated events',
   db.prepare("INSERT INTO items (uuid, name, category_id, location, transferred_to) VALUES (?, 'Camera', ?, 'Garage', 'Anna')")
     .run(crypto.randomUUID(), category);
   db.exec('DROP TABLE item_events; DROP TABLE item_transfers; DROP TABLE item_operations;');
-  db.pragma('user_version = 7');
+  db.pragma('user_version = 8');
 
   const { count, itemService } = build({ db });
   assert.equal(Number(db.pragma('user_version', { simple: true })), SCHEMA_VERSION);

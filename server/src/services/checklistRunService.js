@@ -36,7 +36,8 @@ export class ChecklistRunService {
     return item;
   }
 
-  // Items deleted from the inventory are not copied: there is nothing left to pack or find.
+  // Items deleted from the inventory are not copied: there is nothing left to pack or find. Nor are
+  // retired items; the run records how many were left out, so it can say so.
   start(checklistId) {
     const runId = this.checklists.transaction(() => {
       const checklist = this.checklists.findById(checklistId);
@@ -83,7 +84,7 @@ export class ChecklistRunService {
 
   get(id) {
     const run = presentRun(this.requireRun(id));
-    const items = this.runs.listItems(run.id).map(({ item_name_snapshot: name, ...item }) => ({ ...item, name }));
+    const items = this.runs.listItems(run.id).map(({ item_name_snapshot: name, retired, ...item }) => ({ ...item, name, retired: Boolean(retired) }));
     return { ...run, counts: countRunItems(items), items };
   }
 

@@ -11,6 +11,15 @@ const CLOCK_SKEW_MS = 5 * 60 * 1000;
 const MOMENT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})$/;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/*
+  A date-time field is precise to the minute, so a moment within the minute of `earliest` (a return
+  right after the transfer, a loan right after the previous return) reads as `earliest` itself rather
+  than as before it. Anything earlier stays earlier and is refused by the caller.
+*/
+const notBeforeWithinMinute = (moment, earliest) => (
+  moment < earliest && moment >= `${earliest.slice(0, 16)}:00.000Z` ? earliest : moment
+);
+
 const isIsoDate = value => /^\d{4}-\d{2}-\d{2}$/.test(value) && new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value;
 
 /*
@@ -54,9 +63,13 @@ export class ItemTransferService {
   start(id, body = {}) {
     return this.history.transaction(() => {
       const item = this.requireItem(id);
+      // A retired item has left the inventory; lending it would hide an active loan under Retired.
+      if (item.lifecycle_status === 'retired') throw httpError(409, 'TRANSFER_ITEM_RETIRED');
       const recipient = validateTransferredTo(body.recipient);
       if (!recipient) throw httpError(400, 'TRANSFER_RECIPIENT_REQUIRED');
-      const transferredAt = this.readMoment(body.transferred_at);
+      const latestReturn = this.history.findLatestReturn(item.id);
+      const requestedAt = this.readMoment(body.transferred_at);
+      const transferredAt = latestReturn ? notBeforeWithinMinute(requestedAt, latestReturn) : requestedAt;
       let expectedReturnOn = null;
       if (body.expected_return_on !== null && body.expected_return_on !== undefined && body.expected_return_on !== '') {
         expectedReturnOn = typeof body.expected_return_on === 'string' ? body.expected_return_on.trim() : '';
@@ -66,7 +79,6 @@ export class ItemTransferService {
       }
       const note = this.readNote(body.note);
       if (this.history.findOpenTransfer(item.id)) throw httpError(409, 'TRANSFER_ALREADY_OPEN');
-      const latestReturn = this.history.findLatestReturn(item.id);
       if (latestReturn && transferredAt < latestReturn) throw httpError(400, 'TRANSFER_OVERLAPS_PREVIOUS');
 
       const transferId = this.history.insertTransfer({ itemId: item.id, recipient, transferredAt, expectedReturnOn, note });
@@ -84,7 +96,7 @@ export class ItemTransferService {
       const transfer = /^\d+$/.test(String(transferId)) ? this.history.findTransfer(item.id, Number(transferId)) : null;
       if (!transfer) throw httpError(404, 'TRANSFER_NOT_FOUND');
       if (transfer.returned_at) throw httpError(409, 'TRANSFER_ALREADY_RETURNED');
-      const returnedAt = this.readMoment(body.returned_at);
+      const returnedAt = notBeforeWithinMinute(this.readMoment(body.returned_at), transfer.transferred_at);
       if (returnedAt < transfer.transferred_at) throw httpError(400, 'RETURN_BEFORE_TRANSFER');
       const note = this.readNote(body.note);
 

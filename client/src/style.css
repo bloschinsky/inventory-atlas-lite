@@ -39,6 +39,8 @@ body.app-menu-open { overflow: hidden; }
 .item-thumb { display: grid; place-items: center; width: var(--app-thumb-size); height: var(--app-thumb-size); flex: 0 0 var(--app-thumb-size); overflow: hidden; border-radius: var(--tblr-border-radius); background: var(--app-media-bg); border: var(--tblr-border-width) var(--tblr-border-style) var(--tblr-border-color); }
 .item-thumb-lg { width: var(--app-thumb-size-lg); height: var(--app-thumb-size-lg); flex-basis: var(--app-thumb-size-lg); }
 .item-thumb img { width: 100%; height: 100%; object-fit: cover; }
+/* A retired item stays readable; only its photo is subdued, and its badge says why. */
+.item-retired .item-thumb img { opacity: .55; filter: grayscale(.6); }
 .item-thumb-empty { color: var(--tblr-secondary); font-size: .625rem; text-align: center; line-height: 1.1; }
 
 /* Hierarchy tree rows. One flat list indented by depth, so any nesting renders without nested

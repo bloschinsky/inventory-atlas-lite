@@ -276,7 +276,7 @@ test('a version 3 database gains the checklist tables in place without losing in
   db.pragma('user_version = 3');
 
   applySchema(db);
-  assert.equal(Number(db.pragma('user_version', { simple: true })), 8);
+  assert.equal(Number(db.pragma('user_version', { simple: true })), 9);
   assert.equal(db.prepare('SELECT name FROM items').get().name, 'Zenit E');
   const checklistRepository = new ChecklistRepository(db);
   const checklistRunRepository = new ChecklistRunRepository(db);
@@ -317,7 +317,7 @@ test('a version 4 database gains Last verified and the audit columns in place', 
   db.pragma('user_version = 4');
 
   applySchema(db);
-  assert.equal(Number(db.pragma('user_version', { simple: true })), 8);
+  assert.equal(Number(db.pragma('user_version', { simple: true })), 9);
   assert.deepEqual(db.prepare('SELECT name, last_verified_at FROM items').get(), { name: 'Zenit E', last_verified_at: null });
   assert.deepEqual(db.prepare('SELECT checklist_name_snapshot, source, source_container_item_id, source_container_name_snapshot, audit_scope FROM checklist_runs').get(),
     { checklist_name_snapshot: 'Old kit', source: 'checklist', source_container_item_id: null, source_container_name_snapshot: null, audit_scope: null });

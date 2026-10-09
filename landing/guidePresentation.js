@@ -23,6 +23,7 @@ export const guidePresentation = {
   'add-several-fields-at-once': { demo: '/categories' },
   'let-ai-suggest-the-fields-for-a-category': { selfHosted: true },
   'create-an-item': { screenshot: 'item-details', demo: '/items/new' },
+  'retire-an-item-and-restore-it': { demo: '/items' },
   'save-and-use-item-templates': { demo: '/templates' },
   'pack-or-verify-items-with-a-checklist': { screenshot: 'checklist-run-phone', phone: true, demo: '/checklists' },
   'add-several-items-at-once-from-json': { demo: '/items' },

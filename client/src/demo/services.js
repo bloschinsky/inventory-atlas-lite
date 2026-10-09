@@ -18,6 +18,7 @@ import { CustomFieldService } from '../../../server/src/services/customFieldServ
 import { DashboardService } from '../../../server/src/services/dashboardService.js';
 import { DatabaseMetadataService } from '../../../server/src/services/databaseMetadataService.js';
 import { ItemHistoryService } from '../../../server/src/services/itemHistoryService.js';
+import { ItemLifecycleService } from '../../../server/src/services/itemLifecycleService.js';
 import { ItemService } from '../../../server/src/services/itemService.js';
 import { ItemTransferService } from '../../../server/src/services/itemTransferService.js';
 import { ItemTemplateService } from '../../../server/src/services/itemTemplateService.js';
@@ -42,13 +43,15 @@ export function createDemoServices(SQL) {
   const itemHistoryRepository = new ItemHistoryRepository(db);
   const categoryService = new CategoryService(categoryRepository);
   const itemHistoryService = new ItemHistoryService({ itemHistoryRepository });
+  const itemService = new ItemService({ itemRepository, customFieldRepository, itemPhotoRepository, categoryRepository, itemHistoryService });
 
   return {
     db,
     categoryService,
     customFieldService: new CustomFieldService(customFieldRepository, categoryService),
-    itemService: new ItemService({ itemRepository, customFieldRepository, itemPhotoRepository, categoryRepository, itemHistoryService }),
+    itemService,
     itemTransferService: new ItemTransferService({ itemRepository, itemHistoryRepository, itemHistoryService }),
+    itemLifecycleService: new ItemLifecycleService({ itemRepository, itemService, itemHistoryService }),
     bulkReplaceService: new BulkReplaceService({ bulkReplaceRepository: new BulkReplaceRepository(db), itemHistoryService }),
     databaseMetadataService: new DatabaseMetadataService({ databaseMetadataRepository: new DatabaseMetadataRepository(db) }),
     itemTemplateService: new ItemTemplateService({

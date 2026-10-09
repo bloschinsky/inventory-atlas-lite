@@ -115,6 +115,13 @@ export class ItemHistoryRepository {
     return this.db.prepare('SELECT * FROM item_transfers WHERE item_id = ? AND returned_at IS NULL').get(itemId);
   }
 
+  // How many of the given items are on loan now; answered from the partial open-loan index.
+  countOpenTransfers(ids) {
+    return this.db.prepare(`
+      SELECT COUNT(*) AS count FROM item_transfers WHERE returned_at IS NULL AND item_id IN (SELECT value FROM json_each(?))
+    `).get(JSON.stringify(ids)).count;
+  }
+
   findTransfer(itemId, transferId) {
     return this.db.prepare('SELECT * FROM item_transfers WHERE id = ? AND item_id = ?').get(transferId, itemId);
   }

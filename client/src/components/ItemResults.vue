@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import ConditionGradeBadge from './ConditionGradeBadge.vue';
+import ItemLifecycleBadge from './ItemLifecycleBadge.vue';
 import ItemNewStatusBadge from './ItemNewStatusBadge.vue';
 import ItemThumbnail from './ItemThumbnail.vue';
 import SortableHeader from './SortableHeader.vue';
@@ -77,6 +78,7 @@ const editRoute = item => `/items/${item.id}/edit`;
           <tr
             v-for="item in items"
             :key="item.id"
+            :class="{ 'item-retired': item.lifecycle_status === 'retired' }"
             :data-tour="`item-row-${item.id}`"
           >
             <td>
@@ -109,10 +111,14 @@ const editRoute = item => `/items/${item.id}/edit`;
                   {{ item.name }}
                 </RouterLink>
                 <div
-                  v-if="showTransferBadge && item.transferred_to"
-                  class="mt-1"
+                  v-if="item.lifecycle_status === 'retired' || (showTransferBadge && item.transferred_to)"
+                  class="mt-1 d-flex flex-wrap gap-1"
                 >
-                  <span class="badge bg-azure-lt text-wrap text-break text-start">
+                  <ItemLifecycleBadge :status="item.lifecycle_status" />
+                  <span
+                    v-if="showTransferBadge && item.transferred_to"
+                    class="badge bg-azure-lt text-wrap text-break text-start"
+                  >
                     {{ $t('items.transferredTo', { name: item.transferred_to }) }}
                   </span>
                 </div>
@@ -167,6 +173,7 @@ const editRoute = item => `/items/${item.id}/edit`;
       v-for="item in items"
       :key="item.id"
       class="card item-card"
+      :class="{ 'item-retired': item.lifecycle_status === 'retired' }"
       :data-tour="`item-row-${item.id}`"
     >
       <div class="card-body p-3">
@@ -194,6 +201,10 @@ const editRoute = item => `/items/${item.id}/edit`;
             >
               {{ item.name }}
             </RouterLink>
+            <ItemLifecycleBadge
+              class="ms-2"
+              :status="item.lifecycle_status"
+            />
             <!-- Empty values are left out to keep the card short; the category and the New badge need no label. -->
             <template
               v-for="column in metaColumns"

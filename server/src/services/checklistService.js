@@ -17,13 +17,15 @@ export const presentRunSummary = ({ total, confirmed, missing, pending, ...run }
   counts: { total, confirmed, missing, pending, checked: confirmed + missing }
 });
 
-// A linked entry shows the item as it is now; a deleted one only its last known name.
+// A linked entry shows the item as it is now; a deleted one only its last known name. A retired item
+// stays on the checklist, marked, and new runs leave it out.
 const presentEntry = entry => ({
   id: entry.id,
   item_id: entry.item_id,
   item_uuid: entry.item_uuid ?? null,
   name: entry.item_name ?? entry.item_name_snapshot,
   deleted: entry.item_id === null,
+  retired: entry.lifecycle_status === 'retired',
   category_name: entry.category_name ?? null,
   effective_location: entry.item_id === null ? null : presentLocation(entry.root_id ? entry.root_location : entry.location),
   thumbnail_id: entry.thumbnail_id ?? null

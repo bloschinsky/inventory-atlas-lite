@@ -3,20 +3,17 @@
 ## Summary
 
 Every item tells its chronological story: where it moved, which containers held it, to whom it was
-lent and when it came back, and every change of its Transferred To note. The current state stays in
+lent and when it came back, every change of its Transferred To note, and when it was retired from
+the inventory or restored to it ([Item lifecycle](item-lifecycle.md)). The current state stays in
 the existing `items` columns; history is a compact, append-only log of meaningful confirmed changes,
 written by the server in the same SQLite transaction as the change itself. It is not event
 sourcing: nothing is ever rebuilt from the log.
-
-Lifecycle events (`retired`, `restored`) and the operation types `retire`/`restore` are part of the
-schema's vocabulary and of the timeline's labels, so the planned Inventory Lifecycle (issue #23) can
-record them without another migration. Nothing writes them yet, and no lifecycle UI exists.
 
 ## User-visible behaviour
 
 - **Item details** has a **History** card with the five newest entries and **View full history**,
   which opens `/items/:id/history`: a Tabler timeline, newest first, with **All | Locations |
-  Transfers** filters, **Load more** (20 per page), loading, empty, and error states, and a closing
+  Transfers | Lifecycle** filters, **Load more** (20 per page), loading, empty, and error states, and a closing
   note that changes from before History existed are not shown. Both work on phones (no horizontal
   scrolling) and in English and Ukrainian.
 - Events of one action share an operation and appear as one entry (for example a new container and
@@ -48,7 +45,8 @@ before and after `mutate()` inside one transaction and records only real differe
 | `location_changed` | the item's **effective** location changed, also when inherited from any ancestor | `from_value`/`to_value` exact text; `via_item_*` names the moved item above it |
 | `recipient_changed` | `transferred_to` changed by an edit or bulk replace | `from_value`/`to_value` |
 | `transferred` / `returned` | Transfer / Mark as returned | recipient and `transfer_id` |
-| `retired` / `restored` | reserved for the inventory lifecycle | — |
+| `retired` | Retire item, for the item and everything retired with it | `to_value` the reason key, `from_value` the last effective location, `from_item_*` the container the item itself left; contents get `via_item_*` |
+| `restored` | Restore to inventory, for the item and its contents | `to_value` the effective location it came back to, `to_item_*` its new container; contents get `via_item_*` |
 
 - Free-text locations and recipients are compared trimmed and case-insensitively (the same rule the
   Hierarchy groups by); blank is no value. Snapshots keep the exact text.
@@ -63,7 +61,12 @@ before and after `mutate()` inside one transaction and records only real differe
   never written.
 - Write paths: `ItemService.update()` (`item_update`), `ItemService.bulkMove()` (`bulk_move`,
   after `selectionRoots()`), `BulkReplaceService.apply()` for Location and Transferred To
-  (`bulk_replace`), and `ItemTransferService` (`transfer`, `return`). Creating an item records
+  (`bulk_replace`), `ItemTransferService` (`transfer`, `return`), and `ItemLifecycleService`
+  (`retire`, `restore`, through `trackLifecycle()`).
+- A retirement or restoration is one lifecycle event per item of the subtree, never extra location or
+  container events for the detachment it implies; the event carries that context. A retirement is
+  dated with its Retired on moment, like a loan with its start; a restoration when it happens. The
+  reason is stored as its stable key and translated when shown. Creating an item records
   nothing, and nothing is fabricated for existing items on migration.
 - An item reached from several changed items (a bulk replacement matching a box and its contents)
   names the highest one above it as the item it moved with.
@@ -81,14 +84,20 @@ start, due date, end, and notes in one row; the `transferred`/`returned` events 
   as the server's; up to five minutes of clock skew is tolerated, later is refused. The expected
   return is a calendar date that may not be before the transfer day (one day of time-zone tolerance).
   A return may not be before its transfer, and a new loan may not start before the previous return.
+- **Lifecycle:** an item is not retired while it, or anything retired with it, is on loan
+  (`ITEM_RETIRE_HAS_OPEN_LOAN`, 409, with the count); the Retire dialog says so and offers no
+  confirmation until the loan is marked as returned. A retired item cannot be lent
+  (`TRANSFER_ITEM_RETIRED`, 409) and shows no Transfer button. So a retired item never carries an
+  open loan, and a permanent departure is a retirement, not a loan left open.
 - History is not edited: a mistaken loan is closed with Mark as returned and a note. Editing
   Transferred To in the form records `recipient_changed` and never invents a loan or a return.
 - Codes: `TRANSFER_RECIPIENT_REQUIRED`, `INVALID_TRANSFER_DATE`, `TRANSFER_DATE_IN_FUTURE`,
   `INVALID_EXPECTED_RETURN_DATE`, `EXPECTED_RETURN_BEFORE_TRANSFER`, `INVALID_TRANSFER_NOTE`,
   `TRANSFER_NOTE_TOO_LONG` (1000), `TRANSFER_ALREADY_OPEN` (409), `TRANSFER_OVERLAPS_PREVIOUS`,
-  `TRANSFER_NOT_FOUND` (404), `TRANSFER_ALREADY_RETURNED` (409), `RETURN_BEFORE_TRANSFER`.
+  `TRANSFER_NOT_FOUND` (404), `TRANSFER_ALREADY_RETURNED` (409), `RETURN_BEFORE_TRANSFER`,
+  `TRANSFER_ITEM_RETIRED` (409), and `ITEM_RETIRE_HAS_OPEN_LOAN` (409).
 
-## Schema (version 8)
+## Schema (version 9)
 
 - `item_operations(id, type, created_at)` — one row per user action that changed something.
 - `item_events(id, operation_id → item_operations ON DELETE CASCADE, item_id → items ON DELETE
@@ -121,7 +130,8 @@ start, due date, end, and notes in one row; the `transferred`/`returned` events 
   and the loan; `POST /api/items/:id/transfers/:transferId/return` `{ returned_at?, note? }` → the
   closed loan.
 - `GET /api/items/:id` additionally returns `open_transfer`. The responses of `PUT /api/items/:id`,
-  `PATCH /api/items/bulk-parent`, and the bulk replace endpoints are unchanged.
+  `PATCH /api/items/bulk-parent`, `PATCH /api/items/:id/lifecycle`, and the bulk replace endpoints
+  are unchanged.
 
 ## Capacity
 
@@ -152,11 +162,13 @@ the 1,000,000-event run is opt-in: `node scripts/history-benchmark.mjs` (or `--e
   location edits and detaching, bulk move with overlapping selections and unchanged roots, 341 items
   in a 40-level tree, rollback on a failing insert or mutation, bulk replace, recipient changes,
   loan lifecycle and validation, pagination with timestamp ties and filters, renames and deletions,
-  the v7 → v8 migration without fabricated events, the 100,000-event capacity test, and the HTTP
+  retire and restore of a subtree with their context, the open-loan rule in both directions, the
+  v8 → v9 migration without fabricated events, the 100,000-event capacity test, and the HTTP
   contract including the backup.
 - `test/demo.test.js` — the curated demo history in every language. `test/reset.test.js`,
   `test/restore.test.js` — the new tables in resets, safety backups, and migrated restores.
 - `test/e2e/item-history.spec.js` — a box move seen in the history of the camera inside it, taking
   the camera out with the required location choice, lending to Volodia → return → lending to Olena
-  with the full-history filters, and the timeline on a phone in Ukrainian. `test/e2e/nesting.spec.js`
+  with the full-history filters, retiring and restoring an item with its History and the loan rule,
+  and the timeline on a phone in Ukrainian. `test/e2e/nesting.spec.js`
   makes the explicit choice when it takes an item out.

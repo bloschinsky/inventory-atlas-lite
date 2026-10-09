@@ -17,13 +17,15 @@ const emit = defineEmits(['close', 'saved']);
 // The value of a datetime-local input for a moment, in the browser's time zone.
 const localInput = date => new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 
-const form = reactive({ recipient: '', moment: localInput(new Date()), expected_return_on: '', note: '' });
+// An untouched default is sent as no date, so the server records its own exact now.
+const opened = localInput(new Date());
+const form = reactive({ recipient: '', moment: opened, expected_return_on: '', note: '' });
 const saving = ref(false);
 const error = ref('');
 
 async function save() {
   saving.value = true; error.value = '';
-  const moment = form.moment ? new Date(form.moment).toISOString() : null;
+  const moment = form.moment && form.moment !== opened ? new Date(form.moment).toISOString() : null;
   try {
     if (props.transfer) {
       await api(`/api/items/${props.item.id}/transfers/${props.transfer.id}/return`, jsonOptions('POST', { returned_at: moment, note: form.note }));

@@ -1,4 +1,5 @@
 import { CONDITION_GRADES } from '../../shared/conditionGrades.js';
+import { LIFECYCLE_STATUSES, RETIREMENT_REASONS } from '../../shared/itemLifecycle.js';
 
 /*
   The database schema and its migrations. Nothing here touches the file system or a particular
@@ -14,12 +15,14 @@ import { CONDITION_GRADES } from '../../shared/conditionGrades.js';
   added the checklist tables; version 5 added items.last_verified_at and the container audit columns of
   checklist_runs; version 6 added items.is_new and item_templates.is_new; version 7 added
   item_photos.sort_order, renamed the free-text condition of items and templates to condition_notes,
-  and added the structured condition_grade; version 8 added the item activity history tables
+  and added the structured condition_grade; version 8 added the item lifecycle: items.lifecycle_status and
+  the retirement columns with their snapshots of the last effective location and former container,
+  and checklist_runs.skipped_retired_count; version 9 added the item activity history tables
   (item_operations, item_events, item_transfers).
   user_version stays the source of truth: database_metadata.schema_version mirrors it and is written
   in the same transaction, so the two never disagree.
 */
-export const SCHEMA_VERSION = 8;
+export const SCHEMA_VERSION = 9;
 
 export const DEFAULT_DATABASE_NAME = 'Inventory Atlas';
 
@@ -33,14 +36,28 @@ export const TRACKED_TABLES = ['categories', 'custom_fields', 'items', 'item_fie
   'item_operations', 'item_events', 'item_transfers'];
 
 // The kinds of user action that group history events, and the kinds of event one item can record.
-// Lifecycle (retire/restore) is part of the vocabulary so the inventory lifecycle can write it later
-// without another table rebuild.
 export const ITEM_OPERATION_TYPES = ['item_update', 'bulk_move', 'bulk_replace', 'transfer', 'return', 'retire', 'restore'];
 export const ITEM_EVENT_TYPES = ['location_changed', 'container_changed', 'recipient_changed', 'transferred', 'returned', 'retired', 'restored'];
-const keyList = keys => keys.map(key => `'${key}'`).join(', ');
+const quotedList = values => values.map(value => `'${value}'`).join(', ');
 
 // Only a fixed grade key, or NULL for an unset Condition, can be stored, whatever writes the row.
-const CONDITION_GRADE_CHECK = `CHECK (condition_grade IN (${CONDITION_GRADES.map(grade => `'${grade}'`).join(', ')}))`;
+const CONDITION_GRADE_CHECK = `CHECK (condition_grade IN (${quotedList(CONDITION_GRADES)}))`;
+
+/*
+  The lifecycle columns of items. Every existing and new item is active with no retirement data; the
+  retirement columns are filled by a retirement and cleared by a restore. The snapshots keep the last
+  effective location and the former container as text, so they never follow later moves or deletions.
+*/
+const LIFECYCLE_COLUMNS = [
+  ['lifecycle_status', `TEXT NOT NULL DEFAULT 'active' CHECK (lifecycle_status IN (${quotedList(LIFECYCLE_STATUSES)}))`],
+  ['retired_at', 'TEXT'],
+  ['retired_reason', `TEXT CHECK (retired_reason IN (${quotedList(RETIREMENT_REASONS)}))`],
+  ['retired_recipient', 'TEXT'],
+  ['retired_note', 'TEXT'],
+  ['retired_location_snapshot', 'TEXT'],
+  ['retired_parent_uuid_snapshot', 'TEXT'],
+  ['retired_parent_name_snapshot', 'TEXT']
+];
 
 // ISO 8601 in UTC with milliseconds, so two writes in the same second still order correctly.
 const SQL_NOW = "strftime('%Y-%m-%dT%H:%M:%fZ', 'now')";
@@ -61,7 +78,8 @@ export const CURRENT_SCHEMA = {
   ...CORE_SCHEMA,
   categories: [...CORE_SCHEMA.categories, 'created_at', 'updated_at'],
   items: [...CORE_SCHEMA.items, 'condition_grade', 'condition_notes', 'purchase_date', 'purchase_price_amount', 'purchase_price_currency',
-    'serial_number', 'transferred_to', 'parent_item_id', 'last_verified_at', 'is_new', 'created_at', 'updated_at'],
+    'serial_number', 'transferred_to', 'parent_item_id', 'last_verified_at', 'is_new', 'created_at', 'updated_at',
+    ...LIFECYCLE_COLUMNS.map(([name]) => name)],
   custom_fields: [...CORE_SCHEMA.custom_fields, 'created_at', 'updated_at'],
   item_photos: [...CORE_SCHEMA.item_photos, 'sort_order', 'created_at'],
   item_templates: ['id', 'name', 'category_id', 'item_name', 'description', 'condition_grade', 'condition_notes', 'location', 'purchase_date',
@@ -71,7 +89,7 @@ export const CURRENT_SCHEMA = {
   checklists: ['id', 'name', 'description', 'mode', 'created_at', 'updated_at'],
   checklist_items: ['id', 'checklist_id', 'item_id', 'item_name_snapshot', 'sort_order', 'created_at'],
   checklist_runs: ['id', 'checklist_id', 'checklist_name_snapshot', 'mode', 'status', 'started_at', 'completed_at', 'created_at',
-    'source', 'source_container_item_id', 'source_container_name_snapshot', 'audit_scope'],
+    'source', 'source_container_item_id', 'source_container_name_snapshot', 'audit_scope', 'skipped_retired_count'],
   checklist_run_items: ['id', 'run_id', 'item_id', 'item_name_snapshot', 'position', 'status', 'checked_at', 'note'],
   item_operations: ['id', 'type', 'created_at'],
   item_events: ['id', 'operation_id', 'item_id', 'event_type', 'occurred_at', 'from_value', 'to_value', 'from_item_id',
@@ -148,6 +166,7 @@ export const applySchema = connection => connection.transaction(() => {
       parent_item_id INTEGER REFERENCES items(id) ON DELETE RESTRICT,
       last_verified_at TEXT,
       is_new INTEGER NOT NULL DEFAULT 0 CHECK (is_new IN (0, 1)),
+      ${LIFECYCLE_COLUMNS.map(([name, definition]) => `${name} ${definition},`).join(' ')}
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
@@ -250,7 +269,9 @@ export const applySchema = connection => connection.transaction(() => {
       source TEXT NOT NULL DEFAULT 'checklist' CHECK(source IN ('checklist', 'container_audit')),
       source_container_item_id INTEGER REFERENCES items(id) ON DELETE SET NULL,
       source_container_name_snapshot TEXT,
-      audit_scope TEXT CHECK(audit_scope IN ('direct', 'nested'))
+      audit_scope TEXT CHECK(audit_scope IN ('direct', 'nested')),
+      -- Checklist entries whose item was retired when the run started; they are not part of the run.
+      skipped_retired_count INTEGER NOT NULL DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS checklist_run_items (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -269,7 +290,7 @@ export const applySchema = connection => connection.transaction(() => {
     -- that name it keep their snapshot. History is append-only and kept indefinitely.
     CREATE TABLE IF NOT EXISTS item_operations (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      type TEXT NOT NULL CHECK(type IN (${keyList(ITEM_OPERATION_TYPES)})),
+      type TEXT NOT NULL CHECK(type IN (${quotedList(ITEM_OPERATION_TYPES)})),
       created_at TEXT NOT NULL
     );
     -- from_/to_value hold the effective location or the recipient; from_/to_item_* the direct container;
@@ -278,7 +299,7 @@ export const applySchema = connection => connection.transaction(() => {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       operation_id INTEGER NOT NULL REFERENCES item_operations(id) ON DELETE CASCADE,
       item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
-      event_type TEXT NOT NULL CHECK(event_type IN (${keyList(ITEM_EVENT_TYPES)})),
+      event_type TEXT NOT NULL CHECK(event_type IN (${quotedList(ITEM_EVENT_TYPES)})),
       occurred_at TEXT NOT NULL,
       from_value TEXT,
       to_value TEXT,
@@ -330,7 +351,9 @@ export const applySchema = connection => connection.transaction(() => {
     ['transferred_to', 'TEXT'],
     ['last_verified_at', 'TEXT'],
     // Existing items read as not new; the free-text condition is never parsed to guess otherwise.
-    ['is_new', 'INTEGER NOT NULL DEFAULT 0 CHECK (is_new IN (0, 1))']
+    ['is_new', 'INTEGER NOT NULL DEFAULT 0 CHECK (is_new IN (0, 1))'],
+    // Version 8: every existing item becomes active, with no retirement data.
+    ...LIFECYCLE_COLUMNS
   ];
   for (const [name, definition] of missingItemColumns) {
     if (!itemColumns.has(name)) connection.exec(`ALTER TABLE items ADD COLUMN ${name} ${definition}`);
@@ -349,6 +372,7 @@ export const applySchema = connection => connection.transaction(() => {
     if (!columns.has('condition_grade')) connection.exec(`ALTER TABLE ${table} ADD COLUMN condition_grade TEXT ${CONDITION_GRADE_CHECK}`);
   }
   connection.exec('CREATE INDEX IF NOT EXISTS idx_items_parent ON items(parent_item_id)');
+  connection.exec('CREATE INDEX IF NOT EXISTS idx_items_lifecycle ON items(lifecycle_status)');
   // Existing photos keep the order they were shown in, by id, so no item's cover changes. The
   // migration is not an inventory edit, so the update trigger is recreated only after it ran.
   const photoColumns = new Set(connection.prepare('PRAGMA table_info(item_photos)').all().map(column => column.name));
@@ -367,7 +391,8 @@ export const applySchema = connection => connection.transaction(() => {
     ['source', "TEXT NOT NULL DEFAULT 'checklist' CHECK(source IN ('checklist', 'container_audit'))"],
     ['source_container_item_id', 'INTEGER REFERENCES items(id) ON DELETE SET NULL'],
     ['source_container_name_snapshot', 'TEXT'],
-    ['audit_scope', "TEXT CHECK(audit_scope IN ('direct', 'nested'))"]
+    ['audit_scope', "TEXT CHECK(audit_scope IN ('direct', 'nested'))"],
+    ['skipped_retired_count', 'INTEGER NOT NULL DEFAULT 0']
   ];
   for (const [name, definition] of missingRunColumns) {
     if (!runColumns.has(name)) connection.exec(`ALTER TABLE checklist_runs ADD COLUMN ${name} ${definition}`);

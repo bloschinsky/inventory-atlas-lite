@@ -47,6 +47,7 @@ import { DashboardService } from './services/dashboardService.js';
 import { DatabaseMetadataService } from './services/databaseMetadataService.js';
 import { ImageService } from './services/imageService.js';
 import { ItemHistoryService } from './services/itemHistoryService.js';
+import { ItemLifecycleService } from './services/itemLifecycleService.js';
 import { ItemService } from './services/itemService.js';
 import { ItemTransferService } from './services/itemTransferService.js';
 import { ItemTemplateService } from './services/itemTemplateService.js';
@@ -133,6 +134,7 @@ export function createApp({ production = false } = {}) {
   const itemHistoryService = new ItemHistoryService({ itemHistoryRepository });
   const itemService = new ItemService({ itemRepository, customFieldRepository, itemPhotoRepository, categoryRepository, itemHistoryService });
   const itemTransferService = new ItemTransferService({ itemRepository, itemHistoryRepository, itemHistoryService });
+  const itemLifecycleService = new ItemLifecycleService({ itemRepository, itemService, itemHistoryService });
   const bulkReplaceService = new BulkReplaceService({ bulkReplaceRepository, itemHistoryService });
   const databaseMetadataService = new DatabaseMetadataService({ databaseMetadataRepository: new DatabaseMetadataRepository(db) });
   const itemTemplateService = new ItemTemplateService({ itemTemplateRepository, categoryRepository, customFieldRepository });
@@ -185,7 +187,7 @@ export function createApp({ production = false } = {}) {
   app.use(createDashboardRoutes({ dashboardService }));
   app.use(createDatabaseMetadataRoutes({ databaseMetadataService }));
   app.use(createFieldRoutes({ customFieldService, aiFieldService }));
-  app.use(createItemRoutes({ itemService, bulkReplaceService, itemTransferService }));
+  app.use(createItemRoutes({ itemService, bulkReplaceService, itemTransferService, itemLifecycleService }));
   app.use(createItemTemplateRoutes({ itemTemplateService }));
   app.use(createChecklistRoutes({ checklistService, checklistRunService }));
   app.use(createPhotoRoutes({ photoService, imageUpload }));

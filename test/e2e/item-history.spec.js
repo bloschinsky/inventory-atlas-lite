@@ -93,6 +93,60 @@ test('lend to Volodia, mark as returned, and lend again; the full history filter
   await expect(page.getByText(/Changes made before History was installed are not shown/)).toBeVisible();
 });
 
+test('an item on loan is returned before it is retired, and History shows the retirement and restoration', async ({ page, request }) => {
+  const category = await createCategory(request, unique('Lifecycle'));
+  const garage = unique('Garage');
+  const boxName = unique('Box');
+  const box = await createItem(request, { name: boxName, category_id: category.id, location: garage });
+  const drillName = unique('Drill');
+  const drill = await createItem(request, { name: drillName, category_id: category.id, parent_item_id: box.id });
+  const lent = await request.post(`/api/items/${drill.id}/transfers`, { data: { recipient: 'Volodia' } });
+  expect(lent.status()).toBe(201);
+
+  // A container with something on loan inside it is not retired.
+  await page.goto(`/items/${box.id}`);
+  await page.mouse.move(600, 400);
+  await page.getByRole('button', { name: 'Retire item' }).click();
+  const boxDialog = page.getByRole('dialog', { name: `Retire ${boxName}` });
+  await boxDialog.getByLabel('Reason').selectOption({ label: 'Sold' });
+  await boxDialog.getByRole('button', { name: 'Retire', exact: true }).click();
+  await expect(boxDialog.getByRole('alert')).toHaveText('1 item here is still on loan. Mark it as returned before retiring it.');
+  await boxDialog.getByRole('button', { name: 'Cancel' }).click();
+
+  // The loaned item itself says why, and offers no confirmation until the loan is closed.
+  await page.goto(`/items/${drill.id}`);
+  await page.mouse.move(600, 400);
+  await page.getByRole('button', { name: 'Retire item' }).click();
+  const drillDialog = page.getByRole('dialog', { name: `Retire ${drillName}` });
+  await expect(drillDialog.getByRole('alert')).toHaveText('This item is on loan to Volodia. Mark it as returned before retiring it.');
+  await expect(drillDialog.getByRole('button', { name: 'Retire', exact: true })).toBeDisabled();
+  await drillDialog.getByRole('button', { name: 'Cancel' }).click();
+  await page.getByRole('region', { name: 'Loan' }).getByRole('button', { name: 'Mark as returned' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Mark as returned' }).click();
+  await expect(page.getByRole('region', { name: 'Loan' })).toBeHidden();
+
+  await page.getByRole('button', { name: 'Retire item' }).click();
+  await drillDialog.getByLabel('Reason').selectOption({ label: 'Lost' });
+  await drillDialog.getByRole('button', { name: 'Retire', exact: true }).click();
+  await expect(drillDialog).toBeHidden();
+  const retired = historyCard(page).getByRole('listitem').first();
+  await expect(retired.getByRole('heading', { name: 'Retired: Lost' })).toBeVisible();
+  await expect(retired.getByText(`Last location: ${garage}`)).toBeVisible();
+  await expect(retired.getByText(`Taken out of ${boxName}`)).toBeVisible();
+  // A retired item is not lent.
+  await expect(page.getByRole('button', { name: 'Transfer', exact: true })).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Restore to inventory' }).click();
+  const restore = page.getByRole('dialog', { name: `Restore ${drillName}` });
+  await restore.getByRole('button', { name: 'Restore to inventory' }).click();
+  await expect(restore).toBeHidden();
+  await expect(historyCard(page).getByRole('listitem').first().getByRole('heading', { name: 'Restored to inventory' })).toBeVisible();
+
+  await historyCard(page).getByRole('link', { name: 'View full history' }).click();
+  await page.getByText('Lifecycle', { exact: true }).click();
+  await expect(page.getByRole('list', { name: 'History' }).getByRole('heading')).toHaveText(['Restored to inventory', 'Retired: Lost']);
+});
+
 test('the history timeline on a phone in Ukrainian', async ({ page, request }) => {
   const category = await createCategory(request, unique('Phone'));
   const boxName = unique('Box');
@@ -109,6 +163,8 @@ test('the history timeline on a phone in Ukrainian', async ({ page, request }) =
   await expect(timeline.getByRole('heading', { name: 'Місце змінено' })).toBeVisible();
   await expect(timeline.getByText('Гараж → Горище')).toBeVisible();
   await expect(timeline.getByText(`Переміщено разом із «${boxName}»`)).toBeVisible();
-  // The timeline fits the phone screen without horizontal scrolling.
+  // The four filters and the timeline fit the phone screen without horizontal scrolling.
+  const lastFilter = await page.getByText('Списання', { exact: true }).boundingBox();
+  expect(lastFilter.x + lastFilter.width).toBeLessThanOrEqual(390);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });

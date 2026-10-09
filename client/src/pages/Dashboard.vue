@@ -307,6 +307,14 @@ onBeforeUnmount(() => controller?.abort());
             <div class="text-secondary">
               {{ scopeLabel }}
             </div>
+            <!-- The figures describe the active inventory; retired items are only counted here. -->
+            <RouterLink
+              v-if="data.retiredItems"
+              to="/items?lifecycle=retired"
+              class="small"
+            >
+              {{ $t('lifecycle.dashboard.retired', data.retiredItems) }}
+            </RouterLink>
           </div>
         </section>
       </div>

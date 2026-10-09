@@ -17,7 +17,7 @@ const props = defineProps({
 });
 
 const { t } = useI18n();
-const FILTERS = ['all', 'location', 'transfer'];
+const FILTERS = ['all', 'location', 'transfer', 'lifecycle'];
 const PREVIEW_SIZE = 5;
 const PAGE_SIZE = 20;
 const ICONS = {
@@ -56,12 +56,16 @@ const entries = computed(() => events.value.reduce((list, event) => {
 }, []));
 
 const viaItem = entry => entry.events.find(event => event.via_item)?.via_item;
+// Contents are retired, restored, or moved together with the item above them.
+const viaKey = entry => ({ retired: 'history.retiredWith', restored: 'history.restoredWith' })[entry.events[0].type] ?? 'history.movedWith';
 const operationLabel = entry => (['bulk_move', 'bulk_replace'].includes(entry.operation_type) ? t(`history.operations.${entry.operation_type}`) : '');
 const itemName = reference => (reference.exists ? reference.name : t('history.deletedItem', { name: reference.name }));
 
 function title(event) {
   if (event.type === 'transferred') return t('history.events.transferred', { name: event.to });
   if (event.type === 'returned') return t('history.events.returned', { name: event.from });
+  // A retirement stores its reason as a stable key in `to`.
+  if (event.type === 'retired') return t('history.events.retired', { reason: t(`lifecycle.reasons.${event.to}`) });
   return t(`history.events.${event.type}`);
 }
 
@@ -199,6 +203,43 @@ defineExpose({ reload: () => load() });
                   {{ event.to_item ? itemName(event.to_item) : $t('history.topLevel') }}
                 </component>
               </p>
+              <template v-if="event.type === 'retired'">
+                <p class="mb-1 text-break">
+                  {{ $t('history.lastLocation', { location: event.from || $t('history.noLocation') }) }}
+                </p>
+                <p
+                  v-if="event.from_item"
+                  class="meta-text mb-1 text-break"
+                >
+                  {{ $t('history.leftContainer', { name: itemName(event.from_item) }) }}
+                </p>
+              </template>
+              <template v-else-if="event.type === 'restored'">
+                <p class="mb-1 text-break">
+                  {{ $t('history.restoredTo', { location: event.to || $t('history.noLocation') }) }}
+                </p>
+                <p
+                  v-if="event.to_item"
+                  class="meta-text mb-1 text-break"
+                >
+                  <i18n-t
+                    keypath="history.storedIn"
+                    scope="global"
+                  >
+                    <template #name>
+                      <RouterLink
+                        v-if="event.to_item.exists"
+                        :to="`/items/${event.to_item.id}`"
+                      >
+                        {{ event.to_item.name }}
+                      </RouterLink>
+                      <template v-else>
+                        {{ itemName(event.to_item) }}
+                      </template>
+                    </template>
+                  </i18n-t>
+                </p>
+              </template>
               <template v-if="event.transfer">
                 <p
                   v-if="event.type === 'transferred' && event.transfer.expected_return_on"
@@ -231,7 +272,7 @@ defineExpose({ reload: () => load() });
               class="meta-text mb-0 text-break"
             >
               <i18n-t
-                keypath="history.movedWith"
+                :keypath="viaKey(entry)"
                 scope="global"
               >
                 <template #name>

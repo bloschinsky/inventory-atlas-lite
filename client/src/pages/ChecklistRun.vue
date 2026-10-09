@@ -8,6 +8,7 @@ import { formatDateTime } from '../i18n/index.js';
 import { MAX_RUN_ITEM_NOTE } from '../../../shared/checklists.js';
 import { modeKey, runTitle, stateBadge, stateKey } from '../checklists.js';
 import PageHeader from '../components/PageHeader.vue';
+import ItemLifecycleBadge from '../components/ItemLifecycleBadge.vue';
 import ItemThumbnail from '../components/ItemThumbnail.vue';
 
 /*
@@ -153,6 +154,13 @@ watch(() => route.params.runId, runId => { if (runId) load(); }, { immediate: tr
       {{ $t(audit ? 'checklists.audit.containerDeleted' : 'checklists.run.checklistDeleted') }}
     </div>
     <div
+      v-if="run.skipped_retired_count"
+      class="alert alert-warning"
+      role="status"
+    >
+      {{ $t('lifecycle.checklists.skipped', run.skipped_retired_count) }}
+    </div>
+    <div
       v-if="!open"
       class="alert alert-info"
       role="status"
@@ -221,6 +229,10 @@ watch(() => route.params.runId, runId => { if (runId) load(); }, { immediate: tr
                   v-if="!item.item_id"
                   class="badge bg-warning-lt"
                 >{{ $t('checklists.run.itemDeleted') }}</span>
+                <ItemLifecycleBadge
+                  v-else-if="item.retired"
+                  status="retired"
+                />
               </div>
             </div>
             <RouterLink

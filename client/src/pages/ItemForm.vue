@@ -16,11 +16,14 @@ form.parent_item_id = null;
 const error = ref(''); const saving = ref(false);
 const aiDraft = ref(null); const templateDraft = ref(null); const duplicateSource = ref(null);
 const photoWarning = ref('');
+// A retired item can only be kept inside a retired container, so its picker offers those instead.
+const itemLifecycle = ref('active');
 const itemId = ref(null); const parent = ref(null); const parentSearch = ref(''); const parentResults = ref([]);
 
 async function searchParents() {
   const query = new URLSearchParams({ search: parentSearch.value });
   if (itemId.value) query.set('excludeId', itemId.value);
+  if (itemLifecycle.value === 'retired') query.set('lifecycle', 'retired');
   parentResults.value = await api(`/api/items/parent-candidates?${query}`);
 }
 function selectParent(candidate) {
@@ -135,7 +138,7 @@ async function loadDraft() {
   if (editing.value) {
     const item = await api(`/api/items/${route.params.id}`);
     form.parent_item_id = item.parent_item_id;
-    itemId.value = item.id; parent.value = item.parent;
+    itemId.value = item.id; parent.value = item.parent; itemLifecycle.value = item.lifecycle_status;
     stored.value = { parent: item.parent, effective: item.effective_location, own: item.location };
     photos.value = item.photos.map(savedPhoto);
     savedOrder.value = item.photos.map(photo => photo.id);

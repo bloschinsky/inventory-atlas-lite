@@ -66,6 +66,13 @@ separate container, room, or shelf entity.
   they were; the displayed location changes only through
   [effective location inheritance](effective-location-inheritance.md).
 
+### Retired items
+
+A container and its contents always share one lifecycle status: retiring a leaf takes it out of its
+container, retiring a container either retires its whole subtree or nothing, an active item can never
+be stored in a retired container, and **Move to…** refuses retired items. See
+[Item lifecycle](item-lifecycle.md).
+
 ## Implementation overview
 
 - `items.parent_item_id` is a nullable self-reference with `ON DELETE RESTRICT`, indexed by

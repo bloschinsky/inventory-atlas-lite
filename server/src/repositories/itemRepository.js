@@ -53,6 +53,18 @@ const CUSTOM_SORT = {
   boolean: CUSTOM_SORT_VALUE
 };
 
+// The condition of a lifecycle view (`active`, `retired`, or `all`); only a known key ever selects SQL.
+const LIFECYCLE_WHERE = {
+  active: "i.lifecycle_status = 'active'",
+  retired: "i.lifecycle_status = 'retired'",
+  all: null
+};
+const lifecycleWhere = lifecycle => (Object.hasOwn(LIFECYCLE_WHERE, lifecycle) ? LIFECYCLE_WHERE[lifecycle] : LIFECYCLE_WHERE.active);
+
+// The retirement columns every item response carries; the service folds them into one object.
+const RETIREMENT_COLUMNS = `i.lifecycle_status, i.retired_at, i.retired_reason, i.retired_recipient, i.retired_note,
+  i.retired_location_snapshot, i.retired_parent_uuid_snapshot, i.retired_parent_name_snapshot`;
+
 export class ItemRepository {
   constructor(db) {
     this.db = db;
@@ -72,7 +84,7 @@ export class ItemRepository {
   }
 
   findRef(id) {
-    return this.db.prepare('SELECT id, uuid, name FROM items WHERE id = ?').get(id);
+    return this.db.prepare('SELECT id, uuid, name, lifecycle_status FROM items WHERE id = ?').get(id);
   }
 
   // The top-most container of the chain, or the item itself when it is top-level. The depth guard
@@ -127,7 +139,7 @@ export class ItemRepository {
   // Items named by numeric id or by UUID, as the API accepts either.
   findRefs({ ids, uuids }) {
     return this.db.prepare(`
-      SELECT id, uuid, name, parent_item_id FROM items
+      SELECT id, uuid, name, parent_item_id, lifecycle_status FROM items
       WHERE id IN (SELECT value FROM json_each(?)) OR uuid IN (SELECT value FROM json_each(?))
     `).all(JSON.stringify(ids), JSON.stringify(uuids));
   }
@@ -142,7 +154,7 @@ export class ItemRepository {
 
   listChildren(id) {
     return this.db.prepare(`
-      SELECT i.id, i.uuid, i.name, i.condition_grade, c.name AS category_name,
+      SELECT i.id, i.uuid, i.name, i.condition_grade, i.lifecycle_status, c.name AS category_name,
         ${coverPhotoIdSql('i.id')} AS thumbnail_id
       FROM items i JOIN categories c ON c.id = i.category_id
       WHERE i.parent_item_id = ? ORDER BY i.name COLLATE NOCASE
@@ -153,12 +165,14 @@ export class ItemRepository {
     Every item with only what a hierarchy node shows, in one statement: the root that provides its
     effective location and its direct child count come from grouped joins rather than a query per
     item, and its cover photo from the indexed lookup that every thumbnail uses. Names order
-    siblings, and the id keeps equal names stable.
+    siblings, and the id keeps equal names stable. A container and its contents always share one
+    lifecycle status, so a lifecycle view keeps every parent of the items it returns.
   */
-  listHierarchy() {
+  listHierarchy(lifecycle) {
+    const where = lifecycleWhere(lifecycle);
     return this.db.prepare(`
       ${ROOTS_CTE}
-      SELECT i.id, i.uuid, i.name, i.parent_item_id AS parent_id, i.location,
+      SELECT i.id, i.uuid, i.name, i.parent_item_id AS parent_id, i.location, i.lifecycle_status,
         c.id AS category_id, c.name AS category_name,
         root.id AS root_id, root.location AS root_location,
         ${coverPhotoIdSql('i.id')} AS thumbnail_id, COALESCE(kids.children_count, 0) AS children_count
@@ -167,6 +181,7 @@ export class ItemRepository {
       LEFT JOIN items root ON root.id = roots.root_id
       LEFT JOIN (SELECT parent_item_id, COUNT(*) AS children_count FROM items
         WHERE parent_item_id IS NOT NULL GROUP BY parent_item_id) kids ON kids.parent_item_id = i.id
+      ${where ? `WHERE ${where}` : ''}
       ORDER BY i.name COLLATE NOCASE, i.id
     `).all();
   }
@@ -183,10 +198,11 @@ export class ItemRepository {
     `sort` is either { core: key } or { fieldIds, type } of a merged custom column; unknown keys fall
     back to the name. Empty values always come last, and the item id keeps equal values in a stable
     order, so pagination never repeats or skips a row. `conditionGrade` is a grade key, or null for
-    items whose Condition is not set; leaving it undefined applies no Condition filter.
+    items whose Condition is not set; leaving it undefined applies no Condition filter. `lifecycle` is
+    a lifecycle view, applied to the count and the page alike.
   */
-  search({ search, categoryId, conditionGrade, sort = {}, direction, limit, offset }) {
-    const where = [];
+  search({ search, categoryId, conditionGrade, lifecycle, sort = {}, direction, limit, offset }) {
+    const where = [lifecycleWhere(lifecycle)].filter(Boolean);
     const params = {};
     if (search) {
       where.push(`(${[...SEARCH_COLUMNS.map(column => `${column} LIKE @search ESCAPE '\\'`), CUSTOM_TEXT_SEARCH].join(' OR ')})`);
@@ -213,7 +229,7 @@ export class ItemRepository {
       ${ROOTS_CTE}
       SELECT i.id, i.uuid, i.name, i.is_new, i.condition_grade, i.condition_notes, i.location, i.purchase_date,
         i.purchase_price_amount, i.purchase_price_currency, i.serial_number, i.transferred_to, i.created_at, i.updated_at,
-        c.id AS category_id, c.name AS category_name,
+        ${RETIREMENT_COLUMNS}, c.id AS category_id, c.name AS category_name,
         parent.id AS parent_id, parent.name AS parent_name,
         root.id AS root_id, root.uuid AS root_uuid, root.name AS root_name, root.location AS root_location,
         ${coverPhotoIdSql('i.id')} AS thumbnail_id
@@ -248,8 +264,9 @@ export class ItemRepository {
     `).all(JSON.stringify(uuids));
   }
 
-  listParentCandidates({ search, excludedIds }) {
-    const where = [];
+  // Only containers of the given lifecycle status qualify, so a move never mixes the two.
+  listParentCandidates({ search, excludedIds, lifecycle = 'active' }) {
+    const where = [lifecycle === 'retired' ? LIFECYCLE_WHERE.retired : LIFECYCLE_WHERE.active];
     const params = {};
     if (search) {
       where.push("i.name LIKE @search ESCAPE '\\'");
@@ -259,7 +276,7 @@ export class ItemRepository {
       where.push('i.id NOT IN (SELECT value FROM json_each(@excludedIds))');
       params.excludedIds = JSON.stringify(excludedIds);
     }
-    const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
+    const clause = `WHERE ${where.join(' AND ')}`;
     // The direct container tells apart candidates that share a name.
     return this.db.prepare(`
       SELECT i.id, i.uuid, i.name, c.name AS category_name, parent.name AS parent_name FROM items i
@@ -310,6 +327,51 @@ export class ItemRepository {
     this.db
       .prepare('INSERT INTO item_field_values (item_id, field_id, value) VALUES (?, ?, ?) ON CONFLICT(item_id, field_id) DO UPDATE SET value = excluded.value')
       .run(itemId, fieldId, value);
+  }
+
+  /*
+    Retires the given subtree in one statement. Each item keeps a text snapshot of its effective
+    location and direct container as they are right now (an UPDATE reads the rows before it writes
+    them); the subtree root alone leaves its container, so the contents stay nested inside it. The
+    saved `location` of every item is left exactly as it was.
+  */
+  retire(ids, rootId, { retiredAt, reason, recipient, note }) {
+    return this.db.prepare(`
+      ${ROOTS_CTE}
+      UPDATE items SET lifecycle_status = 'retired', retired_at = @retiredAt, retired_reason = @reason,
+        retired_recipient = @recipient, retired_note = @note,
+        retired_location_snapshot = snapshot.location, retired_parent_uuid_snapshot = snapshot.parent_uuid,
+        retired_parent_name_snapshot = snapshot.parent_name,
+        parent_item_id = CASE WHEN items.id = @rootId THEN NULL ELSE items.parent_item_id END,
+        updated_at = CURRENT_TIMESTAMP
+      FROM (
+        SELECT i.id, NULLIF(TRIM(CASE WHEN root.id IS NULL THEN i.location ELSE root.location END), '') AS location,
+          parent.uuid AS parent_uuid, parent.name AS parent_name
+        FROM items i
+        LEFT JOIN roots ON roots.id = i.id
+        LEFT JOIN items root ON root.id = roots.root_id
+        LEFT JOIN items parent ON parent.id = i.parent_item_id
+        WHERE i.id IN (SELECT value FROM json_each(@ids))
+      ) snapshot
+      WHERE items.id = snapshot.id
+    `).run({ ids: JSON.stringify(ids), rootId, retiredAt, reason, recipient, note }).changes;
+  }
+
+  /*
+    Makes the given retired subtree active again and clears its retirement data. Only the subtree
+    root changes its container (`parentId`, or none) and, when `location` is given, its saved location;
+    the nesting inside the subtree and every other column stay as they are.
+  */
+  restore(ids, rootId, { parentId, location }) {
+    return this.db.prepare(`
+      UPDATE items SET lifecycle_status = 'active', retired_at = NULL, retired_reason = NULL, retired_recipient = NULL,
+        retired_note = NULL, retired_location_snapshot = NULL, retired_parent_uuid_snapshot = NULL,
+        retired_parent_name_snapshot = NULL,
+        parent_item_id = CASE WHEN id = @rootId THEN @parentId ELSE parent_item_id END,
+        location = CASE WHEN id = @rootId AND @setLocation THEN @location ELSE location END,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id IN (SELECT value FROM json_each(@ids)) AND lifecycle_status = 'retired'
+    `).run({ ids: JSON.stringify(ids), rootId, parentId, setLocation: location === undefined ? 0 : 1, location: location ?? null }).changes;
   }
 
   countChildren(id) {

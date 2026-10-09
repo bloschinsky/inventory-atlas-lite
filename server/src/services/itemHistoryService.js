@@ -110,6 +110,39 @@ export class ItemHistoryService {
     });
   }
 
+  /*
+    Retire and Restore of the subtree below `rootId`. Each item records one lifecycle event that
+    carries its own context instead of separate location and container events: a retirement keeps
+    the reason (a stable key, in `to`), the last effective location, and, for the item itself, the
+    container it was taken out of; a restoration keeps the location and container it came back to.
+    The contents name the item they were retired or restored with. A retirement is dated when it
+    happened (`occurredAt`), like a loan; a restoration when it is recorded.
+  */
+  trackLifecycle(operationType, rootId, mutate, { reason = null, occurredAt } = {}) {
+    return this.history.transaction(() => {
+      const retiring = operationType === 'retire';
+      const before = retiring ? this.history.snapshot([rootId]) : null;
+      const result = mutate();
+      const rows = before ?? this.history.snapshot([rootId]);
+      this.record(operationType, rows.map(row => ({
+        item_id: row.id,
+        event_type: retiring ? 'retired' : 'restored',
+        ...(occurredAt && { occurred_at: occurredAt }),
+        ...(retiring ? { from_value: present(row.location), to_value: reason } : { to_value: present(row.location) }),
+        ...(row.depth === 0
+          ? (retiring
+            ? { from_item_id: row.parent_item_id, from_item_name: row.parent_name }
+            : { to_item_id: row.parent_item_id, to_item_name: row.parent_name })
+          : { via_item_id: row.top_id, via_item_name: row.top_name })
+      })));
+      return result;
+    });
+  }
+
+  countOpenTransfers(ids) {
+    return this.history.countOpenTransfers(ids);
+  }
+
   // One operation groups the events; an action that changed nothing leaves no trace at all.
   record(operationType, events) {
     if (!events.length) return null;
