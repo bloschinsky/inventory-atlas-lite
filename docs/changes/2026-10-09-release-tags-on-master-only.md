@@ -12,8 +12,9 @@ workflow published it from there. Releases are now cut only from `master`:
   ancestor of `origin/master` (`git merge-base --is-ancestor`), before any version check, build, or
   publishing job.
 - `AGENTS.md` Versioning: the version bump, the release-history entry, and the completion record stay
-  in the task branch, one version is one release published only from `master`, and a branch whose
-  version `master` has already reached moves to the next free version before merging.
+  in the task branch, one version is one release published only from `master`, a new version is
+  incremented from the highest one on `master` and in the branches of open pull requests, and a
+  branch whose version `master` has already reached moves to the next free version before merging.
 - `AGENTS.md` Git: never tag a task branch; tag the pull request's merge commit on `master` after the
   merge, or the task commit for work done directly on `master`; push a tag only after its `master`
   commit.

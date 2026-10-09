@@ -400,6 +400,7 @@ Safety rules:
 - Reserve `1.0.0` for an explicit decision that the product is ready to leave the initial MVP version line.
 - Decide and apply the version change as part of the task, in the task's own branch, before writing its completion record and creating the commit. The version bump, the `shared/release-history.json` entry, and the completion record travel together, so merging the branch brings a complete release to `master`.
 - One version is one release: each version gets exactly one release-history entry and one tag, and it is published only from `master` (see Git below).
+- Before choosing a new version, find the highest version already taken: the `package.json` version on an up-to-date `origin/master` and in the head branch of every open pull request (`gh pr list --state open --json number,headRefName`, then `git show origin/<branch>:package.json` after `git fetch`). Increment the patch or minor component from that highest version, not only from `master`, so parallel branches never claim the same version.
 - Before merging, check that the branch's version is still the next one: if `master` reached that version or a later one while the branch was open, move the branch to the next free version and update its release-history entry and completion record.
 
 ## Browser test coverage
