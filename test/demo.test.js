@@ -177,10 +177,10 @@ test('the Ukrainian demo translates the invented text and keeps names, serials, 
   assert.equal(byKey(ukrainian.checklists, 'weekend-photo-walk').name, 'Фотопрогулянка на вихідних');
   assert.equal(ukrainian.tourItem.name, 'Nikon F65 (запасний корпус)');
 
-  // Every invented text differs from English, unless it is a proper name, a standard, or a value with a unit.
+  // Every invented text differs from English, unless it is a proper name, a standard, a value with a unit, or a color value.
   const kept = new Set(['Nikon F65', 'Nikon F', 'USB-C', '1 TB', '2004–2010', '1998–2003']);
   const texts = entity => ['name', 'description', 'condition_notes'].map(name => entity[name]).filter(Boolean)
-    .concat(Object.values(entity.fields ?? {}).filter(value => typeof value === 'string' && !/^\d{4}-\d{2}-\d{2}$/.test(value)));
+    .concat(Object.values(entity.fields ?? {}).filter(value => typeof value === 'string' && !/^\d{4}-\d{2}-\d{2}$/.test(value) && !value.startsWith('{"key"')));
   for (const [index, item] of ukrainian.items.entries()) {
     const english = texts(fixture.items[index]);
     texts(item).forEach((text, position) => {

@@ -71,14 +71,16 @@ base64 data, or call any AI service; photos are added to each item afterwards th
 - **Insert Template** builds a document for the selected category on demand: two blank items with
   every base attribute, the purchase fields (currency `UAH`, like the item form), the serial number,
   and one `customFields` key per current field of the category — `""` for text fields and `null` for
-  number, date, and boolean fields. A non-empty editor asks for confirmation before it is replaced.
+  number, date, boolean, and color fields. A non-empty editor asks for confirmation before it is replaced.
 - **Preview** parses the document. Document-level problems — invalid JSON, a missing or unsupported
   version, a category mismatch, a missing or empty `items` array, more than 100 items, an unsupported
   property, a wrongly typed attribute, or an unknown custom field — are shown as one actionable
   message, and no preview is produced.
 - A parsed document becomes one card per proposed item. Every base attribute, the purchase date,
   the purchase price amount and currency, the serial number, and every custom field are editable:
-  booleans are a Yes/No list, dates use the date control, numbers and text are text inputs.
+  booleans are a Yes/No list, colors use the color picker, dates use the date control, numbers and text are text inputs.
+  A color may be written as its `{ "key", "hex" }` object or that object as a JSON string; see
+  [Color custom field](color-custom-field.md).
 - Value problems are shown inline on the affected control and the card is outlined, for example
   `Field "Ports" must be a number.` or `Item name is required.` A summary above the cards counts the
   items and how many need attention. The review is recalculated after every edit or removal.

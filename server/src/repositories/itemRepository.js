@@ -1,6 +1,7 @@
 import { coverPhotoIdSql } from './itemPhotoRepository.js';
 import { containsLike, startsWithLike } from './sql.js';
 import { CONDITION_GRADES } from '../../../shared/conditionGrades.js';
+import { COLOR_KEYS } from '../../../shared/colors.js';
 
 // Every item is walked down from its top-level container, so one pass labels the whole table with
 // the root that provides its effective location. Items inside a cycle are simply never reached.
@@ -46,12 +47,29 @@ const CUSTOM_SORT_VALUE = `(
   WHERE sv.item_id = i.id AND sv.field_id IN (SELECT value FROM json_each(@sortFieldIds))
   ORDER BY sv.field_id LIMIT 1
 )`;
+/*
+  A color sorts by its group in the semantic preset order, then Custom, and inside a group by its
+  HEX, so custom shades stay together and in a fixed order. The rank is a two-digit prefix of the
+  HEX; an unknown group or text that is not JSON reads as unset, like an empty value.
+*/
+const COLOR_RANK = `CASE json_extract(sv.value, '$.key') ${COLOR_KEYS
+  .map((key, index) => `WHEN '${key}' THEN '${String(index + 1).padStart(2, '0')}'`).join(' ')} END`;
+const COLOR_SORT_VALUE = `(
+  SELECT ${COLOR_RANK} || json_extract(sv.value, '$.hex') FROM item_field_values sv
+  WHERE sv.item_id = i.id AND sv.field_id IN (SELECT value FROM json_each(@sortFieldIds)) AND json_valid(sv.value)
+  ORDER BY sv.field_id LIMIT 1
+)`;
 const CUSTOM_SORT = {
   text: `${CUSTOM_SORT_VALUE} COLLATE NOCASE`,
   number: `CAST(${CUSTOM_SORT_VALUE} AS REAL)`,
   date: CUSTOM_SORT_VALUE,
-  boolean: CUSTOM_SORT_VALUE
+  boolean: CUSTOM_SORT_VALUE,
+  color: COLOR_SORT_VALUE
 };
+
+// The valid color values of a merged Color column; @colorFieldIds binds its field ids as one JSON parameter.
+const COLOR_VALUES = `SELECT 1 FROM item_field_values cv
+  WHERE cv.item_id = i.id AND cv.field_id IN (SELECT value FROM json_each(@colorFieldIds)) AND json_valid(cv.value)`;
 
 // The condition of a lifecycle view (`active`, `retired`, or `all`); only a known key ever selects SQL.
 const LIFECYCLE_WHERE = {
@@ -199,9 +217,11 @@ export class ItemRepository {
     back to the name. Empty values always come last, and the item id keeps equal values in a stable
     order, so pagination never repeats or skips a row. `conditionGrade` is a grade key, or null for
     items whose Condition is not set; leaving it undefined applies no Condition filter. `lifecycle` is
-    a lifecycle view, applied to the count and the page alike.
+    a lifecycle view, applied to the count and the page alike. `color` is { fieldIds, key } of a merged
+    Color column: a group key (`custom` matches every custom shade, whatever its HEX), or null for the
+    items of the column's categories that have no color there.
   */
-  search({ search, categoryId, conditionGrade, lifecycle, sort = {}, direction, limit, offset }) {
+  search({ search, categoryId, conditionGrade, color, lifecycle, sort = {}, direction, limit, offset }) {
     const where = [lifecycleWhere(lifecycle)].filter(Boolean);
     const params = {};
     if (search) {
@@ -216,6 +236,16 @@ export class ItemRepository {
     else if (conditionGrade) {
       where.push('i.condition_grade = @conditionGrade');
       params.conditionGrade = conditionGrade;
+    }
+    if (color) {
+      params.colorFieldIds = JSON.stringify(color.fieldIds);
+      if (color.key === null) {
+        where.push(`i.category_id IN (SELECT category_id FROM custom_fields WHERE id IN (SELECT value FROM json_each(@colorFieldIds)))
+          AND NOT EXISTS (${COLOR_VALUES})`);
+      } else {
+        where.push(`EXISTS (${COLOR_VALUES} AND json_extract(cv.value, '$.key') = @colorKey)`);
+        params.colorKey = color.key;
+      }
     }
     const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
     const total = this.db.prepare(`SELECT COUNT(*) AS count FROM items i ${clause}`).get(params).count;

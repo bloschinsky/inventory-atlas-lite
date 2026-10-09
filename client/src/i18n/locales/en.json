@@ -680,7 +680,35 @@
     "text": "Text",
     "number": "Number",
     "date": "Date",
-    "boolean": "Boolean"
+    "boolean": "Boolean",
+    "color": "Color"
+  },
+  "colors": {
+    "presets": {
+      "black": "Black",
+      "white": "White",
+      "gray": "Gray",
+      "brown": "Brown",
+      "beige": "Beige",
+      "red": "Red",
+      "orange": "Orange",
+      "yellow": "Yellow",
+      "green": "Green",
+      "blue": "Blue",
+      "purple": "Purple",
+      "pink": "Pink"
+    },
+    "custom": "Custom",
+    "customOption": "Custom",
+    "customPicker": "Pick a custom color",
+    "customHex": "Custom color HEX code",
+    "invalidHex": "Enter the color as #RRGGBB, for example #A08C75.",
+    "selected": "Selected:",
+    "chooseCustom": "Pick a color or type its HEX code.",
+    "notSet": "Not set",
+    "clear": "Clear",
+    "filterLabel": "Color",
+    "allColors": "All colors"
   },
   "categories": {
     "title": "Categories & Fields",
@@ -1481,6 +1509,7 @@
     "INVALID_CLOUD_SETTINGS": "Invalid cloud backup settings.",
     "INVALID_CLOUD_TIME": "Time must be in HH:MM format.",
     "INVALID_CLOUD_WEEKDAY": "Choose a day of the week.",
+    "INVALID_CUSTOM_FIELD_COLOR": "Field \"{field}\" must be one of the preset colors or a custom #RRGGBB color.",
     "INVALID_CUSTOM_FIELD_BOOLEAN": "Field \"{field}\" must be a boolean.",
     "INVALID_CUSTOM_FIELD_DATE": "Field \"{field}\" must be a valid date.",
     "INVALID_CUSTOM_FIELD_NUMBER": "Field \"{field}\" must be a number.",

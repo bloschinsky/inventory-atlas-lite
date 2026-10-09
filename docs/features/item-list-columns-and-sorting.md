@@ -24,11 +24,12 @@ server before the page is cut, and the view choice is remembered in the browser.
   is `—`; text is truncated with the full value in `title`; Location is the effective (inherited)
   location; Stored inside links to the container. Purchase Price uses the locale money formatter,
   Purchase Date and custom dates the date formatter, Created/Updated the date-time formatter, and
-  yes/no fields show the translated Yes/No. Other custom values are shown exactly as stored.
+  yes/no fields show the translated Yes/No, and color fields a swatch with the color's localized name. Other custom values are shown exactly as stored.
 - **Sorting.** Sortable headers are Tabler `table-sort` buttons and the header cell carries
   `aria-sort`. A new column sorts ascending; the active column toggles between ascending and
   descending. Photo and Stored inside are not sortable and have no sort button. Condition shows the
-  [grade badge](condition-grading.md) and sorts by grade rank, with Not set last. Changing the sort
+  [grade badge](condition-grading.md) and sorts by grade rank, with Not set last; a Color column sorts
+  in [palette order](color-custom-field.md), then Custom. Changing the sort
   returns to page 1.
 - **Phone cards** (below `lg`): the name is the title; the thumbnail is shown only while Photo is
   chosen; the category is an unlabeled line; every other chosen column with a value is a
@@ -66,7 +67,7 @@ server before the page is cut, and the view choice is remembered in the browser.
   per-type custom wrapper whose field ids are bound as one JSON parameter. It orders by
   `(expression) IS NULL`, the expression, and `i.id`, so empty values stay last in both directions
   and pages are stable. Text sorts `COLLATE NOCASE`, numbers and purchase prices `CAST(... AS REAL)`
-  (the amount only, whatever the currency), ISO dates and timestamps as text, and Location by the
+  (the amount only, whatever the currency), colors by palette rank and HEX, ISO dates and timestamps as text, and Location by the
   effective location. The text custom search is an `EXISTS` subquery inside the same count and page
   statements. `ItemRepository.listColumnValues()` loads the requested values for the page with
   `json_each` parameters.

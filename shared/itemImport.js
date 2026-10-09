@@ -47,15 +47,18 @@ export function itemImportTemplate(category, fields) {
   return { version: ITEM_IMPORT_VERSION, category: category.name, items: [blank(), blank()] };
 }
 
-// Preview values are strings bound to form controls. Booleans become the "1"/"0" the item form uses;
-// anything unreadable is kept as text so it stays visible next to its inline error.
+/*
+  Preview values are strings bound to form controls. Booleans become the "1"/"0" the item form uses,
+  and colors (a { key, hex } object or its JSON text) their canonical JSON text; anything unreadable
+  is kept as text so it stays visible next to its inline error.
+*/
 const draftFieldValue = (type, value) => {
   if (value === null || value === undefined) return '';
-  if (type !== 'boolean') return String(value);
+  if (type !== 'boolean' && type !== 'color') return String(value);
   try {
     return validateFieldValue(type, value, '');
   } catch {
-    return String(value);
+    return isPlainObject(value) ? JSON.stringify(value) : String(value);
   }
 };
 
@@ -105,7 +108,8 @@ const readItem = (item, index, fieldsByKey) => {
     }
     if (seen.has(field.id)) throw refuse('IMPORT_DUPLICATE_CUSTOM_FIELD', { index: position, field: field.name });
     seen.add(field.id);
-    if (value !== null && !['string', 'number', 'boolean'].includes(typeof value)) {
+    // Only a color may be written as an object: its { key, hex } form.
+    if (value !== null && !['string', 'number', 'boolean'].includes(typeof value) && !(field.type === 'color' && isPlainObject(value))) {
       throw refuse('IMPORT_CUSTOM_FIELD_VALUE_TYPE', { index: position, field: field.name });
     }
     customFields[field.name] = draftFieldValue(field.type, value);

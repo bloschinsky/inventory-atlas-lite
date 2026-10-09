@@ -7,6 +7,8 @@ import { capabilities } from '../capabilities.js';
 import { CORE_ITEM_COLUMNS, DEFAULT_ITEM_SORT, ITEMS_VIEW_STORAGE_KEY, labelColumns } from '../itemColumns.js';
 import { labelSelection, printLabelsRoute, toggleLabelSelection } from '../labelSelection.js';
 import { CONDITION_GRADES_BEST_FIRST } from '../conditionGrades.js';
+import { colorLabelKey } from '../colors.js';
+import { COLOR_KEYS } from '../../../shared/colors.js';
 import { LIFECYCLE_FILTERS } from '../../../shared/itemLifecycle.js';
 import { useTablePreferences } from '../useTablePreferences.js';
 import AddItemMenu from '../components/AddItemMenu.vue';
@@ -40,8 +42,12 @@ const storedLifecycle = () => {
   try { return sessionStorage.getItem(LIFECYCLE_STORAGE_KEY); } catch { return null; }
 };
 const initialLifecycle = [route.query.lifecycle, storedLifecycle()].find(value => LIFECYCLE_FILTERS.includes(value)) ?? 'active';
-// `condition` is a grade key, "unset" for items without a grade, or empty for every item.
-const filters = reactive({ search: '', categoryId: '', condition: '', lifecycle: initialLifecycle, page: 1 });
+/*
+  `condition` is a grade key, "unset" for items without a grade, or empty for every item. `color` is
+  "<Color column key>|<group key or unset>", or empty for every item; the server filters by the group
+  key, so Custom matches every custom shade.
+*/
+const filters = reactive({ search: '', categoryId: '', condition: '', color: '', lifecycle: initialLifecycle, page: 1 });
 let timer;
 let ready = false;
 
@@ -56,16 +62,31 @@ const customFields = computed(() => visibleColumns.value.filter(column => !colum
 const mobileSortColumns = computed(() => labeledColumns.value.filter(column => column.sortable
   && (column.key === view.sort || visibleColumns.value.includes(column))));
 
-const filtered = computed(() => Boolean(filters.search.trim() || filters.categoryId || filters.condition || filters.lifecycle !== 'active'));
+// Every Color column (merged across categories) offers its groups, Custom, and Not set.
+const colorColumns = computed(() => labeledColumns.value.filter(column => column.type === 'color'));
+const colorFilterGroups = computed(() => colorColumns.value.map(column => ({
+  key: column.key,
+  label: column.label,
+  options: [...COLOR_KEYS, 'unset'].map(key => ({
+    value: `${column.key}|${key}`,
+    label: t(key === 'unset' ? 'colors.notSet' : colorLabelKey(key))
+  }))
+})));
+
+const filtered = computed(() => Boolean(filters.search.trim() || filters.categoryId || filters.condition || filters.color
+  || filters.lifecycle !== 'active'));
 const countLabel = computed(() => t('items.count', result.value.pagination.total));
 
 async function load() {
   loading.value = true; error.value = '';
-  const params = new URLSearchParams(Object.entries({ ...filters, sort: view.sort, direction: view.direction, fields: customFields.value })
-    .filter(([, value]) => value !== ''));
+  const { color, ...rest } = filters;
+  const [colorField, colorKey] = color ? color.split('|') : ['', ''];
+  const params = new URLSearchParams(Object.entries({
+    ...rest, colorField, color: colorKey, sort: view.sort, direction: view.direction, fields: customFields.value
+  }).filter(([, value]) => value !== ''));
   try { result.value = await api(`/api/items?${params}`); } catch (e) { error.value = e.message; } finally { loading.value = false; }
 }
-watch(() => [filters.categoryId, filters.condition, filters.lifecycle, filters.page, view.sort, view.direction, customFields.value], () => { if (ready) load(); });
+watch(() => [filters.categoryId, filters.condition, filters.color, filters.lifecycle, filters.page, view.sort, view.direction, customFields.value], () => { if (ready) load(); });
 function changeLifecycle(value) {
   filters.lifecycle = value;
   filters.page = 1;
@@ -219,6 +240,38 @@ onMounted(async () => {
           <option value="unset">
             {{ $t('condition.notSet') }}
           </option>
+        </select>
+      </div>
+      <div
+        v-if="colorColumns.length"
+        class="col-12 col-sm-4 col-lg-2"
+      >
+        <label
+          class="form-label"
+          for="items-color"
+        >{{ colorColumns.length === 1 ? colorColumns[0].label : $t('colors.filterLabel') }}</label>
+        <select
+          id="items-color"
+          v-model="filters.color"
+          class="form-select"
+          @change="changed"
+        >
+          <option value="">
+            {{ $t('colors.allColors') }}
+          </option>
+          <optgroup
+            v-for="group in colorFilterGroups"
+            :key="group.key"
+            :label="group.label"
+          >
+            <option
+              v-for="option in group.options"
+              :key="option.value"
+              :value="option.value"
+            >
+              {{ option.label }}
+            </option>
+          </optgroup>
         </select>
       </div>
       <div class="col-12 col-sm-8 col-lg-auto">
@@ -388,7 +441,7 @@ onMounted(async () => {
   >
     <div class="empty">
       <p class="empty-title">
-        {{ filters.lifecycle === 'retired' && !filters.search.trim() && !filters.categoryId && !filters.condition
+        {{ filters.lifecycle === 'retired' && !filters.search.trim() && !filters.categoryId && !filters.condition && !filters.color
           ? $t('lifecycle.filter.noRetired') : filtered ? $t('items.noMatches') : $t('items.emptyTitle') }}
       </p>
       <p class="empty-subtitle text-secondary">

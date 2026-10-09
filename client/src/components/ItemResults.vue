@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue';
+import ColorValue from './ColorValue.vue';
 import ConditionGradeBadge from './ConditionGradeBadge.vue';
 import ItemLifecycleBadge from './ItemLifecycleBadge.vue';
 import ItemNewStatusBadge from './ItemNewStatusBadge.vue';
@@ -141,6 +142,10 @@ const editRoute = item => `/items/${item.id}/edit`;
                   v-else-if="column.key === 'condition'"
                   :grade="item.condition_grade"
                 />
+                <ColorValue
+                  v-else-if="column.type === 'color'"
+                  :value="item.custom_values?.[column.key]"
+                />
                 <template v-else>
                   {{ columnText(item, column) || '—' }}
                 </template>
@@ -232,6 +237,10 @@ const editRoute = item => `/items/${item.id}/edit`;
                   <ConditionGradeBadge
                     v-else-if="column.key === 'condition'"
                     :grade="item.condition_grade"
+                  />
+                  <ColorValue
+                    v-else-if="column.type === 'color'"
+                    :value="item.custom_values?.[column.key]"
                   />
                   <template v-else>
                     {{ columnText(item, column) }}

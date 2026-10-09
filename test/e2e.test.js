@@ -812,13 +812,13 @@ test('AI field generation returns a reviewable draft and never writes to the cat
     assert.equal(providerRequest.body.store, false);
     assert.equal(providerRequest.body.text.format.type, 'json_schema');
     assert.equal(providerRequest.body.text.format.strict, true);
-    assert.deepEqual(providerRequest.body.text.format.schema.properties.fields.items.properties.type.enum, ['text', 'number', 'date', 'boolean']);
+    assert.deepEqual(providerRequest.body.text.format.schema.properties.fields.items.properties.type.enum, ['text', 'number', 'date', 'boolean', 'color']);
     const prompt = JSON.parse(providerRequest.body.input[0].content[0].text);
     assert.equal(prompt.description, 'Vintage computer expansion cards.');
     assert.equal(prompt.categoryName, 'Expansion Cards');
     assert.deepEqual(prompt.existingFields, ['Brand']);
     assert.ok(prompt.builtInFields.includes('Purchase Date'));
-    assert.deepEqual(prompt.supportedTypes, ['text', 'number', 'date', 'boolean']);
+    assert.deepEqual(prompt.supportedTypes, ['text', 'number', 'date', 'boolean', 'color']);
 
     // Generation alone changes nothing; the existing batch endpoint stays the only create path.
     assert.equal((await request(`/api/categories/${category.id}/fields`)).length, 1);

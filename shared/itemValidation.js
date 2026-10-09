@@ -6,6 +6,7 @@
 */
 import { AppError } from './appError.js';
 import { isConditionGrade } from './conditionGrades.js';
+import { encodeColor, readColor } from './colors.js';
 
 const invalid = (code, params) => new AppError(code, params, 400);
 
@@ -104,11 +105,17 @@ const isNumeric = raw => (typeof raw === 'number' && Number.isFinite(raw))
   || (typeof raw === 'string' && raw.trim() !== '' && Number.isFinite(Number(raw)));
 
 /*
-  A custom field value as it is stored: text, with booleans normalized to "1" or "0". Empty is null.
-  Refusals name the field, which is user data and is shown exactly as it was entered.
+  A custom field value as it is stored: text, with booleans normalized to "1" or "0" and colors to
+  their canonical JSON text (a color may arrive as its { key, hex } object or as that text). Empty is
+  null. Refusals name the field, which is user data and is shown exactly as it was entered.
 */
 export const validateFieldValue = (type, raw, field) => {
   if (raw === '' || raw === null || raw === undefined) return null;
+  if (type === 'color') {
+    const color = readColor(raw);
+    if (!color) throw invalid('INVALID_CUSTOM_FIELD_COLOR', { field });
+    return encodeColor(color);
+  }
   if (type === 'number' && !isNumeric(raw)) throw invalid('INVALID_CUSTOM_FIELD_NUMBER', { field });
   if (type === 'date' && (typeof raw !== 'string' || !isIsoDate(raw.trim()))) throw invalid('INVALID_CUSTOM_FIELD_DATE', { field });
   if (type === 'boolean' && !booleanValues.includes(raw)) throw invalid('INVALID_CUSTOM_FIELD_BOOLEAN', { field });

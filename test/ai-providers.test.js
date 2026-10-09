@@ -383,6 +383,31 @@ test('AI flows read a renamed field under its new name and the same id', async (
   assert.deepEqual(item.dynamicFields, { [maker.id]: 'Creative' });
 });
 
+test('AI Add Item maps colors to a preset, keeps a defensible HEX as custom, and drops anything else', async () => {
+  let values = [];
+  const features = buildFeatures({
+    settings: ollama,
+    reply: () => ({
+      observedMarkings: [], categoryId, confidence: 0.9, needsDetailedImageAnalysis: false,
+      baseFields: { name: 'Jacket', description: null, condition_notes: null, location: null, purchase_date: null, purchase_price_amount: null, purchase_price_currency: null, serial_number: null },
+      dynamicFields: values.map((value, index) => ({ fieldId: fields[index].id, value })), warnings: []
+    })
+  });
+  const categoryId = features.categoryService.create({ name: 'Clothes' }).id;
+  const fields = ['Main', 'Lining', 'Trim', 'Logo', 'Zip', 'Hood', 'Cuffs'].map(name => features.customFieldService.create(categoryId, { name, type: 'color' }));
+
+  values = ['Brown', '#a08c75', '{"key":"blue","hex":"#2878D0"}', 'dark navy', '#12345', '{"key":"red","hex":"#000000"}', true];
+  const draft = await features.aiItemAnalysisService.analyze(null, 'A brown jacket with a tan lining and blue trim');
+  assert.deepEqual(draft.dynamicFields, {
+    [fields[0].id]: '{"key":"brown","hex":"#795548"}',
+    [fields[1].id]: '{"key":"custom","hex":"#A08C75"}',
+    [fields[2].id]: '{"key":"blue","hex":"#2878D0"}'
+  });
+  // The model is told about the type and the preset names it may use.
+  assert.match(features.calls[0].request.input, /"type":"color"/);
+  assert.match(features.calls[0].request.instructions, /black, white, gray, brown, beige, red, orange, yellow, green, blue, purple, pink/);
+});
+
 test('AI Add Item accepts text with any model and photos only with a model that can read them', async () => {
   const draft = categoryId => ({
     observedMarkings: [], categoryId, confidence: 0.8, needsDetailedImageAnalysis: false,

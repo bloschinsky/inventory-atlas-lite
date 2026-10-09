@@ -1,6 +1,7 @@
 import { httpError } from '../httpError.js';
 import { detectImageMime } from '../imageMime.js';
 import { CONDITION_GRADES, isConditionGrade } from '../../../shared/conditionGrades.js';
+import { COLOR_PRESETS, customColor, encodeColor, normalizeHex, presetColor, readColor } from '../../../shared/colors.js';
 
 const baseFieldNames = [
   'name', 'description', 'condition_notes', 'location', 'purchase_date',
@@ -62,7 +63,22 @@ Distinguish the commercial product name from model numbers, part numbers, serial
 Treat facts the user states in the description and clearly readable markings in the image as supported evidence. When both sources agree, combine them. When they add different details, merge the supported facts. When they conflict, do not silently choose one: use the most strongly supported value and add a warning that names the conflict so the user can resolve it during review.
 Set is_new to true only when the evidence explicitly establishes that the item is new or unused: the user says so, or readable labeling or context states it. Never infer it from a box, clean packaging, a pristine look, or the absence of visible wear; otherwise set is_new to false. Never derive is_new from the condition, or the condition from is_new.
 Set condition_grade only when the evidence clearly supports one grade: excellent (works correctly, no significant damage, at most very small signs of use), good (works correctly, visible signs of normal use), fair (works, significant wear or minor defects), poor (serious defects, works only partly or needs repair), or broken (does not work correctly, needs repair or replacement). Otherwise set condition_grade to null; never guess it. Put specific details of the physical state, such as scratches, defects, wear, missing parts, or battery state, in condition_notes, and never write New, Used, or a similar lifecycle state there.
+For a field of type color, return the lowercase preset name (${COLOR_PRESETS.map(preset => preset.key).join(', ')}) when the item's main color clearly belongs to that group; return an exact #RRGGBB value only when a specific shade is clearly established and no preset name fits; otherwise return null.
 Use only supported facts. Never invent unsupported values, serial numbers, purchase prices, purchase dates, locations, exact model or part numbers, or hidden technical specifications. Explicit user-provided values and visible image markings may be used. Use null when a value is unknown. Choose only a supplied category and only its field IDs. Return JSON only.`;
+
+/*
+  The model may name a preset group, give an exact #RRGGBB shade, or return a full color value. A
+  clear preset name maps to that preset, a valid HEX is kept as a custom color and never moved to a
+  preset, and anything else (free text, an invalid HEX, or contradictory JSON) leaves the field unset.
+*/
+function aiColorValue(value) {
+  if (typeof value !== 'string') return null;
+  const text = value.trim().toLowerCase();
+  if (COLOR_PRESETS.some(preset => preset.key === text)) return encodeColor(presetColor(text));
+  if (normalizeHex(text)) return encodeColor(customColor(text));
+  const color = readColor(value);
+  return color ? encodeColor(color) : null;
+}
 
 function cleanString(value, maximum = 5000) {
   return typeof value === 'string' && value.trim() ? value.trim().slice(0, maximum) : null;
@@ -108,6 +124,10 @@ function normalizeDraft(raw, categories, fields, hasImage) {
     } else if (field.type === 'number') {
       if (!Number.isFinite(Number(entry.value))) continue;
       dynamicFields[field.id] = String(entry.value);
+    } else if (field.type === 'color') {
+      const color = aiColorValue(entry.value);
+      if (!color) continue;
+      dynamicFields[field.id] = color;
     } else if (field.type === 'date') {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(String(entry.value))) continue;
       dynamicFields[field.id] = String(entry.value);

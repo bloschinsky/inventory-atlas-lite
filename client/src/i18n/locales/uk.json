@@ -680,7 +680,35 @@
     "text": "Текст",
     "number": "Число",
     "date": "Дата",
-    "boolean": "Так/ні"
+    "boolean": "Так/ні",
+    "color": "Колір"
+  },
+  "colors": {
+    "presets": {
+      "black": "Чорний",
+      "white": "Білий",
+      "gray": "Сірий",
+      "brown": "Коричневий",
+      "beige": "Бежевий",
+      "red": "Червоний",
+      "orange": "Помаранчевий",
+      "yellow": "Жовтий",
+      "green": "Зелений",
+      "blue": "Синій",
+      "purple": "Фіолетовий",
+      "pink": "Рожевий"
+    },
+    "custom": "Власний",
+    "customOption": "Власний",
+    "customPicker": "Вибрати власний колір",
+    "customHex": "HEX-код власного кольору",
+    "invalidHex": "Введіть колір у форматі #RRGGBB, наприклад #A08C75.",
+    "selected": "Вибрано:",
+    "chooseCustom": "Виберіть колір або введіть його HEX-код.",
+    "notSet": "Не вказано",
+    "clear": "Очистити",
+    "filterLabel": "Колір",
+    "allColors": "Усі кольори"
   },
   "categories": {
     "title": "Категорії та поля",
@@ -1481,6 +1509,7 @@
     "INVALID_CLOUD_SETTINGS": "Некоректні налаштування хмарного резервного копіювання.",
     "INVALID_CLOUD_TIME": "Час має бути у форматі ГГ:ХХ.",
     "INVALID_CLOUD_WEEKDAY": "Виберіть день тижня.",
+    "INVALID_CUSTOM_FIELD_COLOR": "Поле «{field}» має містити один із готових кольорів або власний колір у форматі #RRGGBB.",
     "INVALID_CUSTOM_FIELD_BOOLEAN": "Поле «{field}» має бути значенням так/ні.",
     "INVALID_CUSTOM_FIELD_DATE": "Поле «{field}» має бути коректною датою.",
     "INVALID_CUSTOM_FIELD_NUMBER": "Поле «{field}» має бути числом.",

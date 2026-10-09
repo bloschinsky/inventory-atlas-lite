@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { api, jsonOptions } from '../api.js';
 import { translateError } from '../i18n/index.js';
 import { CONDITION_GRADES_BEST_FIRST } from '../conditionGrades.js';
+import ColorPicker from './ColorPicker.vue';
 import {
   MAX_BATCH_ITEMS, hasDraftErrors, itemImportDocument, itemImportTemplate, parseItemImportDocument,
   reviewItemDraft
@@ -400,12 +401,27 @@ onBeforeUnmount(() => {
                   :key="field.id"
                   class="col-md-6"
                 >
+                  <div
+                    v-if="field.type === 'color'"
+                    :id="inputId(index, `field-${field.id}-label`)"
+                    class="form-label"
+                  >
+                    {{ field.name }}
+                  </div>
                   <label
+                    v-else
                     class="form-label"
                     :for="inputId(index, `field-${field.id}`)"
                   >{{ field.name }}</label>
+                  <ColorPicker
+                    v-if="field.type === 'color'"
+                    v-model="draft.customFields[field.name]"
+                    :name="inputId(index, `field-${field.id}`)"
+                    :labelledby="inputId(index, `field-${field.id}-label`)"
+                    :invalid="Boolean(reviews[index].customFields?.[field.name])"
+                  />
                   <select
-                    v-if="field.type === 'boolean'"
+                    v-else-if="field.type === 'boolean'"
                     :id="inputId(index, `field-${field.id}`)"
                     v-model="draft.customFields[field.name]"
                     class="form-select"
@@ -434,7 +450,10 @@ onBeforeUnmount(() => {
                     :type="field.type === 'date' ? 'date' : 'text'"
                     :inputmode="field.type === 'number' ? 'decimal' : undefined"
                   >
-                  <div class="invalid-feedback">
+                  <div
+                    class="invalid-feedback"
+                    :class="{ 'd-block': field.type === 'color' && reviews[index].customFields?.[field.name] }"
+                  >
                     {{ translateError(reviews[index].customFields?.[field.name]) }}
                   </div>
                 </div>

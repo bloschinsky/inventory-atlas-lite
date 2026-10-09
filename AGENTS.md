@@ -135,6 +135,7 @@ The project stays small and readable. Do not add:
   `RetireItemDialog.vue` (reason, date, recipient, note, and the contents choice of a container) and
   `RestoreItemDialog.vue` (restore on its own at a location or inside an active container) are its two transitions.
 - `client/src/itemColumns.js` — Items view column labels, cell text formatting, and its preference storage key.
+- `client/src/colors.js` — the interface face of the Color custom field (label keys, reading a stored value, checkmark contrast); `client/src/components/ColorPicker.vue` is the accessible swatch picker with Custom HEX and Clear, shared by the item form, the template editor, and Batch Add Items, and `ColorValue.vue` the read-only swatch and name of the details, table, and cards.
 - `client/src/conditionGrades.js` — the interface mapping of the Condition grades (label key, badge class, chart color, best-first order); `client/src/components/ConditionGradeBadge.vue` is the shared grade badge and `ConditionHelpDialog.vue` the Condition grading help opened from the item form.
 - `client/src/useTablePreferences.js` — reusable browser-local table view state: visible columns, sort, reset, and reconciliation with the current columns.
 - `client/src/components/TableColumnPicker.vue` and `SortableHeader.vue` — reusable Columns menu and sortable table header cell.
@@ -173,6 +174,7 @@ The project stays small and readable. Do not add:
 - `shared/aiProviders.js` — AI provider presets (default base URLs, key requirements) and base-URL validation, shared by Settings and the server.
 - `shared/itemColumns.js` — Items view core columns, default sort, and the stable custom column key, shared by the client and the server.
 - `shared/conditionGrades.js` — the fixed Condition grade keys in rank order, shared by the client and the server.
+- `shared/colors.js` — the Color field palette (twelve presets with canonical HEX codes, then `custom`) in sort order, HEX normalization, and the reading, validation, and canonical encoding of `{ key, hex }` values, shared by the client and the server.
 - `shared/itemLifecycle.js` — the lifecycle statuses, retirement reasons, list views (`active`, `all`, `retired`), and text limits, shared by the client and the server.
 - `shared/itemQr.js` — canonical `ial:item:v1:<uuid>` QR payload with its encoder and strict decoder.
 - `shared/checklists.js` — checklist modes, run item states, the note limit, and the run count rule, shared by the client and the server.
@@ -197,6 +199,7 @@ The project stays small and readable. Do not add:
 - `test/item-photo-order.test.js` — persisted photo order and the cover photo: the schema and the version 7 migration, restore validation, ordered uploads, reorder validation and atomicity, deletion, the shared cover thumbnail, and the `PUT /api/items/:id/photos/order` contract.
 - `test/item-lifecycle.test.js` — the item lifecycle: schema and the version 8 migration, restore of an older backup, retire and restore of leaves and subtrees with their snapshots, atomicity, invalid and repeated transitions, the containment guards, server-side list and hierarchy filters, the Dashboard, checklists, and the HTTP API.
 - `test/item-new-flag.test.js` — the core New flag: schema and the version 6 migration, restore validation, strict boolean validation, list sorting, the column catalog, template defaults, and batch import.
+- `test/color-field.test.js` — the Color custom field: the shared rules, the version 10 rebuild of `custom_fields` and restore of a version 9 backup, item and template values, batch import, semantic sorting, the group/Custom/Not set filter, and the HTTP contract.
 - `test/condition-grading.test.js` — Condition grade and Condition Notes: schema, the version 7 migration that keeps old text as notes, restore, grade validation, rank sorting, the filter, templates, duplicates, batch import, and the Dashboard.
 - `test/serverProcess.js` — starts and stops the real server for the API tests on a free port chosen by the operating system (`PORT=0`), reading the bound port from its listening line.
 - `test/hierarchy.test.js` — the hierarchy endpoint (shape, inherited location, one statement), the Location and Category projection rules, per-grouping expansion, and the Graph layout.
@@ -212,6 +215,7 @@ The project stays small and readable. Do not add:
 - `test/cloud-backup.test.js` — cloud backup services, adapters, scheduler, and API against the local Dropbox/Google Drive stub in `test/e2e/cloudProviderStub.js`.
 - `test/fixtures/` — real source photos used as regression input by the Node.js tests.
 - `test/e2e/settings-navigation.spec.js` — Settings section routes and redirects, the active state, the desktop section list, and the phone section selector.
+- `test/e2e/color-field.spec.js` — creating a Color field, the picker (presets, arrow keys, Custom HEX, Clear), details, the Items column with sorting and filters, templates, both color modes, and phones.
 - `test/e2e/lifecycle.spec.js` — Retire and Restore from the item page, the Active / All / Retired views of Items and Hierarchy, the container contents choice, checklists with retired items, the Dashboard link, phones, and Ukrainian.
 - `test/e2e/` — Playwright browser tests, their fixtures, shared helpers, and the run launcher.
 - `playwright.config.js` — Playwright projects, isolated test ports, and the cloud provider stub, API, Vite, and landing and demo build/preview processes started for the suite.
@@ -309,9 +313,9 @@ are mandatory for all frontend work:
 ## Data model and important constraints
 
 - `categories` group items; a category used by any item cannot be deleted.
-- `custom_fields` belong to a category and have the type `text`, `number`, `date`, or `boolean`.
+- `custom_fields` belong to a category and have the type `text`, `number`, `date`, `boolean`, or `color` (the `CHECK` is built from `FIELD_TYPES`; version 10 rebuilt older tables to widen it).
 - `items` have a UUID, category, basic text attributes, a non-null `is_new` flag (`0`/`1`, a boolean in the API), a nullable `condition_grade` limited by a `CHECK` to `broken`, `poor`, `fair`, `good`, or `excellent`, the free-text `condition_notes`, and timestamps. New, the grade, and the notes are independent; `item_templates` has the same three columns. `items.lifecycle_status` is `active` or `retired` (`CHECK`), with the retirement columns (`retired_at`, `retired_reason` limited by a `CHECK`, recipient, note, and text snapshots of the last effective location and the former container). A container and everything inside it always share one lifecycle status, and every list, count, hierarchy, Dashboard figure, parent candidate, and new checklist run defaults to active items. `item_templates.is_new` is nullable: `NULL` means the template sets no New default.
-- `item_field_values` store custom field values as text; booleans are normalized to `"1"` or `"0"`.
+- `item_field_values` store custom field values as text; booleans are normalized to `"1"` or `"0"`, and colors to the canonical JSON `{"key":"brown","hex":"#795548"}` (`key` a preset or `custom`).
 - `item_templates` and `item_template_field_values` store user-defined presets for new items. A template is never an item; deleting its category sets `category_id` to NULL, and template values of deleted fields are ignored when read.
 - `database_metadata` holds exactly one row: the database UUID, name, `created_at`, `last_updated_at`, and a mirror of `PRAGMA user_version` (the schema version source of truth). Triggers advance `last_updated_at` on every write to the tables in `TRACKED_TABLES` in `server/src/db.js`; a new inventory table must be added there.
 - `item_photos` stores metadata and BLOB data in the same database. The API accepts up to 10 JPEG/PNG/WebP/GIF files of 15 MB each. `sort_order` (`0..n-1`, unique per item) is the persisted photo order, and the first photo is the cover: there is no cover flag. Every thumbnail query uses `coverPhotoIdSql()` from `server/src/repositories/itemPhotoRepository.js`.

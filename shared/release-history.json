@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.61.0",
+    "date": "2026-10-09",
+    "changes": [
+      "Categories can now have a Color field. Pick one of twelve named colors — Black, White, Gray, Brown, Beige, Red, Orange, Yellow, Green, Blue, Purple, or Pink — or choose Custom and pick or type any HEX color. Clear leaves the field empty.",
+      "Items show a color as its swatch and name in the table, on phone cards, and on the item page. A Color column sorts in palette order with Custom after the named colors, and a new color filter finds one color, every custom shade, or items without a color.",
+      "Color fields also work in templates, duplicates, Batch Add from JSON, AI Add Item, and backups; existing databases are upgraded without losing any data."
+    ]
+  },
+  {
     "version": "0.60.0",
     "date": "2026-10-09",
     "changes": [

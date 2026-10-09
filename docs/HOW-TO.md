@@ -85,7 +85,7 @@ the English names.
 1. Open **Categories & Fields** in the navigation and create your first category, for example
    `Cameras`. Type the name into **New category name** and press **Add**.
 2. Click the category in the list to select it, then add its custom fields on the right: type a
-   **Field name**, choose the type (Text, Number, Date, Boolean), and press **Add**.
+   **Field name**, choose the type (Text, Number, Date, Boolean, Color), and press **Add**.
 3. Go to **Items** and press **Add item**. Fill in **Name** and **Category** — both are required —
    and any other values you want.
 4. Select photos at the bottom of the form. They are uploaded when you save the item; the first one
@@ -148,7 +148,7 @@ saved.
 | --- | --- |
 | **Item** | One physical thing. It always has a name and a category, plus an automatically assigned UUID and created/updated timestamps. Purchase details, a serial number, and **Transferred To** are optional base fields available in every category. |
 | **Category** | A group of items, such as `Cameras`. Category names are unique and case-insensitive. |
-| **Custom field** | An extra field that belongs to one category. Types: Text, Number, Date, Boolean. Items of that category get the field in their form. |
+| **Custom field** | An extra field that belongs to one category. Types: Text, Number, Date, Boolean, Color. Items of that category get the field in their form. |
 | **Location** | A free-text note about where the object physically is, such as `Garage` or `Shelf 2`. An item stored inside another item is displayed at the location of its outermost container instead. |
 | **Stored inside** | A real link to another item that contains this one, such as a lens inside `Box A`. |
 | **Transferred To** | A free-text note about who or where an item went when it was lent, given away, sold, or otherwise transferred, such as `Vasyl` or `Sold via OLX`. It is informational only and never changes the location. |
@@ -248,7 +248,7 @@ is no longer shown; turn the column of the new name on under **Columns**.
 
 1. Select a category and press **Batch Add Fields** under the field form.
 2. Paste a field-definition document. It lists up to 50 fields, each with a `name`, a `type`
-   (`text`, `number`, `date`, or `boolean`), and an optional `"required": false`:
+   (`text`, `number`, `date`, `boolean`, or `color`), and an optional `"required": false`:
 
    ```json
    {
@@ -311,7 +311,13 @@ unusable, the message explains why and your description stays in the modal for a
    controls; clear the amount to leave the whole price unspecified.
 4. Values for the category's custom fields appear under **Category fields**. Text fields suggest
    values you have already used (see below), boolean fields are a Yes/No list, number and date fields
-   use the matching browser control.
+   use the matching browser control. A **Color** field shows twelve named swatches — Black, White,
+   Gray, Brown, Beige, Red, Orange, Yellow, Green, Blue, Purple, and Pink — and **Custom**. Click a
+   swatch to choose it, or move through them with the arrow keys; the chosen one gets a checkmark, and
+   the line below names it with its HEX code. **Custom** opens a color picker and a HEX box for any
+   color such as `#A08C75`. Nothing is chosen until you pick a color, and **Clear** leaves the field
+   not set. A custom color always stays Custom, even when it matches a preset. The item page, the
+   Items table, and the cards show a color as its swatch and name, never as raw data.
 5. Add photos, then press **Save item**.
 
 Changing the category while filling in the form loads that category's fields.
@@ -348,7 +354,7 @@ press **Save item** there.
    **No**, or **Yes**; Not set leaves new items at No), **Condition** (a grade or **Not set**),
    **Condition Notes**, **Location**, **Transferred To**, **Purchase Date**, **Purchase Price**, **Serial Number**,
    **Description**, and the category's custom fields. Every value is optional; an empty field stays
-   empty in new items, and a Boolean field can stay **Not set**. Values are checked with the same
+   empty in new items, a Boolean field can stay **Not set**, and a Color field can stay unchosen. Values are checked with the same
    rules as an item. Changing the category loads that category's fields.
 4. Press **Save template**. The list shows each template's name, category, default item name, and
    when it was last modified, sorted by name; **Search** filters it by name, category, or item name.
@@ -466,7 +472,10 @@ audits, and deleting the container keeps its audits readable.
    `true` or `false` is accepted. `"conditionGrade"` is one of `"excellent"`, `"good"`, `"fair"`,
    `"poor"`, `"broken"`, or `null`, and `"conditionNotes"` is free text. Older documents with a
    `"condition"` text are still accepted: that text becomes the Condition Notes, never a grade. A
-   batch holds at most 100 items.
+   Color field takes `{ "key": "brown", "hex": "#795548" }` — one of the twelve color keys
+   (`black`, `white`, `gray`, `brown`, `beige`, `red`, `orange`, `yellow`, `green`, `blue`,
+   `purple`, `pink`) with that color's own HEX code, or `"custom"` with any `#RRGGBB` code — the
+   same object written as a JSON string, or `null`. A batch holds at most 100 items.
 4. Press **Preview**. Nothing is saved yet. A document that cannot be read — invalid JSON, a
    different `category`, an unsupported property, an unknown custom field, more than 100 items — is
    reported as one message and stays in the editor for correction.
@@ -503,7 +512,8 @@ afterwards through each item's **Edit** form.
    A description-only draft opens with no photo, and you can add one there before saving. When background
    removal succeeds, this is a JPEG showing the item centered on a clean white background with a
    subtle shadow; otherwise the original is retained and a warning explains the fallback. Choose another photo in the normal file control at any time.
-   Empty values remain empty. Review and edit every value; AI suggestions are not guaranteed to be
+   Empty values remain empty. A Color field gets a named color only when the evidence clearly fits
+   one, an exact HEX only when a specific shade is clear, and stays unset otherwise. Review and edit every value; AI suggestions are not guaranteed to be
    correct.
 6. Press **Save item** to create the record through the normal workflow. Leaving or reloading the
    review page before saving discards the temporary draft, and no inventory record has been written.
@@ -665,12 +675,15 @@ enables the live camera.
 1. Open **Items**.
 2. Type into **Search**. The search runs as you type and matches the item name, description, serial
    number, **Transferred To**, and the values of **text** custom fields — whether or not their column
-   is shown. It does not match condition, condition notes, location, or number, date, and yes/no fields.
+   is shown. It does not match condition, condition notes, location, or number, date, yes/no, and color fields.
 3. Narrow the list with **Category** (**All categories** by default) and **Condition** (**All
    conditions**, one grade, or **Not set**). **Inventory** chooses **Active** (the default), **All**,
    or **Retired** items; the choice is kept while you move around during this browser session, and a
    new session starts with **Active** again. Retired items show a gray **Retired** badge and a faded
-   photo.
+   photo. When a category has a **Color** field, a color filter appears beside **Condition**, named
+   after the field (or **Color** when there are several color fields, each in its own group): **All
+   colors**, one of the twelve colors, **Custom** (every custom shade, whatever its HEX code), or
+   **Not set** (items of the categories with that field that have no color).
 4. Choose what the list shows with **Columns**: tick or untick Photo, Category, Condition, Condition
    Notes, New, Location,
    **Stored inside**, Purchase Date, Purchase Price, Serial Number, Transferred To, Created, Updated,
@@ -681,7 +694,8 @@ enables the live camera.
    **Stored inside**. The choice and the sort are remembered in this browser only.
 5. On a wide screen, click a column header to sort by it; the first click sorts ascending, the next
    one descending, and an arrow marks the sorted column. Photo and **Stored inside** do not sort.
-   **Condition** sorts by grade from Broken to Excellent (or back), with **Not set** always last.
+   **Condition** sorts by grade from Broken to Excellent (or back), with **Not set** always last. A
+   **Color** column sorts in palette order from Black to Pink, then Custom, with unset colors last.
    Empty values are always listed last, numbers and prices sort by amount (whatever the currency),
    and dates by date. The sort covers the whole filtered list, not just the page on screen, and
    changing it returns to the first page.

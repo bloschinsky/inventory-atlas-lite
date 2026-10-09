@@ -5,6 +5,7 @@ import { isCustomColumnKey } from '../../../shared/itemColumns.js';
 import { buildItemColumns } from './itemColumns.js';
 import { readFieldValues, readItemDetails, requiredText, validateIsNew } from '../../../shared/itemValidation.js';
 import { isConditionGrade } from '../../../shared/conditionGrades.js';
+import { COLOR_KEYS } from '../../../shared/colors.js';
 import { LIFECYCLE_FILTERS } from '../../../shared/itemLifecycle.js';
 
 const RETIREMENT_COLUMNS = ['retired_at', 'retired_reason', 'retired_recipient', 'retired_note', 'retired_location_snapshot',
@@ -95,20 +96,25 @@ export class ItemService {
     `sort` and `fields` carry column keys from the columns catalog. They are only ever resolved to
     known field ids here; an unknown key is ignored, and an unknown sort falls back to the name.
     `condition` filters by one grade key, or by "unset" for items without a grade; anything else is ignored.
+    `colorField` names a Color column and `color` one of its group keys, or "unset" for the items of
+    its categories without a color; an unknown column or group applies no color filter.
     Only the requested custom columns get values, loaded for the whole page in one query.
   */
   list(query = {}) {
     const page = Math.max(1, Number.parseInt(query.page) || 1);
     const pageSize = Math.min(100, Math.max(1, Number.parseInt(query.pageSize) || 12));
     const requestedKeys = String(query.fields || '').split(',').filter(isCustomColumnKey);
-    const customColumns = requestedKeys.length || isCustomColumnKey(query.sort)
+    const customColumns = requestedKeys.length || isCustomColumnKey(query.sort) || isCustomColumnKey(query.colorField)
       ? new Map(buildItemColumns(this.fields.listAll()).filter(column => !column.core).map(column => [column.key, column]))
       : new Map();
     const sortColumn = customColumns.get(query.sort);
+    const colorColumn = customColumns.get(query.colorField);
+    const colorKey = query.color === 'unset' ? null : COLOR_KEYS.includes(query.color) ? query.color : undefined;
     const { rows, total } = this.items.search({
       search: String(query.search || '').trim(),
       categoryId: Number.parseInt(query.categoryId) || null,
       conditionGrade: query.condition === 'unset' ? null : isConditionGrade(query.condition) ? query.condition : undefined,
+      color: colorColumn?.type === 'color' && colorKey !== undefined ? { fieldIds: colorColumn.fieldIds, key: colorKey } : null,
       lifecycle: readLifecycleFilter(query.lifecycle),
       sort: sortColumn ? { fieldIds: sortColumn.fieldIds, type: sortColumn.type } : { core: query.sort },
       direction: query.direction,
