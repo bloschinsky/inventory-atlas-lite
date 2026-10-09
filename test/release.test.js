@@ -23,6 +23,8 @@ test('release version validator accepts only the committed stable version', () =
 test('release workflow gates both distributions and preserves the legacy asset contract', () => {
   const workflow = fs.readFileSync('.github/workflows/release.yml', 'utf8');
   assert.match(workflow, /tags:\s*\n\s*- 'v\*'/);
+  // Only a tag on a master commit releases; the check needs the full history and runs before any build.
+  assert.match(workflow, /validate:[\s\S]*fetch-depth: 0[\s\S]*git merge-base --is-ancestor "\$GITHUB_SHA" origin\/master[\s\S]*validate-release-version\.mjs/);
   assert.match(workflow, /docker:[\s\S]*needs: validate/);
   assert.match(workflow, /proxmox-assets:[\s\S]*needs: validate/);
   assert.match(workflow, /release:[\s\S]*needs: \[docker, proxmox-assets\]/);

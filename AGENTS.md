@@ -398,7 +398,9 @@ Safety rules:
 - Increment the minor component (`0.x.0`) for substantial improvements or meaningful new features.
 - Documentation-only changes normally do not change the version. They may increment the patch or minor component when they materially change the project structure, development workflow, or product contract.
 - Reserve `1.0.0` for an explicit decision that the product is ready to leave the initial MVP version line.
-- Decide and apply the version change as part of the task, before writing its completion record and creating the commit.
+- Decide and apply the version change as part of the task, in the task's own branch, before writing its completion record and creating the commit. The version bump, the `shared/release-history.json` entry, and the completion record travel together, so merging the branch brings a complete release to `master`.
+- One version is one release: each version gets exactly one release-history entry and one tag, and it is published only from `master` (see Git below).
+- Before merging, check that the branch's version is still the next one: if `master` reached that version or a later one while the branch was open, move the branch to the next free version and update its release-history entry and completion record.
 
 ## Browser test coverage
 
@@ -435,6 +437,10 @@ npm run test:e2e
 - Name the branch `<type>/<number>-<short-task-name>`, where `<type>` is `feature`, `bugfix`, or `techdebt`, `<number>` is the task number (the GitHub issue number, or the number in the `docs/issues/` task file name), and `<short-task-name>` is the task name in lowercase kebab case (for example, `feature/23-local-network-access`). If the task has no number or its type is unclear, ask the user before creating the branch.
 - Title the pull request with the same parts: `<type>: #<number> <Task name>` (for example, `feature: #23 Local network access`).
 - After updating the version when applicable and writing the completion record, create a local Git commit with a short, meaningful message written in English.
-- When a completed feature updates the project version, create a new local tag named `v<version>` on the resulting feature commit immediately after committing (for example, version `0.10.0` uses tag `v0.10.0`).
+- Tag only commits on `master`; never tag a task branch. Pushing a `v<version>` tag publishes a release, and `.github/workflows/release.yml` refuses a tag whose commit is not on `master`.
+- When a task updates the project version, create the local tag `v<version>` (for example, version `0.10.0` uses tag `v0.10.0`) on the commit that brings the change to `master`:
+  - for a task done in a branch, on the merge commit of its pull request, after the merge and after updating the local `master`;
+  - for a task done directly on `master`, on the task commit immediately after committing.
+- Push a release tag only after the `master` commit it points to has been pushed.
 - Commit only files that belong to the current task; do not include unrelated or pre-existing user changes.
 - Never run `git push`. The user always pushes commits themselves.

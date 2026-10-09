@@ -25,6 +25,14 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      # A release is cut only from master: a tag pushed on a feature branch before its pull request is
+      # merged must not publish anything.
+      - name: Require the tagged commit on master
+        run: |
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/master; then
+            echo "::error::$GITHUB_REF_NAME does not tag a commit on master. Merge the change into master and tag the commit there."
+            exit 1
+          fi
       - name: Validate tag and package versions
         run: node scripts/validate-release-version.mjs "$GITHUB_REF_NAME"
       - name: Validate the release-history entry

@@ -25,7 +25,9 @@ Express directly with Node.js and systemd. The pipeline does not ship a prebuilt
 
 ## Release gate and job flow
 
-The tag-only `.github/workflows/release.yml` workflow first validates the tag and committed versions
+The tag-only `.github/workflows/release.yml` workflow first refuses a tag whose commit is not on
+`master` (`git merge-base --is-ancestor` over the full history), so a tag pushed on a feature branch
+before its pull request is merged publishes nothing. It then validates the tag and committed versions
 and the release entry the tag must have in `shared/release-history.json`, installs dependencies, runs lint, API and shell tests, builds the client, installs Chromium, and runs
 the Playwright suite. A failed browser run retains its traces and screenshots as a seven-day workflow
 artifact. Docker publishing and Proxmox asset packaging depend on this validation job; the GitHub
@@ -51,17 +53,20 @@ construction.
 
 ## Creating a release
 
-Update `package.json` and `package-lock.json` to the intended stable version, add the release entry
-to `shared/release-history.json`, and commit them with the release changes. Create and push the matching tag, for example:
+Each feature that changes the version is one release. Its branch updates `package.json` and
+`package-lock.json` to the intended stable version, adds the release entry to
+`shared/release-history.json`, and commits them with the feature, but the branch is never tagged.
+After the pull request is merged, tag the merge commit on `master` and push the tag:
 
 ```bash
-git push origin master
+git checkout master
+git pull
 git tag v0.8.0
 git push origin v0.8.0
 ```
 
-The release commit must reach `master` before its tag, particularly when the workflow is first added.
-Normal branch pushes do not run this workflow. Prerelease tags are intentionally rejected in the MVP,
+A change made directly on `master` is tagged on its own commit once that commit is pushed. The
+workflow refuses any tag whose commit is not on `master`, and normal branch pushes do not run it. Prerelease tags are intentionally rejected in the MVP,
 so `latest` always names a stable version.
 
 ## Boundaries

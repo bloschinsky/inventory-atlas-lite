@@ -146,18 +146,20 @@ the installation.
 
 ## Creating an official release
 
-Set the same stable version in `package.json` and `package-lock.json`, commit it, then push the tag:
+Set the same stable version in `package.json` and `package-lock.json` and add its entry to
+`shared/release-history.json`. Once that commit is on `master` (for a pull request, its merge commit),
+tag it and push the tag:
 
 ```bash
-git push origin master
+git checkout master
+git pull
 git tag v0.8.0
 git push origin v0.8.0
 ```
 
-Push the commit containing the workflow to `master` before creating the tag, especially for the
-first release. The tag-only GitHub Actions workflow validates the version and full test suite before
-it publishes the Docker image, source archive, `SHA256SUMS`, and GitHub Release. A normal branch push
-cannot create an official release. See
+The tag-only GitHub Actions workflow refuses a tag whose commit is not on `master`, then validates the
+version and full test suite before it publishes the Docker image, source archive, `SHA256SUMS`, and
+GitHub Release. A normal branch push, or a tag on a feature branch, cannot create an official release. See
 [`docs/features/github-release-pipeline.md`](docs/features/github-release-pipeline.md) for the
 artifact contract and release checks.
 
