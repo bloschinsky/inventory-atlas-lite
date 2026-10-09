@@ -122,9 +122,10 @@ To use the AI features, open **Settings → AI** and fill in its **Connection** 
 4. Choose a **Model**. Models known to be text-only are marked *(text only)*. Use **Custom
    model...** to type a model ID that is not listed, for example `llava:13b` in Ollama.
    - With OpenAI the list shows every GPT model your key can use, so a new GPT generation appears
-     without an Inventory Atlas update. **Recommended / Latest** holds the newest generation and the
-     models verified with Inventory Atlas, marked *(verified)*; **Previous generations** holds a few
-     older ones. **Show all models** adds the other models, such as dated snapshots; speech,
+     without an Inventory Atlas update. **Recommended / Latest** holds the newest generation, and
+     **Previous generations** a few models of each older one, newest first. Models verified with
+     Inventory Atlas are marked *(verified)*, keep their place by version, and are always listed.
+     **Show all models** adds the other models, such as dated snapshots; speech,
      embedding, image-generation, moderation, and realtime models are never offered.
    - Below the list you see the exact **Model ID** and what is known about the model: *Vision* and
      *Structured output* are *Supported*, *Not supported*, or *Unknown*. A model that is not verified

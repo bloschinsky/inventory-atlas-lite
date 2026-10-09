@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.62.1",
+    "date": "2026-10-09",
+    "changes": [
+      "The OpenAI model list in Settings → AI now groups models strictly by version: Recommended / Latest holds only the newest GPT generation, and Previous generations lists older ones newest first. Verified GPT-5.6 models no longer appear above newer generations such as GPT-6; they keep their place by version, stay marked as verified, and are always listed."
+    ]
+  },
+  {
     "version": "0.62.0",
     "date": "2026-10-09",
     "changes": [

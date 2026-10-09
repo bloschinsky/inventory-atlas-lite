@@ -48,10 +48,11 @@ test('groups discovered models, expands to all of them, and explains the selecte
   await openAiSettings(page, request);
   const model = page.getByLabel('Model', { exact: true });
   await expect(model).toHaveValue('gpt-5.6-terra');
-  await expect(groupOptions(page, 'Recommended / Latest')).toHaveText([
-    'GPT-6.1 Sol', 'GPT-5.6 Luna (verified)', 'GPT-5.6 Terra (verified)', 'GPT-5.6 Sol (verified)'
+  // Groups follow the version order: a verified older model never sits above a newer generation.
+  await expect(groupOptions(page, 'Recommended / Latest')).toHaveText(['GPT-6.1 Sol']);
+  await expect(groupOptions(page, 'Previous generations')).toHaveText([
+    'GPT-6 Luna', 'GPT-5.6 Luna (verified)', 'GPT-5.6 Terra (verified)', 'GPT-5.6 Sol (verified)'
   ]);
-  await expect(groupOptions(page, 'Previous generations')).toHaveText(['GPT-6 Luna']);
   await expect(page.getByText('Last checked')).toContainText('6 models offered.');
   await expect(model.getByRole('option', { name: 'o3' })).toHaveCount(0);
   await expect(model.getByRole('option', { name: /whisper|embedding/ })).toHaveCount(0);
@@ -85,18 +86,19 @@ test('groups discovered models, expands to all of them, and explains the selecte
 
 test('uses the cached list on reopening, refreshes on request, and keeps a model the provider no longer lists', async ({ page, request }) => {
   await openAiSettings(page, request);
-  await expect(groupOptions(page, 'Recommended / Latest')).toHaveCount(4);
+  await expect(groupOptions(page, 'Previous generations')).toHaveCount(4);
   expect(modelRequests).toBe(1);
 
   // Reopening Settings within a day does not ask the provider again.
   await page.reload();
-  await expect(groupOptions(page, 'Recommended / Latest')).toHaveCount(4);
+  await expect(groupOptions(page, 'Previous generations')).toHaveCount(4);
   expect(modelRequests).toBe(1);
 
   // A new generation appears on Refresh, and the saved model that disappeared stays selected.
   listed = ['gpt-5.6-luna', 'gpt-5.6-sol', 'gpt-6.2-luna', 'gpt-6.1-sol'];
   await page.getByRole('button', { name: 'Refresh models' }).click();
-  await expect(groupOptions(page, 'Recommended / Latest')).toHaveText(['GPT-6.2 Luna', 'GPT-5.6 Luna (verified)', 'GPT-5.6 Sol (verified)']);
+  await expect(groupOptions(page, 'Recommended / Latest')).toHaveText(['GPT-6.2 Luna']);
+  await expect(groupOptions(page, 'Previous generations')).toHaveText(['GPT-6.1 Sol', 'GPT-5.6 Luna (verified)', 'GPT-5.6 Sol (verified)']);
   expect(modelRequests).toBe(2);
   const model = page.getByLabel('Model', { exact: true });
   await expect(model).toHaveValue('gpt-5.6-terra');
@@ -111,13 +113,13 @@ test('uses the cached list on reopening, refreshes on request, and keeps a model
   await expect(page.getByRole('alert').filter({ hasText: 'Could not refresh the model list.' }))
     .toContainText('OpenAI rejected the API key.');
   await expect(page.getByRole('alert').filter({ hasText: 'Could not refresh the model list.' })).toContainText('Showing the list last checked');
-  await expect(groupOptions(page, 'Recommended / Latest')).toHaveCount(3);
+  await expect(groupOptions(page, 'Previous generations')).toHaveCount(3);
   await expect(model).toHaveValue('gpt-5.6-terra');
 
   // Another key is another connection: its list is never borrowed, and its failure is reported.
   await page.getByLabel('API key', { exact: true }).fill('sk-another-account-key');
   await expect(page.getByText('The connection has changed. Refresh models to load the list for it.')).toBeVisible();
-  await expect(groupOptions(page, 'Recommended / Latest')).toHaveCount(0);
+  await expect(groupOptions(page, 'Previous generations')).toHaveCount(0);
   await page.getByRole('button', { name: 'Refresh models' }).click();
   await expect(page.getByRole('alert').filter({ hasText: 'Could not load the model list.' })).toBeVisible();
   await expect(model).toHaveValue('gpt-5.6-terra');
@@ -139,7 +141,8 @@ test.describe('on a phone in Ukrainian and dark mode', () => {
     await openAiSettings(page, request);
     const model = page.getByLabel('Модель', { exact: true });
     await expect(model).toHaveValue('gpt-5.6-terra');
-    await expect(groupOptions(page, 'Рекомендовані / найновіші', 'Модель')).toHaveCount(4);
+    await expect(groupOptions(page, 'Рекомендовані / найновіші', 'Модель')).toHaveText(['GPT-6.1 Sol']);
+    await expect(groupOptions(page, 'Попередні покоління', 'Модель')).toHaveCount(4);
     await page.getByRole('button', { name: 'Показати всі моделі (ще 1)' }).click();
     await expect(groupOptions(page, 'Інші моделі', 'Модель')).toHaveText(['o3']);
     await expect(page.getByText('Зір: Підтримується · Структуровані відповіді: Підтримується')).toBeVisible();

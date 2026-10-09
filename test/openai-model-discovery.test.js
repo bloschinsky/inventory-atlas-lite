@@ -68,10 +68,13 @@ test('discovery follows the provider list, not a fixed allowlist, and groups new
   for (const id of IRRELEVANT) assert.equal(isExcludedModel(id), true, id);
 
   const group = name => models.filter(model => model.group === name).map(model => model.id);
-  // The newest generation leads, next to the models verified with this application.
-  assert.deepEqual(group('recommended'), ['gpt-9.2-orbit', 'gpt-5.6-luna', 'gpt-5.6-terra', 'gpt-5.6-sol']);
-  // Older generations follow in numeric order: 6.10 before 6.9 before 6.1 before 6.
-  assert.deepEqual(group('previous'), ['gpt-6.10-luna', 'gpt-6.9-luna', 'gpt-6.1-sol', 'gpt-6-sol', 'gpt-6-luna']);
+  // The newest generation leads on its own.
+  assert.deepEqual(group('recommended'), ['gpt-9.2-orbit']);
+  // Older generations follow in numeric order: 6.10 before 6.9 before 6.1 before 6, and the verified
+  // GPT-5.6 models keep their place by version instead of moving up.
+  assert.deepEqual(group('previous'), [
+    'gpt-6.10-luna', 'gpt-6.9-luna', 'gpt-6.1-sol', 'gpt-6-sol', 'gpt-6-luna', 'gpt-5.6-luna', 'gpt-5.6-terra', 'gpt-5.6-sol'
+  ]);
   // The compact view stays small, and nothing is lost: the rest is under Show all.
   assert.ok(group('recommended').length + group('previous').length <= 9);
   // GPT snapshots first, then the rest by the provider's creation time, newest first.
@@ -83,6 +86,29 @@ test('discovery follows the provider list, not a fixed allowlist, and groups new
   });
   // A snapshot or an unknown ID keeps its raw ID as the label.
   assert.equal(models.find(model => model.id === 'gpt-6.1-sol-2027-03-01').label, 'gpt-6.1-sol-2027-03-01');
+});
+
+test('a verified model never ranks above a newer generation, and stays in the compact view', () => {
+  const versions = models => models.filter(model => model.group !== 'other').map(model => model.label);
+  // The listing that showed GPT-5.6 under Recommended above GPT-6 under Previous generations.
+  const reported = classifyOpenAiModels(['gpt-5.5', 'gpt-5.5-pro', 'gpt-5.6-luna', 'gpt-5.6-terra', 'gpt-5.6-sol', 'gpt-6-astra', 'gpt-6-sol', 'gpt-6-luna', 'gpt-6.1-sol']
+    .map((id, index) => ({ id, created: 1_800_000_000 + index })));
+  assert.deepEqual(reported.filter(model => model.group === 'recommended').map(model => model.id), ['gpt-6.1-sol']);
+  assert.deepEqual(versions(reported), [
+    'GPT-6.1 Sol', 'GPT-6 Luna', 'GPT-6 Sol', 'GPT-6 Astra', 'GPT-5.6 Luna', 'GPT-5.6 Terra', 'GPT-5.6 Sol', 'GPT-5.5 Pro', 'GPT-5.5'
+  ]);
+  // Every compact entry is the same or an older version than the one above it.
+  const compact = reported.filter(model => model.group !== 'other').map(model => gptVersion(model.id));
+  compact.slice(1).forEach((version, index) => assert.ok(compareGptVersions(compact[index], version) <= 0));
+
+  // Many newer models never push the verified ones under Show all.
+  const crowded = classifyOpenAiModels(['gpt-5.6-luna', 'gpt-5.6-terra', 'gpt-5.6-sol',
+    ...['7', '6.9', '6.8', '6.7'].flatMap(version => ['a', 'b', 'c'].map(variant => `gpt-${version}-${variant}`))].map(id => ({ id })));
+  for (const id of ['gpt-5.6-luna', 'gpt-5.6-terra', 'gpt-5.6-sol']) assert.equal(crowded.find(model => model.id === id).group, 'previous', id);
+  assert.equal(crowded.filter(model => model.group !== 'other').length, 9);
+  // When the verified models are the newest generation, they are the recommended ones.
+  assert.deepEqual(classifyOpenAiModels([{ id: 'gpt-5.6-sol' }, { id: 'gpt-5.6-luna' }, { id: 'gpt-5.5' }]).map(model => [model.id, model.group]),
+    [['gpt-5.6-luna', 'recommended'], ['gpt-5.6-sol', 'recommended'], ['gpt-5.5', 'previous']]);
 });
 
 test('discovery deduplicates, drops invalid IDs, and orders ties predictably', () => {

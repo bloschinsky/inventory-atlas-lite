@@ -78,9 +78,12 @@ or prices. `server/src/integrations/openAiModelCatalog.js` turns it into the sel
   (`davinci`, `babbage`) token are never offered.
 - **Ranking**: GPT versions compare numerically (6.10 > 6.9 > 6.1 > 6 = 6.0 > 5.6), then verified
   models, then the provider's `created` time (newest first), then the ID, so ties are stable.
-- **Groups**: *Recommended / Latest* holds up to six models of the newest generation plus every
-  verified model; *Previous generations* adds up to three models per older generation while the
-  compact view has fewer than nine entries; *Other models* holds the rest — further variants, dated
+- **Groups** follow the version order alone, so an older generation never appears above a newer one:
+  *Recommended / Latest* holds up to six models of the newest generation; *Previous generations*
+  adds up to three models per older generation while the compact view has fewer than nine entries.
+  A verified model keeps its place by version and is always part of the compact view (room is kept
+  for it); it is recommended only when it belongs to the newest generation. *Other models* holds the
+  rest — further variants, dated
   snapshots such as `gpt-4-0613`, `o`-series, fine-tuned, and unknown IDs — and appears through
   **Show all models**. When nothing is recommended, all candidates are shown with a note.
 - **Capabilities**: the models verified with AI Add Item and AI Add Fields (`gpt-5.6-luna`,

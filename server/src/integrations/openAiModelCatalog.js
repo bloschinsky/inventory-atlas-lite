@@ -77,8 +77,10 @@ function compareModels(a, b) {
 
 /*
   `listed` is the `data` array of /models. Returns every usable candidate once, with its group:
-  `recommended` (the newest GPT generation and the verified models), `previous` (a few variants of
-  each older generation), or `other` (everything else, shown on request). IDs are kept exactly.
+  `recommended` (the newest GPT generation), `previous` (a few variants of each older generation), or
+  `other` (everything else, shown on request). Groups follow the version order alone, so an older
+  generation never appears above a newer one; a verified model keeps its place by version and is
+  always part of the compact view. IDs are kept exactly.
 */
 export function classifyOpenAiModels(listed) {
   const candidates = new Map();
@@ -93,17 +95,17 @@ export function classifyOpenAiModels(listed) {
 
   const groups = new Map();
   const perGeneration = new Map();
-  let latest = 0;
+  // Verified models are never pushed out of the compact view, so room is kept for those still ahead.
+  let verifiedAhead = aliases.filter(model => VERIFIED_MODELS.includes(model.id)).length;
   for (const model of aliases) {
-    if (VERIFIED_MODELS.includes(model.id)) groups.set(model.id, 'recommended');
-    else if (model.version.name === newest && latest < LATEST_LIMIT) { groups.set(model.id, 'recommended'); latest += 1; }
-  }
-  for (const model of aliases) {
-    if (groups.has(model.id) || groups.size >= COMPACT_LIMIT || model.version.name === newest) continue;
+    const verified = VERIFIED_MODELS.includes(model.id);
+    if (verified) verifiedAhead -= 1;
+    const latest = model.version.name === newest;
     const shown = perGeneration.get(model.version.name) ?? 0;
-    if (shown >= PREVIOUS_PER_GENERATION) continue;
+    const fits = shown < (latest ? LATEST_LIMIT : PREVIOUS_PER_GENERATION) && groups.size + verifiedAhead < COMPACT_LIMIT;
+    if (!verified && !fits) continue;
     perGeneration.set(model.version.name, shown + 1);
-    groups.set(model.id, 'previous');
+    groups.set(model.id, latest ? 'recommended' : 'previous');
   }
 
   const order = { recommended: 0, previous: 1, other: 2 };
