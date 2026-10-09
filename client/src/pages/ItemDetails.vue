@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { api } from '../api.js';
@@ -7,13 +7,25 @@ import { formatDate, formatDateTime, formatMoney } from '../i18n/index.js';
 import AuditContentsDialog from '../components/AuditContentsDialog.vue';
 import ChecklistRunHistory from '../components/ChecklistRunHistory.vue';
 import ItemPhotoViewer from '../components/ItemPhotoViewer.vue';
+import ItemLifecycleBadge from '../components/ItemLifecycleBadge.vue';
 import ItemNewStatusBadge from '../components/ItemNewStatusBadge.vue';
 import ItemQrDialog from '../components/ItemQrDialog.vue';
 import ConditionGradeBadge from '../components/ConditionGradeBadge.vue';
 import ItemThumbnail from '../components/ItemThumbnail.vue';
+import ItemHistoryTimeline from '../components/ItemHistoryTimeline.vue';
+import ItemLoanDialog from '../components/ItemLoanDialog.vue';
+import RestoreItemDialog from '../components/RestoreItemDialog.vue';
+import RetireItemDialog from '../components/RetireItemDialog.vue';
 
 const route = useRoute(); const router = useRouter(); const { t } = useI18n();
-const item = ref(null); const error = ref(''); const qrOpen = ref(false); const auditOpen = ref(false);
+const item = ref(null); const error = ref(''); const qrOpen = ref(false); const auditOpen = ref(false); const loanOpen = ref(false);
+const history = ref(null);
+// The due date is a calendar day; the loan is overdue from the day after it, in the browser's time zone.
+const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+const overdue = computed(() => Boolean(item.value?.open_transfer?.expected_return_on && item.value.open_transfer.expected_return_on < today()));
+// Retire and Restore each have their own dialog; `notice` reports the finished transition or the next step.
+const retireOpen = ref(false); const restoreOpen = ref(false); const notice = ref(''); const noticeBox = ref(null);
+const retired = computed(() => item.value?.lifecycle_status === 'retired');
 // The container's audits, newest first; the page keeps only the most recent ones compact.
 const audits = ref([]);
 const RECENT_AUDITS = 5;
@@ -27,16 +39,48 @@ async function load() {
     [item.value, audits.value] = await Promise.all([api(`/api/items/${route.params.id}`), api(`/api/items/${route.params.id}/audits`)]);
   } catch (e) { error.value = e.message; }
 }
+// A loan or return changes the item (its recipient) and adds to its history.
+async function loanSaved() {
+  loanOpen.value = false;
+  await load();
+  history.value?.reload();
+}
 async function remove() {
   if (!confirm(t('itemDetails.confirmDelete', { name: item.value.name }))) return;
   try { await api(`/api/items/${item.value.id}`, { method: 'DELETE' }); router.push('/items'); } catch (e) { error.value = e.message; }
+}
+async function showNotice(message) {
+  notice.value = message;
+  await nextTick();
+  noticeBox.value?.focus();
+}
+async function retiredDone({ item: updated, affected_count: count }) {
+  retireOpen.value = false;
+  item.value = updated;
+  history.value?.reload();
+  await showNotice(t('lifecycle.retire.done', { name: updated.name, n: count }, count));
+}
+async function restoredDone({ item: updated, affected_count: count }) {
+  restoreOpen.value = false;
+  item.value = updated;
+  history.value?.reload();
+  await showNotice(t('lifecycle.restore.done', { name: updated.name, n: count }, count));
+}
+// Move contents first: nothing is retired; the contents list is where each item can be opened and moved.
+async function moveContentsFirst() {
+  retireOpen.value = false;
+  await showNotice(t('lifecycle.retire.moveFirstNotice'));
 }
 async function removePhoto(id) {
   if (!confirm(t('photos.confirmDelete'))) return;
   try { await api(`/api/photos/${id}`, { method: 'DELETE' }); await load(); } catch (e) { error.value = e.message; }
 }
 // The same component serves every /items/:id, so parent and contents links must reload it.
-watch(() => route.params.id, () => { qrOpen.value = false; auditOpen.value = false; load(); });
+watch(() => route.params.id, () => {
+  qrOpen.value = false; auditOpen.value = false; loanOpen.value = false; retireOpen.value = false; restoreOpen.value = false;
+  notice.value = '';
+  load();
+});
 onMounted(load);
 </script>
 
@@ -81,12 +125,18 @@ onMounted(load);
           <h1 class="page-title text-break">
             {{ item.name }}
           </h1>
-          <span
-            v-if="item.transferred_to"
-            class="badge bg-azure-lt text-wrap text-break text-start mt-2"
+          <div
+            v-if="retired || item.transferred_to"
+            class="d-flex flex-wrap gap-2 mt-2"
           >
-            {{ $t('items.transferredTo', { name: item.transferred_to }) }}
-          </span>
+            <ItemLifecycleBadge :status="item.lifecycle_status" />
+            <span
+              v-if="item.transferred_to"
+              class="badge bg-azure-lt text-wrap text-break text-start"
+            >
+              {{ $t('items.transferredTo', { name: item.transferred_to }) }}
+            </span>
+          </div>
         </div>
         <div class="col-auto ms-auto d-flex flex-wrap gap-2">
           <RouterLink
@@ -102,6 +152,15 @@ onMounted(load);
           >
             {{ $t('itemDetails.duplicate') }}
           </RouterLink>
+          <!-- A retired item has left the inventory, so it cannot be lent. -->
+          <button
+            v-if="!item.open_transfer && !retired"
+            type="button"
+            class="btn"
+            @click="loanOpen = true"
+          >
+            {{ $t('transfer.action') }}
+          </button>
           <button
             type="button"
             class="btn"
@@ -117,6 +176,22 @@ onMounted(load);
             {{ $t('templates.saveAsTemplate') }}
           </RouterLink>
           <button
+            v-if="retired"
+            type="button"
+            class="btn"
+            @click="notice = ''; restoreOpen = true"
+          >
+            {{ $t('lifecycle.restore.action') }}
+          </button>
+          <button
+            v-else
+            type="button"
+            class="btn"
+            @click="notice = ''; retireOpen = true"
+          >
+            {{ $t('lifecycle.retire.action') }}
+          </button>
+          <button
             type="button"
             class="btn btn-outline-danger"
             @click="remove"
@@ -127,6 +202,21 @@ onMounted(load);
       </div>
     </div>
 
+    <div
+      v-if="notice"
+      ref="noticeBox"
+      class="alert alert-success alert-dismissible"
+      role="status"
+      tabindex="-1"
+    >
+      {{ notice }}<button
+        type="button"
+        class="btn-close"
+        :aria-label="$t('common.dismissMessage')"
+        @click="notice = ''"
+      />
+    </div>
+
     <div class="row g-4">
       <div class="col-12 col-lg-5">
         <ItemPhotoViewer
@@ -135,6 +225,118 @@ onMounted(load);
         />
       </div>
       <div class="col-12 col-lg-7 d-grid gap-4">
+        <!-- An open temporary loan; its recipient is also the item's current Transferred To. -->
+        <section
+          v-if="item.open_transfer"
+          class="card"
+          aria-labelledby="item-loan"
+        >
+          <div class="card-header">
+            <h2
+              id="item-loan"
+              class="card-title"
+            >
+              {{ $t('transfer.loan') }}
+            </h2>
+            <div class="card-actions">
+              <button
+                type="button"
+                class="btn btn-sm btn-primary"
+                @click="loanOpen = true"
+              >
+                {{ $t('transfer.markReturned') }}
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <p class="fw-semibold mb-1 text-break">
+              {{ $t('transfer.onLoanTo', { name: item.open_transfer.recipient }) }}
+              <span
+                v-if="overdue"
+                class="badge bg-red-lt ms-1"
+              >{{ $t('transfer.overdue') }}</span>
+            </p>
+            <p class="meta-text mb-0">
+              {{ $t('transfer.since', { date: formatDateTime(item.open_transfer.transferred_at) }) }}<template v-if="item.open_transfer.expected_return_on">
+                · {{ $t('history.expectedReturn', { date: formatDate(item.open_transfer.expected_return_on) }) }}
+              </template>
+            </p>
+            <p
+              v-if="item.open_transfer.note"
+              class="text-secondary text-break mt-2 mb-0 app-history-note"
+            >
+              {{ item.open_transfer.note }}
+            </p>
+          </div>
+        </section>
+
+        <!-- What is known about the departure; the location and container are snapshots from that moment. -->
+        <section
+          v-if="item.retirement"
+          class="card"
+          aria-labelledby="retirement-title"
+        >
+          <div class="card-header">
+            <h2
+              id="retirement-title"
+              class="card-title"
+            >
+              {{ $t('lifecycle.details.title') }}
+            </h2>
+          </div>
+          <div class="card-body">
+            <dl class="row mb-0">
+              <dt class="col-sm-4">
+                {{ $t('lifecycle.fields.reason') }}
+              </dt>
+              <dd class="col-sm-8">
+                {{ $t(`lifecycle.reasons.${item.retirement.reason}`) }}
+              </dd>
+              <dt class="col-sm-4">
+                {{ $t('lifecycle.fields.retiredAt') }}
+              </dt>
+              <dd class="col-sm-8">
+                {{ formatDateTime(item.retirement.retired_at) }}
+              </dd>
+              <template v-if="item.retirement.recipient">
+                <dt class="col-sm-4">
+                  {{ $t('lifecycle.fields.recipient') }}
+                </dt>
+                <dd class="col-sm-8 text-break">
+                  {{ item.retirement.recipient }}
+                </dd>
+              </template>
+              <template v-if="item.retirement.note">
+                <dt class="col-sm-4">
+                  {{ $t('lifecycle.fields.note') }}
+                </dt>
+                <dd class="col-sm-8 text-break condition-notes">
+                  {{ item.retirement.note }}
+                </dd>
+              </template>
+              <dt class="col-sm-4">
+                {{ $t('lifecycle.fields.lastLocation') }}
+              </dt>
+              <dd
+                class="col-sm-8 text-break"
+                :class="{ 'mb-0': !item.retirement.former_parent || item.parent }"
+              >
+                {{ item.retirement.last_location || '—' }}
+              </dd>
+              <template v-if="item.retirement.former_parent && !item.parent">
+                <dt class="col-sm-4">
+                  {{ $t('lifecycle.fields.formerContainer') }}
+                </dt>
+                <dd class="col-sm-8 text-break mb-0">
+                  <RouterLink :to="`/items/${item.retirement.former_parent.uuid}`">
+                    {{ item.retirement.former_parent.name }}
+                  </RouterLink>
+                </dd>
+              </template>
+            </dl>
+          </div>
+        </section>
+
         <section class="card">
           <div class="card-header">
             <h2 class="card-title">
@@ -143,6 +345,15 @@ onMounted(load);
           </div>
           <div class="card-body">
             <dl class="row mb-0">
+              <dt class="col-sm-4">
+                {{ $t('lifecycle.fields.status') }}
+              </dt>
+              <dd class="col-sm-8">
+                <ItemLifecycleBadge
+                  :status="item.lifecycle_status"
+                  show-active
+                />
+              </dd>
               <dt class="col-sm-4">
                 {{ $t('items.fields.isNew') }}
               </dt>
@@ -277,7 +488,10 @@ onMounted(load);
               <h3 class="card-title">
                 {{ $t('itemDetails.contents') }}
               </h3>
-              <div class="card-actions">
+              <div
+                v-if="!retired"
+                class="card-actions"
+              >
                 <button
                   type="button"
                   class="btn btn-sm"
@@ -304,6 +518,10 @@ onMounted(load);
                   >
                     {{ child.name }}
                   </RouterLink>
+                  <ItemLifecycleBadge
+                    class="ms-2"
+                    :status="child.lifecycle_status"
+                  />
                   <p class="meta-text mb-0">
                     {{ child.category_name }}<template v-if="child.condition_grade">
                       · <ConditionGradeBadge :grade="child.condition_grade" />
@@ -338,6 +556,32 @@ onMounted(load);
             </div>
           </div>
           <ChecklistRunHistory :runs="audits.slice(0, RECENT_AUDITS)" />
+        </section>
+
+        <section
+          class="card"
+          aria-labelledby="item-history"
+        >
+          <div class="card-header">
+            <h2
+              id="item-history"
+              class="card-title"
+            >
+              {{ $t('history.title') }}
+            </h2>
+            <div class="card-actions">
+              <RouterLink :to="`/items/${item.id}/history`">
+                {{ $t('history.viewAll') }}
+              </RouterLink>
+            </div>
+          </div>
+          <div class="card-body">
+            <ItemHistoryTimeline
+              ref="history"
+              :item-id="item.id"
+              preview
+            />
+          </div>
         </section>
 
         <section class="card">
@@ -381,6 +625,26 @@ onMounted(load);
       v-if="auditOpen"
       :item="item"
       @close="auditOpen = false"
+    />
+    <ItemLoanDialog
+      v-if="loanOpen"
+      :item="item"
+      :transfer="item.open_transfer"
+      @close="loanOpen = false"
+      @saved="loanSaved"
+    />
+    <RetireItemDialog
+      v-if="retireOpen"
+      :item="item"
+      @close="retireOpen = false"
+      @retired="retiredDone"
+      @move-contents="moveContentsFirst"
+    />
+    <RestoreItemDialog
+      v-if="restoreOpen"
+      :item="item"
+      @close="restoreOpen = false"
+      @restored="restoredDone"
     />
   </template>
 </template>

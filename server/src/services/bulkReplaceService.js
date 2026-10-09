@@ -8,14 +8,18 @@ export const normalizeValue = value => value.trim().toLowerCase();
 // The preview lists at most this many affected items; the count always covers all of them.
 export const PREVIEW_ITEM_LIMIT = 100;
 
+// The replaceable core fields whose changes the item activity history records.
+const HISTORY_KEYS = ['location', 'transferredTo'];
+
 /*
   Bulk Replace Value: one exact saved value of one field becomes another value on every item that
   has it. Matching is never partial, and the apply step finds the matches again inside its own
   transaction, so a preview the browser still shows can never widen or stale what gets written.
 */
 export class BulkReplaceService {
-  constructor({ bulkReplaceRepository }) {
+  constructor({ bulkReplaceRepository, itemHistoryService }) {
     this.repository = bulkReplaceRepository;
+    this.history = itemHistoryService;
   }
 
   // The fields that can be selected: the whitelisted core keys and every text custom field.
@@ -93,12 +97,19 @@ export class BulkReplaceService {
     };
   }
 
-  // Every current match is replaced, or none is.
+  /*
+    Every current match is replaced, or none is. A new Location or Transferred To moves the items (a
+    location also moves everything inside them) or changes their recipient, so it is recorded in
+    their history in the same transaction.
+  */
   apply(body) {
     const request = this.readRequest(body);
     const updated = this.repository.transaction(() => {
       const { matches } = this.match(request);
-      return matches.size ? this.repository.replace(request.field, [...matches.keys()], request.to) : 0;
+      if (!matches.size) return 0;
+      const ids = [...matches.keys()];
+      const replace = () => this.repository.replace(request.field, ids, request.to);
+      return HISTORY_KEYS.includes(request.field.key) ? this.history.track('bulk_replace', ids, replace) : replace();
     });
     return { updated };
   }

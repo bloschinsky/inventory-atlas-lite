@@ -1,12 +1,13 @@
 <script setup>
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { api } from '../api.js';
 import { capabilities } from '../capabilities.js';
 import { CORE_ITEM_COLUMNS, DEFAULT_ITEM_SORT, ITEMS_VIEW_STORAGE_KEY, labelColumns } from '../itemColumns.js';
 import { labelSelection, printLabelsRoute, toggleLabelSelection } from '../labelSelection.js';
 import { CONDITION_GRADES_BEST_FIRST } from '../conditionGrades.js';
+import { LIFECYCLE_FILTERS } from '../../../shared/itemLifecycle.js';
 import { useTablePreferences } from '../useTablePreferences.js';
 import AddItemMenu from '../components/AddItemMenu.vue';
 import BatchAddItemsDialog from '../components/BatchAddItemsDialog.vue';
@@ -16,6 +17,7 @@ import PageHeader from '../components/PageHeader.vue';
 import TableColumnPicker from '../components/TableColumnPicker.vue';
 import { IconArrowDown, IconArrowUp, IconFolderSymlink, IconJson, IconPrinter, IconSparkles } from '@tabler/icons-vue';
 
+const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
 
@@ -28,8 +30,18 @@ const batchOpen = ref(false);
 const moveOpen = ref(false);
 const moveButton = ref(null);
 const noticeBox = ref(null);
+/*
+  The lifecycle view (Active, All, or Retired) is kept for the browser session, so it survives normal
+  navigation while every new session starts with the active inventory. A link may ask for a view
+  through ?lifecycle=, as the Dashboard's retired count does.
+*/
+const LIFECYCLE_STORAGE_KEY = 'inventory-atlas.items.lifecycle';
+const storedLifecycle = () => {
+  try { return sessionStorage.getItem(LIFECYCLE_STORAGE_KEY); } catch { return null; }
+};
+const initialLifecycle = [route.query.lifecycle, storedLifecycle()].find(value => LIFECYCLE_FILTERS.includes(value)) ?? 'active';
 // `condition` is a grade key, "unset" for items without a grade, or empty for every item.
-const filters = reactive({ search: '', categoryId: '', condition: '', page: 1 });
+const filters = reactive({ search: '', categoryId: '', condition: '', lifecycle: initialLifecycle, page: 1 });
 let timer;
 let ready = false;
 
@@ -44,7 +56,7 @@ const customFields = computed(() => visibleColumns.value.filter(column => !colum
 const mobileSortColumns = computed(() => labeledColumns.value.filter(column => column.sortable
   && (column.key === view.sort || visibleColumns.value.includes(column))));
 
-const filtered = computed(() => Boolean(filters.search.trim() || filters.categoryId || filters.condition));
+const filtered = computed(() => Boolean(filters.search.trim() || filters.categoryId || filters.condition || filters.lifecycle !== 'active'));
 const countLabel = computed(() => t('items.count', result.value.pagination.total));
 
 async function load() {
@@ -53,7 +65,12 @@ async function load() {
     .filter(([, value]) => value !== ''));
   try { result.value = await api(`/api/items?${params}`); } catch (e) { error.value = e.message; } finally { loading.value = false; }
 }
-watch(() => [filters.categoryId, filters.condition, filters.page, view.sort, view.direction, customFields.value], () => { if (ready) load(); });
+watch(() => [filters.categoryId, filters.condition, filters.lifecycle, filters.page, view.sort, view.direction, customFields.value], () => { if (ready) load(); });
+function changeLifecycle(value) {
+  filters.lifecycle = value;
+  filters.page = 1;
+  try { sessionStorage.setItem(LIFECYCLE_STORAGE_KEY, value); } catch { /* the view simply starts as Active next time */ }
+}
 watch(() => filters.search, () => { clearTimeout(timer); filters.page = 1; timer = setTimeout(load, 250); });
 function changed() { filters.page = 1; }
 function sortBy(key) {
@@ -142,7 +159,7 @@ onMounted(async () => {
     data-tour="item-filters"
   >
     <div class="card-body row g-3 align-items-end">
-      <div class="col-12 col-lg-4">
+      <div class="col-12 col-lg-3">
         <label
           class="form-label"
           for="items-search"
@@ -155,7 +172,7 @@ onMounted(async () => {
           :placeholder="$t('items.searchPlaceholder')"
         >
       </div>
-      <div class="col-12 col-sm-4 col-lg-3">
+      <div class="col-12 col-sm-4 col-lg-2">
         <label
           class="form-label"
           for="items-category"
@@ -178,7 +195,7 @@ onMounted(async () => {
           </option>
         </select>
       </div>
-      <div class="col-12 col-sm-4 col-lg-3">
+      <div class="col-12 col-sm-4 col-lg-2">
         <label
           class="form-label"
           for="items-condition"
@@ -203,6 +220,38 @@ onMounted(async () => {
             {{ $t('condition.notSet') }}
           </option>
         </select>
+      </div>
+      <div class="col-12 col-sm-8 col-lg-auto">
+        <div
+          id="items-lifecycle-label"
+          class="form-label"
+        >
+          {{ $t('lifecycle.filter.label') }}
+        </div>
+        <div
+          class="btn-group w-100"
+          role="group"
+          aria-labelledby="items-lifecycle-label"
+        >
+          <template
+            v-for="option in LIFECYCLE_FILTERS"
+            :key="option"
+          >
+            <input
+              :id="`items-lifecycle-${option}`"
+              type="radio"
+              class="btn-check"
+              name="items-lifecycle"
+              :value="option"
+              :checked="filters.lifecycle === option"
+              @change="changeLifecycle(option)"
+            >
+            <label
+              class="btn"
+              :for="`items-lifecycle-${option}`"
+            >{{ $t(`lifecycle.filter.${option}`) }}</label>
+          </template>
+        </div>
       </div>
       <div class="col-12 col-sm-4 col-lg-2">
         <TableColumnPicker
@@ -339,7 +388,8 @@ onMounted(async () => {
   >
     <div class="empty">
       <p class="empty-title">
-        {{ filtered ? $t('items.noMatches') : $t('items.emptyTitle') }}
+        {{ filters.lifecycle === 'retired' && !filters.search.trim() && !filters.categoryId && !filters.condition
+          ? $t('lifecycle.filter.noRetired') : filtered ? $t('items.noMatches') : $t('items.emptyTitle') }}
       </p>
       <p class="empty-subtitle text-secondary">
         {{ filtered ? $t('items.noMatchesText') : $t('items.emptyText') }}

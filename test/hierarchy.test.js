@@ -16,7 +16,9 @@ const { applySchema } = await import('../server/src/db.js');
 const { CategoryRepository } = await import('../server/src/repositories/categoryRepository.js');
 const { CustomFieldRepository } = await import('../server/src/repositories/customFieldRepository.js');
 const { ItemPhotoRepository } = await import('../server/src/repositories/itemPhotoRepository.js');
+const { ItemHistoryRepository } = await import('../server/src/repositories/itemHistoryRepository.js');
 const { ItemRepository } = await import('../server/src/repositories/itemRepository.js');
+const { ItemHistoryService } = await import('../server/src/services/itemHistoryService.js');
 const { ItemService } = await import('../server/src/services/itemService.js');
 
 const build = () => {
@@ -25,6 +27,7 @@ const build = () => {
   applySchema(db);
   const categoryRepository = new CategoryRepository(db);
   const itemService = new ItemService({
+    itemHistoryService: new ItemHistoryService({ itemHistoryRepository: new ItemHistoryRepository(db) }),
     itemRepository: new ItemRepository(db),
     customFieldRepository: new CustomFieldRepository(db),
     itemPhotoRepository: new ItemPhotoRepository(db),
@@ -68,7 +71,7 @@ test('the hierarchy endpoint returns lightweight flat nodes with inherited locat
   const byName = Object.fromEntries(items.map(item => [item.name, item]));
   assert.deepEqual(byName['Nikon F80'], {
     id: camera.id, uuid: camera.uuid, name: 'Nikon F80', parent_id: bag.id, category_id: camera.category_id,
-    category_name: 'Storage', thumbnail_id: firstPhoto, children_count: 0, effective_location: 'KP Garage'
+    category_name: 'Storage', thumbnail_id: firstPhoto, children_count: 0, effective_location: 'KP Garage', lifecycle_status: 'active'
   });
   assert.equal(byName['Box A'].children_count, 1);
   assert.equal(byName['Box A'].parent_id, null);

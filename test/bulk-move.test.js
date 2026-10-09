@@ -12,7 +12,9 @@ const { applySchema } = await import('../server/src/db.js');
 const { CategoryRepository } = await import('../server/src/repositories/categoryRepository.js');
 const { CustomFieldRepository } = await import('../server/src/repositories/customFieldRepository.js');
 const { ItemPhotoRepository } = await import('../server/src/repositories/itemPhotoRepository.js');
+const { ItemHistoryRepository } = await import('../server/src/repositories/itemHistoryRepository.js');
 const { ItemRepository } = await import('../server/src/repositories/itemRepository.js');
+const { ItemHistoryService } = await import('../server/src/services/itemHistoryService.js');
 const { CategoryService } = await import('../server/src/services/categoryService.js');
 const { CustomFieldService } = await import('../server/src/services/customFieldService.js');
 const { ItemService } = await import('../server/src/services/itemService.js');
@@ -26,6 +28,7 @@ const build = () => {
   const categoryService = new CategoryService(categoryRepository);
   const category = categoryService.create({ name: 'Gear' });
   const itemService = new ItemService({
+    itemHistoryService: new ItemHistoryService({ itemHistoryRepository: new ItemHistoryRepository(db) }),
     itemRepository: new ItemRepository(db), customFieldRepository, itemPhotoRepository: new ItemPhotoRepository(db), categoryRepository
   });
   return {
@@ -60,7 +63,7 @@ test('unrelated leaf items and containers move into one destination', () => {
 
   assert.deepEqual(result, {
     selected_count: 5, root_count: 5, moved_count: 5, unchanged_count: 0,
-    parent: { id: target.id, uuid: target.uuid, name: 'Box B4' },
+    parent: { id: target.id, uuid: target.uuid, name: 'Box B4', lifecycle_status: 'active' },
     moved_root_ids: ids([...leaves, ...containers])
   });
   for (const item of [...leaves, ...containers]) assert.equal(parentOf(item), target.id);

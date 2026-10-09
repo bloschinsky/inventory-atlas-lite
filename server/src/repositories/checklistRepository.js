@@ -32,7 +32,7 @@ export class ChecklistRepository {
   listEntries(checklistId) {
     return this.db.prepare(`
       ${ROOTS_CTE}
-      SELECT ci.id, ci.item_id, ci.item_name_snapshot, i.uuid AS item_uuid, i.name AS item_name,
+      SELECT ci.id, ci.item_id, ci.item_name_snapshot, i.uuid AS item_uuid, i.name AS item_name, i.lifecycle_status,
         cat.name AS category_name, i.location, root.id AS root_id, root.location AS root_location,
         ${coverPhotoIdSql('i.id')} AS thumbnail_id
       FROM checklist_items ci

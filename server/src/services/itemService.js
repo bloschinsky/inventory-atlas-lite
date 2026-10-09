@@ -5,13 +5,45 @@ import { isCustomColumnKey } from '../../../shared/itemColumns.js';
 import { buildItemColumns } from './itemColumns.js';
 import { readFieldValues, readItemDetails, requiredText, validateIsNew } from '../../../shared/itemValidation.js';
 import { isConditionGrade } from '../../../shared/conditionGrades.js';
+import { LIFECYCLE_FILTERS } from '../../../shared/itemLifecycle.js';
 
-// The stored purchase price columns are presented as one object, exactly as the API always has, and
-// the stored 0/1 New flag as a boolean.
+const RETIREMENT_COLUMNS = ['retired_at', 'retired_reason', 'retired_recipient', 'retired_note', 'retired_location_snapshot',
+  'retired_parent_uuid_snapshot', 'retired_parent_name_snapshot'];
+
+/*
+  The retirement columns as one object, or null for an active item. The location and the former
+  container are snapshots taken when the item was retired; they never follow later changes.
+*/
+const retirementResponse = row => (row.lifecycle_status === 'retired' ? {
+  reason: row.retired_reason,
+  retired_at: row.retired_at,
+  recipient: row.retired_recipient,
+  note: row.retired_note,
+  last_location: row.retired_location_snapshot,
+  former_parent: row.retired_parent_name_snapshot === null ? null
+    : { uuid: row.retired_parent_uuid_snapshot, name: row.retired_parent_name_snapshot }
+} : null);
+
+// The stored purchase price columns are presented as one object, exactly as the API always has, the
+// stored 0/1 New flag as a boolean, and the retirement columns as one `retirement` object.
 const itemResponse = item => {
   if (!item) return item;
   const { purchase_price_amount: amount, purchase_price_currency: currency, ...rest } = item;
-  return { ...rest, is_new: Boolean(rest.is_new), purchase_price: amount === null ? null : { amount, currency } };
+  for (const column of RETIREMENT_COLUMNS) delete rest[column];
+  return {
+    ...rest, is_new: Boolean(rest.is_new), purchase_price: amount === null ? null : { amount, currency },
+    retirement: retirementResponse(item)
+  };
+};
+
+/*
+  The lifecycle view of a list request: active by default, so retired items never appear unless
+  asked for. An unknown view is refused rather than silently widened.
+*/
+export const readLifecycleFilter = value => {
+  if (value === undefined || value === '') return 'active';
+  if (!LIFECYCLE_FILTERS.includes(value)) throw httpError(400, 'ITEM_LIFECYCLE_FILTER_INVALID');
+  return value;
 };
 
 export const presentLocation = value => (value && value.trim() ? value : null);
@@ -35,8 +67,9 @@ const listedItemResponse = row => {
 export const MAX_LABELS_PER_PRINT = 500;
 
 export class ItemService {
-  constructor({ itemRepository, customFieldRepository, itemPhotoRepository, categoryRepository }) {
+  constructor({ itemRepository, customFieldRepository, itemPhotoRepository, categoryRepository, itemHistoryService }) {
     this.items = itemRepository;
+    this.history = itemHistoryService;
     this.fields = customFieldRepository;
     this.photos = itemPhotoRepository;
     this.categories = categoryRepository;
@@ -76,6 +109,7 @@ export class ItemService {
       search: String(query.search || '').trim(),
       categoryId: Number.parseInt(query.categoryId) || null,
       conditionGrade: query.condition === 'unset' ? null : isConditionGrade(query.condition) ? query.condition : undefined,
+      lifecycle: readLifecycleFilter(query.lifecycle),
       sort: sortColumn ? { fieldIds: sortColumn.fieldIds, type: sortColumn.type } : { core: query.sort },
       direction: query.direction,
       limit: pageSize,
@@ -98,22 +132,28 @@ export class ItemService {
   /*
     The flat node list of the Hierarchy page. Each view derives its own structure from `parent_id`;
     the response never nests items, and the location is the same inherited one the list shows.
+    `lifecycle` selects the active (default), retired, or all items; every view stays a valid forest.
   */
-  hierarchy() {
+  hierarchy(query = {}) {
     return {
-      items: this.items.listHierarchy().map(({ location, root_id: rootId, root_location: rootLocation, ...node }) => ({
+      items: this.items.listHierarchy(readLifecycleFilter(query.lifecycle)).map(({ location, root_id: rootId, root_location: rootLocation, ...node }) => ({
         ...node,
         effective_location: presentLocation(rootId ? rootLocation : location)
       }))
     };
   }
 
-  // An item may never be stored inside itself or inside anything it already contains.
+  /*
+    An item may never be stored inside itself or inside anything it already contains, and only inside
+    a container of its own lifecycle status: `lifecycle=retired` lists the retired containers a
+    retired item may be kept in; every other value lists the active ones.
+  */
   parentCandidates(query = {}) {
     const excludeId = Number.parseInt(query.excludeId) || null;
     return this.items.listParentCandidates({
       search: String(query.search || '').trim(),
-      excludedIds: excludeId ? this.items.listSubtreeIds([excludeId]) : []
+      excludedIds: excludeId ? this.items.listSubtreeIds([excludeId]) : [],
+      lifecycle: query.lifecycle === 'retired' ? 'retired' : 'active'
     });
   }
 
@@ -156,15 +196,29 @@ export class ItemService {
     item.children = this.items.listChildren(item.id);
     // What a nested audit of this container would check: every item below it, not the item itself.
     item.descendant_count = item.children.length ? this.items.listSubtreeIds([item.id]).filter(id => id !== item.id).length : 0;
+    item.open_transfer = this.history.openTransfer(item.id);
     return this.present(item);
   }
 
-  resolveParentId(raw, itemId = null) {
+  // One page of the item's activity history, by numeric id or UUID like every item route.
+  activity(id, query) {
+    return this.history.list(this.requireItem(id).id, query);
+  }
+
+  // `item` is the edited item, or null for a new one, which is always active.
+  resolveParentId(raw, item = null) {
     if (raw === null || raw === undefined || raw === '') return null;
     const parentId = Number.parseInt(raw);
-    if (!Number.isInteger(parentId) || !this.items.findRef(parentId)) throw httpError(400, 'PARENT_ITEM_NOT_FOUND');
-    if (itemId) this.assertCanContain(parentId, [itemId]);
+    const parent = Number.isInteger(parentId) ? this.items.findRef(parentId) : null;
+    if (!parent) throw httpError(400, 'PARENT_ITEM_NOT_FOUND');
+    this.assertSameLifecycle(parent, item?.lifecycle_status ?? 'active');
+    if (item) this.assertCanContain(parentId, [item.id]);
     return parentId;
+  }
+
+  // A container and its contents always share one lifecycle status.
+  assertSameLifecycle(parent, status) {
+    if (parent.lifecycle_status !== status) throw httpError(400, 'ITEM_PARENT_LIFECYCLE_MISMATCH');
   }
 
   /*
@@ -214,7 +268,8 @@ export class ItemService {
       root_count: roots.length,
       candidates: this.items.listParentCandidates({
         search: String(body.search || '').trim(),
-        excludedIds: this.items.listSubtreeIds(roots.map(root => root.id))
+        excludedIds: this.items.listSubtreeIds(roots.map(root => root.id)),
+        lifecycle: 'active'
       })
     };
   }
@@ -222,7 +277,8 @@ export class ItemService {
   /*
     Moves the selection roots inside one destination in a single transaction, reading the hierarchy
     as it is now rather than as the browser last saw it. Any refusal leaves every item where it was.
-    Roots already inside the destination are reported as unchanged and not written.
+    Roots already inside the destination are reported as unchanged and not written. Only active
+    items move into an active container: a selection with retired items is refused as a whole.
   */
   bulkMove(body) {
     return this.items.transaction(() => {
@@ -232,10 +288,13 @@ export class ItemService {
       const parentId = Number.parseInt(raw);
       const parent = Number.isInteger(parentId) ? this.items.findRef(parentId) : null;
       if (!parent) throw httpError(400, 'PARENT_ITEM_NOT_FOUND');
+      this.assertSameLifecycle(parent, 'active');
+      const retired = selected.filter(item => item.lifecycle_status !== 'active').length;
+      if (retired) throw httpError(409, 'BULK_MOVE_RETIRED_ITEMS', { count: retired });
       const roots = this.selectionRoots(selected);
       this.assertCanContain(parent.id, roots.map(root => root.id));
       const moved = roots.filter(root => root.parent_item_id !== parent.id).map(root => root.id);
-      if (moved.length) this.items.setParent(moved, parent.id);
+      if (moved.length) this.history.track('bulk_move', moved, () => this.items.setParent(moved, parent.id));
       return {
         selected_count: selected.length,
         root_count: roots.length,
@@ -249,12 +308,12 @@ export class ItemService {
 
   // Shared attribute rules of create and update. The field values are returned separately because
   // they are written to their own table once the item row exists.
-  readAttributes(body, itemId = null) {
+  readAttributes(body, item = null) {
     const name = requiredText(body?.name, 'ITEM_NAME_REQUIRED');
     const categoryId = Number.parseInt(body?.category_id);
     if (!this.categories.findById(categoryId)) throw httpError(400, 'CATEGORY_REQUIRED');
     const values = readFieldValues(body.field_values, this.fields.listTypesByCategory(categoryId));
-    const parentId = this.resolveParentId(body.parent_item_id, itemId);
+    const parentId = this.resolveParentId(body.parent_item_id, item);
     return { values, attributes: { name, categoryId, isNew: validateIsNew(body.is_new), ...readItemDetails(body), parentId } };
   }
 
@@ -301,9 +360,12 @@ export class ItemService {
   update(id, body) {
     const updatedId = this.items.transaction(() => {
       const current = this.requireItem(id);
-      const { values, attributes } = this.readAttributes(body, current.id);
-      this.items.update(current.id, attributes);
-      for (const [fieldId, value] of values) this.items.saveFieldValue(current.id, fieldId, value);
+      const { values, attributes } = this.readAttributes(body, current);
+      // History compares the item and everything inside it before and after the save.
+      this.history.track('item_update', [current.id], () => {
+        this.items.update(current.id, attributes);
+        for (const [fieldId, value] of values) this.items.saveFieldValue(current.id, fieldId, value);
+      });
       return current.id;
     });
     return this.present(this.items.findDetailed(updatedId));
@@ -313,6 +375,10 @@ export class ItemService {
     const item = this.requireItem(id);
     const contained = this.items.countChildren(item.id);
     if (contained) throw httpError(409, 'ITEM_HAS_CHILDREN', { count: contained });
-    this.items.deleteById(item.id);
+    // A permanent delete removes the item's own history and loans with it, in one transaction.
+    this.items.transaction(() => {
+      this.history.forgetItem(item.id);
+      this.items.deleteById(item.id);
+    });
   }
 }

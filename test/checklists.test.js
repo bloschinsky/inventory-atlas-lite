@@ -14,7 +14,9 @@ const { ChecklistRepository } = await import('../server/src/repositories/checkli
 const { ChecklistRunRepository } = await import('../server/src/repositories/checklistRunRepository.js');
 const { CustomFieldRepository } = await import('../server/src/repositories/customFieldRepository.js');
 const { ItemPhotoRepository } = await import('../server/src/repositories/itemPhotoRepository.js');
+const { ItemHistoryRepository } = await import('../server/src/repositories/itemHistoryRepository.js');
 const { ItemRepository } = await import('../server/src/repositories/itemRepository.js');
+const { ItemHistoryService } = await import('../server/src/services/itemHistoryService.js');
 const { CategoryService } = await import('../server/src/services/categoryService.js');
 const { ChecklistRunService } = await import('../server/src/services/checklistRunService.js');
 const { ChecklistService } = await import('../server/src/services/checklistService.js');
@@ -29,6 +31,7 @@ const build = () => {
   const category = new CategoryService(categoryRepository).create({ name: 'Photo gear' });
   const itemRepository = new ItemRepository(db);
   const itemService = new ItemService({
+    itemHistoryService: new ItemHistoryService({ itemHistoryRepository: new ItemHistoryRepository(db) }),
     itemRepository, customFieldRepository: new CustomFieldRepository(db), itemPhotoRepository: new ItemPhotoRepository(db), categoryRepository
   });
   const checklistRepository = new ChecklistRepository(db);
@@ -273,7 +276,7 @@ test('a version 3 database gains the checklist tables in place without losing in
   db.pragma('user_version = 3');
 
   applySchema(db);
-  assert.equal(Number(db.pragma('user_version', { simple: true })), 7);
+  assert.equal(Number(db.pragma('user_version', { simple: true })), 9);
   assert.equal(db.prepare('SELECT name FROM items').get().name, 'Zenit E');
   const checklistRepository = new ChecklistRepository(db);
   const checklistRunRepository = new ChecklistRunRepository(db);
@@ -314,7 +317,7 @@ test('a version 4 database gains Last verified and the audit columns in place', 
   db.pragma('user_version = 4');
 
   applySchema(db);
-  assert.equal(Number(db.pragma('user_version', { simple: true })), 7);
+  assert.equal(Number(db.pragma('user_version', { simple: true })), 9);
   assert.deepEqual(db.prepare('SELECT name, last_verified_at FROM items').get(), { name: 'Zenit E', last_verified_at: null });
   assert.deepEqual(db.prepare('SELECT checklist_name_snapshot, source, source_container_item_id, source_container_name_snapshot, audit_scope FROM checklist_runs').get(),
     { checklist_name_snapshot: 'Old kit', source: 'checklist', source_container_item_id: null, source_container_name_snapshot: null, audit_scope: null });

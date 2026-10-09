@@ -1,5 +1,22 @@
 [
   {
+    "version": "0.60.0",
+    "date": "2026-10-09",
+    "changes": [
+      "Every item now has a History: where it moved, which container held it, every change of Transferred To, and when it was retired or restored. Moving a box records the move for everything inside it too, marked Moved together with the box. Open the History card on an item page, or View full history to filter Locations, Transfers, and Lifecycle.",
+      "Lend an item with Transfer: choose the recipient, the date, and an optional expected return. The item page shows the open loan, Overdue once it is late, and Mark as returned; History keeps every loan with how long it lasted. An item on loan is marked as returned before it can be retired, and a retired item cannot be lent.",
+      "Taking an item out of its container now asks where it is: where it was, its own saved location, another location, or no location."
+    ]
+  },
+  {
+    "version": "0.59.0",
+    "date": "2026-10-08",
+    "changes": [
+      "Items that left your inventory can now be retired instead of deleted. Open an item and press Retire item, choose why it left (sold, gifted, lost, stolen, disposed of, used up, or another reason), and optionally when, to whom, and a note. The item keeps its photos, details, and QR code, and Restore to inventory brings it back to the place you choose.",
+      "Items, Hierarchy, and the Dashboard now show your active inventory by default. Choose All or Retired under Inventory to see retired items, which carry a gray Retired badge. Retiring a container asks whether to retire everything inside it too or to move the contents out first, and checklists leave retired items out of new runs."
+    ]
+  },
+  {
     "version": "0.58.0",
     "date": "2026-10-07",
     "changes": [

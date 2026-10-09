@@ -39,6 +39,8 @@ body.app-menu-open { overflow: hidden; }
 .item-thumb { display: grid; place-items: center; width: var(--app-thumb-size); height: var(--app-thumb-size); flex: 0 0 var(--app-thumb-size); overflow: hidden; border-radius: var(--tblr-border-radius); background: var(--app-media-bg); border: var(--tblr-border-width) var(--tblr-border-style) var(--tblr-border-color); }
 .item-thumb-lg { width: var(--app-thumb-size-lg); height: var(--app-thumb-size-lg); flex-basis: var(--app-thumb-size-lg); }
 .item-thumb img { width: 100%; height: 100%; object-fit: cover; }
+/* A retired item stays readable; only its photo is subdued, and its badge says why. */
+.item-retired .item-thumb img { opacity: .55; filter: grayscale(.6); }
 .item-thumb-empty { color: var(--tblr-secondary); font-size: .625rem; text-align: center; line-height: 1.1; }
 
 /* Hierarchy tree rows. One flat list indented by depth, so any nesting renders without nested
@@ -100,6 +102,9 @@ body.app-menu-open { overflow: hidden; }
 
 /* Condition Notes keep the line breaks they were typed with. */
 .condition-notes { white-space: pre-line; }
+/* Item history: the changes of one action stack inside its timeline card; loan notes keep their lines. */
+.app-history-event + .app-history-event { margin-top: .5rem; padding-top: .5rem; border-top: 1px solid var(--tblr-border-color); }
+.app-history-note { white-space: pre-line; }
 /*
   Condition grade badges: a tint of the grade's Tabler color behind text mixed from the same color and
   the body text color. The body color is dark in light mode and light in dark mode, so the label keeps

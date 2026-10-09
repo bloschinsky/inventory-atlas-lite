@@ -4,7 +4,10 @@ import { ROOTS_CTE } from './itemRepository.js';
   Aggregation queries for the dashboard. The optional category scope is applied here so nothing
   above this layer builds SQL fragments. `now` is a UTC 'YYYY-MM-DD HH:MM:SS' timestamp in the format
   SQLite's CURRENT_TIMESTAMP writes, so every query of one response shares the same rolling window.
+  Every figure describes the active inventory; retired items are only ever counted by retiredCount().
 */
+const ACTIVE = "i.lifecycle_status = 'active'";
+
 export class DashboardRepository {
   constructor(db) {
     this.db = db;
@@ -12,9 +15,10 @@ export class DashboardRepository {
 
   // Extra conditions are fixed SQL written in this file; only the category id is a parameter.
   scope(categoryId, ...conditions) {
+    conditions.unshift(ACTIVE);
     if (categoryId) conditions.unshift('i.category_id = @categoryId');
     return {
-      clause: conditions.length ? `WHERE ${conditions.join(' AND ')}` : '',
+      clause: `WHERE ${conditions.join(' AND ')}`,
       params: categoryId ? { categoryId } : {}
     };
   }
@@ -39,6 +43,14 @@ export class DashboardRepository {
     `).get({ ...params, now });
   }
 
+  // Retired items in the same category scope, reported beside the active inventory, never inside it.
+  retiredCount(categoryId) {
+    return this.db.prepare(`
+      SELECT COUNT(*) AS count FROM items i
+      WHERE i.lifecycle_status = 'retired' ${categoryId ? 'AND i.category_id = @categoryId' : ''}
+    `).get(categoryId ? { categoryId } : {}).count;
+  }
+
   // Only the days that have items; the service fills the empty days of the window.
   countsByCreatedDay(categoryId, now) {
     const { clause, params } = this.scope(categoryId, "i.created_at >= datetime(@now, '-30 days')");
@@ -55,6 +67,7 @@ export class DashboardRepository {
     return this.db.prepare(`
       SELECT i.category_id AS categoryId, COALESCE(c.name, 'Uncategorized') AS label, COUNT(*) AS count
       FROM items i LEFT JOIN categories c ON c.id = i.category_id
+      WHERE ${ACTIVE}
       GROUP BY i.category_id, c.name
       HAVING COUNT(*) > 0
       ORDER BY count DESC, label COLLATE NOCASE, i.category_id

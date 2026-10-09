@@ -5,7 +5,9 @@
 Every item has an optional **Transferred To** base property, independent of its category, for noting
 who or where the item went when it was lent, given away, sold, or otherwise transferred
 (`Vasyl`, `Father`, `Sold via OLX`, `Workshop`). An empty value means no transfer is recorded. The
-field is informational only: it has no states, no history, and no effect on any other property.
+field itself is informational: it has no states and no effect on any other property. Its changes are
+recorded as `recipient_changed` events of the [Item activity history](item-activity-history.md), and
+the explicit loans of that feature (Transfer / Mark as returned) set and clear it.
 
 ## Data and API
 
@@ -47,8 +49,10 @@ field is informational only: it has no states, no history, and no effect on any 
 
 ## Boundaries
 
-There is no transfer history, no loan/gift/sale type or workflow state, no due date, and no dedicated
-list filter; the regular search covers finding items by recipient.
+The field has no loan/gift/sale type or workflow state and no dedicated list filter; the regular search
+covers finding items by recipient. Loan periods with due dates and returns, and the history of the
+field's values, belong to the [Item activity history](item-activity-history.md); editing the field in
+the form never starts or ends a loan.
 
 ## Verification
 

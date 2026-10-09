@@ -16,16 +16,47 @@ form.parent_item_id = null;
 const error = ref(''); const saving = ref(false);
 const aiDraft = ref(null); const templateDraft = ref(null); const duplicateSource = ref(null);
 const photoWarning = ref('');
+// A retired item can only be kept inside a retired container, so its picker offers those instead.
+const itemLifecycle = ref('active');
 const itemId = ref(null); const parent = ref(null); const parentSearch = ref(''); const parentResults = ref([]);
 
 async function searchParents() {
   const query = new URLSearchParams({ search: parentSearch.value });
   if (itemId.value) query.set('excludeId', itemId.value);
+  if (itemLifecycle.value === 'retired') query.set('lifecycle', 'retired');
   parentResults.value = await api(`/api/items/parent-candidates?${query}`);
 }
 function selectParent(candidate) {
   parent.value = candidate; form.parent_item_id = candidate ? candidate.id : null;
   parentSearch.value = ''; parentResults.value = [];
+  placement.value = '';
+}
+
+/*
+  Taking an item out of its container ends the inherited location, and its own saved location may
+  be long out of date. Saving then requires an explicit choice of where the item physically is, so a
+  stale value never silently becomes the new truth. `stored` is what the item had when it was loaded.
+*/
+const stored = ref(null); const placement = ref('');
+const detaching = computed(() => Boolean(stored.value?.parent && !form.parent_item_id));
+const sameLocation = (a, b) => (a ?? '').trim().toLowerCase() === (b ?? '').trim().toLowerCase();
+const placementOptions = computed(() => {
+  if (!detaching.value) return [];
+  const { effective, own } = stored.value;
+  return [
+    effective && { value: 'keep', label: t('itemForm.detach.keep', { location: effective }) },
+    own?.trim() && !sameLocation(own, effective) && { value: 'saved', label: t('itemForm.detach.saved', { location: own }) },
+    { value: 'other', label: t('itemForm.detach.other') },
+    { value: 'none', label: t('itemForm.detach.none') }
+  ].filter(Boolean);
+});
+async function choosePlacement(value) {
+  placement.value = value;
+  form.location = { keep: stored.value.effective, saved: stored.value.own }[value] ?? '';
+  if (value === 'other') {
+    await nextTick();
+    document.getElementById('item-location')?.focus();
+  }
 }
 
 /*
@@ -107,7 +138,8 @@ async function loadDraft() {
   if (editing.value) {
     const item = await api(`/api/items/${route.params.id}`);
     form.parent_item_id = item.parent_item_id;
-    itemId.value = item.id; parent.value = item.parent;
+    itemId.value = item.id; parent.value = item.parent; itemLifecycle.value = item.lifecycle_status;
+    stored.value = { parent: item.parent, effective: item.effective_location, own: item.location };
     photos.value = item.photos.map(savedPhoto);
     savedOrder.value = item.photos.map(photo => photo.id);
     return draftFromItem(item);
@@ -273,6 +305,33 @@ onMounted(async () => {
               {{ $t('itemForm.parentHelp') }}
             </div>
           </div>
+          <fieldset
+            v-if="detaching"
+            class="alert alert-warning d-block"
+          >
+            <legend class="alert-title fs-4">
+              {{ $t('itemForm.detach.title') }}
+            </legend>
+            <p class="mb-2">
+              {{ $t('itemForm.detach.help', { name: stored.parent.name }) }}
+            </p>
+            <label
+              v-for="option in placementOptions"
+              :key="option.value"
+              class="form-check"
+            >
+              <input
+                class="form-check-input"
+                type="radio"
+                name="item-placement"
+                :value="option.value"
+                :checked="placement === option.value"
+                required
+                @change="choosePlacement(option.value)"
+              >
+              <span class="form-check-label text-break">{{ option.label }}</span>
+            </label>
+          </fieldset>
         </ItemDraftFields>
         <hr>
         <h2 class="card-title mb-3">

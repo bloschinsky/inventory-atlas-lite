@@ -1,10 +1,11 @@
 <script setup>
-import { computed, defineAsyncComponent, onMounted, ref } from 'vue';
+import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { api } from '../api.js';
 import { buildCategoryTree, buildLocationTree, searchTree } from '../hierarchyTree.js';
 import { useHierarchyExpansion } from '../useHierarchyExpansion.js';
+import { LIFECYCLE_FILTERS } from '../../../shared/itemLifecycle.js';
 import PageHeader from '../components/PageHeader.vue';
 import HierarchyTree from '../components/HierarchyTree.vue';
 
@@ -16,7 +17,9 @@ const HierarchyGraph = defineAsyncComponent(() => import('../components/Hierarch
   tree of `Stored inside`) or by category. The page owns the data, the grouping, the search, and the
   opened branches, which the Tree and Graph views both render. The grouping and the view are two
   independent choices kept in the address (`?group=category`, `?view=graph`), so Back from an item
-  returns to them; Location and Tree are the defaults, and unknown values fall back to them.
+  returns to them; Location and Tree are the defaults, and unknown values fall back to them. The
+  lifecycle view (`?lifecycle=all|retired`) chooses which items are loaded, the active ones by default;
+  a container and its contents always share one status, so every view is a complete forest.
 */
 defineOptions({ name: 'ItemHierarchy' });
 const { t } = useI18n();
@@ -29,6 +32,7 @@ const query = ref('');
 
 const GROUPS = ['location', 'category'];
 const VIEWS = ['tree', 'graph'];
+const LIFECYCLES = LIFECYCLE_FILTERS;
 // A choice in the address; the default is left out of it.
 const choice = (name, options) => computed({
   get: () => (options.includes(route.query[name]) ? route.query[name] : options[0]),
@@ -36,13 +40,15 @@ const choice = (name, options) => computed({
 });
 const group = choice('group', GROUPS);
 const view = choice('view', VIEWS);
+const lifecycle = choice('lifecycle', LIFECYCLES);
 /*
   The two independent switches: what the hierarchy means, and how it is drawn. Inside this plain
   array the template does not unwrap `model`, so it stays the address-backed ref.
 */
 const controls = [
   { name: 'group', label: 'hierarchy.groupBy', options: GROUPS, model: group, text: 'hierarchy.groups' },
-  { name: 'view', label: 'hierarchy.view', options: VIEWS, model: view, text: 'hierarchy.views' }
+  { name: 'view', label: 'hierarchy.view', options: VIEWS, model: view, text: 'hierarchy.views' },
+  { name: 'lifecycle', label: 'lifecycle.filter.label', options: LIFECYCLES, model: lifecycle, text: 'lifecycle.filter' }
 ];
 
 const tree = computed(() => (group.value === 'category' ? buildCategoryTree : buildLocationTree)(items.value));
@@ -52,9 +58,12 @@ const subtitle = computed(() => (loading.value || error.value ? '' : t('items.co
 
 async function load() {
   loading.value = true; error.value = '';
-  try { items.value = (await api('/api/items/hierarchy')).items; } catch (e) { error.value = e.message; } finally { loading.value = false; }
+  try {
+    items.value = (await api(`/api/items/hierarchy?${new URLSearchParams({ lifecycle: lifecycle.value })}`)).items;
+  } catch (e) { error.value = e.message; } finally { loading.value = false; }
 }
 onMounted(load);
+watch(lifecycle, load);
 </script>
 
 <template>
@@ -93,28 +102,6 @@ onMounted(load);
     >
       {{ $t('common.retry') }}
     </button>
-  </div>
-
-  <div
-    v-else-if="!items.length"
-    class="card"
-  >
-    <div class="empty">
-      <p class="empty-title">
-        {{ $t('hierarchy.emptyTitle') }}
-      </p>
-      <p class="empty-subtitle text-secondary">
-        {{ $t('hierarchy.emptyText') }}
-      </p>
-      <div class="empty-action">
-        <RouterLink
-          to="/items/new"
-          class="btn btn-primary"
-        >
-          {{ $t('items.add') }}
-        </RouterLink>
-      </div>
-    </div>
   </div>
 
   <template v-else>
@@ -175,8 +162,32 @@ onMounted(load);
       </div>
     </div>
 
+    <!-- The controls stay above an empty view, so another lifecycle view is always one click away. -->
     <div
-      v-if="search && !search.matches.size"
+      v-if="!items.length"
+      class="card"
+    >
+      <div class="empty">
+        <p class="empty-title">
+          {{ lifecycle === 'active' ? $t('hierarchy.emptyTitle') : $t(`lifecycle.filter.empty.${lifecycle}`) }}
+        </p>
+        <template v-if="lifecycle === 'active'">
+          <p class="empty-subtitle text-secondary">
+            {{ $t('hierarchy.emptyText') }}
+          </p>
+          <div class="empty-action">
+            <RouterLink
+              to="/items/new"
+              class="btn btn-primary"
+            >
+              {{ $t('items.add') }}
+            </RouterLink>
+          </div>
+        </template>
+      </div>
+    </div>
+    <div
+      v-else-if="search && !search.matches.size"
       class="card"
     >
       <div class="empty">

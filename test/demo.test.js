@@ -118,6 +118,25 @@ test('search, filters, the hierarchy, the dashboard, and checklists work on the 
   assert.ok(itemService.get(demoItemUuid('cordless-drill')).last_verified_at, 'a completed verification run sets Last verified');
 });
 
+test('the demo retires and restores a container with its contents through the shared lifecycle service', () => {
+  const { itemService, itemLifecycleService, dashboardService } = seeded();
+  const nodes = itemService.hierarchy().items;
+  const container = nodes.find(node => node.parent_id !== null && node.children_count > 0) ?? nodes.find(node => node.children_count > 0);
+  const subtree = itemService.get(container.uuid).descendant_count + 1;
+  const retired = itemLifecycleService.change(container.uuid, { status: 'retired', reason: 'gifted', include_contents: true });
+  assert.equal(retired.affected_count, subtree);
+  assert.equal(retired.item.parent, null);
+  assert.equal(itemService.list({ lifecycle: 'retired' }).pagination.total, subtree);
+  assert.equal(dashboardService.overview({}).totalItems, fixture.items.length - subtree);
+  assert.equal(dashboardService.overview({}).retiredItems, subtree);
+  assert.equal(itemService.hierarchy({ lifecycle: 'retired' }).items.length, subtree);
+
+  const restored = itemLifecycleService.change(container.uuid, { status: 'active' });
+  assert.equal(restored.affected_count, subtree);
+  assert.equal(itemService.list({ lifecycle: 'retired' }).pagination.total, 0);
+  assert.equal(itemService.list().pagination.total, fixture.items.length);
+});
+
 test('changes stay in their own demo database, and a new one starts from the fixture again', () => {
   const visit = seeded();
   const category = visit.categoryService.list()[0];
@@ -177,6 +196,26 @@ test('the Ukrainian demo translates the invented text and keeps names, serials, 
   assert.deepEqual(camera.fields.map(field => [field.name, field.value]), [['Байонет', 'Nikon F'], ['Формат', 'Плівка 35 мм'], ['Остання перевірка', '2026-08-23']]);
   assert.equal(services.itemService.get(demoItemUuid('portable-ssd')).name, 'Портативний SSD 1 TB');
   assert.equal(services.itemService.list({ search: 'Nikon' }).items.length, 3);
+});
+
+test('the demo has a small recorded activity history in every language', () => {
+  for (const locale of locales) {
+    const { itemService } = seeded(locale);
+    const { items, loans } = createDemoFixture(locale);
+    const history = key => itemService.activity(demoItemUuid(key), {}).events;
+    const [radioMove] = history('handheld-radio');
+    // The Camping Box moved, and its contents moved with it.
+    assert.deepEqual([radioMove.type, radioMove.from, radioMove.to, radioMove.via_item.name],
+      ['location_changed', byKey(items, 'archive-box').location, byKey(items, 'camping-box').location, byKey(items, 'camping-box').name]);
+    assert.ok(Date.parse(radioMove.occurred_at) < Date.now() - 20 * 24 * 60 * 60 * 1000, 'the move is dated in the past');
+    assert.deepEqual(history('speedlight').map(event => [event.type, event.from_item.name, event.to_item.name]),
+      [['container_changed', byKey(items, 'electronics-drawer').name, byKey(items, 'camera-bag').name]]);
+    const drill = history('cordless-drill');
+    assert.deepEqual(drill.map(event => event.type), ['returned', 'transferred']);
+    assert.equal(drill[0].transfer.recipient, loans[0].recipient);
+    assert.equal(itemService.get(demoItemUuid('cordless-drill')).transferred_to, null);
+    assert.deepEqual(history('nikon-f65'), [], 'items without curated activity have no fabricated history');
+  }
 });
 
 test('an unsupported language gets the English demo', () => {

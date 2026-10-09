@@ -14,7 +14,9 @@ const { CategoryRepository } = await import('../server/src/repositories/category
 const { CustomFieldRepository } = await import('../server/src/repositories/customFieldRepository.js');
 const { DatabaseMetadataRepository } = await import('../server/src/repositories/databaseMetadataRepository.js');
 const { ItemPhotoRepository } = await import('../server/src/repositories/itemPhotoRepository.js');
+const { ItemHistoryRepository } = await import('../server/src/repositories/itemHistoryRepository.js');
 const { ItemRepository } = await import('../server/src/repositories/itemRepository.js');
+const { ItemHistoryService } = await import('../server/src/services/itemHistoryService.js');
 const { ItemTemplateRepository } = await import('../server/src/repositories/itemTemplateRepository.js');
 const { BulkReplaceService } = await import('../server/src/services/bulkReplaceService.js');
 const { CategoryService } = await import('../server/src/services/categoryService.js');
@@ -52,10 +54,11 @@ const build = () => {
     db,
     categoryService,
     customFieldService: new CustomFieldService(customFieldRepository, categoryService),
-    itemService: new ItemService({ itemRepository, customFieldRepository, itemPhotoRepository, categoryRepository }),
+    itemService: new ItemService({
+    itemHistoryService: new ItemHistoryService({ itemHistoryRepository: new ItemHistoryRepository(db) }), itemRepository, customFieldRepository, itemPhotoRepository, categoryRepository }),
     itemTemplateService: new ItemTemplateService({ itemTemplateRepository: new ItemTemplateRepository(db), categoryRepository, customFieldRepository }),
     photoService: new PhotoService({ itemRepository, itemPhotoRepository }),
-    bulkReplaceService: new BulkReplaceService({ bulkReplaceRepository: new BulkReplaceRepository(db) }),
+    bulkReplaceService: new BulkReplaceService({ bulkReplaceRepository: new BulkReplaceRepository(db), itemHistoryService: new ItemHistoryService({ itemHistoryRepository: new ItemHistoryRepository(db) }) }),
     dashboardService: new DashboardService({ dashboardRepository: new DashboardRepository(db), categoryRepository }),
     metadataService: new DatabaseMetadataService({ databaseMetadataRepository: new DatabaseMetadataRepository(db) }),
     // Moves last_updated_at into the past so any later write is visible regardless of clock resolution.

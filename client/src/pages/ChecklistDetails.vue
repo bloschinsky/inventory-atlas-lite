@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n';
 import { api } from '../api.js';
 import { modeKey } from '../checklists.js';
 import PageHeader from '../components/PageHeader.vue';
+import ItemLifecycleBadge from '../components/ItemLifecycleBadge.vue';
 import ItemThumbnail from '../components/ItemThumbnail.vue';
 import ChecklistRunHistory from '../components/ChecklistRunHistory.vue';
 
@@ -19,6 +20,8 @@ const starting = ref(false);
 
 const openRun = computed(() => runs.value.find(run => run.status === 'in_progress'));
 const hasDeleted = computed(() => checklist.value?.items.some(entry => entry.deleted));
+// Retired items stay on the checklist but are left out of every new run; the page says so before one starts.
+const retiredCount = computed(() => checklist.value?.items.filter(entry => entry.retired).length ?? 0);
 
 async function load() {
   error.value = '';
@@ -103,6 +106,14 @@ onMounted(load);
       {{ checklist.description }}
     </p>
 
+    <div
+      v-if="retiredCount"
+      class="alert alert-warning"
+      role="status"
+    >
+      {{ $t('lifecycle.checklists.retiredWarning', retiredCount) }}
+    </div>
+
     <section
       class="card mb-3"
       aria-labelledby="checklist-expected-items"
@@ -131,6 +142,7 @@ onMounted(load);
           v-for="entry in checklist.items"
           :key="entry.id"
           class="list-group-item d-flex align-items-center gap-3"
+          :class="{ 'item-retired': entry.retired }"
         >
           <ItemThumbnail
             :photo-id="entry.thumbnail_id"
@@ -154,6 +166,11 @@ onMounted(load);
                 class="badge bg-warning-lt"
               >{{ $t('checklists.deletedItem') }}</span>
               <template v-else>
+                <ItemLifecycleBadge
+                  v-if="entry.retired"
+                  class="me-1"
+                  status="retired"
+                />
                 {{ [entry.category_name, entry.effective_location].filter(Boolean).join(' · ') }}
               </template>
             </div>

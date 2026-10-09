@@ -5,6 +5,7 @@ import { ChecklistRunRepository } from '../../../server/src/repositories/checkli
 import { CustomFieldRepository } from '../../../server/src/repositories/customFieldRepository.js';
 import { DashboardRepository } from '../../../server/src/repositories/dashboardRepository.js';
 import { DatabaseMetadataRepository } from '../../../server/src/repositories/databaseMetadataRepository.js';
+import { ItemHistoryRepository } from '../../../server/src/repositories/itemHistoryRepository.js';
 import { ItemPhotoRepository } from '../../../server/src/repositories/itemPhotoRepository.js';
 import { ItemRepository } from '../../../server/src/repositories/itemRepository.js';
 import { ItemTemplateRepository } from '../../../server/src/repositories/itemTemplateRepository.js';
@@ -16,7 +17,10 @@ import { ChecklistService } from '../../../server/src/services/checklistService.
 import { CustomFieldService } from '../../../server/src/services/customFieldService.js';
 import { DashboardService } from '../../../server/src/services/dashboardService.js';
 import { DatabaseMetadataService } from '../../../server/src/services/databaseMetadataService.js';
+import { ItemHistoryService } from '../../../server/src/services/itemHistoryService.js';
+import { ItemLifecycleService } from '../../../server/src/services/itemLifecycleService.js';
 import { ItemService } from '../../../server/src/services/itemService.js';
+import { ItemTransferService } from '../../../server/src/services/itemTransferService.js';
 import { ItemTemplateService } from '../../../server/src/services/itemTemplateService.js';
 import { PhotoService } from '../../../server/src/services/photoService.js';
 import { openDemoDatabase } from './sqlite.js';
@@ -36,14 +40,19 @@ export function createDemoServices(SQL) {
   const itemPhotoRepository = new ItemPhotoRepository(db);
   const checklistRepository = new ChecklistRepository(db);
   const checklistRunRepository = new ChecklistRunRepository(db);
+  const itemHistoryRepository = new ItemHistoryRepository(db);
   const categoryService = new CategoryService(categoryRepository);
+  const itemHistoryService = new ItemHistoryService({ itemHistoryRepository });
+  const itemService = new ItemService({ itemRepository, customFieldRepository, itemPhotoRepository, categoryRepository, itemHistoryService });
 
   return {
     db,
     categoryService,
     customFieldService: new CustomFieldService(customFieldRepository, categoryService),
-    itemService: new ItemService({ itemRepository, customFieldRepository, itemPhotoRepository, categoryRepository }),
-    bulkReplaceService: new BulkReplaceService({ bulkReplaceRepository: new BulkReplaceRepository(db) }),
+    itemService,
+    itemTransferService: new ItemTransferService({ itemRepository, itemHistoryRepository, itemHistoryService }),
+    itemLifecycleService: new ItemLifecycleService({ itemRepository, itemService, itemHistoryService }),
+    bulkReplaceService: new BulkReplaceService({ bulkReplaceRepository: new BulkReplaceRepository(db), itemHistoryService }),
     databaseMetadataService: new DatabaseMetadataService({ databaseMetadataRepository: new DatabaseMetadataRepository(db) }),
     itemTemplateService: new ItemTemplateService({
       itemTemplateRepository: new ItemTemplateRepository(db), categoryRepository, customFieldRepository

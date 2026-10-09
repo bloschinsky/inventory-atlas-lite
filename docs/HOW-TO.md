@@ -179,7 +179,9 @@ separate fields, and they keep separate value suggestions.
 
 ### Read and filter the Dashboard
 
-1. Open **Dashboard**, the application's default landing page. Its four summary cards show the
+1. Open **Dashboard**, the application's default landing page. Every card describes the active
+   inventory: retired items are not counted, and the first card links to them with a line such as
+   *2 retired items are not counted*. Its four summary cards show the
    total item count, a photo coverage gauge with the counts of items with and without photos, a
    placement bar with its three counts, and the items added during the rolling last 30 days with a
    small chart of each day. Hover or tap a chart for its tooltip; the important numbers are always
@@ -415,6 +417,10 @@ Deleting an inventory item is never blocked by a checklist. The checklist then s
 checklist. Deleted items are skipped when a run starts, and runs that already contain the item keep
 it under its name.
 
+A retired item stays on its checklists with a **Retired** badge, and the checklist page warns how many
+of its items are retired. New runs and container audits leave retired items out, and the run page
+says how many were left out. Runs that already contain the item keep it, marked **Retired**.
+
 **Delete** on a checklist, after a confirmation, removes the checklist and its item list but keeps
 its runs. They are listed under **Runs of deleted checklists** on the **Checklists** page and stay
 readable. Checklists and runs are part of the SQLite database, so backups, restores, cloud backups,
@@ -520,6 +526,48 @@ web, create categories or fields, or make a second AI request.
 4. An item that still contains other items cannot be deleted. The message reports how many items are
    inside; move or delete them first.
 
+Deleting removes the record for good. For something you sold, gave away, lost, or used up, **retire**
+it instead, so its photos and details stay available.
+
+### Retire an item and restore it
+
+Retiring marks an item that has left your inventory — sold, gifted, lost, stolen, disposed of, used up,
+or another reason — without deleting anything. A retired item keeps its photos, serial number, QR code,
+New/Used flag, Condition, purchase data, and custom fields, but it no longer counts as current
+inventory. Lending an item to someone is not a retirement; use **Transfer** for that. An item on loan,
+or a container with something on loan inside it, is retired only after the loan is marked as returned,
+and a retired item cannot be lent.
+
+1. Open the item and press **Retire item**.
+2. Choose the **Reason** (required). **Retired on** is now by default; change it if the item left
+   earlier. It cannot be in the future. **Recipient or context** (for example the buyer) and **Note**
+   are optional.
+3. If the item is a container with items inside, choose first:
+   - **Retire the container and all items inside it** retires everything inside it, at every depth,
+     in one step with the same details. The contents stay nested inside the container.
+   - **Move the contents out first** retires nothing. Move the contents elsewhere (open each one, or
+     select them on **Items** and use **Move to…**), then retire the container.
+4. Press **Retire**. The item page shows a gray **Retired** badge and a **Retirement** card with the
+   reason, the date, the recipient and note, the **Last location** it had, and its **Former container**.
+   These are a snapshot: renaming or moving the former container later does not change them.
+5. A retired item leaves its container, so active items are never hidden inside something that is
+   gone. Its own saved **Location** is kept unchanged.
+
+Retired items are hidden by default. On **Items** and **Hierarchy**, choose **Retired** under
+**Inventory** to see only them, or **All** to see everything; **Active** is the default. The Dashboard
+counts only active items and shows how many are retired under the total. Direct links and QR codes of a
+retired item still open it.
+
+To bring an item back, open it and press **Restore to inventory**. Choose where it goes: **On its own,
+at a location** (its saved location is filled in; change or clear it) or **Inside an active container**
+(search and pick one). It is never put back into its former container automatically. Everything that
+was retired inside it comes back with it and stays inside it. Restoring keeps the same item, UUID,
+photos, and details, and clears the retirement details.
+
+An active item can only be stored inside an active container, and a retired item only inside a retired
+one, so **Move to…** refuses a selection that contains retired items. **Delete** stays a separate
+action.
+
 ### Add, view, order, and remove photos
 
 1. Photos are added through the item form, at the bottom, under **Photos**. Select one or several
@@ -619,7 +667,10 @@ enables the live camera.
    number, **Transferred To**, and the values of **text** custom fields — whether or not their column
    is shown. It does not match condition, condition notes, location, or number, date, and yes/no fields.
 3. Narrow the list with **Category** (**All categories** by default) and **Condition** (**All
-   conditions**, one grade, or **Not set**).
+   conditions**, one grade, or **Not set**). **Inventory** chooses **Active** (the default), **All**,
+   or **Retired** items; the choice is kept while you move around during this browser session, and a
+   new session starts with **Active** again. Retired items show a gray **Retired** badge and a faded
+   photo.
 4. Choose what the list shows with **Columns**: tick or untick Photo, Category, Condition, Condition
    Notes, New, Location,
    **Stored inside**, Purchase Date, Purchase Price, Serial Number, Transferred To, Created, Updated,
@@ -656,9 +707,56 @@ enables the live camera.
    **Items** list shows the same badge with the item.
 4. To remove the note, clear **Transferred To** and save. The badge disappears.
 
-The field is only a note: it does not change **Location**, **Stored inside**, or anything else, and it
-keeps no history of earlier transfers. Search for the value on **Items** to list everything
-transferred to the same person.
+The field is only a note: it does not change **Location**, **Stored inside**, or anything else. Every
+change of it is listed in the item's **History** as *Transferred To changed*, but it never starts or
+ends a loan; use **Transfer** for that (see the next section). Search for the value on **Items** to
+list everything transferred to the same person.
+
+### Lend an item and mark it as returned
+
+1. Open the item and press **Transfer** next to **Edit**.
+2. Enter the **Recipient** (suggestions come from earlier Transferred To values). **Transferred on**
+   is now unless you change it; it cannot be in the future. **Expected return** and **Note** are
+   optional. Press **Transfer**.
+3. The item page shows a **Loan** card: *On loan to …*, since when, the expected return, the note,
+   and an **Overdue** badge once the expected return day has passed. **Transferred To** now holds the
+   recipient, so the badge and the Items search work as before. **Location** and **Stored inside**
+   do not change.
+4. When the item is back, press **Mark as returned** on the **Loan** card, adjust **Returned on** if
+   it came back earlier, add a note if you like, and press **Mark as returned**. The loan is closed,
+   **Transferred To** is cleared (unless you had changed it by hand to someone else), and **History**
+   shows how long the loan lasted.
+
+An item has at most one open loan, so **Transfer** is hidden while one is open. A new loan cannot
+start before the previous one was returned. Loans are history, so they cannot be edited or deleted;
+to correct a mistaken loan, mark it as returned with a note. Selling or giving an item away is not a
+loan: retire the item instead.
+
+### See the history of an item
+
+The item page has a **History** card with the five most recent changes; **View full history** opens
+all of them, newest first, with **All**, **Locations**, **Transfers**, and **Lifecycle** filters and
+**Load more**.
+History is recorded by the server when a change is saved, from the moment History was installed;
+nothing earlier is invented.
+
+- **Location changed** — the location you see for the item changed, from → to. This includes moves
+  of a container it is in, at any depth: such entries say *Moved together with …*, linking to the
+  container that moved. Editing the own saved location of an item that shows its container's location
+  is not a move, because what you see stays the same; neither are changes of letter case or spaces.
+- **Container changed** — **Stored inside** changed, from → to, even when the location stays the same.
+  The items inside it keep their container, so they get no entry unless their location changed.
+- **Transferred To changed**, **Lent to …**, **Returned from …** — the recipient note and the loans
+  of the previous section, with their dates, notes, and the actual duration of returned loans.
+- **Retired: …** and **Restored to inventory** — the reason, the last location, and the container the
+  item was taken out of, or the location and container it came back to. Items retired or restored
+  with their container say *Retired together with …* or *Restored together with …*.
+
+Changes saved together, such as a new container and the location it brings, are one entry. **Bulk
+move** and **Bulk replace** entries come from **Move to…** and **Replace a field value on many items**
+(Location and Transferred To only). Other edits — name, Condition, photos, fields — are not History.
+Entries keep the names and locations as they were, so they stay readable after renames; a container
+deleted since then is marked *(deleted)*. Deleting an item permanently deletes its own history.
 
 ### Put an item inside another item
 
@@ -667,7 +765,10 @@ transferred to the same person.
    *Search an item to store this one in…* and press **Search** or Enter.
 3. Click the result you want. It appears as a badge above the search box.
 4. Press **Clear** next to the badge to take the item out of its container and make it top-level
-   again.
+   again. The form then asks *Where is this item now?*: choose where it was (the container's
+   location), its own saved location (if it differs), **Another location** (then type it in
+   **Location**), or **No location**. Saving is not possible until you choose, so an old saved
+   location never silently becomes the item's place.
 5. Save. The item page now shows a **Storage** card with **Stored inside** linking to the container,
    and the container's page lists the item under **Contents**. **Location** on the item page now
    shows the container's location with a short note that it is inherited.
@@ -750,6 +851,9 @@ the new container. There is no undo, and **Move to…** cannot take items out to
    - **Search hierarchy** finds item and category names here; a match opens its category and its
      same-category containers. There are no **Uncontained items** groups in this grouping.
    - Each grouping remembers the branches you opened in it while the page stays open.
+9. **Inventory** shows **Active** items by default; choose **Retired** or **All** to include retired
+   items, in either grouping and view. A retired container is always shown with everything retired
+   inside it, and retired items have **Retired** in their secondary line.
 
 The tree and graph only show what is stored where; to move an item, change **Stored inside** in its
 form, or use **Move to…** on **Items** for several items at once; to move something to another
