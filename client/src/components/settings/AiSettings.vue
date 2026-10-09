@@ -3,7 +3,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { api, jsonOptions } from '../../api.js';
 import { setAiCapabilities } from '../../capabilities.js';
-import { translateNotice } from '../../i18n/index.js';
+import { formatDateTime, translateError, translateNotice } from '../../i18n/index.js';
 import { AI_PROVIDERS, aiProvider, isLocalNetworkHost } from '../../../../shared/aiProviders.js';
 
 const { t } = useI18n();
@@ -15,8 +15,10 @@ const form = reactive({
 const savedEndpoint = reactive({ provider: '', baseUrl: '' });
 const maskedKey = ref('');
 const hasApiKey = ref(false);
-const availableModels = ref([]);
-const selectedModel = ref('custom');
+// The last model list and the connection it belongs to; it is shown only while that still matches.
+const catalog = ref(null);
+const customModel = ref(false);
+const showAllModels = ref(false);
 const loading = ref(true);
 const saving = ref(false);
 const error = ref('');
@@ -49,14 +51,48 @@ const insecureRemote = computed(() => {
 
 // The unsaved connection values the model list and the connection test are run against.
 const connectionForm = () => ({ provider: form.provider, displayName: form.displayName, baseUrl: form.baseUrl, apiKey: form.apiKey });
+// The identity of a model list: another provider, address, or typed key never shows this list.
+const connectionKey = () => JSON.stringify([form.provider, trimmedBaseUrl.value, form.apiKey.trim()]);
 
-function syncSelectedModel() {
-  selectedModel.value = availableModels.value.some(model => model.id === form.model) ? form.model : 'custom';
-}
+const currentCatalog = computed(() => (catalog.value?.key === connectionKey() ? catalog.value : null));
+const models = computed(() => currentCatalog.value?.models ?? []);
+// OpenAI lists arrive grouped; the other providers keep their single list.
+const grouped = computed(() => models.value.some(model => model.group));
+const modelsIn = group => models.value.filter(model => model.group === group);
+const hiddenModels = computed(() => (grouped.value ? modelsIn('other') : []));
+const noRecommended = computed(() => grouped.value && hiddenModels.value.length === models.value.length);
+const modelGroups = computed(() => {
+  if (!grouped.value) return [{ key: 'all', label: '', models: models.value }];
+  const groups = [
+    { key: 'recommended', label: t('settings.ai.groupRecommended'), models: modelsIn('recommended') },
+    { key: 'previous', label: t('settings.ai.groupPrevious'), models: modelsIn('previous') }
+  ];
+  if (showAllModels.value || noRecommended.value) groups.push({ key: 'other', label: t('settings.ai.groupOther'), models: hiddenModels.value });
+  return groups.filter(group => group.models.length);
+});
+
+// The configured model always stays selectable, even when the list omits or hides it.
+const selectedListed = computed(() => models.value.find(model => model.id === form.model) ?? null);
+const selectedShown = computed(() => modelGroups.value.some(group => group.models.some(model => model.id === form.model)));
+const modelChoice = computed({
+  get: () => (customModel.value ? 'custom' : form.model),
+  set: value => {
+    customModel.value = value === 'custom';
+    if (value !== 'custom') form.model = value;
+  }
+});
 
 function modelLabel(model) {
-  return model.imageInput === false ? t('settings.ai.textOnlyModel', { model: model.label }) : model.label;
+  const label = model.verified ? t('settings.ai.verifiedModel', { model: model.label }) : model.label;
+  return model.imageInput === false ? t('settings.ai.textOnlyModel', { model: label }) : label;
 }
+
+const selectedLabel = computed(() => {
+  if (selectedListed.value) return modelLabel(selectedListed.value);
+  return currentCatalog.value?.models.length ? t('settings.ai.notListedModel', { model: form.model }) : form.model;
+});
+
+const capabilityText = value => t(value === true ? 'settings.ai.capabilitySupported' : value === false ? 'settings.ai.capabilityUnsupported' : 'settings.ai.capabilityUnknown');
 
 // Provider names are brands and stay as they are; only the generic custom entry is translated.
 const providerLabel = provider => (provider.id === 'custom' ? t('settings.ai.providers.custom.label') : provider.label);
@@ -72,47 +108,52 @@ function applySettings(settings) {
   savedEndpoint.baseUrl = settings.baseUrl;
   hasApiKey.value = settings.hasApiKey;
   maskedKey.value = settings.apiKeyMasked;
-  syncSelectedModel();
+  customModel.value = false;
 }
 
 // A preset fills in its default address; the list of another provider's models no longer applies.
 function chooseProvider() {
   form.baseUrl = preset.value.defaultBaseUrl;
-  availableModels.value = [];
+  catalog.value = null;
+  showAllModels.value = false;
   modelError.value = '';
   testResult.value = null;
-  syncSelectedModel();
 }
 
-function chooseModel() {
-  if (selectedModel.value !== 'custom') form.model = selectedModel.value;
+// A list never changes the chosen model: a refresh only changes what can be chosen.
+function showModels(key, list) {
+  catalog.value = {
+    key,
+    models: list.models,
+    fetchedAt: list.fetchedAt ?? null,
+    staleReason: list.stale ? translateError(list.error) : ''
+  };
 }
 
-function showModels(models) {
-  availableModels.value = models;
-  syncSelectedModel();
-}
-
-async function loadModels() {
+// `refresh` asks the server to bypass its cached list of this connection.
+async function loadModels(refresh = false) {
+  const key = connectionKey();
   modelsLoading.value = true;
   modelError.value = '';
   try {
-    showModels((await api('/api/ai/models', jsonOptions('POST', connectionForm()))).models);
+    showModels(key, await api('/api/ai/models', jsonOptions('POST', { ...connectionForm(), refresh })));
   } catch (caught) {
-    showModels([]);
-    modelError.value = t('settings.ai.modelsFailed', { reason: caught.message });
+    // A list already shown for this connection stays, marked as not refreshed.
+    if (catalog.value?.key === key) catalog.value = { ...catalog.value, staleReason: caught.message };
+    else modelError.value = t('settings.ai.modelsFailed', { reason: caught.message });
   } finally {
     modelsLoading.value = false;
   }
 }
 
 async function testConnection() {
+  const key = connectionKey();
   testing.value = true;
   testResult.value = null;
   try {
     const result = await api('/api/ai/test', jsonOptions('POST', connectionForm()));
     testResult.value = { ok: true, message: translateNotice(result.notice) };
-    if (result.models.length) { modelError.value = ''; showModels(result.models); }
+    if (result.models.length) { modelError.value = ''; showModels(key, result); }
   } catch (caught) {
     testResult.value = { ok: false, message: caught.message };
   } finally {
@@ -341,32 +382,139 @@ onMounted(async () => {
             >{{ $t('settings.ai.model') }}</label>
             <select
               id="ai-model"
-              v-model="selectedModel"
+              v-model="modelChoice"
               class="form-select"
-              @change="chooseModel"
+              aria-describedby="ai-model-details ai-model-status"
             >
               <option
-                v-for="model in availableModels"
-                :key="model.id"
-                :value="model.id"
+                v-if="!customModel && !selectedShown"
+                :value="form.model"
               >
-                {{ modelLabel(model) }}
+                {{ selectedLabel }}
               </option>
+              <template
+                v-for="group in modelGroups"
+                :key="group.key"
+              >
+                <optgroup
+                  v-if="group.label"
+                  :label="group.label"
+                >
+                  <option
+                    v-for="model in group.models"
+                    :key="model.id"
+                    :value="model.id"
+                    :title="model.id"
+                  >
+                    {{ modelLabel(model) }}
+                  </option>
+                </optgroup>
+                <template v-else>
+                  <option
+                    v-for="model in group.models"
+                    :key="model.id"
+                    :value="model.id"
+                    :title="model.id"
+                  >
+                    {{ modelLabel(model) }}
+                  </option>
+                </template>
+              </template>
               <option value="custom">
                 {{ $t('settings.ai.customModelOption') }}
               </option>
             </select>
-            <div class="form-text d-flex align-items-center gap-2">
-              <span v-if="modelsLoading">{{ $t('settings.ai.modelsLoading') }}</span>
-              <span v-else>{{ $t('settings.ai.modelsHelp') }}</span>
+            <div
+              v-if="!customModel"
+              id="ai-model-details"
+              class="form-text"
+            >
+              <div class="d-flex flex-wrap align-items-center gap-2">
+                <i18n-t
+                  keypath="settings.ai.modelId"
+                  scope="global"
+                  tag="span"
+                  class="text-break"
+                >
+                  <template #id>
+                    <code>{{ form.model }}</code>
+                  </template>
+                </i18n-t>
+                <span
+                  v-if="selectedListed?.verified"
+                  class="badge bg-green-lt text-wrap text-start"
+                >{{ $t('settings.ai.modelVerified') }}</span>
+              </div>
+              <div v-if="selectedListed">
+                {{ $t('settings.ai.capabilityVision', { value: capabilityText(selectedListed.imageInput) }) }} ·
+                {{ $t('settings.ai.capabilityStructured', { value: capabilityText(selectedListed.structuredOutput) }) }}
+              </div>
+              <div v-if="form.imageInput !== 'auto'">
+                {{ $t('settings.ai.imageOverride') }}
+              </div>
+            </div>
+            <div
+              v-if="!customModel && !selectedListed && models.length"
+              class="alert alert-warning py-2 mt-2 mb-0"
+            >
+              {{ $t('settings.ai.modelNotListed') }}
+            </div>
+            <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
               <button
-                class="btn btn-link btn-sm p-0"
+                v-if="hiddenModels.length && !noRecommended"
+                class="btn btn-sm btn-outline-secondary"
+                type="button"
+                @click="showAllModels = !showAllModels"
+              >
+                {{ showAllModels ? $t('settings.ai.showFewerModels') : $t('settings.ai.showAllModels', { count: hiddenModels.length }) }}
+              </button>
+              <button
+                class="btn btn-sm btn-outline-secondary"
                 type="button"
                 :disabled="modelsLoading"
-                @click="loadModels"
+                @click="loadModels(true)"
               >
+                <span
+                  v-if="modelsLoading"
+                  class="spinner-border spinner-border-sm me-1"
+                  aria-hidden="true"
+                />
                 {{ $t('settings.ai.refreshModels') }}
               </button>
+            </div>
+            <div
+              id="ai-model-status"
+              class="form-text"
+              aria-live="polite"
+            >
+              <template v-if="modelsLoading">
+                {{ $t('settings.ai.modelsLoading') }}
+              </template>
+              <template v-else-if="currentCatalog">
+                <template v-if="currentCatalog.fetchedAt">
+                  {{ $t('settings.ai.modelsChecked', { time: formatDateTime(currentCatalog.fetchedAt) }) }}
+                </template>
+                {{ $t('settings.ai.modelsOffered', models.length) }}
+                <template v-if="!models.length">
+                  {{ $t('settings.ai.modelsEmpty') }}
+                </template>
+                <template v-else-if="noRecommended">
+                  {{ $t('settings.ai.modelsNoRecommended') }}
+                </template>
+              </template>
+              <template v-else-if="catalog">
+                {{ $t('settings.ai.modelsConnectionChanged') }}
+              </template>
+              <template v-else>
+                {{ $t('settings.ai.modelsHelp') }}
+              </template>
+            </div>
+            <div
+              v-if="currentCatalog?.staleReason"
+              class="alert alert-warning mt-2 mb-0"
+              role="alert"
+            >
+              {{ $t('settings.ai.modelsStale', { reason: currentCatalog.staleReason, time: currentCatalog.fetchedAt ? formatDateTime(currentCatalog.fetchedAt) : '—' }) }}
             </div>
             <div
               v-if="modelError"
@@ -377,7 +525,7 @@ onMounted(async () => {
             </div>
           </div>
           <div
-            v-if="selectedModel === 'custom'"
+            v-if="customModel"
             class="mb-3"
           >
             <label
@@ -390,7 +538,14 @@ onMounted(async () => {
               class="form-control"
               required
               maxlength="200"
+              aria-describedby="ai-custom-model-help"
             >
+            <div
+              id="ai-custom-model-help"
+              class="form-text"
+            >
+              {{ $t('settings.ai.customModelUnknown') }}
+            </div>
           </div>
           <label
             class="form-label"

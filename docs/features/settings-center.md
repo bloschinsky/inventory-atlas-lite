@@ -35,7 +35,8 @@ of the interface, built only from installed Tabler components.
 - **Interface** and **Database** are one card each. **Cloud Backup** keeps its existing card.
 - **AI** has an *AI* heading and three cards in one form: **Features** (*Enable AI features*),
   **Connection** (provider, display name, base URL, API key, *Remove the saved API key*, *Test
-  connection*), and **Model** (model list with *Refresh models*, custom model ID, *Image input*). One
+  connection*), and **Model** (the grouped model list with *Show all models* and *Refresh models*,
+  custom model ID, *Image input*). One
   **Save settings** button below the cards saves them together, exactly as before.
 - After a Dropbox or Google Drive sign-in, the server returns the browser to
   `/settings/cloud-backup?cloud=connected&provider=…` or `/settings/cloud-backup?cloud=error`. The

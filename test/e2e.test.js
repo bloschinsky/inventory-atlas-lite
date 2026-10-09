@@ -655,12 +655,12 @@ test('AI settings stay server-side and image analysis returns a validated invent
     assert.deepEqual(await request('/api/capabilities'), { ai: { enabled: true, imageInput: true } });
     assert.ok(!JSON.stringify(await request('/api/capabilities')).includes('sk-test'));
 
-    assert.deepEqual(await request('/api/ai/models'), {
-      models: [
-        { id: 'gpt-5.6-luna', label: 'GPT-5.6 Luna', imageInput: true },
-        { id: 'gpt-5.6-sol', label: 'GPT-5.6 Sol', imageInput: true }
-      ]
-    });
+    const listed = await request('/api/ai/models');
+    assert.deepEqual(listed.models.map(model => [model.id, model.group, model.verified]), [
+      ['gpt-5.6-luna', 'recommended', true], ['gpt-5.6-sol', 'recommended', true], ['gpt-4o-mini', 'previous', false]
+    ]);
+    assert.equal(listed.providerCount, 3);
+    assert.ok(!JSON.stringify(listed).includes('sk-test'));
     assert.equal(modelsRequest.authorization, 'Bearer sk-test-not-a-real-secret');
 
     const audioCards = await request('/api/categories', json('POST', { name: 'Audio Cards' }));

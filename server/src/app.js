@@ -34,6 +34,7 @@ import { AiFieldService } from './services/aiFieldService.js';
 import { AiItemAnalysisService } from './services/aiItemAnalysisService.js';
 import { AiProviderService } from './services/aiProviderService.js';
 import { AiSettingsService } from './services/aiSettingsService.js';
+import { ModelListCache } from './services/modelListCache.js';
 import { BackupService } from './services/backupService.js';
 import { BulkReplaceService } from './services/bulkReplaceService.js';
 import { CategoryService } from './services/categoryService.js';
@@ -127,6 +128,7 @@ export function createApp({ production = false } = {}) {
   // OpenAI keeps its native adapter; every other preset speaks the generic OpenAI-compatible API.
   const aiProviderService = new AiProviderService({
     aiSettingsService,
+    modelListCache: new ModelListCache(),
     createProvider: connection => (connection.provider === 'openai' ? new OpenAiProvider(connection) : new OpenAiCompatibleProvider(connection))
   });
   const categoryService = new CategoryService(categoryRepository);

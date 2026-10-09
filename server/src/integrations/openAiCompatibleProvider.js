@@ -50,13 +50,13 @@ export class OpenAiCompatibleProvider {
         structuredOutput: listedCapability(model.supported_parameters, 'structured_outputs', 'response_format')
       });
     }
-    return [...models.values()].sort((a, b) => a.label.localeCompare(b.label));
+    return { models: [...models.values()].sort((a, b) => a.label.localeCompare(b.label)), providerCount: listed.length };
   }
 
   // Unknown capabilities stay null: the request is attempted and a refusal is reported clearly.
   async modelCapabilities(model) {
     try {
-      const listed = (await this.listModels()).find(candidate => candidate.id === model);
+      const listed = (await this.listModels()).models.find(candidate => candidate.id === model);
       return { imageInput: listed?.imageInput ?? null, structuredOutput: listed?.structuredOutput ?? null };
     } catch {
       return { imageInput: null, structuredOutput: null };

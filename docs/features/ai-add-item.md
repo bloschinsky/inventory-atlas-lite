@@ -62,11 +62,12 @@ boolean, or color field types (a color is mapped as described in [Color custom f
 markings are not sent to the item form, and no second AI request is made.
 
 `GET /api/ai/models` and `POST /api/ai/models` keep provider communication on the server. For
-OpenAI they list models for the key, then return only the curated image-analysis choices: GPT-5.6
-Luna, GPT-5.6 Terra, and GPT-5.6 Sol when they are available; other providers return their own list.
-The Settings page loads the list once when opened, refreshes it after a new key or endpoint is saved
-or when requested, and falls back to the saved custom ID with a warning if listing fails. Raw
-provider errors and the API key never reach the browser.
+OpenAI they discover every relevant model available to the key and group it newest first, with
+capabilities known only for the verified GPT-5.6 Luna, Terra, and Sol (see
+[OpenAI model discovery](ai-providers.md#openai-model-discovery)); other providers return their own
+list. The Settings page loads the list when opened (the OpenAI list from a 24-hour cache), refreshes
+it after a new key or endpoint is saved or when requested, and keeps the saved model selected with a
+warning if listing fails. Raw provider errors and the API key never reach the browser.
 
 The in-memory client draft contains the normalized values and proposed photo `File`. Navigating directly
 to Add Item does not use a draft, so the manual workflow is unchanged. Reloading the review page

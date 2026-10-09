@@ -899,6 +899,29 @@
       "refreshModels": "Refresh models",
       "modelsFailed": "Could not load the model list. {reason} You can continue using the configured model or enter a custom model ID.",
       "textOnlyModel": "{model} (text only)",
+      "groupRecommended": "Recommended / Latest",
+      "groupPrevious": "Previous generations",
+      "groupOther": "Other models",
+      "showAllModels": "Show all models ({count} more)",
+      "showFewerModels": "Show fewer models",
+      "modelsChecked": "Last checked {time}.",
+      "modelsOffered": "{count} model offered. | {count} models offered.",
+      "modelsConnectionChanged": "The connection has changed. Refresh models to load the list for it.",
+      "modelsStale": "Could not refresh the model list. {reason} Showing the list last checked {time}.",
+      "modelsEmpty": "The provider listed no models that can be offered here. Choose \"Custom model...\" to enter a model ID.",
+      "modelsNoRecommended": "No recommended GPT models were found for this connection, so all listed models are shown.",
+      "notListedModel": "{model} (not in the provider's list)",
+      "verifiedModel": "{model} (verified)",
+      "modelId": "Model ID: {id}",
+      "modelVerified": "Verified with AI Add Item and AI Add Fields.",
+      "modelNotListed": "This model is not in the provider's current list. It stays selected until you choose another one; check the ID if AI requests fail.",
+      "customModelUnknown": "Image input and structured output of a model entered by ID are unknown.",
+      "capabilityVision": "Vision: {value}",
+      "capabilityStructured": "Structured output: {value}",
+      "capabilitySupported": "Supported",
+      "capabilityUnsupported": "Not supported",
+      "capabilityUnknown": "Unknown",
+      "imageOverride": "The Image input setting below is set manually and takes precedence over this information.",
       "customModel": "Custom model ID",
       "imageInput": "Image input",
       "imageAuto": "Detect automatically",
@@ -907,7 +930,7 @@
       "imageHelp": "AI Add Item needs a vision model to read photos. Automatic detection uses the provider's model information where it exists; otherwise the photo is sent and a refusal is reported. Choose \"Not supported\" for a text-only model to hide the photo option.",
       "providers": {
         "openai": {
-          "help": "Uses the OpenAI API with structured outputs. Only the recommended models available to your key are listed."
+          "help": "Uses the OpenAI API with structured outputs. The GPT models available to your key are listed newest first, and models verified with Inventory Atlas are marked. Unknown capabilities are shown as unknown."
         },
         "openrouter": {
           "help": "Routes requests to many hosted models. The model list shows which models accept images."
@@ -1649,6 +1672,7 @@
   },
   "notices": {
     "AI_CONNECTED": "Connected to {provider}. {count} model is available. | Connected to {provider}. {count} models are available.",
+    "AI_CONNECTED_CANDIDATES": "Connected to {provider}. It returned {count} model; candidates for AI features: {offered}. | Connected to {provider}. It returned {count} models; candidates for AI features: {offered}.",
     "AI_CONNECTED_NO_MODEL_LIST": "Connected to {provider}, but it does not list its models. Enter the model ID manually.",
     "CLOUD_CONNECTED": "Connected to {provider} as {account}."
   }

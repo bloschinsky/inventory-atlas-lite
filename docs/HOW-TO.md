@@ -116,14 +116,29 @@ To use the AI features, open **Settings → AI** and fill in its **Connection** 
    `OLLAMA_HOST=0.0.0.0`, and LM Studio needs *Serve on Local Network*. Only use plain `http://` on
    your own network; the form warns when a remote address is not HTTPS.
 3. Enter the **API key** if the provider needs one, and press **Test connection**. It reports how
-   many models the provider offers, or explains what went wrong — an unreachable address, a rejected
-   key, or a server that does not list its models.
-4. Choose a **Model**. **Refresh models** reloads the list from the provider; OpenAI shows only the
-   recommended models your key can use, and models known to be text-only are marked *(text only)*.
-   Use **Custom model...** to type a model ID that is not listed, for example `llava:13b` in Ollama.
-5. Set **Image input**. *Detect automatically* works for OpenAI and OpenRouter; for Ollama, LM
-   Studio, or a custom server choose *Supported by this model* for a vision model and *Not supported
-   (text only)* for a text model, which hides the photo option on **AI Add Item**.
+   many models the provider offers (for OpenAI, how many it returned and how many of them are
+   candidates for AI features), or explains what went wrong — an unreachable address, a rejected key,
+   or a server that does not list its models.
+4. Choose a **Model**. Models known to be text-only are marked *(text only)*. Use **Custom
+   model...** to type a model ID that is not listed, for example `llava:13b` in Ollama.
+   - With OpenAI the list shows every GPT model your key can use, so a new GPT generation appears
+     without an Inventory Atlas update. **Recommended / Latest** holds the newest generation and the
+     models verified with Inventory Atlas, marked *(verified)*; **Previous generations** holds a few
+     older ones. **Show all models** adds the other models, such as dated snapshots; speech,
+     embedding, image-generation, moderation, and realtime models are never offered.
+   - Below the list you see the exact **Model ID** and what is known about the model: *Vision* and
+     *Structured output* are *Supported*, *Not supported*, or *Unknown*. A model that is not verified
+     stays *Unknown* until you try it.
+   - The OpenAI list is remembered for 24 hours, so reopening Settings does not ask OpenAI again.
+     **Refresh models** always loads a new list. If that fails, the last list stays visible with the
+     time it was checked and the reason.
+   - Refreshing never changes your model. A saved model that the provider no longer lists stays
+     selected, marked *(not in the provider's list)*, until you choose another one and save.
+5. Set **Image input**. *Detect automatically* works for OpenAI's verified models and for OpenRouter;
+   for any other model the photo is sent and a refusal is reported. For a vision model on Ollama, LM
+   Studio, or a custom server choose *Supported by this model*, and choose *Not supported (text
+   only)* for a text model, which hides the photo option on **AI Add Item**. This choice always
+   takes precedence over what the model list says.
 6. Tick **Enable AI features** and press **Save settings**.
 
 **Enable AI features** stays unavailable while OpenAI or OpenRouter has no key saved or typed into

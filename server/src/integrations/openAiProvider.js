@@ -1,13 +1,6 @@
 import { httpError } from '../httpError.js';
 import { AiProviderHttp } from './aiProviderHttp.js';
-
-// Only the models this application is known to work with are offered, and only when the account
-// actually has access to them. All of them accept images.
-const preferredModels = [
-  { id: 'gpt-5.6-luna', label: 'GPT-5.6 Luna' },
-  { id: 'gpt-5.6-terra', label: 'GPT-5.6 Terra' },
-  { id: 'gpt-5.6-sol', label: 'GPT-5.6 Sol' }
-];
+import { classifyOpenAiModels, knownOpenAiCapabilities } from './openAiModelCatalog.js';
 
 function outputText(response) {
   if (typeof response?.output_text === 'string') return response.output_text;
@@ -31,13 +24,12 @@ export class OpenAiProvider {
     const response = await this.http.send('models', { timeoutMs: 15_000 });
     if (!response.ok) this.http.failModelList(response);
     if (!Array.isArray(response.body?.data)) throw httpError(502, 'AI_INVALID_MODEL_LIST', { provider: this.label });
-    const availableIds = new Set(response.body.data.map(model => model?.id));
-    return preferredModels.filter(model => availableIds.has(model.id)).map(model => ({ ...model, imageInput: true }));
+    return { models: classifyOpenAiModels(response.body.data), providerCount: response.body.data.length };
   }
 
-  // OpenAI models used here all read images, and structured outputs are a documented API feature.
-  async modelCapabilities() {
-    return { imageInput: true };
+  // /models publishes no capabilities, so only verified models are known; others are tried as they are.
+  async modelCapabilities(model) {
+    return knownOpenAiCapabilities(model);
   }
 
   async generateStructuredData({ model, instructions, input, image, schemaName, schema, task }) {
