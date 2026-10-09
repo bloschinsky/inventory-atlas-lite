@@ -1,5 +1,6 @@
 import { CONDITION_GRADES } from '../../shared/conditionGrades.js';
 import { LIFECYCLE_STATUSES, RETIREMENT_REASONS } from '../../shared/itemLifecycle.js';
+import { FIELD_TYPES } from '../../shared/fieldDefinitions.js';
 
 /*
   The database schema and its migrations. Nothing here touches the file system or a particular
@@ -18,11 +19,11 @@ import { LIFECYCLE_STATUSES, RETIREMENT_REASONS } from '../../shared/itemLifecyc
   and added the structured condition_grade; version 8 added the item lifecycle: items.lifecycle_status and
   the retirement columns with their snapshots of the last effective location and former container,
   and checklist_runs.skipped_retired_count; version 9 added the item activity history tables
-  (item_operations, item_events, item_transfers).
+  (item_operations, item_events, item_transfers); version 10 allowed the color type in custom_fields.type.
   user_version stays the source of truth: database_metadata.schema_version mirrors it and is written
   in the same transaction, so the two never disagree.
 */
-export const SCHEMA_VERSION = 9;
+export const SCHEMA_VERSION = 10;
 
 export const DEFAULT_DATABASE_NAME = 'Inventory Atlas';
 
@@ -39,6 +40,9 @@ export const TRACKED_TABLES = ['categories', 'custom_fields', 'items', 'item_fie
 export const ITEM_OPERATION_TYPES = ['item_update', 'bulk_move', 'bulk_replace', 'transfer', 'return', 'retire', 'restore'];
 export const ITEM_EVENT_TYPES = ['location_changed', 'container_changed', 'recipient_changed', 'transferred', 'returned', 'retired', 'restored'];
 const quotedList = values => values.map(value => `'${value}'`).join(', ');
+
+// The custom field types a row may have; FIELD_TYPES is the one list of them.
+const FIELD_TYPE_CHECK = `CHECK(type IN (${quotedList(FIELD_TYPES.map(type => type.value))}))`;
 
 // Only a fixed grade key, or NULL for an unset Condition, can be stored, whatever writes the row.
 const CONDITION_GRADE_CHECK = `CHECK (condition_grade IN (${quotedList(CONDITION_GRADES)}))`;
@@ -136,12 +140,62 @@ const ensureMetadata = connection => {
   `).run({ uuid: crypto.randomUUID(), name: DEFAULT_DATABASE_NAME, version: SCHEMA_VERSION });
 };
 
+// The type CHECK of custom_fields as any release wrote it, whatever its spacing.
+const TYPE_CHECK_PATTERN = /CHECK\s*\(\s*type\s+IN\s*\([^)]*\)\s*\)/i;
+
 /*
-  Creates missing tables, runs the additive migrations, and stamps the current schema version.
-  It is idempotent, so it is safe on the live database and on a staged restore candidate alike, and it
-  runs as one transaction: a failed migration leaves the database exactly as it was.
+  The definition of custom_fields when its type CHECK predates the current FIELD_TYPES, otherwise
+  null. A database whose table never had a type CHECK already accepts every type and is left alone.
 */
-export const applySchema = connection => connection.transaction(() => {
+const outdatedCustomFieldsSql = connection => {
+  const table = connection.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'custom_fields'").get();
+  return table && TYPE_CHECK_PATTERN.test(table.sql) && !table.sql.includes(FIELD_TYPE_CHECK) ? table.sql : null;
+};
+
+/*
+  Version 10: SQLite cannot change a CHECK in place, so custom_fields is rebuilt from its own
+  definition with only the type CHECK replaced; its columns, their order, and every other constraint
+  stay exactly as they were. Every row keeps its id, so item and template values and their links stay
+  as they are, and the AUTOINCREMENT counter is carried over, so the id of a deleted field (whose
+  template values are kept on purpose) is never handed to a new field. Foreign keys are off while this
+  runs (see applySchema), otherwise dropping the old table would cascade into item_field_values. The
+  touch triggers go with the old table and are recreated with the others.
+*/
+const rebuildCustomFields = (connection, sql) => {
+  const autoincrement = /AUTOINCREMENT/i.test(sql);
+  const sequence = autoincrement ? connection.prepare("SELECT seq FROM sqlite_sequence WHERE name = 'custom_fields'").get() : null;
+  const definition = sql.replace(TYPE_CHECK_PATTERN, FIELD_TYPE_CHECK).replace(/^CREATE TABLE[^(]*\(/i, 'CREATE TABLE custom_fields_rebuilt (');
+  connection.exec(`
+    ${definition};
+    INSERT INTO custom_fields_rebuilt SELECT * FROM custom_fields;
+    DROP TABLE custom_fields;
+    ALTER TABLE custom_fields_rebuilt RENAME TO custom_fields;
+  `);
+  if (!autoincrement) return;
+  connection.exec("DELETE FROM sqlite_sequence WHERE name IN ('custom_fields', 'custom_fields_rebuilt')");
+  connection.prepare("INSERT INTO sqlite_sequence (name, seq) SELECT 'custom_fields', MAX(?, COALESCE(MAX(id), 0)) FROM custom_fields")
+    .run(sequence?.seq ?? 0);
+};
+
+/*
+  Creates missing tables, runs the migrations, and stamps the current schema version. It is
+  idempotent, so it is safe on the live database and on a staged restore candidate alike, and it runs
+  as one transaction: a failed migration leaves the database exactly as it was. A table rebuild needs
+  foreign keys off, which SQLite only allows outside a transaction, so they are switched off around it
+  and restored afterwards; the rebuild keeps every id, so no relationship can break.
+*/
+export const applySchema = connection => {
+  const rebuild = outdatedCustomFieldsSql(connection);
+  const foreignKeys = Number(connection.pragma('foreign_keys', { simple: true })) === 1;
+  if (rebuild && foreignKeys) connection.pragma('foreign_keys = OFF');
+  try {
+    migrate(connection, rebuild);
+  } finally {
+    if (rebuild && foreignKeys) connection.pragma('foreign_keys = ON');
+  }
+};
+
+const migrate = (connection, rebuild) => connection.transaction(() => {
   connection.exec(`
     CREATE TABLE IF NOT EXISTS categories (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -174,7 +228,7 @@ export const applySchema = connection => connection.transaction(() => {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
       name TEXT NOT NULL COLLATE NOCASE,
-      type TEXT NOT NULL CHECK(type IN ('text', 'number', 'date', 'boolean')),
+      type TEXT NOT NULL ${FIELD_TYPE_CHECK},
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       UNIQUE(category_id, name)
@@ -340,6 +394,7 @@ export const applySchema = connection => connection.transaction(() => {
     CREATE INDEX IF NOT EXISTS idx_checklist_run_items_linked ON checklist_run_items(item_id);
   `);
 
+  if (rebuild) rebuildCustomFields(connection, rebuild);
   // Additive migrations keep existing inventories usable without rebuilding their database.
   const itemColumns = new Set(connection.prepare('PRAGMA table_info(items)').all().map(column => column.name));
   const missingItemColumns = [

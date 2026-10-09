@@ -11,7 +11,7 @@ export const MAX_BATCH_FIELDS = 50;
 export const MAX_FIELD_NAME_LENGTH = 60;
 
 // The interface shows each type through its translation key fieldTypes.<value>.
-export const FIELD_TYPES = [{ value: 'text' }, { value: 'number' }, { value: 'date' }, { value: 'boolean' }];
+export const FIELD_TYPES = [{ value: 'text' }, { value: 'number' }, { value: 'date' }, { value: 'boolean' }, { value: 'color' }];
 const supportedTypes = new Set(FIELD_TYPES.map(type => type.value));
 
 const documentProperties = ['version', 'fields'];

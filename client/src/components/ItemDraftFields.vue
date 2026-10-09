@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue';
 import { IconInfoCircle } from '@tabler/icons-vue';
+import ColorPicker from './ColorPicker.vue';
 import ConditionGradeBadge from './ConditionGradeBadge.vue';
 import ConditionHelpDialog from './ConditionHelpDialog.vue';
 import FieldAutocomplete from './FieldAutocomplete.vue';
@@ -276,12 +277,27 @@ const conditionHelpOpen = ref(false);
       :key="field.id"
       class="mb-3"
     >
+      <!-- A color is a group of swatches, so its name labels the group instead of one input. -->
+      <div
+        v-if="field.type === 'color'"
+        :id="`field-${field.id}-label`"
+        class="form-label"
+      >
+        {{ field.name }}
+      </div>
       <label
+        v-else
         class="form-label"
         :for="`field-${field.id}`"
       >{{ field.name }}</label>
+      <ColorPicker
+        v-if="field.type === 'color'"
+        v-model="form.field_values[field.id]"
+        :name="`field-${field.id}`"
+        :labelledby="`field-${field.id}-label`"
+      />
       <select
-        v-if="field.type === 'boolean'"
+        v-else-if="field.type === 'boolean'"
         :id="`field-${field.id}`"
         v-model="form.field_values[field.id]"
         class="form-select"

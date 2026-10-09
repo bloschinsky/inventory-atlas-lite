@@ -93,7 +93,7 @@ const legacyDatabase = (db = new Database(':memory:')) => {
 
 test('the schema stores the lifecycle with constraints, and every new item is active', () => {
   const { db, add, itemService } = build();
-  assert.equal(SCHEMA_VERSION, 9);
+  assert.equal(SCHEMA_VERSION, 10);
   for (const column of ['lifecycle_status', 'retired_at', 'retired_reason', 'retired_location_snapshot', 'retired_parent_name_snapshot']) {
     assert.ok(CURRENT_SCHEMA.items.includes(column), column);
   }

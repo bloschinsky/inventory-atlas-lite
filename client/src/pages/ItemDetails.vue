@@ -6,6 +6,7 @@ import { api } from '../api.js';
 import { formatDate, formatDateTime, formatMoney } from '../i18n/index.js';
 import AuditContentsDialog from '../components/AuditContentsDialog.vue';
 import ChecklistRunHistory from '../components/ChecklistRunHistory.vue';
+import ColorValue from '../components/ColorValue.vue';
 import ItemPhotoViewer from '../components/ItemPhotoViewer.vue';
 import ItemLifecycleBadge from '../components/ItemLifecycleBadge.vue';
 import ItemNewStatusBadge from '../components/ItemNewStatusBadge.vue';
@@ -29,7 +30,7 @@ const retired = computed(() => item.value?.lifecycle_status === 'retired');
 // The container's audits, newest first; the page keeps only the most recent ones compact.
 const audits = ref([]);
 const RECENT_AUDITS = 5;
-// Custom field values are user data: only the yes/no of a boolean belongs to the interface.
+// Custom field values are user data: only the yes/no of a boolean belongs to the interface; a color has its own face.
 const displayValue = field => field.type === 'boolean' ? t(field.value === '1' ? 'common.yes' : 'common.no') : (field.value || '—');
 // An item with neither a container nor contents would only produce an empty storage card.
 const hasStorage = computed(() => Boolean(item.value?.parent || item.value?.children.length));
@@ -449,7 +450,14 @@ onMounted(load);
                   class="col-sm-8 text-break"
                   :class="{ 'mb-0': index === item.fields.length - 1 }"
                 >
-                  {{ displayValue(field) }}
+                  <ColorValue
+                    v-if="field.type === 'color'"
+                    :value="field.value"
+                    show-hex
+                  />
+                  <template v-else>
+                    {{ displayValue(field) }}
+                  </template>
                 </dd>
               </template>
             </dl>

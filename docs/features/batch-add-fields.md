@@ -27,7 +27,7 @@ category templates.
 - `fields` is required, must contain at least one entry, and accepts at most 50 entries.
 - A field accepts `name`, `type`, and `required` only. Any other property, for example `options`, is
   rejected with the supported property list.
-- `type` is one of the types the application actually supports: `text`, `number`, `date`, `boolean`.
+- `type` is one of the types the application actually supports: `text`, `number`, `date`, `boolean`, `color`.
 - `required` is accepted for format compatibility but must be `false` or omitted: the application
   has no required custom fields yet, so `true` is reported as an invalid configuration instead of
   being silently ignored.

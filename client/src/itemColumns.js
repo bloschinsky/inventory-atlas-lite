@@ -1,6 +1,7 @@
 import { CORE_ITEM_COLUMNS, DEFAULT_ITEM_SORT } from '../../shared/itemColumns.js';
 import { formatDate, formatDateTime, formatMoney, i18n } from './i18n/index.js';
 import { conditionGradeLabelKey } from './conditionGrades.js';
+import { colorLabelKey, storedColor } from './colors.js';
 
 // The Items view as the column picker, the table, and the cards see it.
 export const ITEMS_VIEW_STORAGE_KEY = 'inventory-atlas.items.view';
@@ -38,11 +39,19 @@ const coreText = {
   updated: item => formatDateTime(item.updated_at)
 };
 
-// Custom values are user data and shown as stored; only a boolean's yes/no and a date's format are the interface's.
+/*
+  Custom values are user data and shown as stored; only a boolean's yes/no, a date's format, and a
+  color's name are the interface's. A custom color reads as "Custom #A08C75"; raw JSON is never shown.
+*/
 function customText(type, value) {
   if (value === null || value === undefined || value === '') return '';
   if (type === 'boolean') return t(value === '1' ? 'common.yes' : 'common.no');
   if (type === 'date') return formatDate(value);
+  if (type === 'color') {
+    const color = storedColor(value);
+    if (!color) return '';
+    return color.key === 'custom' ? `${t(colorLabelKey(color.key))} ${color.hex}` : t(colorLabelKey(color.key));
+  }
   return value;
 }
 

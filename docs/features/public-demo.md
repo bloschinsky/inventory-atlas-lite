@@ -79,8 +79,9 @@ name, value, and serial number is invented.
 
 - **Categories and custom fields:** Storage (Material, Labeled), Photography (Mount, Format, Last
   tested), Electronics (Capacity, Connector, Warranty until), Tools (Power source, Voltage), Travel &
-  Outdoor (Weight (g), Waterproof), and Archive (Years covered, Digitized) — text, number, date, and
-  yes/no fields.
+  Outdoor (Weight (g), Waterproof, Color), and Archive (Years covered, Digitized) — text, number, date,
+  yes/no, and color fields. A color value is the same stored text in every language; only its displayed
+  name is translated.
 - **Locations and containers:** Camera Bag and Electronics Drawer in *Home / Office*, Archive Box in
   *Home / Storage*, Tool Cabinet in *Workshop*, and Camping Box in *Travel gear*. Their items inherit
   the container's location.

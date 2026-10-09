@@ -47,7 +47,7 @@ Description → POST /api/categories/:id/fields/ai → field-definition document
   and it works with every [AI provider](ai-providers.md) and any text model.
 - The request is schema-constrained: its strict `json_schema` allows only
   `version: 1`, `required: false`, and the field types the application actually supports
-  (`text`, `number`, `date`, `boolean`), all derived from `shared/fieldDefinitions.js`.
+  (`text`, `number`, `date`, `boolean`, `color`), all derived from `shared/fieldDefinitions.js`.
 - The prompt carries the description, the category name, its existing custom field names, the
   built-in item attributes, the supported types, and the 50-field limit, so the model can avoid
   proposing fields that already exist. Item data is never sent.

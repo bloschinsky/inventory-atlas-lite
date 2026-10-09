@@ -58,7 +58,7 @@ a pristine look, or no visible wear; the server keeps only an explicit `true` an
 names the conflict rather than a silent choice, leaving the resolution to the human review. Without
 an image `observedMarkings` stays empty and the server forces `needsDetailedImageAnalysis` to false. The server validates the response again: a suggested
 category must exist, dynamic field IDs must belong to it, and values must match text, number, date,
-or boolean field types. Unknown dynamic fields and invalid values are discarded. The internal
+boolean, or color field types (a color is mapped as described in [Color custom field](color-custom-field.md)). Unknown dynamic fields and invalid values are discarded. The internal
 markings are not sent to the item form, and no second AI request is made.
 
 `GET /api/ai/models` and `POST /api/ai/models` keep provider communication on the server. For

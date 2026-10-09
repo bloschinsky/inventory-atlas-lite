@@ -1,4 +1,5 @@
 import { DEFAULT_LOCALE, resolveLocale } from '../i18n/core.js';
+import { customColor, encodeColor, presetColor } from '../../../shared/colors.js';
 
 /*
   The canonical inventory of the public demo. Every name, value, serial number, and photo is invented
@@ -59,7 +60,8 @@ const categories = [
   {
     key: 'travel-outdoor', name: { en: 'Travel & Outdoor', uk: 'Подорожі й туризм' }, fields: [
       { key: 'weight', type: 'number', name: { en: 'Weight (g)', uk: 'Вага (г)' } },
-      { key: 'waterproof', type: 'boolean', name: { en: 'Waterproof', uk: 'Водонепроникний' } }
+      { key: 'waterproof', type: 'boolean', name: { en: 'Waterproof', uk: 'Водонепроникний' } },
+      { key: 'color', type: 'color', name: { en: 'Color', uk: 'Колір' } }
     ]
   },
   {
@@ -69,6 +71,9 @@ const categories = [
     ]
   }
 ];
+
+// A Color field value is its stored text in every language; only its displayed name is translated.
+const color = key => encodeColor(presetColor(key));
 
 // Text values that more than one entity uses.
 const filmFormat = { en: '35mm film', uk: 'Плівка 35 мм' };
@@ -183,18 +188,18 @@ const items = [
     key: 'handheld-radio', name: { en: 'Handheld radio', uk: 'Портативна рація' }, category: 'travel-outdoor', parent: 'camping-box',
     addedDaysAgo: 28, photo: 'handheld-radio.webp', condition_grade: 'good',
     description: { en: 'Two-way radio for hiking trips.', uk: 'Рація для походів.' },
-    serial_number: 'HR-5520183', fields: { weight: 230, waterproof: true }
+    serial_number: 'HR-5520183', fields: { weight: 230, waterproof: true, color: color('black') }
   },
   {
     key: 'flashlight', name: { en: 'Compact flashlight', uk: 'Компактний ліхтарик' }, category: 'travel-outdoor', parent: 'camping-box',
     addedDaysAgo: 27, description: { en: 'Rechargeable LED flashlight.', uk: 'Світлодіодний ліхтарик з акумулятором.' }, condition_grade: 'fair',
-    condition_notes: { en: 'Clip is bent.', uk: 'Кліпса погнута.' }, fields: { weight: 95, waterproof: true }
+    condition_notes: { en: 'Clip is bent.', uk: 'Кліпса погнута.' }, fields: { weight: 95, waterproof: true, color: encodeColor(customColor('#3B5B3A')) }
   },
   {
     key: 'first-aid', name: { en: 'First-aid pouch', uk: 'Аптечка' }, category: 'travel-outdoor', parent: 'camping-box', addedDaysAgo: 26,
     description: { en: 'Basic kit for day trips.', uk: 'Базовий набір для одноденних виходів.' }, condition_grade: 'poor',
     condition_notes: { en: 'Plasters and wipes need restocking.', uk: 'Треба поповнити пластирі та серветки.' },
-    fields: { weight: 180, waterproof: false }
+    fields: { weight: 180, waterproof: false, color: color('red') }
   },
   {
     key: 'negatives', name: { en: 'Photo negatives 2004–2010', uk: 'Фотонегативи 2004–2010' }, category: 'archive', parent: 'archive-box',
