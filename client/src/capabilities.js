@@ -9,14 +9,17 @@ import { api } from './api.js';
   It fails closed: a capability stays hidden until the backend confirms it. Hiding an entry point is
   only UX; the backend keeps rejecting operations for a feature that is turned off.
 */
-export const capabilities = reactive({ ai: { enabled: false, imageInput: true } });
+export const capabilities = reactive({ ai: { enabled: false, imageInput: true }, urlImport: false });
 
 let loading = null;
 
 // Loaded once at startup; later calls reuse the same promise so a navigation guard can await it.
 export function loadCapabilities() {
   loading ??= api('/api/capabilities')
-    .then(loaded => setAiCapabilities(loaded?.ai))
+    .then(loaded => {
+      setAiCapabilities(loaded?.ai);
+      capabilities.urlImport = loaded?.urlImport === true;
+    })
     .catch(() => setAiCapabilities(null));
   return loading;
 }

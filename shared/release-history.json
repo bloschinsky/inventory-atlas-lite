@@ -1,5 +1,15 @@
 [
   {
+    "version": "0.64.0",
+    "date": "2026-10-10",
+    "changes": [
+      "Add an item from a product page: choose From URL under Add item, paste the address of a store or manufacturer page, and review what was found before it goes into the form. Fill from URL on an item page adds missing details to an existing item the same way. No AI or API key is needed.",
+      "The review shows the current and found value of every field side by side. Only the values and images you tick are used, values you already have are never replaced unless you choose so, and nothing is saved until you save the item.",
+      "The price shown on the page is only a suggestion and becomes the Purchase Price only if you tick Use page price as Purchase Price. Items can now keep the product page as their Source URL, shown as a link on the item page.",
+      "The page is read by your server as plain HTML, with no scripts and no logins, and addresses on your own device or local network are always refused, so the import cannot be used to reach your home network."
+    ]
+  },
+  {
     "version": "0.63.0",
     "date": "2026-10-10",
     "changes": [

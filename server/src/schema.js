@@ -19,11 +19,12 @@ import { FIELD_TYPES } from '../../shared/fieldDefinitions.js';
   and added the structured condition_grade; version 8 added the item lifecycle: items.lifecycle_status and
   the retirement columns with their snapshots of the last effective location and former container,
   and checklist_runs.skipped_retired_count; version 9 added the item activity history tables
-  (item_operations, item_events, item_transfers); version 10 allowed the color type in custom_fields.type.
+  (item_operations, item_events, item_transfers); version 10 allowed the color type in custom_fields.type;
+  version 11 added items.source_url, the optional product page an item was described from.
   user_version stays the source of truth: database_metadata.schema_version mirrors it and is written
   in the same transaction, so the two never disagree.
 */
-export const SCHEMA_VERSION = 10;
+export const SCHEMA_VERSION = 11;
 
 export const DEFAULT_DATABASE_NAME = 'Inventory Atlas';
 
@@ -82,7 +83,7 @@ export const CURRENT_SCHEMA = {
   ...CORE_SCHEMA,
   categories: [...CORE_SCHEMA.categories, 'created_at', 'updated_at'],
   items: [...CORE_SCHEMA.items, 'condition_grade', 'condition_notes', 'purchase_date', 'purchase_price_amount', 'purchase_price_currency',
-    'serial_number', 'transferred_to', 'parent_item_id', 'last_verified_at', 'is_new', 'created_at', 'updated_at',
+    'serial_number', 'transferred_to', 'parent_item_id', 'last_verified_at', 'is_new', 'source_url', 'created_at', 'updated_at',
     ...LIFECYCLE_COLUMNS.map(([name]) => name)],
   custom_fields: [...CORE_SCHEMA.custom_fields, 'created_at', 'updated_at'],
   item_photos: [...CORE_SCHEMA.item_photos, 'sort_order', 'created_at'],
@@ -220,6 +221,7 @@ const migrate = (connection, rebuild) => connection.transaction(() => {
       parent_item_id INTEGER REFERENCES items(id) ON DELETE RESTRICT,
       last_verified_at TEXT,
       is_new INTEGER NOT NULL DEFAULT 0 CHECK (is_new IN (0, 1)),
+      source_url TEXT,
       ${LIFECYCLE_COLUMNS.map(([name, definition]) => `${name} ${definition},`).join(' ')}
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -408,7 +410,9 @@ const migrate = (connection, rebuild) => connection.transaction(() => {
     // Existing items read as not new; the free-text condition is never parsed to guess otherwise.
     ['is_new', 'INTEGER NOT NULL DEFAULT 0 CHECK (is_new IN (0, 1))'],
     // Version 8: every existing item becomes active, with no retirement data.
-    ...LIFECYCLE_COLUMNS
+    ...LIFECYCLE_COLUMNS,
+    // Version 11: existing items have no source page.
+    ['source_url', 'TEXT']
   ];
   for (const [name, definition] of missingItemColumns) {
     if (!itemColumns.has(name)) connection.exec(`ALTER TABLE items ADD COLUMN ${name} ${definition}`);

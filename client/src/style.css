@@ -185,6 +185,11 @@ body.app-menu-open { overflow: hidden; }
 .app-photo-tile-badge-end { left: auto; right: .375rem; }
 .app-photo-tile-action { min-width: 44px; min-height: 44px; }
 
+/* URL import review: smaller image candidates, and long found text that stays readable without stretching the dialog. */
+.app-url-import-image { width: 9rem; }
+.app-url-import-image .app-photo-tile-frame { height: 7rem; }
+.app-url-import-value { white-space: pre-line; max-height: 8rem; overflow-y: auto; }
+
 /*
   Tabler styles its sidebar navigation only inside the desktop vertical navbar, so the mobile
   drawer repeats the same tokens and keeps one navigation look at every width.

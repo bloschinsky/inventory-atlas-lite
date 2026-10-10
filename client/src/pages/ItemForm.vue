@@ -6,7 +6,9 @@ import { IconChevronLeft, IconChevronRight, IconStar, IconStarFilled, IconTrash 
 import { api, jsonOptions, photoUrl } from '../api.js';
 import ItemDraftFields from '../components/ItemDraftFields.vue';
 import PageHeader from '../components/PageHeader.vue';
+import UrlImportDialog from '../components/UrlImportDialog.vue';
 import { takePendingAiDraft } from '../aiDraft.js';
+import { capabilities, loadCapabilities } from '../capabilities.js';
 import { draftFromItem, useItemDraftForm } from '../itemDraft.js';
 
 const route = useRoute(); const router = useRouter(); const { t } = useI18n();
@@ -101,6 +103,25 @@ async function removePhoto(photo) {
 }
 onBeforeUnmount(() => photos.value.forEach(releasePreview));
 
+/*
+  Smart URL import fills this form, never the database: the dialog hands back only the values the
+  user selected, and they are saved with the form like any other edit. Selected product images join
+  the photo list as unsaved photos after the existing ones, so the cover stays as it is.
+*/
+const importOpen = ref(false); const importNotice = ref('');
+const MAX_PHOTOS_PER_SAVE = 10;
+const photoSlots = computed(() => Math.max(0, MAX_PHOTOS_PER_SAVE - photos.value.filter(photo => photo.file).length));
+function applyImport({ categoryId, base, fieldValues, purchasePrice, photos: files }) {
+  // Values first: the category watcher only fills fields that have no value yet.
+  Object.assign(form.field_values, fieldValues);
+  if (categoryId) form.category_id = categoryId;
+  Object.assign(form, base);
+  if (purchasePrice) form.purchase_price = { ...purchasePrice };
+  photos.value = [...photos.value, ...files.map(selectedPhoto)];
+  importOpen.value = false;
+  importNotice.value = t('urlImport.appliedNotice');
+}
+
 async function savePhotos(id) {
   const selected = photos.value.filter(photo => photo.file);
   if (selected.length) {
@@ -173,12 +194,35 @@ async function loadDraft() {
 }
 onMounted(async () => {
   try { await start(await loadDraft()); } catch (e) { error.value = e.message; }
+  // ?import=url opens the URL import as soon as the form is ready, from Add item or Item details.
+  await loadCapabilities();
+  if (route.query.import === 'url' && capabilities.urlImport) importOpen.value = true;
 });
 </script>
 
 <template>
   <div class="form-card">
-    <PageHeader :title="editing ? $t('itemForm.editTitle') : (aiDraft ? $t('itemForm.reviewTitle') : $t('items.add'))" />
+    <PageHeader :title="editing ? $t('itemForm.editTitle') : (aiDraft ? $t('itemForm.reviewTitle') : $t('items.add'))">
+      <template
+        v-if="capabilities.urlImport"
+        #actions
+      >
+        <button
+          type="button"
+          class="btn"
+          @click="importOpen = true"
+        >
+          {{ $t('urlImport.fillAction') }}
+        </button>
+      </template>
+    </PageHeader>
+    <div
+      v-if="importNotice"
+      class="alert alert-info"
+      role="status"
+    >
+      {{ importNotice }}
+    </div>
     <div
       v-if="aiDraft"
       class="alert alert-info"
@@ -454,5 +498,15 @@ onMounted(async () => {
         </button>
       </div>
     </form>
+    <UrlImportDialog
+      v-if="importOpen"
+      :form="form"
+      :categories="categories"
+      :fields="fields"
+      :editing="editing"
+      :photo-slots="photoSlots"
+      @apply="applyImport"
+      @close="importOpen = false"
+    />
   </div>
 </template>

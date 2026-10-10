@@ -344,6 +344,23 @@ onBeforeUnmount(() => {
                 <div class="col-md-6">
                   <label
                     class="form-label"
+                    :for="inputId(index, 'source-url')"
+                  >{{ $t('items.fields.sourceUrl') }}</label>
+                  <input
+                    :id="inputId(index, 'source-url')"
+                    v-model="draft.sourceUrl"
+                    class="form-control"
+                    :class="{ 'is-invalid': reviews[index].sourceUrl }"
+                    type="url"
+                    inputmode="url"
+                  >
+                  <div class="invalid-feedback">
+                    {{ translateError(reviews[index].sourceUrl) }}
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label
+                    class="form-label"
                     :for="inputId(index, 'purchase-price')"
                   >{{ $t('items.fields.purchasePrice') }}</label>
                   <div

@@ -122,14 +122,14 @@ test('a fresh database accepts the color type, and a version 9 database is rebui
   const fresh = build();
   const category = fresh.categoryService.create({ name: 'Paint' });
   assert.equal(fresh.fieldService.create(category.id, { name: 'Color', type: 'color' }).type, 'color');
-  assert.equal(SCHEMA_VERSION, 10);
+  assert.equal(SCHEMA_VERSION, 11);
 
   const db = versionNineDatabase();
   assert.throws(() => db.prepare("INSERT INTO custom_fields (category_id, name, type) VALUES (1, 'Shade', 'color')").run(), /CHECK/);
   const before = db.prepare('SELECT * FROM custom_fields ORDER BY id').all();
   const lastUpdated = db.prepare('SELECT last_updated_at FROM database_metadata').get();
   applySchema(db);
-  assert.equal(Number(db.pragma('user_version', { simple: true })), 10);
+  assert.equal(Number(db.pragma('user_version', { simple: true })), 11);
   assert.equal(Number(db.pragma('foreign_keys', { simple: true })), 1);
   assert.deepEqual(db.prepare('SELECT * FROM custom_fields ORDER BY id').all(), before);
   assert.deepEqual(db.prepare('SELECT item_id, field_id, value FROM item_field_values ORDER BY id').all(),

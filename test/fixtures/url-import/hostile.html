@@ -1,0 +1,17 @@
+<!doctype html>
+<html>
+<head>
+  <title>&lt;img src=x onerror=alert(1)&gt;Hostile Gadget</title>
+  <meta property="og:description" content="&lt;script&gt;alert('og')&lt;/script&gt;Nice &amp;lt;b&amp;gt;gadget&amp;lt;/b&amp;gt;">
+  <meta property="og:image" content="data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=">
+  <meta property="og:image" content="file:///etc/passwd">
+  <meta property="og:image" content="https://user:secret@cdn.hostile.test/x.png">
+  <meta property="og:image" content="/ok.png">
+  <style>h1 { content: "<b>not text</b>"; }</style>
+</head>
+<body>
+  <!-- <h1>Commented heading</h1> -->
+  <h1 onclick="steal()"><script>document.cookie</script>Hostile <b>Gadget</b> Pro</h1>
+  <table><tr><th><img src=x onerror=alert(2)>Model</th><td>HG-1 <iframe src="https://evil.test"></iframe></td></tr></table>
+</body>
+</html>

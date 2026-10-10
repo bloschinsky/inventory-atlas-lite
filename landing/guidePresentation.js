@@ -28,6 +28,7 @@ export const guidePresentation = {
   'pack-or-verify-items-with-a-checklist': { screenshot: 'checklist-run-phone', phone: true, demo: '/checklists' },
   'add-several-items-at-once-from-json': { demo: '/items' },
   'create-an-item-from-a-photo-or-a-description-with-ai': { selfHosted: true },
+  'fill-an-item-from-a-product-page-url': { selfHosted: true },
   'show-the-qr-code-of-an-item': { screenshot: 'item-phone', phone: true },
   'select-items-and-print-qr-labels': { screenshot: 'labels', demo: '/items' },
   'search-filter-sort-and-page-through-items': { screenshot: 'items-search', demo: '/items' },

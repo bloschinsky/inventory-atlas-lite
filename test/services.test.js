@@ -171,7 +171,7 @@ test('batch item import creates every item through the regular item rules', () =
   refused(batch([{ name: 'X', uuid: '00000000-0000-4000-8000-000000000000' }]),
     { code: 'IMPORT_ITEM_UNSUPPORTED_PROPERTY', params: {
       index: 1, property: 'uuid',
-      supported: 'name, conditionGrade, conditionNotes, location, description, transferredTo, purchaseDate, serialNumber, new, purchasePrice, customFields, condition'
+      supported: 'name, conditionGrade, conditionNotes, location, description, transferredTo, purchaseDate, serialNumber, sourceUrl, new, purchasePrice, customFields, condition'
     } });
   refused(batch([{ name: 'X', customFields: { Colour: 'Red' } }]), { code: 'IMPORT_UNKNOWN_CUSTOM_FIELD', params: { index: 1, field: 'Colour', known: 'Brand, Ports, Released, Working' } });
   refused(batch([{ name: 'X' }, { name: 'Y', customFields: { Ports: 'many' } }]), inItem(2, 'INVALID_CUSTOM_FIELD_NUMBER', { field: 'Ports' }));

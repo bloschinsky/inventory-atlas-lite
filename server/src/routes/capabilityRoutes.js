@@ -5,13 +5,14 @@ import { Router } from 'express';
   decide what to show from one request instead of asking each feature's own settings endpoint, and
   it deliberately carries no credentials or provider details.
 */
-export const createCapabilityRoutes = ({ aiSettingsService }) => {
+export const createCapabilityRoutes = ({ aiSettingsService, urlImport = false }) => {
   const router = Router();
 
   router.get('/api/capabilities', (_req, res) => {
     const settings = aiSettingsService.read();
-    // Photo analysis is only offered when the configured model is not known to be text-only.
-    res.json({ ai: { enabled: settings.enabled, imageInput: settings.imageInput !== 'unsupported' } });
+    // Photo analysis is only offered when the configured model is not known to be text-only. URL import
+    // needs the server's network access, so only the real server offers it, never the in-browser demo.
+    res.json({ ai: { enabled: settings.enabled, imageInput: settings.imageInput !== 'unsupported' }, urlImport });
   });
 
   return router;
