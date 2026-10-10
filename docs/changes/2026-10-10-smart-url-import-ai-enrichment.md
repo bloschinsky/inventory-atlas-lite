@@ -1,7 +1,7 @@
 # Smart URL import, Phase 2: optional AI enrichment
 
 - Completed: 2026-10-10
-- Version: 0.65.0
+- Version: 0.64.0, released together with Phase 1 (#33) under one tag
 - Task: GitHub issue #34 (builds on #33, Phase 1)
 
 ## Summary
@@ -37,7 +37,9 @@ to existing fields. It is strictly opt-in and Phase 1 stays fully usable without
   separate, unchecked opt-in. Errors keep the page review usable.
 - **Copy and docs:** `urlImport.ai.*`, `urlImport.sources.ai`, and the new error and warning codes in
   English and Ukrainian; `docs/HOW-TO.md` and `docs/HOW-TO.uk.md` (new step and limitation), the
-  feature document and its index entry, `AGENTS.md`, and the 0.65.0 release-history entry.
+  feature document and its index entry, `AGENTS.md`, and the AI note in the shared 0.64.0 release-history
+  entry. The branch first claimed 0.65.0; the two phases were then released together as 0.64.0, so that
+  version has one release-history entry and one tag.
 
 ## Verification
 
@@ -46,5 +48,5 @@ to existing fields. It is strictly opt-in and Phase 1 stays fully usable without
   `test/landing.test.js` that fail the same way on a clean checkout on this Windows machine. The new
   `test/url-import-ai.test.js` (8 tests) and `test/url-import.test.js` passed.
 - `npm run build` — passed.
-- `APP_VERSION=0.65.0 npm run test:e2e` — 247 of 247 passed, including three new AI tests in
+- `APP_VERSION=0.64.0 npm run test:e2e` — 247 of 247 passed, including three new AI tests in
   `test/e2e/url-import.spec.js`.
