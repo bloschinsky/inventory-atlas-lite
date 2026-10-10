@@ -726,7 +726,33 @@
       "openGraph": "Open Graph",
       "meta": "Page meta tags",
       "html": "Page content",
-      "page": "Page address"
+      "page": "Page address",
+      "ai": "AI suggestion"
+    },
+    "ai": {
+      "title": "Enhance with AI",
+      "help": "AI can map complex specifications and incomplete descriptions to the fields of the category. Only when you choose this, the text found on the page and the names of your categories and fields are sent to the AI provider configured in Settings, which may be a remote, paid service. Your other items and the values of this item are never sent.",
+      "action": "Enhance with AI",
+      "again": "Ask AI again",
+      "running": "Asking AI…",
+      "failed": "The values read from the page are still available below.",
+      "result": "{n} AI suggestion added. Review it like any other value. | {n} AI suggestions added. Review them like any other value.",
+      "none": "AI found nothing to add to the values read from the page.",
+      "discard": "Discard AI suggestions",
+      "notes": "Notes from AI",
+      "confidenceHelp": "Confidence is the model’s own estimate, not a guarantee. Low-confidence suggestions start unchecked.",
+      "confidence": {
+        "high": "High confidence",
+        "medium": "Medium confidence",
+        "low": "Low confidence"
+      },
+      "evidence": "Page text: “{text}”",
+      "agrees": "AI agrees",
+      "choosePage": "Page value",
+      "chooseAi": "AI suggestion",
+      "edit": "Edit the AI suggestion for {field}",
+      "categorySuggested": "Suggested by AI from the details on the page.",
+      "priceSuggested": "AI: current offer"
     }
   },
   "fieldTypes": {
@@ -1749,7 +1775,10 @@
     "URL_IMPORT_WARNING_PRICE_AMBIGUOUS": "The page shows several prices or currencies, for example for different variants. None was chosen for you.",
     "URL_IMPORT_WARNING_PRICE_INVALID": "A price on the page had an invalid amount or currency and was ignored.",
     "URL_IMPORT_WARNING_TEXT_TRIMMED": "A long description was shortened.",
-    "URL_IMPORT_WARNING_FIELD_AMBIGUOUS": "The page has several different values for “{field}”, so that field was left as it is."
+    "URL_IMPORT_WARNING_FIELD_AMBIGUOUS": "The page has several different values for “{field}”, so that field was left as it is.",
+    "URL_IMPORT_AI_CHOOSE_CATEGORY": "Choose a category first: the inventory has too many categories and fields to send all of them to AI.",
+    "URL_IMPORT_AI_WARNING_DROPPED": "{count} AI suggestion did not pass validation and was discarded. | {count} AI suggestions did not pass validation and were discarded.",
+    "URL_IMPORT_AI_WARNING_CONFLICT": "AI proposed different values for “{field}”, so none of them is offered."
   },
   "notices": {
     "AI_CONNECTED": "Connected to {provider}. {count} model is available. | Connected to {provider}. {count} models are available.",

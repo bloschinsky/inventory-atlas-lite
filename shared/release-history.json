@@ -6,7 +6,8 @@
       "Add an item from a product page: choose From URL under Add item, paste the address of a store or manufacturer page, and review what was found before it goes into the form. Fill from URL on an item page adds missing details to an existing item the same way. No AI or API key is needed.",
       "The review shows the current and found value of every field side by side. Only the values and images you tick are used, values you already have are never replaced unless you choose so, and nothing is saved until you save the item.",
       "The price shown on the page is only a suggestion and becomes the Purchase Price only if you tick Use page price as Purchase Price. Items can now keep the product page as their Source URL, shown as a link on the item page.",
-      "The page is read by your server as plain HTML, with no scripts and no logins, and addresses on your own device or local network are always refused, so the import cannot be used to reach your home network."
+      "The page is read by your server as plain HTML, with no scripts and no logins, and addresses on your own device or local network are always refused, so the import cannot be used to reach your home network.",
+      "When AI is enabled, Enhance with AI in the same review maps complex specifications and incomplete descriptions to the fields of your category and writes a short factual description. Nothing is sent unless you press it, and then only the text found on the page and the names of your categories and fields. Each suggestion shows its confidence and the page text it relies on, page values stay chosen unless you pick the AI one, and AI never fills the serial number, condition, location, purchase date, or Purchase Price."
     ]
   },
   {

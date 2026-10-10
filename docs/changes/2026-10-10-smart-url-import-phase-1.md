@@ -1,7 +1,8 @@
 # Smart URL import, Phase 1
 
 - Completed: 2026-10-10
-- Version: 0.64.0
+- Version: 0.64.0, released together with Phase 2 (#34, see
+  `2026-10-10-smart-url-import-ai-enrichment.md`) under one tag
 - Task: GitHub issue #33
 
 ## Summary

@@ -552,7 +552,8 @@ web, create categories or fields, or make a second AI request.
 ### Fill an item from a product page URL
 
 Smart URL import reads a public product page of a store or manufacturer and shows what it found for
-review before anything goes into the item form. It needs no AI provider and no API key.
+review before anything goes into the item form. It needs no AI provider and no API key; AI can
+only be added on request.
 
 1. For a new item, open **Items**, press the arrow next to **Add item**, and choose **From URL**. For
    an existing item, press **Fill from URL** on its page or in its **Edit** form.
@@ -574,7 +575,18 @@ review before anything goes into the item form. It needs no AI provider and no A
    page shows several prices or currencies, none is chosen for you.
 6. Tick the **Product images** you want. Only ticked images are imported, as new photos after the
    existing ones, so the cover stays the same; the usual photo limits apply.
-7. Press **Use selected values** for a new item or **Apply selected values** for an existing one. The
+7. Optional: when AI is enabled in **Settings → AI**, press **Enhance with AI** to let the configured
+   provider map complex specifications to your fields, for example "upper material" to Material or
+   "colorway" to Color, and write a short factual description. It runs only when you press it. Only
+   the text found on the page and the names of your categories and fields are sent, never your other
+   items or this item's values. AI suggestions join the same list, marked **AI suggestion** with a
+   confidence and the page text they rely on; a value the page already gave keeps it until you choose
+   **AI suggestion** or edit the AI value. Low-confidence suggestions start unticked, and **Discard AI
+   suggestions** removes them all. AI never fills the serial number, condition, location, purchase
+   date, or Purchase Price; it may only mark one page price as the current offer, and the price is
+   still copied only by **Use page price as Purchase Price**. If the provider fails or times out, the
+   page values stay as they were.
+8. Press **Use selected values** for a new item or **Apply selected values** for an existing one. The
    values go into the form, where you can still change them, and are saved only when you press
    **Save item**. An existing item keeps its identity, container, photos, loan, and lifecycle state.
 
@@ -1332,7 +1344,9 @@ backup, and keep the copies on a different machine than the server.
   bot protection, never send your browser's cookies, and refuse any address that belongs to this
   device or a local or private network, also after a redirect. Pages over 3 MB, more than four
   redirects, and pages that take longer than 15 seconds are refused. A page is read once; the saved
-  Source URL is never checked again for changes.
+  Source URL is never checked again for changes. **Enhance with AI** sends the extracted page text
+  (at most about 12,000 characters, never the raw page) and your category and field names to the AI
+  provider; with many categories, choose the category first.
 - Only providers with an OpenAI-compatible API are supported, one at a time. Whether a model accepts
   photos is detected only for OpenAI and OpenRouter; for other servers set **Image input** yourself.
   Small local models may return unusable answers, which are reported and never saved.
