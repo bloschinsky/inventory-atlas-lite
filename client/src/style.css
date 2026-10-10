@@ -189,6 +189,8 @@ body.app-menu-open { overflow: hidden; }
 .app-url-import-image { width: 9rem; }
 .app-url-import-image .app-photo-tile-frame { height: 7rem; }
 .app-url-import-value { white-space: pre-line; max-height: 8rem; overflow-y: auto; }
+/* The AI explanation keeps its button beside it on wide dialogs and above it on phones. */
+.app-url-import-ai-text { flex: 1 1 18rem; }
 
 /*
   Tabler styles its sidebar navigation only inside the desktop vertical navbar, so the mobile

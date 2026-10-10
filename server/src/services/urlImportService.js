@@ -54,6 +54,8 @@ const sameSite = (first, second) => new URL(first).hostname.replace(/^www\./, ''
 
   Image candidates are kept server-side under a short-lived random token, so the browser can only
   ask for "image 2 of this preview"; it can never make the server fetch an address of its choosing.
+  The extracted product facts are kept under the same token for the optional AI enhancement, which
+  therefore never has to trust a product description sent back by the browser.
 */
 export class UrlImportService {
   constructor({ webClient, categoryRepository, customFieldRepository, now = Date.now }) {
@@ -91,7 +93,7 @@ export class UrlImportService {
     const warnings = [...extraction.warnings, ...ambiguous.map(field => ({ code: 'URL_IMPORT_WARNING_FIELD_AMBIGUOUS', params: { field } }))];
 
     return {
-      token: this.remember(images),
+      token: this.remember({ images, facts: { product, provenance, price } }),
       pageUrl: page.url,
       product,
       provenance,
@@ -107,9 +109,7 @@ export class UrlImportService {
 
   // One image candidate of a preview, checked to be a real, reasonably sized JPEG, PNG, WebP, or GIF.
   async image(token, index) {
-    const session = this.sessions.get(String(token));
-    if (!session || session.expiresAt < this.now()) throw httpError(404, 'URL_IMPORT_PREVIEW_EXPIRED');
-    const image = session.images[Number.parseInt(index)];
+    const image = this.session(token).images[Number.parseInt(index)];
     if (!image || !/^\d+$/.test(String(index))) throw httpError(404, 'URL_IMPORT_IMAGE_NOT_FOUND');
     const file = await this.web.get(image.url, { types: IMAGE_TYPES, maxBytes: MAX_IMAGE_BYTES });
     const mime = detectImageMime(file.body);
@@ -123,12 +123,23 @@ export class UrlImportService {
     return { mime, data: file.body, filename: `product-image-${Number(index) + 1}.${IMAGE_EXTENSIONS[mime]}` };
   }
 
-  remember(images) {
+  // The product facts the server itself extracted for this preview.
+  facts(token) {
+    return this.session(token).facts;
+  }
+
+  session(token) {
+    const session = this.sessions.get(String(token));
+    if (!session || session.expiresAt < this.now()) throw httpError(404, 'URL_IMPORT_PREVIEW_EXPIRED');
+    return session;
+  }
+
+  remember({ images, facts }) {
     const now = this.now();
     for (const [token, session] of this.sessions) if (session.expiresAt < now) this.sessions.delete(token);
     while (this.sessions.size >= MAX_SESSIONS) this.sessions.delete(this.sessions.keys().next().value);
     const token = crypto.randomUUID();
-    this.sessions.set(token, { images, expiresAt: now + SESSION_TTL_MS });
+    this.sessions.set(token, { images, facts, expiresAt: now + SESSION_TTL_MS });
     return token;
   }
 }

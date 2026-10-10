@@ -49,11 +49,16 @@ function responseSchema(categories) {
   };
 }
 
-// The inventory the model may choose from: the categories and the fields of each one.
-function inventorySchema(categories, fields) {
+// The categories the model may choose from and the fields of each one: names, ids, and types only.
+export function categorySchema(categories, fields) {
   const byCategory = new Map(categories.map(category => [category.id, { id: category.id, name: category.name, fields: [] }]));
   for (const field of fields) byCategory.get(field.category_id)?.fields.push({ id: field.id, name: field.name, type: field.type });
-  return { baseFields: [...baseFieldNames, ...extraBaseFields], categories: [...byCategory.values()] };
+  return [...byCategory.values()];
+}
+
+// The inventory the model may choose from: the base fields, the categories, and their fields.
+function inventorySchema(categories, fields) {
+  return { baseFields: [...baseFieldNames, ...extraBaseFields], categories: categorySchema(categories, fields) };
 }
 
 const instructions = `Create a conservative inventory draft from the supplied evidence. The user may supply an item photo, a written description, or both; work with whatever is present.
@@ -71,7 +76,7 @@ Use only supported facts. Never invent unsupported values, serial numbers, purch
   clear preset name maps to that preset, a valid HEX is kept as a custom color and never moved to a
   preset, and anything else (free text, an invalid HEX, or contradictory JSON) leaves the field unset.
 */
-function aiColorValue(value) {
+export function aiColorValue(value) {
   if (typeof value !== 'string') return null;
   const text = value.trim().toLowerCase();
   if (COLOR_PRESETS.some(preset => preset.key === text)) return encodeColor(presetColor(text));
@@ -80,7 +85,7 @@ function aiColorValue(value) {
   return color ? encodeColor(color) : null;
 }
 
-function cleanString(value, maximum = 5000) {
+export function cleanString(value, maximum = 5000) {
   return typeof value === 'string' && value.trim() ? value.trim().slice(0, maximum) : null;
 }
 

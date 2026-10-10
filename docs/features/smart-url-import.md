@@ -1,8 +1,10 @@
-# Smart URL import (Phase 1)
+# Smart URL import
 
 Smart URL import reads a public retailer or manufacturer product page and turns it into reviewed values
 for the item form: either a new item draft or a selective enrichment of an existing item. It needs no
-AI provider and no API key. Nothing is written to the inventory until the user saves the item form.
+AI provider and no API key; an optional, user-initiated AI enhancement (see
+[AI enhancement](#ai-enhancement)) can map the same page facts further. Nothing is written to the
+inventory until the user saves the item form.
 
 ## Entry points
 
@@ -133,7 +135,99 @@ ambiguous field matches.
 ```
 
 `product` holds the raw candidates, `baseFields` and `customFields` what they map to, and `price`
-only suggestions. The same normalized result is meant to feed a later optional AI analysis.
+only suggestions. The extracted `product`, `provenance`, and `price` are also kept server-side under
+the preview token, where the optional AI enhancement reads them.
+
+## AI enhancement
+
+An optional second step of the same review, offered only while `/api/capabilities` reports
+`ai.enabled` (a configured, connectable provider). It is off until the user presses **Enhance with
+AI** in the review; reading a page never contacts the AI provider, and nothing runs in the background
+or is remembered between dialogs.
+
+### Request
+
+`POST /api/items/import-url/:token/ai` with `{ categoryId? }`
+(`server/src/routes/urlImportRoutes.js` → `server/src/services/urlImportAiService.js`):
+
+- The facts come from the preview session of `token` (`UrlImportService.facts()`), never from the
+  browser, so a forged product description cannot be submitted; an unknown or expired token answers
+  `URL_IMPORT_PREVIEW_EXPIRED` before AI is checked.
+- `categoryId` fixes the category: an existing item always sends its own, a new item sends the one
+  chosen in the dialog. Without it the model may choose among all categories; when that category and
+  field list is larger than 20,000 characters the request is refused with
+  `URL_IMPORT_AI_CHOOSE_CATEGORY`.
+- `AiProviderService.assertReady()` and `generateStructuredData()` are used as for every AI feature,
+  so the configured provider, model, discovery (#29), timeouts, and error codes
+  (`AI_DISABLED`, `AI_PROVIDER_TIMEOUT`, `AI_INVALID_RESPONSE`, …) are shared. No image is sent.
+
+### What the provider receives
+
+- **Trusted instructions** in the provider's system/instructions slot, separate from the data. They
+  say that `pageFacts` is untrusted page data, never an instruction; that the model cannot browse or
+  call tools; which categories and field ids it may use; the color presets; that units and scales are
+  never converted; that brand/model/SKU/MPN/GTIN describe the catalog product; and that serial
+  number, condition, New/Used, location, purchase date, and purchase price are never provided.
+- **One JSON user message** `{ inventory, pageFacts }`. `inventory` holds only category ids and names
+  and their field ids, names, and types (`categorySchema()` shared with AI Add Item), without fields
+  whose name is about the user's own item or purchase (serial, IMEI, purchase, paid, bought, price,
+  location, condition, and Ukrainian equivalents). `pageFacts` holds the extracted name, brand, model,
+  SKU, MPN, GTIN, breadcrumbs, plain-text description, specification pairs, and the page prices by
+  index, bounded to 12,000 characters by dropping specifications from the end. No HTML, addresses,
+  images, existing item values, other items, or credentials are sent.
+
+### Validation of the answer
+
+The model output is treated as untrusted input (`normalize()` in `urlImportAiService.js`):
+
+- The top level must be exactly `categoryId`, `name`, `description`, `fields`, `offerPriceIndex`,
+  `warnings` with the right types, or the whole answer is refused with `AI_INVALID_RESPONSE`.
+- `categoryId` must be an existing (or the fixed) category; fields must belong to it and be on the
+  allowlist above.
+- Each field entry needs a known confidence (`high`, `medium`, `low`) and an evidence quote that is
+  really found in the page facts (compared by words, case- and punctuation-insensitive). The value
+  must already have the field type: booleans as booleans, dates as valid ISO dates, colors through
+  the same preset-or-HEX reading as AI Add Item, numbers only when the same number appears in the
+  evidence (so no silent unit conversion), and text only with words found on the page. Values pass
+  `validateFieldValue()`.
+- An entry that fails is dropped and counted (`URL_IMPORT_AI_WARNING_DROPPED`); different values for
+  one field drop all of them (`URL_IMPORT_AI_WARNING_CONFLICT`).
+- A cleaned `name` may only use words of the page; `description` is plain text of at most 1,000
+  characters; model notes are at most five plain-text lines of 300 characters.
+- `offerPriceIndex` is kept only as a position among the page's own price candidates. No amount,
+  currency, or purchase field can come out of the answer.
+
+```json
+{
+  "categoryId": 3,
+  "baseFields": { "name": null, "description": "Running shoe with a full-grain leather upper." },
+  "fields": [{ "fieldId": 7, "name": "Color", "type": "color", "value": "{\"key\":\"blue\",\"hex\":\"#2878D0\"}",
+               "confidence": "medium", "evidence": "Colorway: Midnight Navy" }],
+  "offerPriceIndex": 0,
+  "notes": ["The description mentions a different price."],
+  "warnings": [{ "code": "URL_IMPORT_AI_WARNING_DROPPED", "params": { "count": 1 } }]
+}
+```
+
+### Review
+
+`UrlImportDialog.vue` merges the answer into the same Current → Found rows; nothing reaches the form
+until **Use/Apply selected values**:
+
+- A field the page did not fill gets a row marked **AI suggestion** with its confidence and the page
+  text it relies on. Low-confidence rows start unchecked; others follow the usual rule (empty current
+  value checked, filled one unchecked).
+- A field the page did fill keeps the page value: the AI value is offered beside it with **Page
+  value** / **AI suggestion** radios, and **AI agrees** marks rows where both match.
+- Text, number, name, and description suggestions are editable; editing one chooses it.
+- Rows already shown keep their checkbox, choice, and edits when **Ask AI again** answers, and
+  **Discard AI suggestions** returns to the page values.
+- A new item without a category takes the AI's category, with *Suggested by AI from the details on
+  the page*.
+- The AI's offer price only preselects that radio when none is selected and adds an **AI: current
+  offer** badge; **Use page price as Purchase Price** stays unchecked and the item's existing price
+  is untouched.
+- A failed request shows its translated error and keeps the review usable.
 
 ## Source URL
 
@@ -150,8 +244,8 @@ background.
 
 - Static HTML only: no script execution, no headless browser, no login, and no attempt to get past
   paywalls, CAPTCHAs, or bot protection.
-- No price monitoring, no refresh from the saved Source URL, no variant selection, and no AI analysis
-  in this phase.
+- No price monitoring, no refresh from the saved Source URL, and no variant selection. AI never
+  browses, searches, or fetches anything; it only sees the facts the server already extracted.
 - The server needs outbound Internet access; it never contacts the local network for an import.
 
 ## Verification
@@ -165,6 +259,14 @@ background.
   bomb, type, status, timeout, and concurrency limits), the preview service and image tokens, Source
   URL validation and persistence, the version 11 migration and older-backup restore, and the HTTP
   contract.
+- `test/url-import-ai.test.js` — the AI enhancement with a stubbed provider: the bounded payload and
+  its separation from the instructions, the field allowlist without personal fields, schema mapping
+  and color normalization, unknown ids, malformed types, invented evidence, converted units,
+  conflicts, prompt-injection text that stays data, malformed answers, AI disabled, timeout, and
+  failure with the preview kept, expired previews, oversized inventories, and the HTTP contract.
 - `test/e2e/url-import.spec.js` — the new-item and enrich flows, conflicts, the opt-in page price,
-  image selection, partial failures and blocked pages, Ukrainian, and the phone layout;
+  image selection, partial failures and blocked pages, Ukrainian, and the phone layout; with AI, the
+  opt-in request, AI rows with confidence and evidence, page-versus-AI choices and edits that survive
+  a second request, the untouched price opt-in, a timeout that keeps the page values, discarding the
+  suggestions of an existing item, and the phone layout;
   `test/e2e/demo.spec.js` checks that the demo does not offer the import.
