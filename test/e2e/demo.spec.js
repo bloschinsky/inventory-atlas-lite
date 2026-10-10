@@ -124,6 +124,10 @@ test('server-only features explain that they are not part of the demo', async ({
   // AI entry points stay hidden: the demo reports AI as not configured.
   await open(page, '#/items');
   await expect(page.getByRole('link', { name: /AI/ })).toHaveCount(0);
+  // URL import needs the server's network access, so the demo never offers it.
+  await page.getByRole('button', { name: 'More ways to add an item' }).click();
+  await expect(page.getByRole('link', { name: 'Blank item' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'From URL' })).toHaveCount(0);
 });
 
 test('the built demo contains no API key or cloud credential', () => {

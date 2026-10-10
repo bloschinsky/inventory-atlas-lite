@@ -30,6 +30,7 @@ import { GitHubReleaseClient } from './integrations/githubReleaseClient.js';
 import { GoogleDriveStorageProvider } from './integrations/googleDriveStorageProvider.js';
 import { OpenAiCompatibleProvider } from './integrations/openAiCompatibleProvider.js';
 import { OpenAiProvider } from './integrations/openAiProvider.js';
+import { PublicWebClient } from './integrations/publicWebClient.js';
 import { AiFieldService } from './services/aiFieldService.js';
 import { AiItemAnalysisService } from './services/aiItemAnalysisService.js';
 import { AiProviderService } from './services/aiProviderService.js';
@@ -56,6 +57,7 @@ import { PhotoService } from './services/photoService.js';
 import { ResetService } from './services/resetService.js';
 import { RestoreService } from './services/restoreService.js';
 import { UpdateService } from './services/updateService.js';
+import { UrlImportService } from './services/urlImportService.js';
 import { errorHandler, maintenanceGuard } from './http/errorHandler.js';
 import { createImageUpload, createRestoreUpload } from './http/uploads.js';
 import { createAiRoutes } from './routes/aiRoutes.js';
@@ -74,6 +76,7 @@ import { createPhotoRoutes } from './routes/photoRoutes.js';
 import { createResetRoutes } from './routes/resetRoutes.js';
 import { createSystemRoutes } from './routes/systemRoutes.js';
 import { createUpdateRoutes } from './routes/updateRoutes.js';
+import { createUrlImportRoutes } from './routes/urlImportRoutes.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -148,6 +151,7 @@ export function createApp({ production = false } = {}) {
   const aiItemAnalysisService = new AiItemAnalysisService({ aiProviderService, categoryRepository, customFieldRepository });
   const aiFieldService = new AiFieldService({ aiProviderService, categoryService, customFieldRepository });
   const backupService = new BackupService({ db, maintenance });
+  const urlImportService = new UrlImportService({ webClient: new PublicWebClient(), categoryRepository, customFieldRepository });
 
   // Cloud backup: provider adapters behind one connection service, credentials and state in their own files.
   const cloudCredentialsStore = new JsonFileStore({ file: credentialsFile, defaults: () => ({}) });
@@ -183,13 +187,14 @@ export function createApp({ production = false } = {}) {
   app.use(maintenanceGuard(maintenance));
 
   app.use(createAiRoutes({ aiSettingsService, aiProviderService, aiItemAnalysisService, imageUpload }));
-  app.use(createCapabilityRoutes({ aiSettingsService }));
+  app.use(createCapabilityRoutes({ aiSettingsService, urlImport: true }));
   app.use(createImageRoutes({ imageService, imageUpload }));
   app.use(createCategoryRoutes({ categoryService }));
   app.use(createDashboardRoutes({ dashboardService }));
   app.use(createDatabaseMetadataRoutes({ databaseMetadataService }));
   app.use(createFieldRoutes({ customFieldService, aiFieldService }));
   app.use(createItemRoutes({ itemService, bulkReplaceService, itemTransferService, itemLifecycleService }));
+  app.use(createUrlImportRoutes({ urlImportService }));
   app.use(createItemTemplateRoutes({ itemTemplateService }));
   app.use(createChecklistRoutes({ checklistService, checklistRunService }));
   app.use(createPhotoRoutes({ photoService, imageUpload }));

@@ -323,8 +323,10 @@ unusable, the message explains why and your description stays in the modal for a
    to open **Condition grading**, which explains every grade; close it with **Close**, ×, Escape, or a
    click outside. Put details such as *Small crack near the left hinge* in **Condition Notes**.
    Optionally fill in **Condition**, **Condition Notes**, **Location**, **Transferred To**, **Purchase Date**, **Purchase
-   Price**, **Serial Number**, **Stored inside**, and **Description**. Purchase Price has separate amount and currency
-   controls; clear the amount to leave the whole price unspecified.
+   Price**, **Serial Number**, **Source URL**, **Stored inside**, and **Description**. Purchase Price has separate amount and currency
+   controls; clear the amount to leave the whole price unspecified. **Source URL** keeps the product page the item
+   was described from as a full `http://` or `https://` address; the item page shows it as a link that
+   opens in a new tab.
 4. Values for the category's custom fields appear under **Category fields**. Text fields suggest
    values you have already used (see below), boolean fields are a Yes/No list, number and date fields
    use the matching browser control. A **Color** field shows twelve named swatches — Black, White,
@@ -340,7 +342,9 @@ Changing the category while filling in the form loads that category's fields.
 
 **Add item** is a split button: its main part opens the blank form described above, and the arrow
 next to it opens a menu with **Blank item** (the same blank form), **From template…** (see below),
-and **AI Add Item** while AI features are on.
+**From URL** (see
+[Fill an item from a product page URL](#fill-an-item-from-a-product-page-url)), and **AI Add Item**
+while AI features are on.
 
 ### Duplicate an item
 
@@ -486,7 +490,8 @@ audits, and deleting the container keeps its audits readable.
    current fields. Fill it in, add or delete entries in `items`, or paste a document produced
    elsewhere. `"new": true` marks an item as new; leave it out or set `false` otherwise. Only
    `true` or `false` is accepted. `"conditionGrade"` is one of `"excellent"`, `"good"`, `"fair"`,
-   `"poor"`, `"broken"`, or `null`, and `"conditionNotes"` is free text. Older documents with a
+   `"poor"`, `"broken"`, or `null`, and `"conditionNotes"` is free text. `"sourceUrl"` is the optional
+   `http://` or `https://` product page address. Older documents with a
    `"condition"` text are still accepted: that text becomes the Condition Notes, never a grade. A
    Color field takes `{ "key": "brown", "hex": "#795548" }` — one of the twelve color keys
    (`black`, `white`, `gray`, `brown`, `beige`, `red`, `orange`, `yellow`, `green`, `blue`,
@@ -543,6 +548,41 @@ photo,
 keeps whatever the model considers the foreground - including a hand holding the item - and places it
 centered on white with a soft shadow. It does not search the
 web, create categories or fields, or make a second AI request.
+
+### Fill an item from a product page URL
+
+Smart URL import reads a public product page of a store or manufacturer and shows what it found for
+review before anything goes into the item form. It needs no AI provider and no API key.
+
+1. For a new item, open **Items**, press the arrow next to **Add item**, and choose **From URL**. For
+   an existing item, press **Fill from URL** on its page or in its **Edit** form.
+2. Paste the page address into **Product page URL** and press **Read page**. The server reads the
+   page's static HTML once: schema.org product data first, then Open Graph and product meta tags,
+   then the page title, heading, and specification tables.
+3. Review what was found. Each value shows **Current** and **Found** side by side, with where it came
+   from: **Structured data**, **Open Graph**, **Page meta tags**, **Page content**, or **Page
+   address**. The import offers **Name**, **Description** (plain text, at most 2,000 characters),
+   **Source URL**, and the custom fields of the category whose name matches a detail on the page, such
+   as Brand, Model, SKU, EAN, Color, or Weight, when the value fits the field type. An empty value is
+   offered ticked; a value that would replace one the item already has is marked **Replaces current
+   value** and starts unticked. Values the page does not state stay as they are.
+4. For a new item choose the **Category**. An existing category is preselected only when the page
+   names it; the import never creates categories or fields. Page details that match no field are
+   listed under **other details found** and are not saved.
+5. **Page price** shows the offer, sale, or regular price with its currency. It is only a suggestion:
+   it becomes the **Purchase Price** only if you tick **Use page price as Purchase Price**. When the
+   page shows several prices or currencies, none is chosen for you.
+6. Tick the **Product images** you want. Only ticked images are imported, as new photos after the
+   existing ones, so the cover stays the same; the usual photo limits apply.
+7. Press **Use selected values** for a new item or **Apply selected values** for an existing one. The
+   values go into the form, where you can still change them, and are saved only when you press
+   **Save item**. An existing item keeps its identity, container, photos, loan, and lifecycle state.
+
+The import never fills New, Condition, Condition Notes, Location, Purchase Date, Transferred To,
+Serial Number, or the container: a catalog page describes the product, not your item. Pages behind a
+login, payment, or bot protection, and pages that build their content with JavaScript, give little or
+nothing, and the dialog says so. Addresses on this device or on a local or private network are always
+refused. The public demo does not offer the import.
 
 ### Edit or delete an item
 
@@ -1287,6 +1327,12 @@ backup, and keep the copies on a different machine than the server.
   The original image is stored only after you confirm the draft. The provider settings and key stay
   in `ai-settings.json` under `DATA_DIR` and are not part of SQLite backups, so move or reconfigure
   them separately.
+- **From URL** and **Fill from URL** read only public `http://` and `https://` pages, as static HTML,
+  and need outbound Internet access on the server. They never run page scripts, log in, or get past
+  bot protection, never send your browser's cookies, and refuse any address that belongs to this
+  device or a local or private network, also after a redirect. Pages over 3 MB, more than four
+  redirects, and pages that take longer than 15 seconds are refused. A page is read once; the saved
+  Source URL is never checked again for changes.
 - Only providers with an OpenAI-compatible API are supported, one at a time. Whether a model accepts
   photos is detected only for OpenAI and OpenRouter; for other servers set **Image input** yourself.
   Small local models may return unusable answers, which are reported and never saved.
@@ -1326,6 +1372,7 @@ backup, and keep the copies on a different machine than the server.
 | Search finds nothing | The search matches the name, description, serial number, and Transferred To. Clear the category filter and check that you are on page 1. |
 | No suggestions in a text field | Suggestions come from values already saved for that same field. A newly created field starts empty. |
 | AI Add Item is missing | AI features are off. Open **Settings → AI**, choose a provider, enter its API key if it needs one, choose a model, tick **Enable AI features**, then save. The AI actions appear immediately. |
+| From URL finds little or nothing | The page may build its content with JavaScript or block automated visitors. Use what was found and fill in the rest yourself, or try the manufacturer's own product page. |
 | Enable AI features cannot be ticked | OpenAI and OpenRouter need an API key and none is saved for this provider and base URL. Enter a key in the same form; the switch becomes available at once. |
 | *Could not reach Ollama/LM Studio at …* | The address is resolved on the Inventory Atlas server. In a Proxmox container or Docker, `localhost` is the container itself: use the LAN address of the computer running the model server, and make that server listen on the network. |
 | *The selected model does not support image input.* | The model cannot read photos. Choose a vision model, or describe the item instead. |

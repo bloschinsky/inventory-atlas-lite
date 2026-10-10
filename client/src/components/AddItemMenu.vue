@@ -70,6 +70,14 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', closeOnOutside
       >
         {{ $t('items.addFromTemplate') }}
       </button>
+      <!-- Opens the blank form with the URL import over it; nothing is created until the form is saved. -->
+      <RouterLink
+        v-if="capabilities.urlImport"
+        :to="{ path: '/items/new', query: { import: 'url' } }"
+        class="dropdown-item"
+      >
+        {{ $t('urlImport.newAction') }}
+      </RouterLink>
       <RouterLink
         v-if="capabilities.ai.enabled"
         to="/items/ai"

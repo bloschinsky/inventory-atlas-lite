@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { api } from '../api.js';
+import { capabilities } from '../capabilities.js';
 import { formatDate, formatDateTime, formatMoney } from '../i18n/index.js';
 import AuditContentsDialog from '../components/AuditContentsDialog.vue';
 import ChecklistRunHistory from '../components/ChecklistRunHistory.vue';
@@ -145,6 +146,14 @@ onMounted(load);
             class="btn btn-primary"
           >
             {{ $t('common.edit') }}
+          </RouterLink>
+          <!-- Opens the edit form with the URL import over it; only the values chosen there and then saved change. -->
+          <RouterLink
+            v-if="capabilities.urlImport"
+            :to="{ path: `/items/${item.id}/edit`, query: { import: 'url' } }"
+            class="btn"
+          >
+            {{ $t('urlImport.fillAction') }}
           </RouterLink>
           <!-- Opens the Add Item form prefilled from this item; the copy is created only when saved there. -->
           <RouterLink
@@ -416,6 +425,19 @@ onMounted(load);
                 </dt>
                 <dd class="col-sm-8 text-break">
                   {{ item.serial_number }}
+                </dd>
+              </template>
+              <!-- A link the user saved or approved; it opens outside the app and is never fetched by it. -->
+              <template v-if="item.source_url">
+                <dt class="col-sm-4">
+                  {{ $t('items.fields.sourceUrl') }}
+                </dt>
+                <dd class="col-sm-8 text-break">
+                  <a
+                    :href="item.source_url"
+                    target="_blank"
+                    rel="noopener noreferrer nofollow"
+                  >{{ item.source_url }}</a>
                 </dd>
               </template>
               <dt class="col-sm-4">

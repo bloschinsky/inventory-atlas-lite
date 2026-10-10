@@ -252,6 +252,27 @@ const conditionHelpOpen = ref(false);
       {{ $t('itemForm.priceHelp') }}
     </div>
   </div>
+  <!-- A product page belongs to one item, so a template never carries it. -->
+  <div
+    v-if="!template"
+    class="mb-3"
+  >
+    <label
+      class="form-label"
+      for="item-source-url"
+    >{{ $t('items.fields.sourceUrl') }}</label><input
+      id="item-source-url"
+      v-model="form.source_url"
+      class="form-control"
+      type="url"
+      inputmode="url"
+      maxlength="2048"
+      placeholder="https://"
+    >
+    <div class="form-text">
+      {{ $t('itemForm.sourceUrlHelp') }}
+    </div>
+  </div>
   <slot />
   <div class="mb-3">
     <label

@@ -23,6 +23,13 @@ export default [
     }
   },
   {
+    // Shared rules run in the browser and in Node.js, so they may only use globals both provide.
+    files: ['shared/**/*.js'],
+    languageOptions: {
+      globals: { URL: 'readonly' }
+    }
+  },
+  {
     files: ['server/**/*.{js,mjs}', 'scripts/**/*.mjs', 'landing/*.js', 'test/**/*.{js,mjs}', '*.config.js'],
     languageOptions: {
       globals: globals.node

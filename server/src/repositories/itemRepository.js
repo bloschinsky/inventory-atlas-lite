@@ -319,22 +319,22 @@ export class ItemRepository {
   insert(attributes) {
     return this.db.prepare(`
       INSERT INTO items (uuid, name, category_id, description, is_new, condition_grade, condition_notes, location, purchase_date,
-        purchase_price_amount, purchase_price_currency, serial_number, transferred_to, parent_item_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        purchase_price_amount, purchase_price_currency, serial_number, transferred_to, parent_item_id, source_url)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(crypto.randomUUID(), attributes.name, attributes.categoryId, attributes.description, attributes.isNew ? 1 : 0,
       attributes.conditionGrade, attributes.conditionNotes, attributes.location, attributes.purchaseDate, attributes.purchasePriceAmount,
-      attributes.purchasePriceCurrency, attributes.serialNumber, attributes.transferredTo, attributes.parentId).lastInsertRowid;
+      attributes.purchasePriceCurrency, attributes.serialNumber, attributes.transferredTo, attributes.parentId, attributes.sourceUrl).lastInsertRowid;
   }
 
   update(id, attributes) {
     this.db.prepare(`
       UPDATE items SET name = ?, category_id = ?, description = ?, is_new = ?, condition_grade = ?, condition_notes = ?, location = ?,
         purchase_date = ?, purchase_price_amount = ?, purchase_price_currency = ?, serial_number = ?,
-        transferred_to = ?, parent_item_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+        transferred_to = ?, parent_item_id = ?, source_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
     `).run(attributes.name, attributes.categoryId, attributes.description, attributes.isNew ? 1 : 0,
       attributes.conditionGrade, attributes.conditionNotes, attributes.location,
       attributes.purchaseDate, attributes.purchasePriceAmount, attributes.purchasePriceCurrency,
-      attributes.serialNumber, attributes.transferredTo, attributes.parentId, id);
+      attributes.serialNumber, attributes.transferredTo, attributes.parentId, attributes.sourceUrl, id);
   }
 
   // A loan writes only the current recipient; every other column stays as it is.

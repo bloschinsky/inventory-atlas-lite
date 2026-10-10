@@ -3,7 +3,7 @@ import { errorBody } from '../../../shared/appError.js';
 import { itemImportRequestBody, readItemImportDocument } from '../../../shared/itemImport.js';
 import { isCustomColumnKey } from '../../../shared/itemColumns.js';
 import { buildItemColumns } from './itemColumns.js';
-import { readFieldValues, readItemDetails, requiredText, validateIsNew } from '../../../shared/itemValidation.js';
+import { readFieldValues, readItemDetails, requiredText, validateIsNew, validateSourceUrl } from '../../../shared/itemValidation.js';
 import { isConditionGrade } from '../../../shared/conditionGrades.js';
 import { COLOR_KEYS } from '../../../shared/colors.js';
 import { LIFECYCLE_FILTERS } from '../../../shared/itemLifecycle.js';
@@ -320,7 +320,10 @@ export class ItemService {
     if (!this.categories.findById(categoryId)) throw httpError(400, 'CATEGORY_REQUIRED');
     const values = readFieldValues(body.field_values, this.fields.listTypesByCategory(categoryId));
     const parentId = this.resolveParentId(body.parent_item_id, item);
-    return { values, attributes: { name, categoryId, isNew: validateIsNew(body.is_new), ...readItemDetails(body), parentId } };
+    return {
+      values,
+      attributes: { name, categoryId, isNew: validateIsNew(body.is_new), ...readItemDetails(body), sourceUrl: validateSourceUrl(body.source_url), parentId }
+    };
   }
 
   // Callers wrap it in a transaction, so the item row and its field values are written together.

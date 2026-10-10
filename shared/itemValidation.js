@@ -65,6 +65,29 @@ export const validateSerialNumber = value => shortText(value, { invalid: 'INVALI
 
 export const validateTransferredTo = value => shortText(value, { invalid: 'INVALID_TRANSFERRED_TO', tooLong: 'TRANSFERRED_TO_TOO_LONG' });
 
+export const MAX_SOURCE_URL_LENGTH = 2048;
+
+/*
+  The optional product page an item was described from: an absolute http(s) address without
+  credentials, stored in the normalized form URL gives it. It is a reference for the user, never a
+  location and never fetched on its own.
+*/
+export const validateSourceUrl = value => {
+  if (value === null || value === undefined || value === '') return null;
+  if (typeof value !== 'string') throw invalid('INVALID_SOURCE_URL');
+  const text = value.trim();
+  if (!text) return null;
+  let url;
+  try {
+    url = new URL(text);
+  } catch {
+    throw invalid('INVALID_SOURCE_URL');
+  }
+  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || !url.hostname) throw invalid('INVALID_SOURCE_URL');
+  if (url.href.length > MAX_SOURCE_URL_LENGTH) throw invalid('SOURCE_URL_TOO_LONG', { max: MAX_SOURCE_URL_LENGTH });
+  return url.href;
+};
+
 // The New flag of an item is a real JSON boolean; omitted or null means the item is not new.
 export const validateIsNew = value => {
   if (value === null || value === undefined) return false;

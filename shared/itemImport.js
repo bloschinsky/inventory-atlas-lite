@@ -1,7 +1,7 @@
 import { AppError, errorBody } from './appError.js';
 import {
   requiredText, validateConditionGrade, validateFieldValue, validatePurchaseDate, validatePurchasePrice, validateSerialNumber,
-  validateTransferredTo
+  validateSourceUrl, validateTransferredTo
 } from './itemValidation.js';
 
 /*
@@ -15,7 +15,7 @@ export const ITEM_IMPORT_VERSION = 1;
 export const MAX_BATCH_ITEMS = 100;
 
 const documentProperties = ['version', 'category', 'items'];
-const textProperties = ['name', 'conditionGrade', 'conditionNotes', 'location', 'description', 'transferredTo', 'purchaseDate', 'serialNumber'];
+const textProperties = ['name', 'conditionGrade', 'conditionNotes', 'location', 'description', 'transferredTo', 'purchaseDate', 'serialNumber', 'sourceUrl'];
 /*
   `new` is the item's New flag. Version 1 documents without it stay valid: the flag is then false.
   `condition` is the legacy free-text Condition of older version 1 documents. It is still accepted and
@@ -42,6 +42,7 @@ export function itemImportTemplate(category, fields) {
     purchaseDate: null,
     purchasePrice: { amount: null, currency: 'UAH' },
     serialNumber: '',
+    sourceUrl: '',
     customFields: Object.fromEntries(fields.map(field => [field.name, field.type === 'text' ? '' : null]))
   });
   return { version: ITEM_IMPORT_VERSION, category: category.name, items: [blank(), blank()] };
@@ -184,6 +185,7 @@ export function reviewItemDraft(draft, fields) {
   check(errors, 'purchasePrice', () => validatePurchasePrice(draft.purchasePrice));
   check(errors, 'serialNumber', () => validateSerialNumber(draft.serialNumber));
   check(errors, 'transferredTo', () => validateTransferredTo(draft.transferredTo));
+  check(errors, 'sourceUrl', () => validateSourceUrl(draft.sourceUrl));
   const fieldErrors = {};
   for (const field of fields) {
     check(fieldErrors, field.name, () => validateFieldValue(field.type, draft.customFields[field.name], field.name));
@@ -207,6 +209,7 @@ export const itemImportRequestBody = (draft, categoryId, fields) => ({
   purchase_date: draft.purchaseDate,
   purchase_price: draft.purchasePrice,
   serial_number: draft.serialNumber,
+  source_url: draft.sourceUrl,
   field_values: Object.fromEntries(fields.map(field => [field.id, draft.customFields[field.name]]))
 });
 
