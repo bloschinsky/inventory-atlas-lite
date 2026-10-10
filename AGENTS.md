@@ -162,7 +162,8 @@ The project stays small and readable. Do not add:
 - `client/src/qrScan.js` — local QR decoding with the bundled `jsqr` and classification of the scanned text.
 - `client/src/pages/Categories.vue` — category and custom field management, including renaming a field in place.
 - `client/src/pages/DataBackup.vue` — SQLite backup download, restore, and the Danger Zone.
-- `client/src/pages/Settings.vue` — the Settings shell: the grouped section list on desktops, the section selector on phones, and the active section; `client/src/settingsSections.js` lists the groups and sections (path, label, icon, component) used by the routes and both navigations.
+- `client/src/pages/Settings.vue` — the Settings dialog, opened over the current page by every `/settings/*` address: the grouped section list on desktops, the full-screen dialog with the section selector on phones, and the active section; `client/src/settingsSections.js` lists the groups and sections (path, label, icon, component) used by the routes and both navigations.
+- `client/src/settingsOverlay.js` — the route-driven Settings dialog: the covered (background) page route, `usePageRoute()` for the page area, `closeSettings()`, and the unsaved-changes guard that Settings forms join with `useUnsavedChanges()`; `client/src/components/PageView.vue` renders the page area with that route and provides it to `useRoute()`, so the page under Settings stays as it was.
 - `client/src/components/settings/` — one component per Settings section: `InterfaceSettings.vue` (language), `DatabaseSettings.vue` (editable database name, last update, folded technical details), `CloudBackupSettings.vue` (Dropbox/Google Drive connections, Backup now, the schedule, retention, and status) with `CloudAppCredentials.vue` (the masked app key/client ID and secret form of one provider), and `AiSettings.vue` (the AI form in Features, Connection, and Model cards).
 - `client/src/components/BulkReplaceValue.vue` — the Data page card that previews and applies the replacement of one exact field value on every matching item.
 - `client/src/components/ResetDatabaseDialog.vue` — impact review and confirmation of the inventory reset.
@@ -214,7 +215,7 @@ The project stays small and readable. Do not add:
 - `test/errors.test.js` — error code coverage in both locales, the error response mapping, and error translation.
 - `test/cloud-backup.test.js` — cloud backup services, adapters, scheduler, and API against the local Dropbox/Google Drive stub in `test/e2e/cloudProviderStub.js`.
 - `test/fixtures/` — real source photos used as regression input by the Node.js tests.
-- `test/e2e/settings-navigation.spec.js` — Settings section routes and redirects, the active state, the desktop section list, and the phone section selector.
+- `test/e2e/settings-navigation.spec.js` — the Settings dialog: section routes and redirects, the Dashboard under direct addresses, the preserved page underneath, close, Escape, Back and Forward, section changes without history entries, the unsaved-changes prompt, focus, the desktop section list, the full-screen phone dialog and its section selector, and the dark mode in Ukrainian.
 - `test/e2e/color-field.spec.js` — creating a Color field, the picker (presets, arrow keys, Custom HEX, Clear), details, the Items column with sorting and filters, templates, both color modes, and phones.
 - `test/e2e/lifecycle.spec.js` — Retire and Restore from the item page, the Active / All / Retired views of Items and Hierarchy, the container contents choice, checklists with retired items, the Dashboard link, phones, and Ukrainian.
 - `test/e2e/` — Playwright browser tests, their fixtures, shared helpers, and the run launcher.

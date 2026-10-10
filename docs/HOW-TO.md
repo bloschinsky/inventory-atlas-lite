@@ -65,7 +65,7 @@ reload and a language change.
   with `Tab` — and it slides open over the page with the full labels. On a phone or a narrow tablet
   the same list opens from the **☰** button in the top bar. On a wide screen the pages use the
   whole width beside the sidebar, so the Dashboard, the Items table, and the Hierarchy get more room;
-  forms such as Add Item and Settings stay at a comfortable reading width.
+  forms such as Add Item stay at a comfortable reading width.
 - The application starts in the light or dark colour scheme your operating system uses. The sun and
   moon buttons switch it and your choice is remembered in the browser for the next visit; on a wide
   screen they appear at the bottom of the sidebar once you expand it, on a narrow screen they are
@@ -940,11 +940,20 @@ backup first when in doubt.
 
 ### Find a setting
 
-**Settings** is split into sections: **Interface** under *General*, **Database** and **Cloud Backup**
-under *Data*, and **AI** under *Services*. On a computer the sections are listed on the left of the
-page and the open one is highlighted; on a phone choose it from the **Section** selector at the top.
-Each section has its own address, such as `/settings/ai`, so it can be bookmarked; `/settings`
-opens **Interface**.
+**Settings** opens as a dialog over the page you are on, which stays as you left it underneath. It is
+split into sections: **Interface** under *General*, **Database** and **Cloud Backup** under *Data*,
+and **AI** under *Services*. On a computer the sections are listed on the left of the dialog and the
+open one is highlighted; on a phone Settings fills the screen and you choose the section from the
+**Section** selector at the top. A long section scrolls inside the dialog.
+
+Close Settings with the **×** button, `Esc`, a click beside the dialog, or the browser's Back button:
+you return to the same page with its search, filters, and scroll position. Switching sections does not
+add Back steps. If a section has changes you have not saved, Settings asks before it closes, switches
+sections, or goes elsewhere; choose **Cancel** to keep editing.
+
+Each section has its own address, such as `/settings/ai`, so it can be bookmarked or reloaded;
+`/settings` opens **Interface**. An address opened directly, after a reload, or on the return from a
+Dropbox or Google Drive sign-in shows Settings over the **Dashboard**, where closing it leaves you.
 
 ### Change the interface language
 

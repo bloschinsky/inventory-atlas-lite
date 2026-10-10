@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n';
 import { IconBrandDropbox, IconBrandGoogleDrive } from '@tabler/icons-vue';
 import { api, jsonOptions } from '../../api.js';
 import { formatDateTime, translateError, translateNotice } from '../../i18n/index.js';
+import { useUnsavedChanges } from '../../settingsOverlay.js';
 import CloudAppCredentials from './CloudAppCredentials.vue';
 
 const route = useRoute();
@@ -23,6 +24,9 @@ const busy = ref('');
 const notice = ref('');
 const error = ref('');
 const form = reactive({ enabled: false, provider: '', frequency: 'daily', weekday: 0, time: '03:00', retentionMode: 'all', keep: 10 });
+// The schedule as last loaded or saved; any difference is an unsaved edit.
+const savedForm = ref('');
+useUnsavedChanges(() => Boolean(overview.value) && JSON.stringify(form) !== savedForm.value);
 
 const providers = computed(() => overview.value?.providers ?? []);
 const connected = computed(() => providers.value.filter(provider => provider.connected));
@@ -44,6 +48,7 @@ function show(data) {
       : (data.providers.find(provider => provider.connected)?.id ?? ''),
     frequency: schedule.frequency, weekday: schedule.weekday, time: schedule.time, retentionMode: retention.mode, keep: retention.keep
   });
+  savedForm.value = JSON.stringify(form);
 }
 
 async function load() {

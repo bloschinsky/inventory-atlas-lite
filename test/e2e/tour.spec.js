@@ -699,6 +699,8 @@ test.describe('on the Ukrainian demo', () => {
     await page.getByRole('link', { name: 'Settings', exact: true }).click();
     await page.mouse.move(600, 400);
     await page.getByLabel('Language').selectOption('uk');
+    // Settings is a dialog over the page; the page and its navigation are back once it closes.
+    await page.getByRole('button', { name: 'Закрити налаштування' }).click();
 
     // Nothing of the English run is left: no card, no spotlight, no lock, no half-saved English item.
     await expect(ukCard(page)).toHaveCount(0);

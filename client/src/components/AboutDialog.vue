@@ -1,11 +1,14 @@
 <script setup>
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { IconBrandGithub, IconHistory } from '@tabler/icons-vue';
 import AppBrand from './AppBrand.vue';
 import { aboutOpen, closeAbout, openVersionHistory, versionHistoryOpen } from '../about.js';
 import { appInfo } from '../build-info.js';
 import AboutUpdate from './AboutUpdate.vue';
+import { isSettingsRoute } from '../settingsOverlay.js';
 
+const route = useRoute();
 const panel = ref(null);
 const closeButton = ref(null);
 let opener = null;
@@ -20,7 +23,8 @@ function onFocusIn(event) {
   if (panel.value && !panel.value.contains(event.target)) closeButton.value?.focus();
 }
 function release() {
-  document.body.classList.remove('modal-open');
+  // What's New can open the changelog over Settings, which keeps the page locked after this closes.
+  if (!isSettingsRoute(route)) document.body.classList.remove('modal-open');
   document.removeEventListener('keydown', onKeydown);
   document.removeEventListener('focusin', onFocusIn);
 }

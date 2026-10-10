@@ -16,6 +16,7 @@ import Dashboard from './pages/Dashboard.vue';
 import AIAddItem from './pages/AIAddItem.vue';
 import Settings from './pages/Settings.vue';
 import { defaultSettingsPath, settingsSections } from './settingsSections.js';
+import { installSettingsOverlay } from './settingsOverlay.js';
 import DemoUnavailable from './components/DemoUnavailable.vue';
 import ScanQr from './pages/ScanQr.vue';
 import PrintLabels from './pages/PrintLabels.vue';
@@ -73,5 +74,6 @@ router.beforeEach(async to => {
   return capabilities.ai.enabled ? true : '/items';
 });
 
+installSettingsOverlay(router);
 loadCapabilities();
 createApp(App).use(i18n).use(router).mount('#app');

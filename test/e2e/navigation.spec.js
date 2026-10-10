@@ -25,7 +25,10 @@ test('the primary pages are reachable from the navigation bar', async ({ page })
 
   await page.getByRole('link', { name: 'Settings', exact: true }).click();
   await expect(page).toHaveURL('/settings/interface');
-  await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Settings' })).toBeVisible();
+  // Settings is a dialog over the page; closing it returns to the page it was opened from.
+  await page.getByRole('button', { name: 'Close settings' }).click();
+  await expect(page).toHaveURL('/data');
 
   await page.getByRole('link', { name: 'Items', exact: true }).click();
   await expect(page).toHaveURL('/items');

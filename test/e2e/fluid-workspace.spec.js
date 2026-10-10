@@ -100,7 +100,7 @@ test.describe('a Full HD desktop', () => {
   });
 
   test('forms keep their readable local width', async ({ page }) => {
-    for (const url of ['/items/new', '/settings']) {
+    for (const url of ['/items/new', '/data']) {
       await open(page, url);
       const form = page.locator('.form-card').first();
       await expect(form).toBeVisible();

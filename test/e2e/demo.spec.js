@@ -194,11 +194,13 @@ test.describe('in every language', () => {
     await page.getByRole('link', { name: 'Settings', exact: true }).click();
     await page.mouse.move(600, 400);
     await page.getByLabel('Language').selectOption('uk');
-    await expect(banner(page)).toContainText('Демо-дані оновлено українською мовою.');
     await expect(page.getByRole('heading', { name: 'Налаштування', level: 1 })).toBeVisible();
     // The address names the shown language, so a reload or a copied link opens it again.
     expect(new URL(page.url()).searchParams.get('lang')).toBe('uk');
     expect(await page.evaluate(key => localStorage.getItem(key), STORAGE_KEY)).toBe('uk');
+    // Settings is a dialog over the page; the demo strip under it reports the new data once it closes.
+    await page.getByRole('button', { name: 'Закрити налаштування' }).click();
+    await expect(banner(page)).toContainText('Демо-дані оновлено українською мовою.');
 
     await page.getByRole('link', { name: 'Предмети', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Предмети', level: 1 })).toBeVisible();
@@ -221,6 +223,7 @@ test.describe('in every language', () => {
     await expect(page.getByRole('heading', { name: byKey(ukrainian.items, 'cordless-drill').name })).toBeVisible();
     await open(page, '?lang=uk#/settings/interface');
     await page.getByLabel('Мова').selectOption('en');
+    await page.getByRole('button', { name: 'Close settings' }).click();
     await expect(banner(page)).toContainText('Demo data was reset in English.');
     await page.getByRole('link', { name: 'Items', exact: true }).click();
     await expect(page.getByRole('link', { name: 'Camera Bag', exact: true }).first()).toBeVisible();

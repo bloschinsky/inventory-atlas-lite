@@ -29,8 +29,6 @@ body.app-menu-open { overflow: hidden; }
 
 /* Shared surfaces */
 .form-card { max-width: var(--app-form-width); }
-/* Settings section list: a fixed column beside the active section that stays in view while a long section scrolls. */
-.settings-nav { position: sticky; top: 1rem; width: 16rem; }
 .meta-text { color: var(--tblr-secondary); font-size: .875rem; }
 .truncate-cell { max-width: 13rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .name-cell { min-width: 13rem; }
@@ -244,6 +242,22 @@ body.app-menu-open { overflow: hidden; }
   max-height: 18rem;
   max-width: min(100%, 26rem);
   object-fit: contain;
+}
+
+/*
+  Settings: a large dialog over the page, full screen on phones. Its section list stays put while the
+  section pane scrolls. It sits below the default modal layer, so About and What's New open above it.
+*/
+body.modal-open { overflow: hidden; }
+.app-settings-modal { z-index: 1045; }
+.app-settings-backdrop { z-index: 1040; }
+.app-settings-dialog { --tblr-modal-width: 57.5rem; }
+.app-settings-dialog .modal-content { height: 100%; }
+.app-settings-nav { flex: 0 0 14rem; overflow-y: auto; padding: 1rem; border-right: var(--tblr-border-width) solid var(--tblr-border-color); }
+.app-settings-pane { flex: 1 1 auto; min-width: 0; overflow-y: auto; overscroll-behavior: contain; padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom)); }
+@media (min-width: 768px) {
+  .app-settings-dialog { height: min(88dvh, calc(100% - var(--tblr-modal-margin) * 2)); }
+  .app-settings-pane { padding: 1.5rem; }
 }
 
 /*
