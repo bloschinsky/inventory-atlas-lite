@@ -3,7 +3,7 @@ import sharp from 'sharp';
 import { httpError } from '../httpError.js';
 import { detectImageMime } from '../imageMime.js';
 import { readPublicUrl } from '../integrations/publicAddress.js';
-import { extractProduct } from '../urlImport/productExtraction.js';
+import { extractProduct, selectVariant } from '../urlImport/productExtraction.js';
 import { matchCustomFields, productAttributes } from '../../../shared/productImport.js';
 import { validateSourceUrl } from '../../../shared/itemValidation.js';
 
@@ -56,6 +56,11 @@ const sameSite = (first, second) => new URL(first).hostname.replace(/^www\./, ''
   ask for "image 2 of this preview"; it can never make the server fetch an address of its choosing.
   The extracted product facts are kept under the same token for the optional AI enhancement, which
   therefore never has to trust a product description sent back by the browser.
+
+  When the page offers several distinguishable variants, the preview lists them and holds only what
+  they share. Choosing one builds a new preview with a new token from the same reading of the page
+  (nothing is fetched again), with that variant's own identity, attributes, prices, and images.
+  Refresh from Source is the same preview of an item's saved Source URL, read only when the user asks.
 */
 export class UrlImportService {
   constructor({ webClient, categoryRepository, customFieldRepository, now = Date.now }) {
@@ -68,16 +73,12 @@ export class UrlImportService {
 
   async preview(body) {
     const pageUrl = readPublicUrl(body?.url).href;
-    const categoryId = body?.categoryId === undefined || body?.categoryId === null || body?.categoryId === '' ? null : Number.parseInt(body.categoryId);
-    const category = categoryId === null ? null : this.categories.findById(categoryId);
-    if (categoryId !== null && !category) throw httpError(400, 'CATEGORY_REQUIRED');
-
+    const category = this.category(body);
     const page = await this.web.get(pageUrl, {
       types: PAGE_TYPES, maxBytes: MAX_PAGE_BYTES, accept: 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.1'
     });
     const extraction = extractProduct(decodePage(page.body, page.charset), page.url);
-    const { product, provenance, price, images } = extraction;
-    if (!product.name) throw httpError(422, 'URL_IMPORT_NO_PRODUCT');
+    if (!extraction.product.name) throw httpError(422, extraction.scriptRendered ? 'URL_IMPORT_SCRIPT_RENDERED' : 'URL_IMPORT_NO_PRODUCT');
 
     // The page's canonical address is preferred only while it stays on the same site.
     const canonical = extraction.canonicalUrl && sameSite(extraction.canonicalUrl, page.url) ? extraction.canonicalUrl : page.url;
@@ -87,22 +88,57 @@ export class UrlImportService {
     } catch {
       sourceUrl = validateSourceUrl(page.url);
     }
+    return this.build({ extraction, pageUrl: page.url, sourceUrl, fetchedAt: new Date(this.now()).toISOString() }, extraction, category);
+  }
 
+  // The preview of one variant of an earlier preview; an `index` of null returns to the shared details.
+  variant(token, body) {
+    const { reading } = this.session(token);
+    const raw = body?.index;
+    const index = raw === null || raw === undefined || raw === '' ? null
+      : typeof raw === 'number' ? raw : typeof raw === 'string' && /^\d+$/.test(raw) ? Number(raw) : Number.NaN;
+    if (index !== null && !(Number.isInteger(index) && index >= 0 && index < reading.extraction.variants.length)) {
+      throw httpError(404, 'URL_IMPORT_VARIANT_NOT_FOUND');
+    }
+    const category = this.category(body);
+    return this.build(reading, index === null ? reading.extraction : selectVariant(reading.extraction, index), category);
+  }
+
+  category(body) {
+    const categoryId = body?.categoryId === undefined || body?.categoryId === null || body?.categoryId === '' ? null : Number.parseInt(body.categoryId);
+    const category = categoryId === null ? null : this.categories.findById(categoryId);
+    if (categoryId !== null && !category) throw httpError(400, 'CATEGORY_REQUIRED');
+    return category;
+  }
+
+  /*
+    `reading` is one read of the page (its extraction, final address, proposed Source URL, and time),
+    shared by every view of it; `view` is the page-level extraction or one variant of it.
+  */
+  build(reading, view, category) {
+    const { product, provenance, price, images } = view;
     const fields = category ? this.fields.listByCategory(category.id) : [];
     const { matches, ambiguous } = matchCustomFields(productAttributes(product, provenance), fields);
-    const warnings = [...extraction.warnings, ...ambiguous.map(field => ({ code: 'URL_IMPORT_WARNING_FIELD_AMBIGUOUS', params: { field } }))];
+    const warnings = [...view.warnings, ...ambiguous.map(field => ({ code: 'URL_IMPORT_WARNING_FIELD_AMBIGUOUS', params: { field } }))];
 
     return {
-      token: this.remember({ images, facts: { product, provenance, price } }),
-      pageUrl: page.url,
+      token: this.remember({ reading, images, facts: { product, provenance, price } }),
+      pageUrl: reading.pageUrl,
+      fetchedAt: reading.fetchedAt,
       product,
       provenance,
-      baseFields: { name: product.name, description: product.description || null, source_url: sourceUrl },
+      baseFields: { name: product.name, description: product.description || null, source_url: reading.sourceUrl },
       suggestedCategoryId: suggestCategory(product.categories, this.categories.listNames()),
       categoryId: category?.id ?? null,
       customFields: matches,
       price,
       images: images.map((image, index) => ({ index, url: image.url, source: image.source })),
+      // Each variant's label and, only when it has exactly one current price, that offer for the picker.
+      variants: reading.extraction.variants.map(({ label, price: offers }, index) => {
+        const [offer, ...others] = offers.candidates.filter(candidate => candidate.kind !== 'regular');
+        return { index, label, offer: offer && !others.length && !offers.ambiguous ? { amount: offer.amount, currency: offer.currency } : null };
+      }),
+      variant: view.variant,
       warnings
     };
   }
@@ -134,12 +170,12 @@ export class UrlImportService {
     return session;
   }
 
-  remember({ images, facts }) {
+  remember({ reading, images, facts }) {
     const now = this.now();
     for (const [token, session] of this.sessions) if (session.expiresAt < now) this.sessions.delete(token);
     while (this.sessions.size >= MAX_SESSIONS) this.sessions.delete(this.sessions.keys().next().value);
     const token = crypto.randomUUID();
-    this.sessions.set(token, { images, facts, expiresAt: now + SESSION_TTL_MS });
+    this.sessions.set(token, { reading, images, facts, expiresAt: now + SESSION_TTL_MS });
     return token;
   }
 }

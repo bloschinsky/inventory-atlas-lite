@@ -3,7 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } 
 import { useI18n } from 'vue-i18n';
 import { api, apiBlob, jsonOptions } from '../api.js';
 import { capabilities } from '../capabilities.js';
-import { formatMoney, translateError } from '../i18n/index.js';
+import { formatDateTime, formatMoney, translateError } from '../i18n/index.js';
 import { matchCustomFields, productAttributes } from '../../../shared/productImport.js';
 import ColorValue from './ColorValue.vue';
 
@@ -22,19 +22,26 @@ import ColorValue from './ColorValue.vue';
   an alternative. AI values can be edited before they are applied, low-confidence ones start
   unchecked, and choices the user already made are never changed by a later AI answer. A failed
   request leaves the page values as they were.
+
+  Refresh from Source is the same review of an existing item's saved Source URL: the page is read as
+  soon as the dialog opens, and a page that cannot be read only shows its error. When the page offers
+  several variants, nothing variant-specific is shown until the user chooses one; the server then
+  answers a new preview for that variant alone, and the rows, price, and images follow it.
 */
 const props = defineProps({
   form: { type: Object, required: true },
   categories: { type: Array, required: true },
   fields: { type: Array, required: true },
   editing: { type: Boolean, default: false },
+  // The saved Source URL to refresh from; empty for Fill from URL and From URL.
+  refreshUrl: { type: String, default: '' },
   // How many more photos the form can upload with its next save.
   photoSlots: { type: Number, default: 10 }
 });
 const emit = defineEmits(['close', 'apply']);
 const { t } = useI18n();
 
-const url = ref(props.form.source_url || '');
+const url = ref(props.refreshUrl || props.form.source_url || '');
 const loading = ref(false);
 const error = ref('');
 const preview = ref(null);
@@ -131,8 +138,9 @@ const otherDetails = computed(() => {
   const used = new Set(matched.value.matches.map(match => match.attribute.toLowerCase()));
   return productAttributes(preview.value.product, preview.value.provenance).filter(attribute => !used.has(attribute.name.toLowerCase()));
 });
+// The variant picker explains the choice itself, so its warning is not repeated.
 const warnings = computed(() => [
-  ...(preview.value?.warnings ?? []).filter(warning => warning.code !== 'URL_IMPORT_WARNING_FIELD_AMBIGUOUS'),
+  ...(preview.value?.warnings ?? []).filter(warning => !['URL_IMPORT_WARNING_FIELD_AMBIGUOUS', 'URL_IMPORT_WARNING_VARIANTS'].includes(warning.code)),
   ...matched.value.ambiguous.map(field => ({ code: 'URL_IMPORT_WARNING_FIELD_AMBIGUOUS', params: { field } }))
 ]);
 
@@ -148,6 +156,7 @@ const selectedImages = computed(() => images.value.filter(image => image.selecte
 const displayValue = row => (row.key !== 'source_url' && row.type === 'boolean' ? t(row.value === '1' ? 'common.yes' : 'common.no') : row.value);
 
 async function loadImages(token, candidates) {
+  for (const image of images.value) if (image.previewUrl) URL.revokeObjectURL(image.previewUrl);
   images.value = candidates.map(candidate => ({ ...candidate, status: 'loading', previewUrl: '', blob: null, selected: false }));
   // One at a time: the server limits how many remote reads run together.
   for (const image of images.value) {
@@ -162,26 +171,55 @@ async function loadImages(token, candidates) {
   }
 }
 
+// A new preview replaces every choice made on the previous one, including the AI suggestions.
+function show(result) {
+  for (const key of Object.keys(selected)) delete selected[key];
+  discardAi();
+  preview.value = result;
+  variant.value = result.variant === null || result.variant === undefined ? '' : String(result.variant);
+  const current = result.price.candidates.findIndex(candidate => candidate.kind !== 'regular');
+  priceIndex.value = result.price.ambiguous || current < 0 ? null : current;
+  usePrice.value = false;
+  loadImages(result.token, result.images);
+}
+
 async function read() {
   loading.value = true; error.value = ''; preview.value = null;
   try {
     const body = { url: url.value };
     if (props.form.category_id) body.categoryId = props.form.category_id;
     const result = await api('/api/items/import-url/preview', jsonOptions('POST', body));
-    for (const key of Object.keys(selected)) delete selected[key];
-    discardAi();
-    preview.value = result;
     if (!props.editing && !props.form.category_id && result.suggestedCategoryId) categoryId.value = result.suggestedCategoryId;
-    const current = result.price.candidates.findIndex(candidate => candidate.kind !== 'regular');
-    priceIndex.value = result.price.ambiguous || current < 0 ? null : current;
-    usePrice.value = false;
+    show(result);
     await nextTick();
     dialog.value?.querySelector('[data-review-heading]')?.focus();
-    loadImages(result.token, result.images);
   } catch (e) {
     error.value = e.message;
   } finally {
     loading.value = false;
+  }
+}
+
+// The chosen variant ('' for none); the server builds its preview from the page it has already read.
+const variant = ref('');
+const variantLoading = ref(false);
+const variantError = ref('');
+const chosenVariant = computed(() => preview.value?.variants?.find(entry => entry.index === preview.value.variant) ?? null);
+const variantText = entry => (entry.offer ? `${entry.label} — ${formatMoney(entry.offer.amount, entry.offer.currency)}` : entry.label);
+async function chooseVariant() {
+  const token = preview.value.token;
+  variantLoading.value = true; variantError.value = '';
+  try {
+    const body = { index: variant.value === '' ? null : Number(variant.value) };
+    const fixed = props.editing ? props.form.category_id : categoryId.value;
+    if (fixed) body.categoryId = fixed;
+    const result = await api(`/api/items/import-url/${encodeURIComponent(token)}/variant`, jsonOptions('POST', body));
+    if (preview.value?.token === token) show(result);
+  } catch (e) {
+    variantError.value = e.message;
+    variant.value = preview.value?.variant === null || preview.value?.variant === undefined ? '' : String(preview.value.variant);
+  } finally {
+    variantLoading.value = false;
   }
 }
 
@@ -241,7 +279,9 @@ const onKeydown = event => { if (event.key === 'Escape') emit('close'); };
 onMounted(() => {
   document.body.classList.add('modal-open');
   document.addEventListener('keydown', onKeydown);
-  nextTick(() => urlInput.value?.focus());
+  // Refresh from Source reads the saved address right away; the other entry points wait for an address.
+  if (props.refreshUrl) read();
+  else nextTick(() => urlInput.value?.focus());
 });
 onBeforeUnmount(() => {
   document.body.classList.remove('modal-open');
@@ -266,7 +306,7 @@ onBeforeUnmount(() => {
             id="url-import-title"
             class="modal-title"
           >
-            {{ editing ? $t('urlImport.fillTitle') : $t('urlImport.newTitle') }}
+            {{ refreshUrl ? $t('urlImport.refreshTitle') : editing ? $t('urlImport.fillTitle') : $t('urlImport.newTitle') }}
           </h2>
           <button
             type="button"
@@ -294,6 +334,7 @@ onBeforeUnmount(() => {
                 inputmode="url"
                 maxlength="2048"
                 placeholder="https://"
+                :readonly="Boolean(refreshUrl)"
                 required
               ><button
                 class="btn btn-primary"
@@ -304,11 +345,11 @@ onBeforeUnmount(() => {
                   class="spinner-border spinner-border-sm me-1"
                   aria-hidden="true"
                 />
-                {{ loading ? $t('urlImport.reading') : $t('urlImport.read') }}
+                {{ loading ? $t('urlImport.reading') : refreshUrl ? $t('urlImport.refreshAgain') : $t('urlImport.read') }}
               </button>
             </div>
             <div class="form-text">
-              {{ $t('urlImport.addressHelp') }}
+              {{ refreshUrl ? $t('urlImport.refreshHelp') : $t('urlImport.addressHelp') }}
             </div>
           </form>
           <div
@@ -316,7 +357,9 @@ onBeforeUnmount(() => {
             class="alert alert-danger"
             role="alert"
           >
-            {{ error }}
+            {{ error }} <template v-if="refreshUrl">
+              {{ $t('urlImport.refreshFailed') }}
+            </template>
           </div>
 
           <template v-if="preview">
@@ -329,6 +372,12 @@ onBeforeUnmount(() => {
             </h3>
             <p class="text-secondary">
               {{ editing ? $t('urlImport.reviewHelpEdit') : $t('urlImport.reviewHelpNew') }}
+            </p>
+            <p
+              v-if="preview.fetchedAt"
+              class="small text-secondary"
+            >
+              {{ $t('urlImport.fetchedAt', { time: formatDateTime(preview.fetchedAt) }) }}
             </p>
             <div
               v-if="warnings.length"
@@ -343,6 +392,57 @@ onBeforeUnmount(() => {
                   {{ translateError(warning) }}
                 </li>
               </ul>
+            </div>
+
+            <div
+              v-if="preview.variants?.length"
+              class="mb-3"
+            >
+              <label
+                class="form-label"
+                for="url-import-variant"
+              >{{ $t('urlImport.variant.title') }}</label>
+              <select
+                id="url-import-variant"
+                v-model="variant"
+                class="form-select"
+                :disabled="variantLoading"
+                @change="chooseVariant"
+              >
+                <option value="">
+                  {{ $t('urlImport.variant.none') }}
+                </option><option
+                  v-for="entry in preview.variants"
+                  :key="entry.index"
+                  :value="String(entry.index)"
+                >
+                  {{ variantText(entry) }}
+                </option>
+              </select>
+              <div class="form-text">
+                {{ $t('urlImport.variant.help', { n: preview.variants.length }, preview.variants.length) }}
+              </div>
+              <div
+                class="small mt-1"
+                role="status"
+              >
+                <template v-if="variantLoading">
+                  <span
+                    class="spinner-border spinner-border-sm me-1"
+                    aria-hidden="true"
+                  />{{ $t('urlImport.variant.loading') }}
+                </template>
+                <template v-else-if="chosenVariant">
+                  {{ $t('urlImport.variant.chosen', { label: chosenVariant.label }) }}
+                </template>
+              </div>
+              <div
+                v-if="variantError"
+                class="alert alert-danger mt-2 mb-0"
+                role="alert"
+              >
+                {{ variantError }}
+              </div>
             </div>
 
             <div

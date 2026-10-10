@@ -556,10 +556,15 @@ review before anything goes into the item form. It needs no AI provider and no A
 only be added on request.
 
 1. For a new item, open **Items**, press the arrow next to **Add item**, and choose **From URL**. For
-   an existing item, press **Fill from URL** on its page or in its **Edit** form.
-2. Paste the page address into **Product page URL** and press **Read page**. The server reads the
-   page's static HTML once: schema.org product data first, then Open Graph and product meta tags,
-   then the page title, heading, and specification tables.
+   an existing item, press **Fill from URL** on its page or in its **Edit** form. An item that already
+   has a **Source URL** offers **Refresh from Source** on its page instead (its **Edit** form has both):
+   it reads the saved address again, only when you press it, and opens the same review for the item.
+   To use another page, change or clear **Source URL** in the form or use **Fill from URL**.
+2. Paste the page address into **Product page URL** and press **Read page** (**Refresh from Source**
+   reads at once; **Read again** repeats it). The server reads the page's static HTML once:
+   schema.org product data first, then Open Graph and product meta tags, then the page title, heading,
+   and specification tables. The review shows when the page was read; the page itself can change at any
+   time, and its price is never what you paid.
 3. Review what was found. Each value shows **Current** and **Found** side by side, with where it came
    from: **Structured data**, **Open Graph**, **Page meta tags**, **Page content**, or **Page
    address**. The import offers **Name**, **Description** (plain text, at most 2,000 characters),
@@ -567,15 +572,22 @@ only be added on request.
    as Brand, Model, SKU, EAN, Color, or Weight, when the value fits the field type. An empty value is
    offered ticked; a value that would replace one the item already has is marked **Replaces current
    value** and starts unticked. Values the page does not state stay as they are.
-4. For a new item choose the **Category**. An existing category is preselected only when the page
+4. When the page offers several variants, such as sizes, colors, or capacities, choose yours under
+   **Choose variant**. Nothing is preselected: until you choose, only the details all variants share
+   are shown, without a price, images, identifiers, or the values the variants differ by, so the
+   variant the store shows first is never taken for yours. The chosen variant brings its own name,
+   SKU or EAN, color, size, offer price, and images, never those of another variant. Choosing again
+   or **Not chosen** replaces them. Variants the page does not tell apart reliably are not offered, and
+   the review says so.
+5. For a new item choose the **Category**. An existing category is preselected only when the page
    names it; the import never creates categories or fields. Page details that match no field are
    listed under **other details found** and are not saved.
-5. **Page price** shows the offer, sale, or regular price with its currency. It is only a suggestion:
+6. **Page price** shows the offer, sale, or regular price with its currency. It is only a suggestion:
    it becomes the **Purchase Price** only if you tick **Use page price as Purchase Price**. When the
    page shows several prices or currencies, none is chosen for you.
-6. Tick the **Product images** you want. Only ticked images are imported, as new photos after the
+7. Tick the **Product images** you want. Only ticked images are imported, as new photos after the
    existing ones, so the cover stays the same; the usual photo limits apply.
-7. Optional: when AI is enabled in **Settings → AI**, press **Enhance with AI** to let the configured
+8. Optional: when AI is enabled in **Settings → AI**, press **Enhance with AI** to let the configured
    provider map complex specifications to your fields, for example "upper material" to Material or
    "colorway" to Color, and write a short factual description. It runs only when you press it. Only
    the text found on the page and the names of your categories and fields are sent, never your other
@@ -586,14 +598,17 @@ only be added on request.
    date, or Purchase Price; it may only mark one page price as the current offer, and the price is
    still copied only by **Use page price as Purchase Price**. If the provider fails or times out, the
    page values stay as they were.
-8. Press **Use selected values** for a new item or **Apply selected values** for an existing one. The
+9. Press **Use selected values** for a new item or **Apply selected values** for an existing one. The
    values go into the form, where you can still change them, and are saved only when you press
    **Save item**. An existing item keeps its identity, container, photos, loan, and lifecycle state.
 
 The import never fills New, Condition, Condition Notes, Location, Purchase Date, Transferred To,
 Serial Number, or the container: a catalog page describes the product, not your item. Pages behind a
 login, payment, or bot protection, and pages that build their content with JavaScript, give little or
-nothing, and the dialog says so. Addresses on this device or on a local or private network are always
+nothing, and the dialog says so: a page with scripts but almost no text is reported as built by
+JavaScript, because the import never runs a browser to render it. When the page cannot be read during
+**Refresh from Source** (it is gone, refused, blocked, or too slow), the dialog shows the reason and the
+item stays exactly as it was. Addresses on this device or on a local or private network are always
 refused. The public demo does not offer the import.
 
 ### Edit or delete an item
@@ -1343,8 +1358,9 @@ backup, and keep the copies on a different machine than the server.
   and need outbound Internet access on the server. They never run page scripts, log in, or get past
   bot protection, never send your browser's cookies, and refuse any address that belongs to this
   device or a local or private network, also after a redirect. Pages over 3 MB, more than four
-  redirects, and pages that take longer than 15 seconds are refused. A page is read once; the saved
-  Source URL is never checked again for changes. **Enhance with AI** sends the extracted page text
+  redirects, and pages that take longer than 15 seconds are refused. A page is read only when you press
+  **Read page** or **Refresh from Source**; the saved Source URL is never checked in the background, and
+  no page copies or price history are kept. **Enhance with AI** sends the extracted page text
   (at most about 12,000 characters, never the raw page) and your category and field names to the AI
   provider; with many categories, choose the category first.
 - Only providers with an OpenAI-compatible API are supported, one at a time. Whether a model accepts

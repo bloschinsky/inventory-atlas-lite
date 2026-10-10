@@ -3,8 +3,10 @@
 Smart URL import reads a public retailer or manufacturer product page and turns it into reviewed values
 for the item form: either a new item draft or a selective enrichment of an existing item. It needs no
 AI provider and no API key; an optional, user-initiated AI enhancement (see
-[AI enhancement](#ai-enhancement)) can map the same page facts further. Nothing is written to the
-inventory until the user saves the item form.
+[AI enhancement](#ai-enhancement)) can map the same page facts further. An item's saved Source URL can
+be read again on request ([Refresh from Source](#refresh-from-source)), and a page with several
+product variants lets the user choose theirs ([Product variants](#product-variants)). Nothing is
+written to the inventory until the user saves the item form.
 
 ## Entry points
 
@@ -12,6 +14,9 @@ inventory until the user saves the item form.
   import dialog over it.
 - **Fill from URL** on an item page opens `/items/:id/edit?import=url`; the same button is in the page
   header of the Add and Edit forms.
+- **Refresh from Source** replaces Fill from URL on the page of an item with a saved Source URL and
+  opens `/items/:id/edit?import=refresh`; the Edit form header shows it beside Fill from URL while
+  the item has a saved Source URL. A `?import=refresh` address of an item without one opens nothing.
 - Every entry point is shown only while `/api/capabilities` reports `urlImport: true`. Only the real
   server does; the public demo (in-browser backend) reports `false`, and its item routes do not include
   the import, so a direct request answers `DEMO_UNAVAILABLE`.
@@ -21,13 +26,15 @@ inventory until the user saves the item form.
 `client/src/components/UrlImportDialog.vue` works on the item form's own state:
 
 1. **Product page URL** and **Read page** call `POST /api/items/import-url/preview`. The URL starts
-   at the form's current Source URL.
+   at the form's current Source URL. The review states when the page was read (`fetchedAt`).
 2. **Found values** lists every proposed change as **Current → Found** with its provenance
    (Structured data, Open Graph, Page meta tags, Page content, or Page address): Name, Description,
    Source URL, and the custom fields of the target category matched by
    `shared/productImport.js`. Values equal to the current ones are left out. An empty current value is
    offered checked; a filled one is marked **Replaces current value** and starts unchecked.
-3. For a new item, **Category** starts at the server's suggestion (an existing category whose name the
+3. **Choose variant** appears only when the preview lists variants (see
+   [Product variants](#product-variants)).
+   For a new item, **Category** starts at the server's suggestion (an existing category whose name the
    page states as its category or breadcrumb, singular and plural counted as one), otherwise empty.
    Changing it re-matches the attributes to that category's fields in the browser with the same
    shared function. An existing item always keeps its category.
@@ -48,13 +55,90 @@ inventory until the user saves the item form.
 The import never fills New, Condition, Condition Notes, Location, Purchase Date, Transferred To,
 Serial Number, or the container.
 
+## Refresh from Source
+
+Refresh from Source is the same review over an existing item's saved Source URL, not a second
+importer. `ItemForm.vue` keeps the Source URL the item was loaded with and passes it to
+`UrlImportDialog.vue` as `refreshUrl`; the dialog then titles itself **Refresh from Source**, shows
+the address read-only (it is changed or cleared in the form's Source URL field), and calls the same
+preview endpoint at once. **Read again** repeats it.
+
+- The read happens only on that user action. Nothing runs in the background, nothing is scheduled,
+  and opening an item page never fetches anything.
+- The review compares the page with the item's current form values, row by row, exactly like Fill
+  from URL: filled values start unchecked, Source URL is offered only when the page's canonical
+  address differs, and the item's identity, container, location, lifecycle, New/Used, serial number,
+  photos, and unchosen fields are untouched. No earlier page values are kept, so none are shown.
+- The page price is again only a suggestion; **Use page price as Purchase Price** starts unchecked and
+  an existing purchase price is shown as a conflict.
+- A dead, refused, blocked, slow, or empty page shows the translated error followed by
+  *The item was not changed.*; the preview endpoint never writes, so no value can be cleared.
+- Nothing about the refresh is stored: no last-checked time, page copy, raw HTML, or price history.
+  The `fetchedAt` time of the read is shown in the review only.
+
+## Product variants
+
+`extractProduct()` reads the variants of a schema.org `ProductGroup`: its `hasVariant` entries
+(including `@id` references) and products that name the group in `isVariantOf`, at most 30.
+
+- **One variant** is simply the product: it fills what the group does not state, and its offers and
+  images join the group's, as before.
+- **Several variants** are described one by one with only their own name, identifiers, color,
+  material, size, pattern, measures, `additionalProperty` values, offers (`readPrices()` per
+  variant, without page meta tags), and images. The attribute names they vary by are the group's
+  `variesBy` names plus every attribute whose values differ between variants. Each variant's label
+  joins its varying values (`Navy / 43`), else uses its name, else its SKU. When every label is
+  present and distinct, the variants are offered with `URL_IMPORT_WARNING_VARIANTS` (and
+  `URL_IMPORT_WARNING_VARIANTS_LIMITED` beyond 30); otherwise none is offered and
+  `URL_IMPORT_WARNING_VARIANTS_AMBIGUOUS` says so.
+- With several variants the **page-level** result keeps only what they share: the group's own name,
+  description, brand, categories, and non-varying attributes, the group's own offers and JSON-LD
+  images. It drops what usually describes the store's preselected variant: page-level SKU/MPN/GTIN
+  meta tags, `og:image` and other image tags, and specification rows of a varying attribute. No
+  variant's price or image is ever merged into it.
+- `selectVariant(extraction, index)` builds one variant's result: its own name, identifiers (never
+  the group's), attributes before the shared ones, and only its own price and images, even when it
+  has none. Price warnings are the variant's own.
+
+`POST /api/items/import-url/:token/variant` with `{ index, categoryId? }` builds that view from the
+reading kept under the preview token, without fetching anything again, and answers a full preview
+with a **new token**, so its images and AI facts are the variant's. `index: null` returns to the
+shared details. An index that is not an integer in range answers `URL_IMPORT_VARIANT_NOT_FOUND`
+(404), and an expired token `URL_IMPORT_PREVIEW_EXPIRED`.
+
+In the dialog, **Choose variant** is a select that starts at *Not chosen* (nothing preselected), with
+each variant's label and, when it has exactly one current price, that offer. Choosing replaces the
+preview: rows, checkboxes, the price choice (with **Use page price as Purchase Price** unchecked
+again), images, and any AI suggestions start over for that variant, and a status line names the
+variant shown. A failed request keeps the previous preview.
+
+## Pages built by JavaScript
+
+The import never renders pages; a headless-browser fallback was considered and deliberately not
+shipped. A browser renderer would fetch arbitrary subresources, frames, WebSockets, and redirects
+from remote script, so every one of those requests would need the same connection-time address
+checks as `PublicWebClient` (or a verified default-deny network sandbox), plus CPU, memory, and
+process isolation, and it would add a large browser runtime to the default container. Playwright is
+only a development dependency here, and no such isolation exists in the deployments the project
+supports, so the safe choice is to report limited support instead.
+
+`readHtml()` counts non-JSON-LD `<script>` elements and measures the readable text. A page without
+structured product data that has scripts and fewer than 500 readable characters is reported as built
+by JavaScript: `URL_IMPORT_WARNING_SCRIPT_RENDERED` replaces `URL_IMPORT_WARNING_NO_PRODUCT_DATA`
+when it still has a title, and `URL_IMPORT_SCRIPT_RENDERED` (422) replaces `URL_IMPORT_NO_PRODUCT`
+when nothing is left. The partial static result stays usable, and the message suggests the
+manufacturer's page or manual entry. No script is ever fetched or run.
+
 ## Server
 
 - `server/src/routes/urlImportRoutes.js` — `POST /api/items/import-url/preview` with
-  `{ url, categoryId? }`, and `GET /api/items/import-url/:token/images/:index`, which answers the
+  `{ url, categoryId? }`, `POST /api/items/import-url/:token/variant` with `{ index, categoryId? }`,
+  and `GET /api/items/import-url/:token/images/:index`, which answers the
   image bytes with `Cache-Control: no-store` and `X-Content-Type-Options: nosniff`.
 - `server/src/services/urlImportService.js` — validates the address, reads the page, decodes it by
-  its declared charset, extracts, maps, and returns the preview. Image candidates stay on the server
+  its declared charset, extracts, maps, and returns the preview. Each session keeps the page's
+  reading (the bounded extraction, final address, proposed Source URL, and read time), so a variant
+  view is built from it without another request. Image candidates stay on the server
   under a random token for 30 minutes (at most 100 previews), so the browser can only ask for "image
   *n* of this preview" and never names an address for the server to fetch. An image must be a real
   JPEG, PNG, WebP, or GIF (magic bytes), at most 15 MB, and at most 50 megapixels (sharp metadata).
@@ -110,10 +194,12 @@ Errors are stable codes without addresses or remote content: `URL_IMPORT_URL_REQ
 `URL_IMPORT_BLOCKED_HOST`, `URL_IMPORT_HOST_NOT_FOUND`, `URL_IMPORT_CONNECTION_FAILED`,
 `URL_IMPORT_TIMEOUT`, `URL_IMPORT_TOO_MANY_REDIRECTS`, `URL_IMPORT_PAGE_REFUSED`,
 `URL_IMPORT_PAGE_UNAVAILABLE`, `URL_IMPORT_UNSUPPORTED_CONTENT`, `URL_IMPORT_TOO_LARGE`,
-`URL_IMPORT_NO_PRODUCT`, `URL_IMPORT_PREVIEW_EXPIRED`, `URL_IMPORT_IMAGE_NOT_FOUND`, and
-`URL_IMPORT_IMAGE_INVALID`. Partial results carry `URL_IMPORT_WARNING_*` codes for unreadable JSON-LD,
-missing product data, several products, ambiguous or invalid prices, a shortened description, and
-ambiguous field matches.
+`URL_IMPORT_NO_PRODUCT`, `URL_IMPORT_SCRIPT_RENDERED`, `URL_IMPORT_PREVIEW_EXPIRED`,
+`URL_IMPORT_VARIANT_NOT_FOUND`, `URL_IMPORT_IMAGE_NOT_FOUND`, and `URL_IMPORT_IMAGE_INVALID`.
+Partial results carry `URL_IMPORT_WARNING_*` codes for unreadable JSON-LD, missing product data, a
+page built by JavaScript, several products, variants to choose, variants that cannot be told apart, a
+limited variant list, ambiguous or invalid prices, a shortened description, and ambiguous field
+matches.
 
 ## Preview contract
 
@@ -121,6 +207,7 @@ ambiguous field matches.
 {
   "token": "uuid",
   "pageUrl": "final address after redirects",
+  "fetchedAt": "2026-10-11T09:30:00.000Z",
   "product": { "name": "", "brand": "", "model": "", "description": "", "sku": "", "mpn": "", "gtin": "",
                "categories": [], "attributes": [{ "name": "", "value": "", "source": "json-ld" }] },
   "provenance": { "name": "json-ld" },
@@ -130,12 +217,15 @@ ambiguous field matches.
   "customFields": [{ "fieldId": 1, "name": "", "type": "text", "value": "", "attribute": "", "source": "" }],
   "price": { "candidates": [{ "amount": "129.90", "currency": "EUR", "kind": "sale", "source": "json-ld" }], "ambiguous": false },
   "images": [{ "index": 0, "url": "", "source": "json-ld" }],
-  "warnings": [{ "code": "URL_IMPORT_WARNING_PRICE_AMBIGUOUS", "params": {} }]
+  "variants": [{ "index": 0, "label": "Navy / 43", "offer": { "amount": "99.00", "currency": "EUR" } }],
+  "variant": null,
+  "warnings": [{ "code": "URL_IMPORT_WARNING_VARIANTS", "params": {} }]
 }
 ```
 
 `product` holds the raw candidates, `baseFields` and `customFields` what they map to, and `price`
-only suggestions. The extracted `product`, `provenance`, and `price` are also kept server-side under
+only suggestions. `variants` is empty unless the page offers several distinguishable variants, and
+`variant` is the index the preview shows, or null for the shared details. The extracted `product`, `provenance`, and `price` are also kept server-side under
 the preview token, where the optional AI enhancement reads them.
 
 ## AI enhancement
@@ -242,10 +332,13 @@ background.
 
 ## Limits and boundaries
 
-- Static HTML only: no script execution, no headless browser, no login, and no attempt to get past
+- Static HTML only: no script execution, no headless browser (see
+  [Pages built by JavaScript](#pages-built-by-javascript)), no login, and no attempt to get past
   paywalls, CAPTCHAs, or bot protection.
-- No price monitoring, no refresh from the saved Source URL, and no variant selection. AI never
-  browses, searches, or fetches anything; it only sees the facts the server already extracted.
+- No price monitoring, price history, notifications, scheduled or background refresh, or crawling:
+  a page is read only on Read page, Read again, or Refresh from Source. Refresh and variant choice
+  never call AI. AI never browses, searches, or fetches anything; it only sees the facts the server
+  already extracted for the current view.
 - The server needs outbound Internet access; it never contacts the local network for an import.
 
 ## Verification
@@ -258,7 +351,12 @@ background.
   literal, `localhost`, metadata, and `file:` destinations, DNS rebinding between connections, size,
   bomb, type, status, timeout, and concurrency limits), the preview service and image tokens, Source
   URL validation and persistence, the version 11 migration and older-backup restore, and the HTTP
-  contract.
+  contract; variants from `product-variants.html` (hasVariant, `@id`, and `isVariantOf`, no
+  preselected-variant data at page level, no cross-variant identifiers, prices, or images, ambiguous,
+  single, and over-limit variants), the variant endpoint (no second fetch, new token, per-variant
+  fields, offer, images, and AI facts, invalid indexes, expiry), pages built by scripts, and Refresh
+  from Source of dead, refused, slow, blocked, and empty pages leaving items, values, and history
+  untouched.
 - `test/url-import-ai.test.js` — the AI enhancement with a stubbed provider: the bounded payload and
   its separation from the instructions, the field allowlist without personal fields, schema mapping
   and color normalization, unknown ids, malformed types, invented evidence, converted units,
@@ -268,5 +366,8 @@ background.
   image selection, partial failures and blocked pages, Ukrainian, and the phone layout; with AI, the
   opt-in request, AI rows with confidence and evidence, page-versus-AI choices and edits that survive
   a second request, the untouched price opt-in, a timeout that keeps the page values, discarding the
-  suggestions of an existing item, and the phone layout;
+  suggestions of an existing item, and the phone layout; Refresh from Source (the details button, the
+  immediate read of the saved address, the read time, selective apply that preserves identity,
+  container, serial number, New, and Purchase Price), a dead source and a page built by scripts, and
+  an explicit variant choice with its own values, offer, and images;
   `test/e2e/demo.spec.js` checks that the demo does not offer the import.

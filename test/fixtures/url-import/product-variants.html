@@ -1,0 +1,61 @@
+<!doctype html>
+<html>
+<head>
+  <title>Stride Runner 3 – Shoe Store</title>
+  <!-- The page describes the store's preselected variant in its meta tags and specification table. -->
+  <meta property="og:title" content="Stride Runner 3 Black 42">
+  <meta property="og:image" content="https://shoes.test/img/runner3-black.jpg">
+  <meta name="sku" content="SR3-BLK-42">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "ProductGroup",
+    "@id": "https://shoes.test/runner-3#group",
+    "name": "Stride Runner 3",
+    "description": "Lightweight road running shoe with a recycled mesh upper.",
+    "brand": { "@type": "Brand", "name": "Stride" },
+    "category": "Footwear > Running shoes",
+    "image": "https://shoes.test/img/runner3-family.jpg",
+    "productGroupID": "SR3",
+    "variesBy": ["https://schema.org/color", "https://schema.org/size"],
+    "additionalProperty": [{ "@type": "PropertyValue", "name": "Drop", "value": "8 mm" }],
+    "hasVariant": [
+      {
+        "@type": "Product", "name": "Stride Runner 3 Black 42", "sku": "SR3-BLK-42", "gtin13": "4006381333900",
+        "color": "Black", "size": "42",
+        "image": ["https://shoes.test/img/runner3-black.jpg"],
+        "offers": { "@type": "Offer", "price": "119.00", "priceCurrency": "EUR" }
+      },
+      {
+        "@type": "Product", "name": "Stride Runner 3 Navy 43", "sku": "SR3-NVY-43", "gtin13": "4006381333917",
+        "color": "Navy", "size": "43",
+        "image": ["https://shoes.test/img/runner3-navy.jpg", "https://shoes.test/img/runner3-navy-sole.jpg"],
+        "offers": {
+          "@type": "Offer", "price": "99.00", "priceCurrency": "EUR",
+          "priceSpecification": [{ "@type": "UnitPriceSpecification", "priceType": "https://schema.org/StrikethroughPrice", "price": "129.00", "priceCurrency": "EUR" }]
+        }
+      },
+      { "@id": "https://shoes.test/runner-3/white-44" }
+    ]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "@id": "https://shoes.test/runner-3/white-44",
+    "isVariantOf": { "@id": "https://shoes.test/runner-3#group" },
+    "name": "Stride Runner 3 White 44", "sku": "SR3-WHT-44", "color": "White", "size": "44",
+    "offers": { "@type": "Offer", "availability": "https://schema.org/OutOfStock" }
+  }
+  </script>
+</head>
+<body>
+  <h1>Stride Runner 3</h1>
+  <table>
+    <tr><th>Color</th><td>Black</td></tr>
+    <tr><th>Size</th><td>42</td></tr>
+    <tr><th>Upper</th><td>Recycled mesh</td></tr>
+  </table>
+</body>
+</html>

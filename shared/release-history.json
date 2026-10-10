@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.65.0",
+    "date": "2026-10-11",
+    "changes": [
+      "Refresh from Source: an item that keeps its product page as its Source URL can read that page again whenever you press Refresh from Source on the item page. The same review shows what changed next to the item's current values, nothing is ticked over a value you already have, and only the values you choose go into the form until you save. If the page is gone, refused, or unreachable, you see why and the item stays exactly as it was. Nothing is ever checked in the background.",
+      "Product pages with several variants, such as sizes, colors, or capacities, now let you choose yours under Choose variant. Nothing is chosen for you: until you pick one, only the details all variants share are shown. The chosen variant brings its own name, SKU or EAN, color, size, offer price, and images, never those of another variant, and its price is still only a suggestion that becomes the Purchase Price only if you tick Use page price as Purchase Price.",
+      "Pages that build their product details with JavaScript are now recognized and explained instead of returning almost nothing without a reason. The import still reads only the page's static HTML and never runs a browser or page scripts, so your server never loads anything else from those pages."
+    ]
+  },
+  {
     "version": "0.64.0",
     "date": "2026-10-10",
     "changes": [

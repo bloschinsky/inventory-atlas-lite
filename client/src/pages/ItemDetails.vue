@@ -147,13 +147,14 @@ onMounted(load);
           >
             {{ $t('common.edit') }}
           </RouterLink>
-          <!-- Opens the edit form with the URL import over it; only the values chosen there and then saved change. -->
+          <!-- Opens the edit form with the URL import over it; only the values chosen there and then saved change.
+               An item with a saved Source URL offers to read that page again instead; Fill from URL stays in the form. -->
           <RouterLink
             v-if="capabilities.urlImport"
-            :to="{ path: `/items/${item.id}/edit`, query: { import: 'url' } }"
+            :to="{ path: `/items/${item.id}/edit`, query: { import: item.source_url ? 'refresh' : 'url' } }"
             class="btn"
           >
-            {{ $t('urlImport.fillAction') }}
+            {{ item.source_url ? $t('urlImport.refreshAction') : $t('urlImport.fillAction') }}
           </RouterLink>
           <!-- Opens the Add Item form prefilled from this item; the copy is created only when saved there. -->
           <RouterLink
