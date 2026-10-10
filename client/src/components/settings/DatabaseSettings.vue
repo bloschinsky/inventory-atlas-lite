@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue';
 import { api, jsonOptions } from '../../api.js';
 import { formatDateTime } from '../../i18n/index.js';
+import { useUnsavedChanges } from '../../settingsOverlay.js';
 
 // The identity of the current database. Only the name is editable; the rest is managed by the server.
 const metadata = ref(null);
@@ -9,6 +10,7 @@ const name = ref('');
 const saving = ref(false);
 const saved = ref(false);
 const error = ref('');
+useUnsavedChanges(() => Boolean(metadata.value) && name.value !== metadata.value.name);
 
 function show(data) {
   metadata.value = data;

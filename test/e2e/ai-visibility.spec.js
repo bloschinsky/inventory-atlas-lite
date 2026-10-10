@@ -27,6 +27,12 @@ async function openSettings(page) {
   await expect(page).toHaveURL('/settings/ai');
 }
 
+// Settings is a dialog over the page; the main navigation is reachable again once it closes.
+async function goToItems(page) {
+  await page.getByRole('button', { name: 'Close settings' }).click();
+  await page.getByRole('link', { name: 'Items', exact: true }).click();
+}
+
 async function openFields(page, categoryName) {
   await page.goto('/categories');
   // A fresh headless page keeps the pointer at (0, 0), which expands the folded sidebar.
@@ -103,9 +109,10 @@ test('applies a saved Enable AI features change to the interface without a reloa
   const toggle = page.getByLabel('Enable AI features');
   await expect(toggle).toBeChecked();
 
-  // An unsaved change must not reach the rest of the application.
+  // An unsaved change must not reach the rest of the application; closing asks before discarding it.
   await toggle.uncheck();
-  await page.getByRole('link', { name: 'Items', exact: true }).click();
+  page.once('dialog', dialog => dialog.accept());
+  await goToItems(page);
   await expect(aiAddItem(page).first()).toBeVisible();
 
   await openSettings(page);
@@ -113,7 +120,7 @@ test('applies a saved Enable AI features change to the interface without a reloa
   await page.getByRole('button', { name: 'Save settings' }).click();
   await expect(page.getByRole('status')).toHaveText('AI settings saved.');
 
-  await page.getByRole('link', { name: 'Items', exact: true }).click();
+  await goToItems(page);
   await expect(page).toHaveURL('/items');
   await expect(aiAddItem(page)).toHaveCount(0);
 
@@ -122,7 +129,7 @@ test('applies a saved Enable AI features change to the interface without a reloa
   await page.getByRole('button', { name: 'Save settings' }).click();
   await expect(page.getByRole('status')).toHaveText('AI settings saved.');
 
-  await page.getByRole('link', { name: 'Items', exact: true }).click();
+  await goToItems(page);
   await expect(aiAddItem(page).first()).toBeVisible();
 });
 
@@ -152,7 +159,7 @@ test('cannot enable AI features before an API key is saved', async ({ page, requ
   await expect(page.getByRole('status')).toHaveText('AI settings saved.');
   await expect(page.getByLabel('Enable AI features')).toBeChecked();
 
-  await page.getByRole('link', { name: 'Items', exact: true }).click();
+  await goToItems(page);
   await expect(aiAddItem(page).first()).toBeVisible();
 
   // Removing the key turns AI off with it, without a reload.
@@ -161,7 +168,7 @@ test('cannot enable AI features before an API key is saved', async ({ page, requ
   await expect(page.getByLabel('Enable AI features')).not.toBeChecked();
   await page.getByRole('button', { name: 'Save settings' }).click();
   await expect(page.getByRole('status')).toHaveText('AI settings saved.');
-  await page.getByRole('link', { name: 'Items', exact: true }).click();
+  await goToItems(page);
   await expect(aiAddItem(page)).toHaveCount(0);
 });
 

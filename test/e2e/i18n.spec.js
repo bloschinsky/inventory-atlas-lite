@@ -25,7 +25,8 @@ test('Settings switches the language at once, and the choice survives a reload',
   // No reload: the page, the shared navigation, and the document language follow immediately.
   await expect(heading(page)).toHaveText('Налаштування');
   await expect(page.getByRole('heading', { name: 'Інтерфейс' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Предмети' })).toHaveCount(1);
+  // The navigation behind the Settings dialog follows as well.
+  await expect(page.getByRole('link', { name: 'Предмети', includeHidden: true })).toHaveCount(1);
   await expect(page.locator('html')).toHaveAttribute('lang', 'uk');
   expect(await storedLocale(page)).toBe('uk');
 

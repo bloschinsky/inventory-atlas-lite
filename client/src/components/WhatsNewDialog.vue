@@ -1,12 +1,15 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { IconHistory } from '@tabler/icons-vue';
 import { aboutOpen, openAbout, openVersionHistory } from '../about.js';
 import { appInfo } from '../build-info.js';
 import { releases } from '../releaseHistory.js';
 import { formatDate } from '../i18n/index.js';
 import { checkWhatsNew, closeWhatsNew, whatsNewReleases } from '../whatsNew.js';
+import { isSettingsRoute } from '../settingsOverlay.js';
 
+const route = useRoute();
 const panel = ref(null);
 const closeButton = ref(null);
 const open = computed(() => whatsNewReleases.value.length > 0);
@@ -19,8 +22,8 @@ function onFocusIn(event) {
   if (panel.value && !panel.value.contains(event.target)) closeButton.value?.focus();
 }
 function release() {
-  // View full changelog hands the page straight to the About dialog, which keeps it locked.
-  if (!aboutOpen.value) document.body.classList.remove('modal-open');
+  // View full changelog hands the page straight to the About dialog, and Settings below keeps it locked.
+  if (!aboutOpen.value && !isSettingsRoute(route)) document.body.classList.remove('modal-open');
   document.removeEventListener('keydown', onKeydown);
   document.removeEventListener('focusin', onFocusIn);
 }

@@ -846,7 +846,8 @@
   },
   "settings": {
     "title": "Settings",
-    "subtitle": "Configure the interface and optional integrations for this installation.",
+    "close": "Close settings",
+    "discardChanges": "Discard the unsaved changes in Settings?",
     "loading": "Loading settings…",
     "save": "Save settings",
     "sections": "Settings sections",

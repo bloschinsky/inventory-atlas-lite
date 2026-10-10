@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { api, jsonOptions } from '../../api.js';
 import { setAiCapabilities } from '../../capabilities.js';
 import { formatDateTime, translateError, translateNotice } from '../../i18n/index.js';
+import { useUnsavedChanges } from '../../settingsOverlay.js';
 import { AI_PROVIDERS, aiProvider, isLocalNetworkHost } from '../../../../shared/aiProviders.js';
 
 const { t } = useI18n();
@@ -27,6 +28,9 @@ const modelsLoading = ref(false);
 const testing = ref(false);
 const testResult = ref(null);
 const saved = ref(false);
+// The form as last loaded or saved; any difference is an unsaved edit.
+const savedForm = ref('');
+useUnsavedChanges(() => !loading.value && JSON.stringify(form) !== savedForm.value);
 
 const preset = computed(() => aiProvider(form.provider));
 const trimmedBaseUrl = computed(() => form.baseUrl.trim().replace(/\/+$/, ''));
@@ -109,6 +113,7 @@ function applySettings(settings) {
   hasApiKey.value = settings.hasApiKey;
   maskedKey.value = settings.apiKeyMasked;
   customModel.value = false;
+  savedForm.value = JSON.stringify(form);
 }
 
 // A preset fills in its default address; the list of another provider's models no longer applies.

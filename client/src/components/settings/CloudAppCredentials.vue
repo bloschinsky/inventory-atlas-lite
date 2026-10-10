@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useUnsavedChanges } from '../../settingsOverlay.js';
 
 /*
   The OAuth app credentials of one cloud storage provider. The saved secret is never sent back by the
@@ -29,6 +30,8 @@ watch(app, value => {
   clientId.value = value.clientId;
   clientSecret.value = '';
 }, { immediate: true });
+
+useUnsavedChanges(() => app.value.source !== 'environment' && (clientId.value !== app.value.clientId || Boolean(clientSecret.value)));
 
 const save = () => emit('save', { clientId: clientId.value.trim(), clientSecret: clientSecret.value.trim() });
 </script>

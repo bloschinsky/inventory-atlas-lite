@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.63.0",
+    "date": "2026-10-10",
+    "changes": [
+      "Settings now opens as a large dialog over the page you are working on instead of replacing it. Close it with the close button, Escape, or Back and you are returned to the same page with its search, filters, and scroll position as you left them.",
+      "Every section keeps its own address, such as /settings/ai, so bookmarks, reloads, and links from other pages still open it. Switching sections no longer adds Back steps, and an address opened directly shows Settings over the Dashboard.",
+      "On phones Settings fills the screen and keeps the Section selector. If you have unsaved changes, Settings asks before closing, switching sections, or leaving, so an edit is never lost by accident."
+    ]
+  },
+  {
     "version": "0.62.1",
     "date": "2026-10-09",
     "changes": [
