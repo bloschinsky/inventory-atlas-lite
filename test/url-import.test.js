@@ -11,8 +11,9 @@ import sharp from 'sharp';
 import { startServer, stopServer } from './serverProcess.js';
 
 /*
-  Smart URL import, Phase 1: product extraction from local deterministic HTML fixtures, attribute
-  matching, the Source URL field, and the network protections of the page fetcher. Nothing here
+  Smart URL import: product extraction from local deterministic HTML fixtures, product variants,
+  pages built by scripts, attribute matching, the Source URL field and Refresh from Source, and the
+  network protections of the page fetcher. Nothing here
   reaches the internet: host names are pointed at a local test server through the fetcher's
   injectable resolver, and only that server's loopback address is allowed in those tests.
 */
@@ -33,7 +34,7 @@ const { ItemService } = await import('../server/src/services/itemService.js');
 const { UrlImportService } = await import('../server/src/services/urlImportService.js');
 const { PublicWebClient } = await import('../server/src/integrations/publicWebClient.js');
 const { isPublicAddress, readPublicUrl } = await import('../server/src/integrations/publicAddress.js');
-const { extractProduct, readAmount } = await import('../server/src/urlImport/productExtraction.js');
+const { extractProduct, readAmount, selectVariant } = await import('../server/src/urlImport/productExtraction.js');
 const { plainText } = await import('../server/src/urlImport/htmlDocument.js');
 const { matchCustomFields, productAttributes } = await import('../shared/productImport.js');
 const { parseItemImportDocument, reviewItemDraft } = await import('../shared/itemImport.js');
@@ -82,15 +83,17 @@ test('JSON-LD Product gives the name, plain-text description, identifiers, attri
   assert.deepEqual(result.warnings, []);
 });
 
-test('an @graph ProductGroup resolves @id references and leaves variant prices for the user', () => {
+test('an @graph ProductGroup resolves @id references and leaves its variants for the user to choose', () => {
   const result = extract('graph-product-group');
   assert.equal(result.product.name, 'Merino Hiking Socks');
   assert.equal(result.product.brand, 'Woolpath');
   assert.deepEqual(result.product.categories, ['Clothing', 'Socks']);
-  assert.deepEqual(result.price.candidates.map(price => [price.amount, price.currency]), [['18.00', 'USD'], ['21.50', 'USD']]);
-  assert.equal(result.price.ambiguous, true);
-  assert.deepEqual(codes(result.warnings), ['URL_IMPORT_WARNING_PRICE_AMBIGUOUS']);
-  assert.equal(result.images.length, 2);
+  // No variant's price or image is taken for the page until one is chosen.
+  assert.deepEqual(result.price, { candidates: [], ambiguous: false });
+  assert.deepEqual(result.images, []);
+  assert.deepEqual(result.variants.map(variant => variant.label), ['S', 'L']);
+  assert.deepEqual(codes(result.warnings), ['URL_IMPORT_WARNING_VARIANTS']);
+  assert.deepEqual(selectVariant(result, 1).price.candidates.map(price => [price.amount, price.currency]), [['21.50', 'USD']]);
 });
 
 test('Open Graph and product meta tags are the fallback when JSON-LD is malformed', () => {
@@ -119,14 +122,19 @@ test('a specification table and definition list give attributes from two-cell ro
   assert.deepEqual(result.warnings, []);
 });
 
-test('a page without product data keeps only its title and says so; nothing absent is invented', () => {
+test('a page built by its scripts keeps only its title and says so; nothing absent is invented', () => {
   const result = extract('title-only');
+  assert.equal(result.scriptRendered, true);
   assert.equal(result.product.name, 'Loading… | Single Page Shop');
   assert.deepEqual({ ...result.product, name: '' }, {
     name: '', brand: '', model: '', description: '', sku: '', mpn: '', gtin: '', categories: [], attributes: []
   });
   assert.deepEqual(result.price.candidates, []);
-  assert.deepEqual(codes(result.warnings), ['URL_IMPORT_WARNING_NO_PRODUCT_DATA']);
+  assert.deepEqual(codes(result.warnings), ['URL_IMPORT_WARNING_SCRIPT_RENDERED']);
+  // A static page without product data or scripts is simply a page without product data.
+  const plain = extractProduct('<title>About us</title><p>We sell lamps.</p>', 'https://shop.test/about');
+  assert.equal(plain.scriptRendered, false);
+  assert.deepEqual(codes(plain.warnings), ['URL_IMPORT_WARNING_NO_PRODUCT_DATA']);
 });
 
 test('invalid amounts and currencies are ignored with a warning, and mixed currencies or ranges are ambiguous', () => {
@@ -172,6 +180,86 @@ test('extraction stays fast on runaway markup', () => {
 // ---------------------------------------------------------------------------------------------
 // Matching found attributes to existing custom fields
 // ---------------------------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------------------------
+// Product variants
+// ---------------------------------------------------------------------------------------------
+
+test('several variants are listed with grounded labels, and the page keeps only what they share', () => {
+  const result = extract('product-variants', 'https://shoes.test/runner-3');
+  // hasVariant entries, an @id reference among them, and a Product naming the group in isVariantOf.
+  assert.deepEqual(result.variants.map(variant => variant.label), ['Black / 42', 'Navy / 43', 'White / 44']);
+  assert.deepEqual(codes(result.warnings), ['URL_IMPORT_WARNING_VARIANTS']);
+  assert.equal(result.variant, null);
+  // The store's preselected variant (meta SKU, og:title, og:image, its row in the specification table) is not the page's product.
+  assert.equal(result.product.name, 'Stride Runner 3');
+  assert.deepEqual({ sku: result.product.sku, gtin: result.product.gtin }, { sku: '', gtin: '' });
+  assert.deepEqual(result.product.attributes.map(attribute => [attribute.name, attribute.value]), [['Drop', '8 mm'], ['Upper', 'Recycled mesh']]);
+  assert.deepEqual(result.price, { candidates: [], ambiguous: false });
+  assert.deepEqual(result.images.map(image => image.url), ['https://shoes.test/img/runner3-family.jpg']);
+});
+
+test('a chosen variant brings only its own identity, attributes, price, and images', () => {
+  const result = extract('product-variants', 'https://shoes.test/runner-3');
+  const navy = selectVariant(result, 1);
+  assert.equal(navy.variant, 1);
+  assert.deepEqual(
+    { name: navy.product.name, sku: navy.product.sku, gtin: navy.product.gtin, brand: navy.product.brand, description: navy.product.description },
+    { name: 'Stride Runner 3 Navy 43', sku: 'SR3-NVY-43', gtin: '4006381333917', brand: 'Stride', description: 'Lightweight road running shoe with a recycled mesh upper.' }
+  );
+  assert.deepEqual(navy.product.categories, ['Footwear', 'Running shoes']);
+  assert.deepEqual(navy.product.attributes.map(attribute => [attribute.name, attribute.value]), [
+    ['Color', 'Navy'], ['Size', '43'], ['Drop', '8 mm'], ['Upper', 'Recycled mesh']
+  ]);
+  assert.deepEqual(navy.price, {
+    candidates: [
+      { amount: '129.00', currency: 'EUR', kind: 'regular', source: 'json-ld' },
+      { amount: '99.00', currency: 'EUR', kind: 'sale', source: 'json-ld' }
+    ],
+    ambiguous: false
+  });
+  assert.deepEqual(navy.images.map(image => image.url), ['https://shoes.test/img/runner3-navy.jpg', 'https://shoes.test/img/runner3-navy-sole.jpg']);
+  assert.deepEqual(navy.warnings, []);
+
+  // A variant without a price or images stays without them; nothing is borrowed from another variant or the group.
+  const white = selectVariant(result, 2);
+  assert.equal(white.product.sku, 'SR3-WHT-44');
+  assert.equal(white.product.gtin, '');
+  assert.deepEqual(white.price, { candidates: [], ambiguous: false });
+  assert.deepEqual(white.images, []);
+  // Choosing never changes the page result it was made from.
+  assert.equal(result.product.sku, '');
+});
+
+test('variants that cannot be told apart are not offered, and no variant data is used', () => {
+  const group = variants => `<script type="application/ld+json">${JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'ProductGroup', name: 'Desk Lamp', hasVariant: variants
+  })}</script>`;
+  const alike = extractProduct(group([
+    { '@type': 'Product', name: 'Desk Lamp', color: 'Black', offers: { '@type': 'Offer', price: '30.00', priceCurrency: 'EUR' }, image: 'https://shop.test/a.jpg' },
+    { '@type': 'Product', name: 'Desk Lamp', color: 'Black', offers: { '@type': 'Offer', price: '35.00', priceCurrency: 'EUR' }, image: 'https://shop.test/b.jpg' }
+  ]), 'https://shop.test/lamp');
+  assert.deepEqual(alike.variants, []);
+  assert.deepEqual(codes(alike.warnings), ['URL_IMPORT_WARNING_VARIANTS_AMBIGUOUS']);
+  assert.deepEqual(alike.price.candidates, []);
+  assert.deepEqual(alike.images, []);
+  assert.equal(alike.product.attributes.some(attribute => attribute.name === 'Color'), false);
+
+  // A single variant is simply the product.
+  const single = extractProduct(group([
+    { '@type': 'Product', name: 'Desk Lamp Black', sku: 'DL-B', color: 'Black', offers: { '@type': 'Offer', price: '30.00', priceCurrency: 'EUR' }, image: 'https://shop.test/a.jpg' }
+  ]), 'https://shop.test/lamp');
+  assert.deepEqual(single.variants, []);
+  assert.deepEqual({ name: single.product.name, sku: single.product.sku }, { name: 'Desk Lamp', sku: 'DL-B' });
+  assert.deepEqual(single.price.candidates.map(price => price.amount), ['30.00']);
+  assert.deepEqual(single.images.map(image => image.url), ['https://shop.test/a.jpg']);
+  assert.deepEqual(codes(single.warnings), []);
+
+  // The number of variants offered is bounded.
+  const many = extractProduct(group(Array.from({ length: 45 }, (_, index) => ({ '@type': 'Product', name: `Lamp ${index}`, size: String(index) }))), 'https://shop.test/lamp');
+  assert.equal(many.variants.length, 30);
+  assert.deepEqual(codes(many.warnings), ['URL_IMPORT_WARNING_VARIANTS', 'URL_IMPORT_WARNING_VARIANTS_LIMITED']);
+});
 
 test('attributes match existing fields by name or alias and only with a value valid for the field type', () => {
   const { product, provenance } = extract('json-ld-product');
@@ -262,6 +350,10 @@ const site = http.createServer((req, res) => {
       res.writeHead(200, { 'Content-Type': 'text/html' });
       return res.end(Buffer.concat([Buffer.from('<meta charset="windows-1251"><title>'), Buffer.from([0xcb, 0xe0, 0xec, 0xef, 0xe0]), Buffer.from('</title>')]));
     case '/empty': return html('<html><body></body></html>');
+    case '/variants': return html(fixture('product-variants').replaceAll('https://shoes.test', `http://cdn.shop.test:${port}`));
+    case '/script-only': return html('<html><body><div id="root"></div><script src="/app.js"></script></body></html>');
+    case '/script-titled': return html('<title>Runner 3 | Shoe Store</title><div id="root"></div><script src="/app.js"></script>');
+    case '/img/runner3-navy.jpg': res.writeHead(200, { 'Content-Type': 'image/png' }); return res.end(pngBytes);
     case '/redirect-private': res.writeHead(302, { Location: `http://private.test:${port}/product` }); return res.end();
     case '/redirect-literal': res.writeHead(301, { Location: 'http://10.0.0.1/' }); return res.end();
     case '/redirect-localhost': res.writeHead(307, { Location: `http://localhost:${port}/product` }); return res.end();
@@ -444,6 +536,92 @@ test('previews expire, and pages without a product or with an unusable address a
   assert.equal(legacy.baseFields.name, 'Лампа');
 });
 
+test('choosing a variant builds its own preview from the same reading, with its own fields, offer, images, and AI facts', async () => {
+  let now = 1_000_000;
+  const inventory = buildInventory();
+  const shoes = inventory.categoryService.create({ name: 'Running shoe' });
+  for (const field of [{ name: 'Color', type: 'color' }, { name: 'Size', type: 'text' }, { name: 'SKU', type: 'text' }]) {
+    inventory.customFieldService.create(shoes.id, field);
+  }
+  const service = new UrlImportService({ webClient: client(), ...inventory, now: () => now });
+  const page = await service.preview({ url: shop('/variants'), categoryId: shoes.id });
+  // The time of the read is known, so it is reported; it is never a purchase date.
+  assert.equal(page.fetchedAt, new Date(1_000_000).toISOString());
+  assert.equal(page.suggestedCategoryId, shoes.id);
+  assert.equal(page.variant, null);
+  assert.deepEqual(page.variants, [
+    { index: 0, label: 'Black / 42', offer: { amount: '119.00', currency: 'EUR' } },
+    { index: 1, label: 'Navy / 43', offer: { amount: '99.00', currency: 'EUR' } },
+    { index: 2, label: 'White / 44', offer: null }
+  ]);
+  // Until a variant is chosen, the preselected one's color, size, and SKU fill nothing.
+  assert.deepEqual(page.customFields, []);
+  assert.deepEqual(page.price.candidates, []);
+  assert.equal(service.facts(page.token).product.sku, '');
+
+  const reads = received.length;
+  const navy = service.variant(page.token, { index: 1, categoryId: shoes.id });
+  assert.equal(received.length, reads, 'the page is not fetched again');
+  assert.notEqual(navy.token, page.token);
+  assert.equal(navy.variant, 1);
+  assert.equal(navy.fetchedAt, page.fetchedAt);
+  assert.deepEqual(navy.variants, page.variants);
+  assert.equal(navy.baseFields.name, 'Stride Runner 3 Navy 43');
+  assert.equal(navy.baseFields.source_url, page.baseFields.source_url);
+  assert.deepEqual(navy.customFields.map(field => [field.name, field.type === 'color' ? JSON.parse(field.value).key : field.value]), [
+    ['Color', 'blue'], ['Size', '43'], ['SKU', 'SR3-NVY-43']
+  ]);
+  assert.deepEqual(navy.price.candidates.map(price => [price.amount, price.kind]), [['129.00', 'regular'], ['99.00', 'sale']]);
+  assert.deepEqual(navy.images.map(image => image.index), [0, 1]);
+  assert.deepEqual((await service.image(navy.token, '0')).data, pngBytes);
+  // The AI enhancement of the variant preview sees that variant's facts only.
+  assert.equal(service.facts(navy.token).product.sku, 'SR3-NVY-43');
+  assert.equal(service.facts(page.token).product.sku, '');
+
+  // Back to the shared details, and every invalid choice is refused.
+  const shared = service.variant(navy.token, { index: null });
+  assert.equal(shared.variant, null);
+  assert.deepEqual(shared.price.candidates, []);
+  for (const index of [3, -1, 1.5, 'x', true]) {
+    assert.throws(() => service.variant(page.token, { index }), { code: 'URL_IMPORT_VARIANT_NOT_FOUND', status: 404 }, String(index));
+  }
+  assert.throws(() => service.variant(page.token, { index: 0, categoryId: 999 }), { code: 'CATEGORY_REQUIRED' });
+  now += 31 * 60 * 1000;
+  assert.throws(() => service.variant(page.token, { index: 0 }), { code: 'URL_IMPORT_PREVIEW_EXPIRED', status: 404 });
+});
+
+test('a page built by its scripts is reported as such instead of being rendered', async () => {
+  const service = new UrlImportService({ webClient: client(), ...buildInventory() });
+  await refused(service.preview({ url: shop('/script-only') }), 422, 'URL_IMPORT_SCRIPT_RENDERED');
+  // Its script was never requested: pages are read, never run.
+  assert.equal(received.some(entry => entry.url === '/app.js'), false);
+  const titled = await service.preview({ url: shop('/script-titled') });
+  assert.deepEqual(codes(titled.warnings), ['URL_IMPORT_WARNING_SCRIPT_RENDERED']);
+});
+
+test('Refresh from Source of a dead, refused, or blocked page changes nothing', async () => {
+  const inventory = buildInventory();
+  const category = inventory.categoryService.create({ name: 'Lamps' });
+  const brand = inventory.customFieldService.create(category.id, { name: 'Brand', type: 'text' });
+  const snapshot = () => ({
+    items: inventory.db.prepare('SELECT * FROM items ORDER BY id').all(),
+    values: inventory.db.prepare('SELECT * FROM item_field_values ORDER BY item_id, field_id').all(),
+    history: inventory.db.prepare('SELECT COUNT(*) AS count FROM item_events').get()
+  });
+  const service = new UrlImportService({ webClient: client({ timeoutMs: 300 }), ...inventory });
+  for (const [route, status, code] of [
+    ['/missing', 502, 'URL_IMPORT_PAGE_UNAVAILABLE'], ['/forbidden', 502, 'URL_IMPORT_PAGE_REFUSED'], ['/hang', 504, 'URL_IMPORT_TIMEOUT'],
+    ['/redirect-private', 400, 'URL_IMPORT_BLOCKED_HOST'], ['/empty', 422, 'URL_IMPORT_NO_PRODUCT']
+  ]) {
+    const item = inventory.itemService.create({
+      name: 'Desk lamp', category_id: category.id, description: 'Mine', source_url: shop(route), field_values: { [brand.id]: 'Lumo' }
+    });
+    const before = snapshot();
+    await refused(service.preview({ url: item.source_url, categoryId: category.id }), status, code);
+    assert.deepEqual(snapshot(), before, route);
+  }
+});
+
 // ---------------------------------------------------------------------------------------------
 // Source URL on items
 // ---------------------------------------------------------------------------------------------
@@ -517,6 +695,11 @@ test('the API offers URL import, refuses local addresses, and never accepts an i
     const image = await fetch(`${base}/api/items/import-url/unknown/images/0`);
     assert.equal(image.status, 404);
     assert.equal((await image.json()).error.code, 'URL_IMPORT_PREVIEW_EXPIRED');
+    const variant = await fetch(`${base}/api/items/import-url/unknown/variant`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ index: 0 })
+    });
+    assert.equal(variant.status, 404);
+    assert.deepEqual(await variant.json(), { error: { code: 'URL_IMPORT_PREVIEW_EXPIRED', params: {} } });
     // The local test server was never contacted by the application.
     assert.equal(received.filter(entry => entry.headers['user-agent']?.includes('InventoryAtlasLite') && !entry.headers.host.startsWith('shop.test')
       && !entry.headers.host.startsWith('cdn.shop.test') && !entry.headers.host.startsWith('rebind.test')).length, 0);

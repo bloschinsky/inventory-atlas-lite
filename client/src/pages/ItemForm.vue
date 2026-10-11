@@ -106,9 +106,15 @@ onBeforeUnmount(() => photos.value.forEach(releasePreview));
 /*
   Smart URL import fills this form, never the database: the dialog hands back only the values the
   user selected, and they are saved with the form like any other edit. Selected product images join
-  the photo list as unsaved photos after the existing ones, so the cover stays as it is.
+  the photo list as unsaved photos after the existing ones, so the cover stays as it is. Refresh from
+  Source is the same dialog over the Source URL the item has saved, not the one being edited.
 */
 const importOpen = ref(false); const importNotice = ref('');
+const refreshing = ref(false); const savedSourceUrl = ref('');
+function openImport(refresh) {
+  refreshing.value = refresh;
+  importOpen.value = true;
+}
 const MAX_PHOTOS_PER_SAVE = 10;
 const photoSlots = computed(() => Math.max(0, MAX_PHOTOS_PER_SAVE - photos.value.filter(photo => photo.file).length));
 function applyImport({ categoryId, base, fieldValues, purchasePrice, photos: files }) {
@@ -160,6 +166,7 @@ async function loadDraft() {
     const item = await api(`/api/items/${route.params.id}`);
     form.parent_item_id = item.parent_item_id;
     itemId.value = item.id; parent.value = item.parent; itemLifecycle.value = item.lifecycle_status;
+    savedSourceUrl.value = item.source_url || '';
     stored.value = { parent: item.parent, effective: item.effective_location, own: item.location };
     photos.value = item.photos.map(savedPhoto);
     savedOrder.value = item.photos.map(photo => photo.id);
@@ -194,9 +201,11 @@ async function loadDraft() {
 }
 onMounted(async () => {
   try { await start(await loadDraft()); } catch (e) { error.value = e.message; }
-  // ?import=url opens the URL import as soon as the form is ready, from Add item or Item details.
+  // ?import=url opens the URL import as soon as the form is ready, from Add item or Item details;
+  // ?import=refresh opens Refresh from Source for an item with a saved Source URL.
   await loadCapabilities();
-  if (route.query.import === 'url' && capabilities.urlImport) importOpen.value = true;
+  if (capabilities.urlImport && route.query.import === 'url') openImport(false);
+  if (capabilities.urlImport && route.query.import === 'refresh' && savedSourceUrl.value) openImport(true);
 });
 </script>
 
@@ -208,9 +217,17 @@ onMounted(async () => {
         #actions
       >
         <button
+          v-if="savedSourceUrl"
           type="button"
           class="btn"
-          @click="importOpen = true"
+          @click="openImport(true)"
+        >
+          {{ $t('urlImport.refreshAction') }}
+        </button>
+        <button
+          type="button"
+          class="btn"
+          @click="openImport(false)"
         >
           {{ $t('urlImport.fillAction') }}
         </button>
@@ -504,6 +521,7 @@ onMounted(async () => {
       :categories="categories"
       :fields="fields"
       :editing="editing"
+      :refresh-url="refreshing ? savedSourceUrl : ''"
       :photo-slots="photoSlots"
       @apply="applyImport"
       @close="importOpen = false"

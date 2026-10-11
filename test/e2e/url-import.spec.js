@@ -348,6 +348,141 @@ test('a failed AI request keeps the page values, and AI suggestions for an exist
   await expect(page.getByLabel('Purchase Price', { exact: true })).toHaveValue('100.00');
 });
 
+test('Refresh from Source reads the saved page on request and applies only the chosen changes', async ({ page, request }) => {
+  const category = await createCategory(request, unique('Cameras'), [{ name: 'Brand', type: 'text' }]);
+  const container = await createItem(request, { name: unique('Shelf'), category_id: category.id });
+  const fields = await (await request.get(`/api/categories/${category.id}/fields`)).json();
+  const brand = fields.find(field => field.name === 'Brand');
+  const item = await createItem(request, {
+    name: 'My trail cam', category_id: category.id, parent_item_id: container.id, source_url: PAGE, serial_number: unique('SN'),
+    purchase_price: { amount: '100.00', currency: 'EUR' }, is_new: true, field_values: { [brand.id]: 'Old brand' }
+  });
+  const requests = await interceptImport(page, preview({
+    categoryId: category.id, fetchedAt: '2026-10-11T09:30:00.000Z',
+    customFields: [], product: { ...preview().product, brand: 'Fieldmark' }
+  }));
+
+  await page.goto(`/items/${item.id}`);
+  await page.mouse.move(600, 400);
+  // An item with a saved Source URL offers to read it again; Fill from URL stays in the form.
+  await expect(page.getByRole('link', { name: 'Fill from URL' })).toHaveCount(0);
+  await page.getByRole('link', { name: 'Refresh from Source' }).click();
+  await expect(page).toHaveURL(new RegExp(`/items/${item.id}/edit\\?import=refresh$`));
+  const dialog = page.getByRole('dialog', { name: 'Refresh from Source' });
+  // The saved address is read at once, and only now; it is changed in the form, not here.
+  await expect(dialog.getByRole('heading', { name: 'Review what was found' })).toBeVisible();
+  expect(requests).toEqual([{ url: PAGE, categoryId: category.id }]);
+  await expect(dialog.getByLabel('Product page URL')).toHaveValue(PAGE);
+  await expect(dialog.getByLabel('Product page URL')).not.toBeEditable();
+  await expect(dialog.getByText(/^Page read .*2026/)).toBeVisible();
+
+  // Current → Found for every changed value; filled values start unchecked, and the price stays a suggestion.
+  const brandRow = dialog.getByRole('listitem').filter({ has: page.getByRole('checkbox', { name: /^Brand/ }) });
+  await expect(brandRow.getByText('Old brand')).toBeVisible();
+  await expect(brandRow.getByText('Fieldmark')).toBeVisible();
+  await expect(dialog.getByRole('checkbox', { name: /^Brand/ })).not.toBeChecked();
+  await expect(dialog.getByRole('checkbox', { name: /^Name/ })).not.toBeChecked();
+  await expect(dialog.getByRole('checkbox', { name: /^Source URL/ })).toHaveCount(0);
+  await expect(dialog.getByRole('checkbox', { name: 'Use page price as Purchase Price' })).not.toBeChecked();
+  await dialog.getByRole('checkbox', { name: /^Brand/ }).check();
+  await dialog.getByRole('checkbox', { name: /^Description/ }).uncheck();
+  await dialog.getByRole('button', { name: 'Apply selected values' }).click();
+  await expect(dialog).toHaveCount(0);
+  await page.getByRole('button', { name: 'Save item' }).click();
+  await expect(page).toHaveURL(new RegExp(`/items/${item.id}$`));
+
+  const saved = await (await request.get(`/api/items/${item.id}`)).json();
+  expect(saved.fields.map(field => [field.name, field.value])).toEqual([['Brand', 'Fieldmark']]);
+  for (const key of ['uuid', 'name', 'description', 'source_url', 'serial_number', 'purchase_price', 'parent_item_id', 'is_new', 'lifecycle_status']) {
+    expect(saved[key], key).toEqual(item[key]);
+  }
+});
+
+test('a dead source changes nothing, and a page built by scripts is explained', async ({ page, request }) => {
+  const category = await createCategory(request, unique('Lamps'));
+  const item = await createItem(request, { name: 'Desk lamp', category_id: category.id, source_url: PAGE, description: 'Mine.' });
+  let answer = { status: 502, body: { error: { code: 'URL_IMPORT_PAGE_UNAVAILABLE', params: { status: 404 } } } };
+  await page.route('**/api/items/import-url/preview', route => route.fulfill({
+    status: answer.status, contentType: 'application/json', body: JSON.stringify(answer.body)
+  }));
+
+  await page.goto(`/items/${item.id}/edit?import=refresh`);
+  const dialog = page.getByRole('dialog', { name: 'Refresh from Source' });
+  await expect(dialog.getByRole('alert')).toContainText('(HTTP 404)');
+  await expect(dialog.getByRole('alert')).toContainText('The item was not changed.');
+  await expect(dialog.getByRole('button', { name: 'Apply selected values' })).toHaveCount(0);
+
+  answer = {
+    status: 200,
+    body: preview({ product: { ...preview().product, attributes: [] }, warnings: [{ code: 'URL_IMPORT_WARNING_SCRIPT_RENDERED', params: {} }], images: [] })
+  };
+  await dialog.getByRole('button', { name: 'Read again' }).click();
+  await expect(dialog.getByText('builds its product details with JavaScript')).toBeVisible();
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByLabel('Name *')).toHaveValue('Desk lamp');
+  expect(await (await request.get(`/api/items/${item.id}`)).json()).toEqual(expect.objectContaining({ name: 'Desk lamp', description: 'Mine.', source_url: PAGE }));
+});
+
+test('a variant is chosen explicitly and brings only its own values, offer, and images', async ({ page, request }) => {
+  const category = await createCategory(request, unique('Running shoes'), [{ name: 'Size', type: 'text' }, { name: 'SKU', type: 'text' }]);
+  const variants = [
+    { index: 0, label: 'Black / 42', offer: { amount: '119.00', currency: 'EUR' } },
+    { index: 1, label: 'Navy / 43', offer: { amount: '99.00', currency: 'EUR' } },
+    { index: 2, label: 'White / 44', offer: null }
+  ];
+  const shared = preview({
+    token: '11111111-1111-4111-8111-111111111111', suggestedCategoryId: category.id, variants, variant: null,
+    product: { ...preview().product, name: 'Stride Runner 3', sku: '', gtin: '', attributes: [{ name: 'Drop', value: '8 mm', source: 'json-ld' }] },
+    baseFields: { ...preview().baseFields, name: 'Stride Runner 3' },
+    price: { candidates: [], ambiguous: false }, images: [], warnings: [{ code: 'URL_IMPORT_WARNING_VARIANTS', params: {} }]
+  });
+  const navy = preview({
+    token: '22222222-2222-4222-8222-222222222222', suggestedCategoryId: category.id, variants, variant: 1,
+    product: { ...shared.product, name: 'Stride Runner 3 Navy 43', sku: 'SR3-NVY-43', attributes: [{ name: 'Size', value: '43', source: 'json-ld' }] },
+    provenance: { ...preview().provenance, sku: 'json-ld' },
+    baseFields: { ...preview().baseFields, name: 'Stride Runner 3 Navy 43' },
+    price: { candidates: [{ amount: '129.00', currency: 'EUR', kind: 'regular', source: 'json-ld' }, { amount: '99.00', currency: 'EUR', kind: 'sale', source: 'json-ld' }], ambiguous: false },
+    images: [{ index: 0, url: 'https://shop.example/navy.png', source: 'json-ld' }], warnings: []
+  });
+  await interceptImport(page, shared);
+  const variantRequests = [];
+  await page.route('**/api/items/import-url/*/variant', async route => {
+    variantRequests.push({ url: route.request().url(), body: route.request().postDataJSON() });
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(route.request().postDataJSON().index === 1 ? navy : shared) });
+  });
+
+  await page.goto('/items/new?import=url');
+  const dialog = page.getByRole('dialog', { name: 'Add item from URL' });
+  await dialog.getByLabel('Product page URL').fill(PAGE);
+  await dialog.getByRole('button', { name: 'Read page' }).click();
+  // Nothing is preselected: the shared details only, without a price, images, or a size.
+  const picker = dialog.getByLabel('Choose variant');
+  await expect(picker).toHaveValue('');
+  await expect(dialog.getByText('The page offers 3 variants.')).toBeVisible();
+  await expect(dialog.getByText('No price was found on the page.')).toBeVisible();
+  await expect(dialog.getByRole('checkbox', { name: /^Size/ })).toHaveCount(0);
+  await expect(dialog.getByRole('checkbox', { name: /^Import image/ })).toHaveCount(0);
+
+  await picker.selectOption({ label: 'Navy / 43 — €99.00' });
+  await expect(dialog.getByText('Showing the variant “Navy / 43”.')).toBeVisible();
+  expect(variantRequests).toEqual([{ url: expect.stringContaining(`/import-url/${shared.token}/variant`), body: { index: 1, categoryId: category.id } }]);
+  await expect(dialog.getByRole('listitem').filter({ hasText: 'Stride Runner 3 Navy 43' })).toBeVisible();
+  await expect(dialog.getByRole('checkbox', { name: /^Size/ })).toBeChecked();
+  await expect(dialog.getByRole('checkbox', { name: /^SKU/ })).toBeChecked();
+  await expect(dialog.getByRole('radio', { name: /99\.00.*Sale price/ })).toBeChecked();
+  await expect(dialog.getByRole('checkbox', { name: 'Use page price as Purchase Price' })).not.toBeChecked();
+  await expect(dialog.getByRole('img', { name: 'Product image 1' })).toBeVisible();
+  await dialog.getByRole('checkbox', { name: 'Import image 1' }).check();
+  await dialog.getByRole('button', { name: 'Use selected values' }).click();
+
+  await expect(page.getByLabel('Name *')).toHaveValue('Stride Runner 3 Navy 43');
+  await expect(page.getByLabel('Size')).toHaveValue('43');
+  await expect(page.getByLabel('SKU')).toHaveValue('SR3-NVY-43');
+  await expect(page.getByLabel('Purchase Price', { exact: true })).toHaveValue('');
+  await expect(page.getByText('Not saved', { exact: true })).toHaveCount(1);
+});
+
 test.describe('on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 

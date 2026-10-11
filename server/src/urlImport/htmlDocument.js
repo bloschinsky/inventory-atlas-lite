@@ -2,7 +2,8 @@
   A bounded reader of the few parts of a static HTML page the URL import uses: the title, the first
   heading, meta and link tags, JSON-LD blocks, and two-column specification tables and definition
   lists. It never builds a DOM and never runs anything: scripts are only read as JSON-LD text or
-  dropped. The input is cut to a fixed size, each kind of result has its own limit, and every
+  dropped and counted, and the length of the readable text is measured, so a page that is built by
+  its scripts can be recognized. The input is cut to a fixed size, each kind of result has its own limit, and every
   pattern stays linear: tag attributes stop at the next "<", and an element that is never closed
   simply runs to the end of the page instead of being searched for again from every later position.
 */
@@ -87,10 +88,13 @@ const firstText = (html, tag) => plainText(html.match(new RegExp(`<${tag}\\b[^<>
 
 export function readHtml(source) {
   const jsonLd = [];
+  let scripts = 0;
   let html = String(source).slice(0, MAX_HTML_CHARS).replace(/<!--[\s\S]*?(?:-->|$)/g, ' ');
   html = html.replace(/<script\b([^<>]{0,2000})>([\s\S]*?)(?:<\/script\s*>|$)/gi, (_match, attributes, content) => {
     if (/application\/ld\+json/i.test(readAttributes(attributes).type ?? '') && jsonLd.length < MAX_JSON_LD_BLOCKS && content.length <= MAX_JSON_LD_CHARS) {
       jsonLd.push(content);
+    } else {
+      scripts += 1;
     }
     return ' ';
   });
@@ -111,5 +115,7 @@ export function readHtml(source) {
       links.push({ rel: attributes.rel.trim().toLowerCase(), href: attributes.href.trim() });
     }
   }
-  return { title: firstText(html, 'title'), h1: firstText(html, 'h1'), metas, links, jsonLd, specs: readSpecs(html) };
+  // How much readable text the static page has; a script-built page has little more than its title.
+  const textLength = plainText(html).length;
+  return { title: firstText(html, 'title'), h1: firstText(html, 'h1'), metas, links, jsonLd, specs: readSpecs(html), scripts, textLength };
 }
