@@ -9,7 +9,8 @@ import { api } from './api.js';
   It fails closed: a capability stays hidden until the backend confirms it. Hiding an entry point is
   only UX; the backend keeps rejecting operations for a feature that is turned off.
 */
-export const capabilities = reactive({ ai: { enabled: false, imageInput: true }, urlImport: false });
+// `instanceLabel` is the deployment's optional ATLAS_INSTANCE_LABEL (such as TEST), or null without one.
+export const capabilities = reactive({ ai: { enabled: false, imageInput: true }, urlImport: false, instanceLabel: null });
 
 let loading = null;
 
@@ -19,6 +20,7 @@ export function loadCapabilities() {
     .then(loaded => {
       setAiCapabilities(loaded?.ai);
       capabilities.urlImport = loaded?.urlImport === true;
+      capabilities.instanceLabel = typeof loaded?.instanceLabel === 'string' && loaded.instanceLabel ? loaded.instanceLabel : null;
     })
     .catch(() => setAiCapabilities(null));
   return loading;

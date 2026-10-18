@@ -15,6 +15,14 @@
     "hierarchy": "Ієрархія",
     "checklists": "Чек-листи"
   },
+  "databaseIndicator": {
+    "label": "Активна база даних:",
+    "loading": "Завантаження бази даних…",
+    "unavailable": "База даних недоступна",
+    "instanceLabel": "Екземпляр:",
+    "instance": "Екземпляр: {label}",
+    "open": "Відкрити налаштування бази даних"
+  },
   "theme": {
     "colorMode": "Колірний режим",
     "light": "Світлий режим",

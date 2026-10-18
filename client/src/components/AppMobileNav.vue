@@ -2,6 +2,7 @@
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { IconMenu2 } from '@tabler/icons-vue';
+import ActiveDatabaseIndicator from './ActiveDatabaseIndicator.vue';
 import AppBrand from './AppBrand.vue';
 import AppNavigation from './AppNavigation.vue';
 import ThemeToggle from './ThemeToggle.vue';
@@ -49,7 +50,7 @@ onBeforeUnmount(() => {
 
 <template>
   <header class="navbar navbar-expand-md d-lg-none sticky-top d-print-none">
-    <div class="container-fluid gap-2">
+    <div class="container-fluid flex-nowrap gap-2">
       <button
         ref="menuButton"
         type="button"
@@ -64,12 +65,17 @@ onBeforeUnmount(() => {
           aria-hidden="true"
         />
       </button>
-      <RouterLink
-        to="/"
-        class="navbar-brand app-brand m-0 p-0 flex-grow-1"
-      >
-        <AppBrand />
-      </RouterLink>
+      <!-- Two separate links: the product name goes home, the smaller line below it opens the
+           active database's settings. -->
+      <div class="app-mobile-identity">
+        <RouterLink
+          to="/"
+          class="navbar-brand app-brand m-0 p-0"
+        >
+          <AppBrand />
+        </RouterLink>
+        <ActiveDatabaseIndicator />
+      </div>
       <ThemeToggle />
     </div>
   </header>

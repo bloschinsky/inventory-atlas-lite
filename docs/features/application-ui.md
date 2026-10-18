@@ -26,6 +26,9 @@ presentation layer over the existing API, and no CDN or other runtime internet d
   the same labels without any pointer.
 - The expanded sidebar is fixed and overlays the page; only the folded width reserves space, so
   expanding never shifts the content sideways.
+- A single quiet line above the page names the active database (and the optional instance label)
+  beside the folded rail and opens **Settings → Database**; see
+  [`active-database-indicator.md`](active-database-indicator.md).
 - The routed page fills the whole width beside the sidebar: the shell wraps every page in a fluid
   `.container-fluid.app-content` with the normal Tabler gutters and no shell `max-width`, so data
   pages such as the Dashboard, Items, and Hierarchy grow with wide and Full HD screens. Narrow
@@ -38,7 +41,8 @@ presentation layer over the existing API, and no CDN or other runtime internet d
 ### Mobile navigation
 
 - Below `lg` the sidebar is replaced by a sticky top bar with a hamburger button, the product name,
-  and the colour-mode buttons. Hover navigation is never used at this size.
+  and the colour-mode buttons. Hover navigation is never used at this size. A smaller second line
+  under the product name names the active database and opens its settings.
 - The hamburger opens the same navigation in an offcanvas drawer from the left, with a backdrop.
 - The drawer closes on selection, on backdrop click, and with `Escape`. Opening it moves the focus to
   its close button and keeps the focus inside the drawer; closing it returns the focus to the
