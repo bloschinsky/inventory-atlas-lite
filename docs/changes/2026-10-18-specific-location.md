@@ -59,4 +59,7 @@ See `docs/features/specific-location.md`.
   placeholder changed in the specs that use it. An earlier full run had one failure in
   `condition-grading.spec.js` (the folded sidebar intercepted a click after the pointer was left at
   the page corner) that passed on its own and in the final full run.
-- Landing screenshots were not recaptured.
+- `npm run landing:screenshots` recaptured the item list, item details, search, hierarchy, and phone
+  screenshots in both languages from the demo, which now shows specific locations;
+  `test/landing.test.js` (apart from the two Windows guide failures above) and
+  `test/e2e/landing.spec.js` with `test/e2e/guide.spec.js` (47 passed) accept them.
