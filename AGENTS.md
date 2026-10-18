@@ -241,7 +241,9 @@ The project stays small and readable. Do not add:
   `LANDING_SITE_URL`, release from `LANDING_RELEASE_TAG`, demo buttons from `LANDING_DEMO_URL`, and
   the `virtual:guide` modules; it fails without a full screenshot set per locale, on a guide
   translation that drifted from `docs/HOW-TO.md`, or on invalid guide presentation metadata),
-  `site.js` (repository and documentation links, the guide source file of each locale,
+  `socialImages.js` (the names, size, and budget of the six social preview PNGs in
+  `public/og/`, one per page — landing, guide, demo — and locale), `social/` (`layouts.js` and `card.css`,
+  their editable layouts), `site.js` (repository and documentation links, the guide source file of each locale,
   `landingRelease()` over the release history), `screenshots.js` (the screenshot names, sizes, and
   per-locale files), `guideSource.js` (renders `docs/HOW-TO.md` and `docs/HOW-TO.<locale>.md` with
   markdown-it at build time into sections with stable ids, checks their structural parity, and reads
@@ -256,9 +258,11 @@ The project stays small and readable. Do not add:
   `ScreenshotLightbox.vue` (the screenshot viewer, wired by `screenshotViewer.js`), and
   `landing.css`; the bundled Geist typeface is imported in each entry, and the screenshots are in
   `src/assets/screenshots/<locale>/`), `public/` (favicon and Open Graph image), and `scripts/`
-  (`capture-screenshots.mjs`, which photographs the built public demo in every locale).
+  (`capture-screenshots.mjs`, which photographs the built public demo in every locale, and
+  `render-social-images.mjs`, `npm run landing:social`, which renders and checks the social preview images).
 - `test/landing.test.js` — landing release resolution, site address, documentation links, landing
-  message parity and compilation, the screenshot set and sizes of every locale, and the user guide:
+  message parity and compilation, the screenshot set and sizes of every locale, the social preview
+  images, and the user guide:
   its sources, the same section ids in every language, structural drift that fails the build, safe
   Markdown rendering and links, valid presentation metadata and demo routes, and no guide text copied
   into the landing sources;

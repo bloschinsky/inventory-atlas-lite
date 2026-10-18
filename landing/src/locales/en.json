@@ -195,5 +195,23 @@
         ]
       }
     }
+  },
+  "social": {
+    "landing": {
+      "eyebrow": "Self-hosted inventory",
+      "title": "Know what you own. Know where it is.",
+      "tagline": "Your server. Your data."
+    },
+    "guide": {
+      "eyebrow": "User Guide",
+      "title": "How to use Inventory Atlas Lite",
+      "text": "From the first setup to labels, checklists, and backups, step by step.",
+      "contents": "Contents"
+    },
+    "demo": {
+      "eyebrow": "Live demo",
+      "title": "Try it right in your browser",
+      "text": "No installation, no sign-up. Explore a sample inventory."
+    }
   }
 }

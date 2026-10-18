@@ -187,6 +187,27 @@ its guided tour, and the screenshots on the page.
   script fails on an unsupported language or a screenshot it did not capture. The demo runs only on
   its invented inventory in the browser, so no private inventory or photo can appear on the public
   page. Re-run it after a visible interface change.
+- **Social preview images:** six 1200 × 630 PNG cards, one per public page and language, in
+  `landing/public/og/<page>-<locale>.png` (`landing`, `guide`, and `demo`; `landing/socialImages.js`
+  names them and the size budget). The build publishes them as `og/<page>-<locale>.png` under the
+  site address. They share one design — the hero's ink, glows, and dot grid, the Geist typeface, the
+  product mark, and a copy column with the brand, an eyebrow, a title, and one line — and each page
+  has its own accent and visual: **Landing** the Items list with an item on a phone and *Your server.
+  Your data.*; **Guide** a contents page listing the first sections of the localized user guide over
+  a faded Hierarchy screenshot; **Demo** the Dashboard in a browser window with a checklist run on a
+  phone. The copy is `social.<page>` in `landing/src/locales/<locale>.json`, and every language of a
+  page keeps the same composition. The pages do not reference these images yet: `og-image.png`
+  stays their Open Graph image until the locale-specific page addresses and metadata switch to them.
+- **Rendering them:** `npm run landing:social` runs `landing/scripts/render-social-images.mjs`,
+  which builds each card from the editable layouts `landing/social/layouts.js` and `card.css`, the
+  localized screenshots above (refresh them first with `npm run landing:screenshots` after an
+  interface change), and the guide's section titles, renders it locally in Chromium at twice the size
+  with the bundled Geist subsets embedded, and scales it down with sharp. It fails when the typeface
+  did not load, when copy overflows its column or a contents line would be cut, and when the result
+  is not a PNG of the exact size within the budget, and it leaves a file whose bytes did not change
+  untouched. `npm run landing:social -- --locale=uk` renders one language. `test/landing.test.js`
+  checks the published set: every file, its format and size, the budget, no duplicates, and no stray
+  files.
 
 ### Local development
 
@@ -195,6 +216,7 @@ npm run landing:dev        # http://localhost:5174/inventory-atlas-lite/
 npm run landing:build      # dist-landing/
 npm run landing:preview    # serves dist-landing/ at http://localhost:4174/inventory-atlas-lite/
 npm run landing:screenshots
+npm run landing:social     # landing/public/og/
 ```
 
 ### GitHub Pages setup
@@ -252,7 +274,8 @@ local build without the variable renders no Try Demo button.
    `landing/src/i18n.js` (and the application messages in `client/src/i18n/index.js`).
 3. Add the locale's text to every localized value of the demo inventory in
    `client/src/demo/fixture.js`; `createDemoFixture()` fails on a missing one.
-4. Run `npm run landing:screenshots -- --locale=<locale>` for its screenshot set.
+4. Run `npm run landing:screenshots -- --locale=<locale>` for its screenshot set, then add the
+   `social` copy and run `npm run landing:social -- --locale=<locale>` for its social preview images.
 5. Add `docs/HOW-TO.<locale>.md` for the [public user guide](public-user-guide.md#adding-another-locale).
 
 The dropdown, the Try Demo address, the screenshot lookup, the demo seed, and the guided tour need no

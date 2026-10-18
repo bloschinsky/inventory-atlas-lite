@@ -21,7 +21,8 @@
     "landing:preview": "vite preview --config landing/vite.config.js",
     "demo:dev": "vite --mode demo",
     "demo:build": "vite build --mode demo",
-    "landing:screenshots": "vite build --mode demo && node landing/scripts/capture-screenshots.mjs"
+    "landing:screenshots": "vite build --mode demo && node landing/scripts/capture-screenshots.mjs",
+    "landing:social": "node landing/scripts/render-social-images.mjs"
   },
   "dependencies": {
     "@tabler/core": "1.5.1",
