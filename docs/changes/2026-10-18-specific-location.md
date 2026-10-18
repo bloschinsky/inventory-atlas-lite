@@ -64,3 +64,16 @@ See `docs/features/specific-location.md`.
   screenshots in both languages from the demo, which now shows specific locations;
   `test/landing.test.js` (apart from the two Windows guide failures above) and
   `test/e2e/landing.spec.js` with `test/e2e/guide.spec.js` (47 passed) accept them.
+
+## Joint 0.66.0 release with #41
+
+After #41 (the active database indicator) reached `master`, it was merged into this branch, the
+version and the release-history entry were combined into one 0.66.0 release, and the landing
+screenshots were recaptured with `npm run landing:screenshots` so they show both the indicator and
+the Specific location.
+
+- `npm run lint` — passed.
+- `npm test` — 399 passed, 2 failed, 1 skipped; the two failures are the same Windows guide tests
+  in `test/landing.test.js` described above.
+- `npm run build` — passed.
+- `APP_VERSION=0.66.0 npm run test:e2e` — 264 of 264 passed, including the landing and guide build.
