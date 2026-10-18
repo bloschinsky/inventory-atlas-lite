@@ -85,7 +85,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
   The composition root: every repository, service, and route table is created here and receives its
   dependencies explicitly. Nothing below this file reaches for a module-level singleton.
 */
-export function createApp({ production = false } = {}) {
+export function createApp({ production = false, instanceLabel = null } = {}) {
   const appVersion = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version;
 
   const categoryRepository = new CategoryRepository(db);
@@ -189,7 +189,7 @@ export function createApp({ production = false } = {}) {
   app.use(maintenanceGuard(maintenance));
 
   app.use(createAiRoutes({ aiSettingsService, aiProviderService, aiItemAnalysisService, imageUpload }));
-  app.use(createCapabilityRoutes({ aiSettingsService, urlImport: true }));
+  app.use(createCapabilityRoutes({ aiSettingsService, urlImport: true, instanceLabel }));
   app.use(createImageRoutes({ imageService, imageUpload }));
   app.use(createCategoryRoutes({ categoryService }));
   app.use(createDashboardRoutes({ dashboardService }));

@@ -1,10 +1,11 @@
 <script setup>
 import { onMounted, ref } from 'vue';
-import { api, jsonOptions } from '../../api.js';
+import { loadActiveDatabase, renameActiveDatabase } from '../../activeDatabase.js';
 import { formatDateTime } from '../../i18n/index.js';
 import { useUnsavedChanges } from '../../settingsOverlay.js';
 
 // The identity of the current database. Only the name is editable; the rest is managed by the server.
+// Loads and renames go through activeDatabase.js, so the indicator in the shell follows at once.
 const metadata = ref(null);
 const name = ref('');
 const saving = ref(false);
@@ -20,13 +21,13 @@ function show(data) {
 async function save() {
   saving.value = true; error.value = ''; saved.value = false;
   try {
-    show(await api('/api/database/metadata', jsonOptions('PUT', { name: name.value })));
+    show(await renameActiveDatabase(name.value));
     saved.value = true;
   } catch (caught) { error.value = caught.message; } finally { saving.value = false; }
 }
 
 onMounted(async () => {
-  try { show(await api('/api/database/metadata')); } catch (caught) { error.value = caught.message; }
+  try { show(await loadActiveDatabase()); } catch (caught) { error.value = caught.message; }
 });
 </script>
 

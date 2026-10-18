@@ -95,13 +95,17 @@ The project stays small and readable. Do not add:
 - `index.html` — page shell; its inline script applies the stored or system color mode before paint.
 - `client/src/main.js` — starts Vue, imports Tabler's stylesheet, configures the router, and lists
   application routes.
-- `client/src/App.vue` — Tabler page shell that composes the sidebar, the mobile navigation, and the
-  page content area, a fluid `.container-fluid.app-content` (pages limit narrow surfaces such as
-  `.form-card` themselves).
+- `client/src/App.vue` — Tabler page shell that composes the sidebar, the mobile navigation, the
+  desktop line with the active database indicator, and the page content area, a fluid
+  `.container-fluid.app-content` (pages limit narrow surfaces such as `.form-card` themselves).
 - `client/src/components/AppSidebar.vue` — desktop folded-hover sidebar.
 - `client/src/components/AppMobileNav.vue` — mobile header and offcanvas navigation drawer.
 - `client/src/components/AppNavigation.vue` — navigation list shared by both of them.
 - `client/src/components/AppBrand.vue` — product mark and name.
+- `client/src/components/ActiveDatabaseIndicator.vue` — the active database name and the optional
+  instance label, a link to Settings → Database shown above desktop pages and in the mobile header;
+  `client/src/activeDatabase.js` is the shared metadata of the open database that it, Settings →
+  Database, and the restore and reset flows load, rename, and forget.
 - `client/src/components/ThemeToggle.vue` — light/dark control; `client/src/theme.js` holds the state.
 - `client/src/api.js` — shared `fetch` wrapper and helper for JSON requests, `photoUrl()` for stored
   photos, and the only switch to the in-browser backend of the public demo build (`__DEMO__`).
@@ -127,7 +131,7 @@ The project stays small and readable. Do not add:
 - `client/src/i18n/locales/` — `en.json` and `uk.json`, the interface messages grouped by feature.
 - `client/src/update.js` — shared state and polling of the update panel in the About dialog.
 - `client/src/whatsNew.js` — the last acknowledged version in browser storage and the unseen releases shown after an update; `client/src/components/WhatsNewDialog.vue` renders them.
-- `client/src/capabilities.js` — shared visibility state of optional features (AI and URL import), loaded once from `/api/capabilities`.
+- `client/src/capabilities.js` — shared visibility state of optional features (AI and URL import) and the deployment's instance label, loaded once from `/api/capabilities`.
 - `client/src/pages/ItemsList.vue` — item list, search, filtering, column choice, sorting, and pagination.
 - `client/src/components/ItemResults.vue` — the item table and phone cards, rendered from the visible column list.
 - `client/src/components/ItemNewStatusBadge.vue` — the read-only New/Used badge of the core New flag, shared by the item table, cards, and details.
@@ -184,7 +188,8 @@ The project stays small and readable. Do not add:
 - `shared/semver.js` — semantic version parsing and comparison, used by the updater and the What's New dialog.
 - `shared/releaseHistory.js` and `shared/release-history.json` — the single release history read by Version History, What's New, and the release notes.
 - `shared/appError.js` — `AppError` (stable code, parameters, HTTP status) thrown by the shared rules and the server, and its `{ code, params }` body.
-- `server/src/index.js` — process entry point: port and production flag, the HTTP listener, and shutdown.
+- `server/src/index.js` — process entry point: port, production flag, and instance label, the HTTP listener, and shutdown.
+- `server/src/instanceLabel.js` — the optional `ATLAS_INSTANCE_LABEL` of the running deployment and its normalization; never stored in SQLite.
 - `server/src/app.js` — composition root: builds every repository, service, upload, and route table and assembles the Express app, including production static serving.
 - `server/src/routes/` — thin Express route tables; they parse the request, call one service, and shape the response.
 - `server/src/services/` — application and business logic, independent of Express request and response objects. `itemColumns.js` builds the Items column catalog and merges same-name, same-type custom fields; `bulkReplaceService.js` previews and applies exact-value replacement over the column whitelist of `repositories/bulkReplaceRepository.js`; `databaseMetadataService.js` exposes the database identity and renames it through `repositories/databaseMetadataRepository.js`; `checklistService.js` owns checklist definitions and membership and `checklistRunService.js` the runs (server-side snapshots, container audits, state changes by run item or inventory item, completion with Last verified) over `repositories/checklistRepository.js` and `checklistRunRepository.js`; `itemService.js` owns the containment rule (`assertCanContain`) shared by the item form and Bulk Move, which reduces a selection to its roots before moving it, and the lifecycle rule that a container and its contents share one status; `itemLifecycleService.js` retires and restores an item with its whole subtree in one transaction (`PATCH /api/items/:id/lifecycle`), refusing a retirement while anything in it is on loan; `itemHistoryService.js` records the item activity history (`track()` compares the affected items before and after a write in its transaction, `trackLifecycle()` records Retire and Restore) and pages it, and `itemTransferService.js` owns temporary loans, both over `repositories/itemHistoryRepository.js`; `urlImportService.js` builds the review-only Smart URL import preview, builds one variant's preview from the same reading (`POST /api/items/import-url/:token/variant`, nothing fetched again), and serves its image candidates and extracted facts by preview token, and `urlImportAiService.js` is its optional AI enhancement (`POST /api/items/import-url/:token/ai`): a bounded text-only payload of those facts and the allowed fields, trusted instructions kept apart, and server-side validation of every suggestion against the field allowlist, types, and quoted page evidence.
@@ -208,6 +213,7 @@ The project stays small and readable. Do not add:
 - `test/url-import.test.js` — Smart URL import: extraction from the HTML fixtures in `test/fixtures/url-import/`, product variants and the variant preview, pages built by scripts, Refresh from Source of unreadable pages, attribute matching, the address policy, the page fetcher's network protections against a local server, the preview service and image tokens, Source URL validation, the version 11 migration, and the HTTP contract.
 - `test/url-import-ai.test.js` — the optional AI enhancement of Smart URL import with a stubbed provider: payload bounds and separation, the field allowlist, mapping and color normalization, dropped unknown, malformed, ungrounded, and unit-converted values, conflicts, prompt injection, failure fallback, and the HTTP contract.
 - `test/location-detail.test.js` — the Specific location: the version 12 migration and restore of a version 11 backup, validation and the omitted-attribute rule, outermost-container inheritance, the list sort and search, history, retire and restore snapshots, templates, batch import, and the HTTP contract.
+- `test/instance-label.test.js` — the instance label: normalization, the capabilities response, and a real server that keeps its label after restoring a database named PROD.
 - `test/serverProcess.js` — starts and stops the real server for the API tests on a free port chosen by the operating system (`PORT=0`), reading the bound port from its listening line.
 - `test/hierarchy.test.js` — the hierarchy endpoint (shape, inherited location, one statement), the Location and Category projection rules, per-grouping expansion, and the Graph layout.
 - `test/checklists.test.js` — checklist definitions, ordering, duplicates, runs, state changes, counts, completion, run history, snapshots over renamed and deleted items and deleted checklists, Last verified, container audits, and the version 3 and 4 migrations at the service level.
@@ -224,6 +230,7 @@ The project stays small and readable. Do not add:
 - `test/e2e/settings-navigation.spec.js` — the Settings dialog: section routes and redirects, the Dashboard under direct addresses, the preserved page underneath, close, Escape, Back and Forward, section changes without history entries, the unsaved-changes prompt, focus, the desktop section list, the full-screen phone dialog and its section selector, and the dark mode in Ukrainian.
 - `test/e2e/url-import.spec.js` — Smart URL import with intercepted preview, variant, and image requests: a new item from a page, selective enrichment of an existing item, Refresh from Source and a dead source, the explicit variant choice, conflicts, the opt-in page price, images, partial failures, Ukrainian, and phones, plus the opt-in AI enhancement (suggestions, choices and edits, the untouched price opt-in, failure fallback, and discarding).
 - `test/e2e/location-detail.spec.js` — the Specific location in the item form and details, the inherited value and note, the list's secondary text, search, and column, the detach choice, history after a container move, Ukrainian, and the phone card.
+- `test/e2e/database-indicator.spec.js` — the active database indicator: every page beside the folded rail, keyboard activation of Settings → Database and the return to the covered page, rename and refused rename, long names and labels as text, restore with the instance label, the unavailable state, phones, Ukrainian, and the dark mode.
 - `test/e2e/color-field.spec.js` — creating a Color field, the picker (presets, arrow keys, Custom HEX, Clear), details, the Items column with sorting and filters, templates, both color modes, and phones.
 - `test/e2e/lifecycle.spec.js` — Retire and Restore from the item page, the Active / All / Retired views of Items and Hierarchy, the container contents choice, checklists with retired items, the Dashboard link, phones, and Ukrainian.
 - `test/e2e/` — Playwright browser tests, their fixtures, shared helpers, and the run launcher.

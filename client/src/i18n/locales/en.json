@@ -15,6 +15,14 @@
     "hierarchy": "Hierarchy",
     "checklists": "Checklists"
   },
+  "databaseIndicator": {
+    "label": "Active database:",
+    "loading": "Loading database…",
+    "unavailable": "Database unavailable",
+    "instanceLabel": "Instance:",
+    "instance": "Instance: {label}",
+    "open": "Open database settings"
+  },
   "theme": {
     "colorMode": "Color mode",
     "light": "Light mode",

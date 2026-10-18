@@ -37,10 +37,13 @@ test('resets the inventory from the Danger Zone after reviewing the impact and c
   await addPhoto(request, camera.id);
   await addPhoto(request, lens.id);
   expect((await request.post('/api/item-templates', { data: { name: unique('Reset preset'), category_id: books.id } })).ok()).toBeTruthy();
+  const named = unique('Before reset');
+  expect((await request.put('/api/database/metadata', { data: { name: named } })).ok()).toBeTruthy();
 
   await page.goto('/data');
   // A fresh page can keep the pointer at (0, 0), which expands the folded sidebar over the content.
   await page.mouse.move(600, 400);
+  await expect(page.getByRole('link', { name: `Active database: ${named}`, exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Danger Zone' })).toBeVisible();
   await page.getByRole('button', { name: 'Reset Inventory Database' }).click();
 
@@ -64,6 +67,8 @@ test('resets the inventory from the Danger Zone after reviewing the impact and c
   await expect(page.getByText('Database reset completed.')).toBeVisible();
   await expect(page.getByText('Inventory Atlas Lite is ready for a fresh inventory.')).toBeVisible();
   await expect(page.getByText(/pre-reset-.*\.sqlite/)).toBeVisible();
+  // The fresh database's default name replaces the old one without waiting for the reload.
+  await expect(page.getByRole('link', { name: 'Active database: Inventory Atlas', exact: true })).toBeVisible();
 
   // The page reloads itself into the now empty items list.
   await page.waitForURL('**/items', { timeout: 15000 });

@@ -1,7 +1,7 @@
 # Specific location field with container inheritance
 
 - Completed: 2026-10-18
-- Version: 0.67.0
+- Version: 0.66.0 (released together with #41, the active database indicator)
 - Task: GitHub issue #42
 
 ## Summary
@@ -39,8 +39,9 @@ See `docs/features/specific-location.md`.
 - **Copy and docs:** new and changed messages in `en.json` and `uk.json` (the unused
   `itemForm.ownLocation` became `itemForm.ownPlacement`), `docs/HOW-TO.md` and `docs/HOW-TO.uk.md`,
   the new feature document and its index entry, the related feature documents, `AGENTS.md`, and the
-  0.67.0 release-history entry. The version is 0.67.0 because 0.66.0 is taken by the open pull
-  request #43.
+  0.66.0 release-history entry. The branch first claimed 0.67.0 while pull request #43 held 0.66.0;
+  both features then shipped as one release, so #42 joined the 0.66.0 version and its single
+  release-history entry.
 
 ## Verification
 
@@ -52,7 +53,7 @@ See `docs/features/specific-location.md`.
   templates, batch import, and the HTTP contract; existing tests were updated for schema version 12 and
   the new response fields.
 - `npm run build` — passed.
-- `APP_VERSION=0.67.0 npm run test:e2e` — 256 passed, including the landing and guide build. The new
+- `APP_VERSION=0.67.0 npm run test:e2e` (before the joint release) — 256 passed, including the landing and guide build. The new
   `test/e2e/location-detail.spec.js` covers the form, details, list, search, column, detach choice,
   history, Ukrainian, and the phone card; `getByLabel('Location')` in the item, duplicate, and
   template specs became exact, since it now also matched **Specific location**, and the Items search

@@ -1,8 +1,10 @@
 [
   {
-    "version": "0.67.0",
+    "version": "0.66.0",
     "date": "2026-10-18",
     "changes": [
+      "The name of the open database is now always shown at the top of every page: in a small line above the page on a computer, even with the sidebar folded, and under the product name on a phone. Select it to open Settings → Database. A new name, a restore, or a reset shows up there at once, so you always know which inventory you are working in.",
+      "Administrators can label an installation, for example TEST or PROD, with the optional ATLAS_INSTANCE_LABEL environment variable. The label appears beside the database name and belongs to the installation, not to the database, so a production backup restored into a test installation still says TEST. Without it, only the database name is shown.",
       "Items have a new optional Specific location next to Location, for the exact spot within it, such as Bedroom, wardrobe, top shelf. Location stays the broad place, and Stored inside stays the link to the container an item is kept in.",
       "Items stored inside a container show the Location and the Specific location of the outermost container, so moving the box to another shelf updates where everything inside it is shown, without changing their own saved values.",
       "The Items list shows the Specific location under Location, can show it as its own sortable column from Columns, and its search finds items by the Specific location they are shown at. Item details, history, templates, Duplicate, Batch Add Items, Restore, labels, checklists, and the Hierarchy include it too.",

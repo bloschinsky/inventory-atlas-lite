@@ -103,6 +103,7 @@ docker run -d --name inventory-atlas-lite \
   -p 3000:3000 \
   -v inventory-atlas-data:/data \
   -e DATA_DIR=/data \
+  -e ATLAS_INSTANCE_LABEL=PROD \
   ghcr.io/bloschinsky/inventory-atlas-lite:0.8.0
 ```
 
@@ -113,6 +114,13 @@ the same volume. The container reports itself as `DEPLOYMENT_TYPE=docker`, so **
 checks for newer releases but never updates the container itself; it is not given access to the
 Docker socket. See [`docs/features/self-update.md`](docs/features/self-update.md).
 
+`ATLAS_INSTANCE_LABEL` is optional: it shows a short label such as `TEST` or `PROD` beside the
+database name at the top of every page, so two containers with the same interface are easy to tell
+apart. Leave it out for no label. It belongs to the container, not to the database, so backups do not
+carry it and a restored database shows the label of the instance it was restored into. It is cut to
+24 characters and changes nothing else. See
+[`docs/features/active-database-indicator.md`](docs/features/active-database-indicator.md).
+
 ## Manual production run
 
 ```bash
@@ -120,7 +128,7 @@ npm run build
 npm start
 ```
 
-Open `http://SERVER_IP:3000`. Set `PORT` to change the port. Set `DATA_DIR` to place persistent data in another directory. These environment variables work on Linux/macOS and in PowerShell (`$env:PORT=3001`).
+Open `http://SERVER_IP:3000`. Set `PORT` to change the port. Set `DATA_DIR` to place persistent data in another directory. Set `ATLAS_INSTANCE_LABEL` (for example `TEST`) to label this instance beside the database name. These environment variables work on Linux/macOS and in PowerShell (`$env:PORT=3001`).
 
 `DEPLOYMENT_TYPE` tells the application how it was deployed: `proxmox-lxc`, `docker`, `manual`, or
 `development`. It decides whether **About** may offer to install an update, and only the Proxmox/LXC

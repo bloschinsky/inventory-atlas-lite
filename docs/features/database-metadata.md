@@ -18,6 +18,8 @@ machine. **Settings → Database** shows them and lets the user rename the datab
   such as a line break. Any other text is allowed and shown exactly as saved.
 - Timestamps are shown in the browser's time zone and the active interface language.
 - There is no database switching; the card always describes the database the server has open.
+- The application chrome names the open database on every page, and a saved name shows there at
+  once; see [Active database indicator](active-database-indicator.md).
 
 ## Storage
 

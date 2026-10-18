@@ -1069,6 +1069,16 @@ Dropbox or Google Drive sign-in shows Settings over the **Dashboard**, where clo
 The name and these details are stored inside the database file, so a backup carries them and a
 restore brings them back. A reset starts a new database with a new UUID and the default name.
 
+The name of the open database is always shown at the top of every page: in a small line above the
+page on a computer, and under the product name in the header on a phone. Select it to open
+**Settings → Database**. A long name is shortened there; hover over it to see the whole name. A saved
+name, a restore, or a reset shows up there at once.
+
+An administrator can also label the running installation, for example `TEST` or `PROD`, with the
+`ATLAS_INSTANCE_LABEL` environment variable (see the README). The label is shown beside the
+database name. It belongs to the installation, not to the database: it is not saved in backups, so a
+production backup restored into a test installation still shows `TEST`. It changes nothing else.
+
 ### Download a backup
 
 1. Open **Data / Backup**.

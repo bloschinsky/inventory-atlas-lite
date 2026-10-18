@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { forgetActiveDatabase, loadActiveDatabase } from '../activeDatabase.js';
 import { api, jsonOptions } from '../api.js';
 import { formatFileSize } from '../i18n/index.js';
 import BulkReplaceValue from '../components/BulkReplaceValue.vue';
@@ -85,7 +86,10 @@ async function restore() {
     success.value = result;
     validation.value = null;
     confirmation.value = '';
+    forgetActiveDatabase();
     await waitUntilReady();
+    // The restored database brings its own name; the indicator shows it before the reload below.
+    loadActiveDatabase().catch(() => {});
     // A full page load is the simplest way to drop every cached view of the replaced data.
     setTimeout(() => window.location.assign('/items'), 2000);
   } catch (caught) {
@@ -98,7 +102,9 @@ async function restore() {
 async function finishReset(result) {
   resetOpen.value = false;
   resetResult.value = result;
+  forgetActiveDatabase();
   await waitUntilReady();
+  loadActiveDatabase().catch(() => {});
   // Like a restore, a full page load drops every cached view of the removed data.
   setTimeout(() => window.location.assign('/items'), 2000);
 }

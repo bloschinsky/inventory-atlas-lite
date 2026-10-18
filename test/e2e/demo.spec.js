@@ -8,7 +8,7 @@ import { demoURL } from './environment.js';
   same Pages-style base path (see playwright.config.js). No API server is involved: every request a
   demo page makes must stay inside the static site.
 */
-const { items } = createDemoFixture('en');
+const { items, databaseName } = createDemoFixture('en');
 const ukrainian = createDemoFixture('uk');
 const uuidOf = demoItemUuid;
 const search = page => page.getByPlaceholder('Search name, description, serial number, transferred to, specific location or text fields…');
@@ -36,6 +36,8 @@ test('the demo opens the real interface on the canonical inventory without any s
   await expect(banner.getByRole('link', { name: 'Get Inventory Atlas Lite' })).toHaveAttribute('href', 'https://github.com/bloschinsky/inventory-atlas-lite');
 
   await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+  // The shell names the demo's own in-browser database.
+  await expect(page.getByRole('link', { name: `Active database: ${databaseName}`, exact: true })).toBeVisible();
   await expect(page.getByText(String(items.length), { exact: true }).first()).toBeVisible();
 
   await page.getByRole('link', { name: 'Items', exact: true }).click();
@@ -205,6 +207,8 @@ test.describe('in every language', () => {
     // Settings is a dialog over the page; the demo strip under it reports the new data once it closes.
     await page.getByRole('button', { name: 'Закрити налаштування' }).click();
     await expect(banner(page)).toContainText('Демо-дані оновлено українською мовою.');
+    // The seeded database replaced the old one, so the indicator names the new one.
+    await expect(page.getByRole('link', { name: `Активна база даних: ${ukrainian.databaseName}`, exact: true })).toBeVisible();
 
     await page.getByRole('link', { name: 'Предмети', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Предмети', level: 1 })).toBeVisible();
@@ -229,6 +233,7 @@ test.describe('in every language', () => {
     await page.getByLabel('Мова').selectOption('en');
     await page.getByRole('button', { name: 'Close settings' }).click();
     await expect(banner(page)).toContainText('Demo data was reset in English.');
+    await expect(page.getByRole('link', { name: `Active database: ${databaseName}`, exact: true })).toBeVisible();
     await page.getByRole('link', { name: 'Items', exact: true }).click();
     await expect(page.getByRole('link', { name: 'Camera Bag', exact: true }).first()).toBeVisible();
     await expect(page.getByRole('link', { name: byKey(ukrainian.items, 'camera-bag').name, exact: true })).toHaveCount(0);
