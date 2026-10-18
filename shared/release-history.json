@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.66.0",
+    "date": "2026-10-18",
+    "changes": [
+      "The name of the open database is now always shown at the top of every page: in a small line above the page on a computer, even with the sidebar folded, and under the product name on a phone. Select it to open Settings → Database. A new name, a restore, or a reset shows up there at once, so you always know which inventory you are working in.",
+      "Administrators can label an installation, for example TEST or PROD, with the optional ATLAS_INSTANCE_LABEL environment variable. The label appears beside the database name and belongs to the installation, not to the database, so a production backup restored into a test installation still says TEST. Without it, only the database name is shown."
+    ]
+  },
+  {
     "version": "0.65.0",
     "date": "2026-10-11",
     "changes": [

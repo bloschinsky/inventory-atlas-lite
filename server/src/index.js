@@ -1,10 +1,14 @@
 import { createApp } from './app.js';
+import { normalizeInstanceLabel } from './instanceLabel.js';
 
 // Process entry point: configuration from the environment, the HTTP listener, and shutdown.
 const port = Number(process.env.PORT || 3000);
 const isProduction = process.env.NODE_ENV === 'production' || process.argv.includes('--production');
 
-const { app, staging, cloudBackupScheduler } = createApp({ production: isProduction });
+const { app, staging, cloudBackupScheduler } = createApp({
+  production: isProduction,
+  instanceLabel: normalizeInstanceLabel(process.env.ATLAS_INSTANCE_LABEL)
+});
 
 // The logged port is the bound one, so PORT=0 (any free port, used by the tests) reports the real port.
 const server = app.listen(port, '0.0.0.0', () => console.log(`Inventory server listening on http://0.0.0.0:${server.address().port}`));

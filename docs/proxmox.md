@@ -144,6 +144,11 @@ CLOUD_BACKUP_REDIRECT_URI=https://inventory.example.ts.net/api/cloud-backup/oaut
 Updates never replace this file. See [`features/cloud-backup.md`](features/cloud-backup.md) for the
 provider setup and the redirect URI rules.
 
+To label this installation beside the database name, for example to tell a test container from the
+production one, add `ATLAS_INSTANCE_LABEL=TEST` to the same file and restart the service. The label
+belongs to the container, not to the database or its backups; see
+[`features/active-database-indicator.md`](features/active-database-indicator.md).
+
 ## Administration
 
 Open a shell in the container with `pct enter <CTID>` and run:

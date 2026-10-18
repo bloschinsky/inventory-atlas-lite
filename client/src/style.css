@@ -19,6 +19,24 @@ body.app-menu-open { overflow: hidden; }
 .app-brand-name { white-space: nowrap; }
 
 .app-menu-button { flex: 0 0 auto; width: 44px; height: 44px; }
+
+/* Active database indicator: one quiet line above the desktop page, a second header line on phones.
+   Long names are cut with an ellipsis; the link's tooltip carries the full name. */
+.app-database-bar { padding-top: .75rem; }
+.app-database-bar + .page-body { margin-top: .75rem; }
+.app-database-indicator { display: inline-flex; align-items: center; gap: .375rem; max-width: min(100%, 40rem); min-width: 0; min-height: 1.5rem; color: var(--tblr-secondary); font-size: .8125rem; line-height: 1.25; text-decoration: none; border-radius: var(--tblr-border-radius); vertical-align: top; }
+.app-database-indicator:hover { color: var(--tblr-primary); text-decoration: none; }
+.app-database-indicator:focus-visible { outline: 2px solid var(--tblr-primary); outline-offset: 2px; }
+.app-database-icon { flex: 0 0 auto; }
+.app-database-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--tblr-body-color); font-weight: 500; }
+.app-database-indicator:hover .app-database-name { color: inherit; }
+/* Neutral and outlined: the text itself says TEST or PROD, color never carries the meaning. */
+.app-instance-label { flex: 0 1 auto; min-width: 2rem; max-width: 12rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 1px solid var(--tblr-border-color); background: var(--tblr-bg-surface-secondary); color: var(--tblr-body-color); font-weight: 600; letter-spacing: .02em; }
+.app-mobile-identity { display: flex; flex: 1 1 0; flex-direction: column; align-items: flex-start; min-width: 0; }
+.app-mobile-identity .app-brand { max-width: 100%; }
+.app-mobile-identity .app-brand-name { overflow: hidden; text-overflow: ellipsis; }
+/* Lines up with the product name, past the 1.75rem mark and its gap. */
+.app-mobile-identity .app-database-indicator { max-width: calc(100% - 2.25rem); min-height: 1.25rem; margin-left: 2.25rem; font-size: .75rem; }
 .app-offcanvas { max-width: 82vw; }
 
 /* The two-button theme toggle is wider than the folded 4rem rail, so it only shows once the
