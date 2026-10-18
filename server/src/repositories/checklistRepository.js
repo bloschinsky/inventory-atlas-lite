@@ -26,14 +26,15 @@ export class ChecklistRepository {
 
   /*
     The entries in the user's order with what the picker and the details show about the linked item:
-    its current name, category, effective location, and first photo. A deleted item leaves a row with
+    its current name, category, effective location and Specific location, and first photo. A deleted item leaves a row with
     no link and only its name snapshot.
   */
   listEntries(checklistId) {
     return this.db.prepare(`
       ${ROOTS_CTE}
       SELECT ci.id, ci.item_id, ci.item_name_snapshot, i.uuid AS item_uuid, i.name AS item_name, i.lifecycle_status,
-        cat.name AS category_name, i.location, root.id AS root_id, root.location AS root_location,
+        cat.name AS category_name, i.location, i.location_detail, root.id AS root_id, root.location AS root_location,
+        root.location_detail AS root_location_detail,
         ${coverPhotoIdSql('i.id')} AS thumbnail_id
       FROM checklist_items ci
       LEFT JOIN items i ON i.id = ci.item_id

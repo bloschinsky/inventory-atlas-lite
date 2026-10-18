@@ -1,7 +1,7 @@
 import { AppError, errorBody } from './appError.js';
 import {
-  requiredText, validateConditionGrade, validateFieldValue, validatePurchaseDate, validatePurchasePrice, validateSerialNumber,
-  validateSourceUrl, validateTransferredTo
+  requiredText, validateConditionGrade, validateFieldValue, validateLocationDetail, validatePurchaseDate, validatePurchasePrice,
+  validateSerialNumber, validateSourceUrl, validateTransferredTo
 } from './itemValidation.js';
 
 /*
@@ -15,9 +15,11 @@ export const ITEM_IMPORT_VERSION = 1;
 export const MAX_BATCH_ITEMS = 100;
 
 const documentProperties = ['version', 'category', 'items'];
-const textProperties = ['name', 'conditionGrade', 'conditionNotes', 'location', 'description', 'transferredTo', 'purchaseDate', 'serialNumber', 'sourceUrl'];
+const textProperties = ['name', 'conditionGrade', 'conditionNotes', 'location', 'locationDetail', 'description', 'transferredTo', 'purchaseDate',
+  'serialNumber', 'sourceUrl'];
 /*
   `new` is the item's New flag. Version 1 documents without it stay valid: the flag is then false.
+  `locationDetail` is the optional Specific location; documents without it stay valid as well.
   `condition` is the legacy free-text Condition of older version 1 documents. It is still accepted and
   read as Condition Notes, never as a grade; the structured grade only comes from `conditionGrade`.
 */
@@ -37,6 +39,7 @@ export function itemImportTemplate(category, fields) {
     conditionGrade: null,
     conditionNotes: '',
     location: '',
+    locationDetail: '',
     description: '',
     transferredTo: '',
     purchaseDate: null,
@@ -185,6 +188,7 @@ export function reviewItemDraft(draft, fields) {
   check(errors, 'purchasePrice', () => validatePurchasePrice(draft.purchasePrice));
   check(errors, 'serialNumber', () => validateSerialNumber(draft.serialNumber));
   check(errors, 'transferredTo', () => validateTransferredTo(draft.transferredTo));
+  check(errors, 'locationDetail', () => validateLocationDetail(draft.locationDetail));
   check(errors, 'sourceUrl', () => validateSourceUrl(draft.sourceUrl));
   const fieldErrors = {};
   for (const field of fields) {
@@ -205,6 +209,7 @@ export const itemImportRequestBody = (draft, categoryId, fields) => ({
   condition_grade: draft.conditionGrade,
   condition_notes: draft.conditionNotes,
   location: draft.location,
+  location_detail: draft.locationDetail,
   transferred_to: draft.transferredTo,
   purchase_date: draft.purchaseDate,
   purchase_price: draft.purchasePrice,

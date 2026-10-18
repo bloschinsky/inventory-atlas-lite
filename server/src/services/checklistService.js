@@ -28,6 +28,8 @@ const presentEntry = entry => ({
   retired: entry.lifecycle_status === 'retired',
   category_name: entry.category_name ?? null,
   effective_location: entry.item_id === null ? null : presentLocation(entry.root_id ? entry.root_location : entry.location),
+  effective_location_detail: entry.item_id === null ? null
+    : presentLocation(entry.root_id ? entry.root_location_detail : entry.location_detail),
   thumbnail_id: entry.thumbnail_id ?? null
 });
 

@@ -11,7 +11,7 @@ import { demoURL } from './environment.js';
 const { items } = createDemoFixture('en');
 const ukrainian = createDemoFixture('uk');
 const uuidOf = demoItemUuid;
-const search = page => page.getByPlaceholder('Search name, description, serial number, transferred to or text fields…');
+const search = page => page.getByPlaceholder('Search name, description, serial number, transferred to, specific location or text fields…');
 
 // Every request of a demo page, so a test can prove that nothing reached a server API.
 const watchRequests = page => {

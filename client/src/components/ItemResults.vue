@@ -6,7 +6,7 @@ import ItemLifecycleBadge from './ItemLifecycleBadge.vue';
 import ItemNewStatusBadge from './ItemNewStatusBadge.vue';
 import ItemThumbnail from './ItemThumbnail.vue';
 import SortableHeader from './SortableHeader.vue';
-import { columnText } from '../itemColumns.js';
+import { columnText, placementText } from '../itemColumns.js';
 import { labelSelection, toggleLabelSelection } from '../labelSelection.js';
 
 /*
@@ -31,6 +31,11 @@ const showPhoto = computed(() => props.columns.some(column => column.key === 'ph
 const metaColumns = computed(() => props.columns.filter(column => column.key !== 'photo' && column.key !== 'name'));
 // The transfer badge beside the name stands in for the Transferred To column while that column is hidden.
 const showTransferBadge = computed(() => !props.columns.some(column => column.key === 'transferredTo'));
+// The effective Specific location joins the Location while its own column is hidden, so it is never shown twice.
+const detailWithLocation = computed(() => !props.columns.some(column => column.key === 'locationDetail'));
+const cardText = (item, column) => (column.key === 'location' && detailWithLocation.value
+  ? placementText(item.effective_location, item.effective_location_detail)
+  : columnText(item, column));
 
 // The table and the card list show the same data through the same routes; only the markup differs.
 const detailsRoute = item => `/items/${item.id}`;
@@ -146,6 +151,14 @@ const editRoute = item => `/items/${item.id}/edit`;
                   v-else-if="column.type === 'color'"
                   :value="item.custom_values?.[column.key]"
                 />
+                <template v-else-if="column.key === 'location' && detailWithLocation">
+                  {{ columnText(item, column) || '—' }}
+                  <span
+                    v-if="item.effective_location_detail"
+                    class="d-block meta-text text-truncate"
+                    :title="item.effective_location_detail"
+                  >{{ item.effective_location_detail }}</span>
+                </template>
                 <template v-else>
                   {{ columnText(item, column) || '—' }}
                 </template>
@@ -216,7 +229,7 @@ const editRoute = item => `/items/${item.id}/edit`;
               :key="column.key"
             >
               <p
-                v-if="columnText(item, column)"
+                v-if="cardText(item, column)"
                 class="meta-text mb-0"
               >
                 <ItemNewStatusBadge
@@ -243,7 +256,7 @@ const editRoute = item => `/items/${item.id}/edit`;
                     :value="item.custom_values?.[column.key]"
                   />
                   <template v-else>
-                    {{ columnText(item, column) }}
+                    {{ cardText(item, column) }}
                   </template>
                 </template>
               </p>

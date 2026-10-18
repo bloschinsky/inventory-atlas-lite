@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n';
 import { api } from '../api.js';
 import { capabilities } from '../capabilities.js';
 import { formatDate, formatDateTime, formatMoney } from '../i18n/index.js';
+import { placementText } from '../itemColumns.js';
 import AuditContentsDialog from '../components/AuditContentsDialog.vue';
 import ChecklistRunHistory from '../components/ChecklistRunHistory.vue';
 import ColorValue from '../components/ColorValue.vue';
@@ -332,7 +333,7 @@ onMounted(load);
                 class="col-sm-8 text-break"
                 :class="{ 'mb-0': !item.retirement.former_parent || item.parent }"
               >
-                {{ item.retirement.last_location || '—' }}
+                {{ placementText(item.retirement.last_location, item.retirement.last_location_detail) || '—' }}
               </dd>
               <template v-if="item.retirement.former_parent && !item.parent">
                 <dt class="col-sm-4">
@@ -395,6 +396,18 @@ onMounted(load);
                   class="d-block meta-text"
                 >
                   {{ $t('items.inheritedLocation') }}
+                </span>
+              </dd>
+              <dt class="col-sm-4">
+                {{ $t('items.fields.locationDetail') }}
+              </dt>
+              <dd class="col-sm-8 text-break">
+                {{ item.effective_location_detail || '—' }}
+                <span
+                  v-if="item.effective_location_source"
+                  class="d-block meta-text"
+                >
+                  {{ $t('items.inheritedLocationDetail') }}
                 </span>
               </dd>
               <!-- Written only by a completed verification run, never edited in the item form. -->

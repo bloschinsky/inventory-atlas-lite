@@ -20,7 +20,7 @@ let request = 0;
 
 const entryKey = entry => entry.id ?? `item-${entry.item_id}`;
 const isAdded = item => entries.value.some(entry => entry.item_id === item.id);
-const context = item => [item.category_name, item.effective_location, item.parent_name].filter(Boolean).join(' · ');
+const context = item => [item.category_name, item.effective_location, item.effective_location_detail, item.parent_name].filter(Boolean).join(' · ');
 
 async function find() {
   const current = ++request;
@@ -50,6 +50,7 @@ function add(item) {
     deleted: false,
     category_name: item.category_name,
     effective_location: item.effective_location,
+    effective_location_detail: item.effective_location_detail,
     thumbnail_id: item.thumbnail_id
   }];
 }
@@ -173,7 +174,7 @@ onBeforeUnmount(() => clearTimeout(timer));
               {{ $t('checklists.deletedItemHelp') }}
             </template>
             <template v-else>
-              {{ [entry.category_name, entry.effective_location].filter(Boolean).join(' · ') }}
+              {{ [entry.category_name, entry.effective_location, entry.effective_location_detail].filter(Boolean).join(' · ') }}
             </template>
           </div>
         </div>

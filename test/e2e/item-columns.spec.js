@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { createCategory, createItem, unique } from './helpers.js';
 
-const searchBox = page => page.getByPlaceholder('Search name, description, serial number, transferred to or text fields…');
+const searchBox = page => page.getByPlaceholder('Search name, description, serial number, transferred to, specific location or text fields…');
 
 // Two categories that each define a text field of the same unique name, so it becomes one column.
 async function mergedFieldCategories(request) {

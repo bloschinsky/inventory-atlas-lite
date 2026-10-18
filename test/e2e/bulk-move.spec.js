@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { createCategory, createItem, detail, unique } from './helpers.js';
 
-const SEARCH = 'Search name, description, serial number, transferred to or text fields…';
+const SEARCH = 'Search name, description, serial number, transferred to, specific location or text fields…';
 
 // Items that share one unique token, so a single search shows exactly this test's records.
 async function setup(request, prefix) {

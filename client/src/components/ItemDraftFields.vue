@@ -139,22 +139,6 @@ const conditionHelpOpen = ref(false);
         </select>
       </div>
       <ConditionHelpDialog v-model:open="conditionHelpOpen" />
-    </div><div class="col-md-6 mb-3">
-      <label
-        class="form-label"
-        for="item-location"
-      >{{ $t('items.fields.location') }}</label><input
-        id="item-location"
-        v-model="form.location"
-        class="form-control"
-        :placeholder="$t('itemForm.locationPlaceholder')"
-      >
-      <div
-        v-if="form.parent_item_id"
-        class="form-text"
-      >
-        {{ $t('items.inheritedLocation') }} {{ $t('itemForm.ownLocation') }}
-      </div>
     </div>
   </div>
   <div class="mb-3">
@@ -168,6 +152,44 @@ const conditionHelpOpen = ref(false);
       rows="2"
       :placeholder="$t('itemForm.conditionNotesPlaceholder')"
     />
+  </div>
+  <!-- The broad Location and the exact spot within it; Stored inside stays a separate container link. -->
+  <div class="row">
+    <div class="col-md-6 mb-3">
+      <label
+        class="form-label"
+        for="item-location"
+      >{{ $t('items.fields.location') }}</label><input
+        id="item-location"
+        v-model="form.location"
+        class="form-control"
+        :placeholder="$t('itemForm.locationPlaceholder')"
+      >
+    </div><div class="col-md-6 mb-3">
+      <label
+        class="form-label"
+        for="item-location-detail"
+      >{{ $t('items.fields.locationDetail') }}</label><input
+        id="item-location-detail"
+        v-model="form.location_detail"
+        class="form-control"
+        maxlength="255"
+        aria-describedby="item-location-detail-help"
+        :placeholder="$t('itemForm.locationDetailPlaceholder')"
+      >
+      <div
+        id="item-location-detail-help"
+        class="form-text"
+      >
+        {{ $t('itemForm.locationDetailHelp') }}
+      </div>
+    </div>
+    <div
+      v-if="form.parent_item_id"
+      class="col-12 mb-3 form-text mt-n2"
+    >
+      {{ $t('items.inheritedPlacement') }} {{ $t('itemForm.ownPlacement') }}
+    </div>
   </div>
   <div class="mb-3">
     <label

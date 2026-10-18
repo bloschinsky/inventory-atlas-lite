@@ -1,5 +1,15 @@
 [
   {
+    "version": "0.67.0",
+    "date": "2026-10-18",
+    "changes": [
+      "Items have a new optional Specific location next to Location, for the exact spot within it, such as Bedroom, wardrobe, top shelf. Location stays the broad place, and Stored inside stays the link to the container an item is kept in.",
+      "Items stored inside a container show the Location and the Specific location of the outermost container, so moving the box to another shelf updates where everything inside it is shown, without changing their own saved values.",
+      "The Items list shows the Specific location under Location, can show it as its own sortable column from Columns, and its search finds items by the Specific location they are shown at. Item details, history, templates, Duplicate, Batch Add Items, Restore, labels, checklists, and the Hierarchy include it too.",
+      "Taking an item out of its container now asks where it is for both fields together, so an outdated saved Specific location never silently comes back. Moves that change only the Specific location are recorded in the item history like other moves."
+    ]
+  },
+  {
     "version": "0.65.0",
     "date": "2026-10-11",
     "changes": [

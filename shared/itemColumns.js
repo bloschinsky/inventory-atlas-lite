@@ -12,6 +12,7 @@ export const CORE_ITEM_COLUMNS = [
   { key: 'conditionNotes', type: 'text', sortable: true, searchable: false, visibleByDefault: false },
   { key: 'isNew', type: 'boolean', sortable: true, searchable: false, visibleByDefault: false },
   { key: 'location', type: 'text', sortable: true, searchable: false, visibleByDefault: true },
+  { key: 'locationDetail', type: 'text', sortable: true, searchable: true, visibleByDefault: false },
   { key: 'storedInside', type: 'item', sortable: false, searchable: false, visibleByDefault: true },
   { key: 'purchaseDate', type: 'date', sortable: true, searchable: false, visibleByDefault: false },
   { key: 'purchasePrice', type: 'money', sortable: true, searchable: false, visibleByDefault: false },

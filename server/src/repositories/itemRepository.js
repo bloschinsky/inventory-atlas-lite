@@ -12,8 +12,18 @@ export const ROOTS_CTE = `
   )
 `;
 
-// The free-text item search matches any of these columns, plus every text-type custom field value.
-const SEARCH_COLUMNS = ['i.name', 'i.description', 'i.serial_number', 'i.transferred_to'];
+const ROOT_JOINS = 'LEFT JOIN roots ON roots.id = i.id LEFT JOIN items root ON root.id = roots.root_id';
+
+// The effective value of a placement column of `i` joined to its root: the root container's, or the
+// item's own when no root was found. Both the Location and the Specific location follow this rule.
+const effective = column => `CASE WHEN root.id IS NULL THEN i.${column} ELSE root.${column} END`;
+
+/*
+  The free-text item search matches any of these columns, plus every text-type custom field value.
+  The Specific location is the effective one, so an item inside a box matches the box's spot; the
+  item's own saved value, hidden while it is stored inside something, never matches.
+*/
+const SEARCH_COLUMNS = ['i.name', 'i.description', 'i.serial_number', 'i.transferred_to', effective('location_detail')];
 const CUSTOM_TEXT_SEARCH = `EXISTS (
   SELECT 1 FROM item_field_values sv JOIN custom_fields sf ON sf.id = sv.field_id
   WHERE sv.item_id = i.id AND sf.type = 'text' AND sv.value LIKE @search ESCAPE '\\'
@@ -23,7 +33,7 @@ const CUSTOM_TEXT_SEARCH = `EXISTS (
 const CONDITION_RANK = `CASE i.condition_grade ${CONDITION_GRADES.map((grade, index) => `WHEN '${grade}' THEN ${index + 1}`).join(' ')} END`;
 
 // The whitelist of core sort expressions. A request only ever selects a key here, never SQL. The
-// location is the effective one: the root container's, or the item's own when it has no root.
+// location and the Specific location are the effective ones: the root container's, or the item's own.
 // Condition sorts by rank, never by its key or label; Condition Notes is plain text.
 const CORE_SORT = {
   name: 'i.name COLLATE NOCASE',
@@ -31,7 +41,8 @@ const CORE_SORT = {
   condition: CONDITION_RANK,
   conditionNotes: "NULLIF(TRIM(i.condition_notes), '') COLLATE NOCASE",
   isNew: 'i.is_new',
-  location: "NULLIF(TRIM(CASE WHEN root.id IS NULL THEN i.location ELSE root.location END), '') COLLATE NOCASE",
+  location: `NULLIF(TRIM(${effective('location')}), '') COLLATE NOCASE`,
+  locationDetail: `NULLIF(TRIM(${effective('location_detail')}), '') COLLATE NOCASE`,
   purchaseDate: 'i.purchase_date',
   purchasePrice: 'CAST(i.purchase_price_amount AS REAL)',
   serialNumber: 'i.serial_number COLLATE NOCASE',
@@ -81,7 +92,7 @@ const lifecycleWhere = lifecycle => (Object.hasOwn(LIFECYCLE_WHERE, lifecycle) ?
 
 // The retirement columns every item response carries; the service folds them into one object.
 const RETIREMENT_COLUMNS = `i.lifecycle_status, i.retired_at, i.retired_reason, i.retired_recipient, i.retired_note,
-  i.retired_location_snapshot, i.retired_parent_uuid_snapshot, i.retired_parent_name_snapshot`;
+  i.retired_location_snapshot, i.retired_location_detail_snapshot, i.retired_parent_uuid_snapshot, i.retired_parent_name_snapshot`;
 
 export class ItemRepository {
   constructor(db) {
@@ -109,11 +120,11 @@ export class ItemRepository {
   // keeps a damaged row from looping forever even though cycles cannot be created through the API.
   findRoot(id) {
     return this.db.prepare(`
-      WITH RECURSIVE chain(id, uuid, name, location, parent_item_id, depth) AS (
-        SELECT id, uuid, name, location, parent_item_id, 0 FROM items WHERE id = @id
-        UNION ALL SELECT p.id, p.uuid, p.name, p.location, p.parent_item_id, chain.depth + 1
+      WITH RECURSIVE chain(id, uuid, name, location, location_detail, parent_item_id, depth) AS (
+        SELECT id, uuid, name, location, location_detail, parent_item_id, 0 FROM items WHERE id = @id
+        UNION ALL SELECT p.id, p.uuid, p.name, p.location, p.location_detail, p.parent_item_id, chain.depth + 1
         FROM items p JOIN chain ON p.id = chain.parent_item_id WHERE chain.depth < 100
-      ) SELECT id, uuid, name, location FROM chain ORDER BY depth DESC LIMIT 1
+      ) SELECT id, uuid, name, location, location_detail FROM chain ORDER BY depth DESC LIMIT 1
     `).get({ id });
   }
 
@@ -190,13 +201,12 @@ export class ItemRepository {
     const where = lifecycleWhere(lifecycle);
     return this.db.prepare(`
       ${ROOTS_CTE}
-      SELECT i.id, i.uuid, i.name, i.parent_item_id AS parent_id, i.location, i.lifecycle_status,
+      SELECT i.id, i.uuid, i.name, i.parent_item_id AS parent_id, i.location, i.location_detail, i.lifecycle_status,
         c.id AS category_id, c.name AS category_name,
-        root.id AS root_id, root.location AS root_location,
+        root.id AS root_id, root.location AS root_location, root.location_detail AS root_location_detail,
         ${coverPhotoIdSql('i.id')} AS thumbnail_id, COALESCE(kids.children_count, 0) AS children_count
       FROM items i JOIN categories c ON c.id = i.category_id
-      LEFT JOIN roots ON roots.id = i.id
-      LEFT JOIN items root ON root.id = roots.root_id
+      ${ROOT_JOINS}
       LEFT JOIN (SELECT parent_item_id, COUNT(*) AS children_count FROM items
         WHERE parent_item_id IS NOT NULL GROUP BY parent_item_id) kids ON kids.parent_item_id = i.id
       ${where ? `WHERE ${where}` : ''}
@@ -248,7 +258,10 @@ export class ItemRepository {
       }
     }
     const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
-    const total = this.db.prepare(`SELECT COUNT(*) AS count FROM items i ${clause}`).get(params).count;
+    // Only a search reads the effective Specific location, so only a search makes the count walk the roots.
+    const total = this.db.prepare(search
+      ? `${ROOTS_CTE} SELECT COUNT(*) AS count FROM items i ${ROOT_JOINS} ${clause}`
+      : `SELECT COUNT(*) AS count FROM items i ${clause}`).get(params).count;
     let column = CORE_SORT[sort.core] || CORE_SORT.name;
     if (sort.fieldIds) {
       column = CUSTOM_SORT[sort.type] || CUSTOM_SORT.text;
@@ -257,16 +270,16 @@ export class ItemRepository {
     const order = direction === 'desc' ? 'DESC' : 'ASC';
     const rows = this.db.prepare(`
       ${ROOTS_CTE}
-      SELECT i.id, i.uuid, i.name, i.is_new, i.condition_grade, i.condition_notes, i.location, i.purchase_date,
+      SELECT i.id, i.uuid, i.name, i.is_new, i.condition_grade, i.condition_notes, i.location, i.location_detail, i.purchase_date,
         i.purchase_price_amount, i.purchase_price_currency, i.serial_number, i.transferred_to, i.created_at, i.updated_at,
         ${RETIREMENT_COLUMNS}, c.id AS category_id, c.name AS category_name,
         parent.id AS parent_id, parent.name AS parent_name,
         root.id AS root_id, root.uuid AS root_uuid, root.name AS root_name, root.location AS root_location,
+        root.location_detail AS root_location_detail,
         ${coverPhotoIdSql('i.id')} AS thumbnail_id
       FROM items i JOIN categories c ON c.id = i.category_id
       LEFT JOIN items parent ON parent.id = i.parent_item_id
-      LEFT JOIN roots ON roots.id = i.id
-      LEFT JOIN items root ON root.id = roots.root_id ${clause}
+      ${ROOT_JOINS} ${clause}
       ORDER BY (${column}) IS NULL, ${column} ${order}, i.id ASC LIMIT @limit OFFSET @offset
     `).all({ ...params, limit, offset });
     return { rows, total };
@@ -285,11 +298,10 @@ export class ItemRepository {
   findLabels(uuids) {
     return this.db.prepare(`
       ${ROOTS_CTE}
-      SELECT i.uuid, i.name, i.description, i.location, c.name AS category_name,
-        root.id AS root_id, root.location AS root_location
+      SELECT i.uuid, i.name, i.description, i.location, i.location_detail, c.name AS category_name,
+        root.id AS root_id, root.location AS root_location, root.location_detail AS root_location_detail
       FROM items i JOIN categories c ON c.id = i.category_id
-      LEFT JOIN roots ON roots.id = i.id
-      LEFT JOIN items root ON root.id = roots.root_id
+      ${ROOT_JOINS}
       WHERE i.uuid IN (SELECT value FROM json_each(?))
     `).all(JSON.stringify(uuids));
   }
@@ -318,21 +330,22 @@ export class ItemRepository {
 
   insert(attributes) {
     return this.db.prepare(`
-      INSERT INTO items (uuid, name, category_id, description, is_new, condition_grade, condition_notes, location, purchase_date,
-        purchase_price_amount, purchase_price_currency, serial_number, transferred_to, parent_item_id, source_url)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO items (uuid, name, category_id, description, is_new, condition_grade, condition_notes, location, location_detail,
+        purchase_date, purchase_price_amount, purchase_price_currency, serial_number, transferred_to, parent_item_id, source_url)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(crypto.randomUUID(), attributes.name, attributes.categoryId, attributes.description, attributes.isNew ? 1 : 0,
-      attributes.conditionGrade, attributes.conditionNotes, attributes.location, attributes.purchaseDate, attributes.purchasePriceAmount,
+      attributes.conditionGrade, attributes.conditionNotes, attributes.location, attributes.locationDetail, attributes.purchaseDate,
+      attributes.purchasePriceAmount,
       attributes.purchasePriceCurrency, attributes.serialNumber, attributes.transferredTo, attributes.parentId, attributes.sourceUrl).lastInsertRowid;
   }
 
   update(id, attributes) {
     this.db.prepare(`
       UPDATE items SET name = ?, category_id = ?, description = ?, is_new = ?, condition_grade = ?, condition_notes = ?, location = ?,
-        purchase_date = ?, purchase_price_amount = ?, purchase_price_currency = ?, serial_number = ?,
+        location_detail = ?, purchase_date = ?, purchase_price_amount = ?, purchase_price_currency = ?, serial_number = ?,
         transferred_to = ?, parent_item_id = ?, source_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
     `).run(attributes.name, attributes.categoryId, attributes.description, attributes.isNew ? 1 : 0,
-      attributes.conditionGrade, attributes.conditionNotes, attributes.location,
+      attributes.conditionGrade, attributes.conditionNotes, attributes.location, attributes.locationDetail,
       attributes.purchaseDate, attributes.purchasePriceAmount, attributes.purchasePriceCurrency,
       attributes.serialNumber, attributes.transferredTo, attributes.parentId, attributes.sourceUrl, id);
   }
@@ -361,25 +374,25 @@ export class ItemRepository {
 
   /*
     Retires the given subtree in one statement. Each item keeps a text snapshot of its effective
-    location and direct container as they are right now (an UPDATE reads the rows before it writes
-    them); the subtree root alone leaves its container, so the contents stay nested inside it. The
-    saved `location` of every item is left exactly as it was.
+    location, Specific location, and direct container as they are right now (an UPDATE reads the rows
+    before it writes them); the subtree root alone leaves its container, so the contents stay nested
+    inside it. The saved `location` and `location_detail` of every item are left exactly as they were.
   */
   retire(ids, rootId, { retiredAt, reason, recipient, note }) {
     return this.db.prepare(`
       ${ROOTS_CTE}
       UPDATE items SET lifecycle_status = 'retired', retired_at = @retiredAt, retired_reason = @reason,
         retired_recipient = @recipient, retired_note = @note,
-        retired_location_snapshot = snapshot.location, retired_parent_uuid_snapshot = snapshot.parent_uuid,
-        retired_parent_name_snapshot = snapshot.parent_name,
+        retired_location_snapshot = snapshot.location, retired_location_detail_snapshot = snapshot.location_detail,
+        retired_parent_uuid_snapshot = snapshot.parent_uuid, retired_parent_name_snapshot = snapshot.parent_name,
         parent_item_id = CASE WHEN items.id = @rootId THEN NULL ELSE items.parent_item_id END,
         updated_at = CURRENT_TIMESTAMP
       FROM (
-        SELECT i.id, NULLIF(TRIM(CASE WHEN root.id IS NULL THEN i.location ELSE root.location END), '') AS location,
+        SELECT i.id, NULLIF(TRIM(${effective('location')}), '') AS location,
+          NULLIF(TRIM(${effective('location_detail')}), '') AS location_detail,
           parent.uuid AS parent_uuid, parent.name AS parent_name
         FROM items i
-        LEFT JOIN roots ON roots.id = i.id
-        LEFT JOIN items root ON root.id = roots.root_id
+        ${ROOT_JOINS}
         LEFT JOIN items parent ON parent.id = i.parent_item_id
         WHERE i.id IN (SELECT value FROM json_each(@ids))
       ) snapshot
@@ -389,19 +402,24 @@ export class ItemRepository {
 
   /*
     Makes the given retired subtree active again and clears its retirement data. Only the subtree
-    root changes its container (`parentId`, or none) and, when `location` is given, its saved location;
-    the nesting inside the subtree and every other column stay as they are.
+    root changes its container (`parentId`, or none) and, when `location` or `locationDetail` is given,
+    its saved location or Specific location; the nesting inside the subtree and every other column stay
+    as they are.
   */
-  restore(ids, rootId, { parentId, location }) {
+  restore(ids, rootId, { parentId, location, locationDetail }) {
     return this.db.prepare(`
       UPDATE items SET lifecycle_status = 'active', retired_at = NULL, retired_reason = NULL, retired_recipient = NULL,
-        retired_note = NULL, retired_location_snapshot = NULL, retired_parent_uuid_snapshot = NULL,
-        retired_parent_name_snapshot = NULL,
+        retired_note = NULL, retired_location_snapshot = NULL, retired_location_detail_snapshot = NULL,
+        retired_parent_uuid_snapshot = NULL, retired_parent_name_snapshot = NULL,
         parent_item_id = CASE WHEN id = @rootId THEN @parentId ELSE parent_item_id END,
         location = CASE WHEN id = @rootId AND @setLocation THEN @location ELSE location END,
+        location_detail = CASE WHEN id = @rootId AND @setLocationDetail THEN @locationDetail ELSE location_detail END,
         updated_at = CURRENT_TIMESTAMP
       WHERE id IN (SELECT value FROM json_each(@ids)) AND lifecycle_status = 'retired'
-    `).run({ ids: JSON.stringify(ids), rootId, parentId, setLocation: location === undefined ? 0 : 1, location: location ?? null }).changes;
+    `).run({
+      ids: JSON.stringify(ids), rootId, parentId, setLocation: location === undefined ? 0 : 1, location: location ?? null,
+      setLocationDetail: locationDetail === undefined ? 0 : 1, locationDetail: locationDetail ?? null
+    }).changes;
   }
 
   countChildren(id) {

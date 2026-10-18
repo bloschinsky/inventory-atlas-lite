@@ -19,7 +19,7 @@ test('creates an item, finds it in the list, and edits its values', async ({ pag
   await expect(page.getByLabel('Condition', { exact: true }).locator('option:checked')).toHaveText('Not set');
   await page.getByLabel('Condition', { exact: true }).selectOption('good');
   await page.getByLabel('Condition Notes').fill('Light brassing');
-  await page.getByLabel('Location').fill('Shelf A');
+  await page.getByLabel('Location', { exact: true }).fill('Shelf A');
   await page.getByLabel('Purchase Date').fill('2024-11-18');
   await page.getByLabel('Purchase Price', { exact: true }).fill('49.99');
   await page.getByLabel('Purchase Price currency').selectOption('USD');
@@ -35,11 +35,11 @@ test('creates an item, finds it in the list, and edits its values', async ({ pag
 
   // Find the saved item again through the list search and the category filter.
   await page.getByRole('link', { name: 'Items', exact: true }).click();
-  await page.getByPlaceholder('Search name, description, serial number, transferred to or text fields…').fill('000123ABC-09');
+  await page.getByPlaceholder('Search name, description, serial number, transferred to, specific location or text fields…').fill('000123ABC-09');
   await expect(page.getByRole('link', { name: itemName, exact: true })).toBeVisible();
   await expect(page.getByRole('row')).toHaveCount(2);
 
-  await page.getByPlaceholder('Search name, description, serial number, transferred to or text fields…').fill('');
+  await page.getByPlaceholder('Search name, description, serial number, transferred to, specific location or text fields…').fill('');
   await page.getByLabel('Category').selectOption({ label: categoryName });
   await expect(page.getByRole('link', { name: itemName, exact: true })).toBeVisible();
 
@@ -90,7 +90,7 @@ test('deletes an item and removes it from the list', async ({ page, request }) =
   await request.post('/api/items', { data: { name: itemName, category_id: category.id } });
 
   await page.goto('/items');
-  await page.getByPlaceholder('Search name, description, serial number, transferred to or text fields…').fill(itemName);
+  await page.getByPlaceholder('Search name, description, serial number, transferred to, specific location or text fields…').fill(itemName);
   await page.getByRole('link', { name: itemName, exact: true }).click();
   await expect(page.getByRole('heading', { name: itemName })).toBeVisible();
 
@@ -98,7 +98,7 @@ test('deletes an item and removes it from the list', async ({ page, request }) =
   await page.getByRole('button', { name: 'Delete' }).click();
 
   await expect(page).toHaveURL('/items');
-  await page.getByPlaceholder('Search name, description, serial number, transferred to or text fields…').fill(itemName);
+  await page.getByPlaceholder('Search name, description, serial number, transferred to, specific location or text fields…').fill(itemName);
   await expect(page.getByText('No matching items')).toBeVisible();
 });
 
@@ -112,7 +112,7 @@ test('records where an item was transferred, suggests it again, and clears it', 
   await page.goto('/items/new');
   await page.getByLabel('Name *').fill(itemName);
   await page.getByLabel('Category *').selectOption({ label: categoryName });
-  await page.getByLabel('Location').fill('Garage');
+  await page.getByLabel('Location', { exact: true }).fill('Garage');
   await page.getByLabel('Transferred To').fill(person);
   await page.getByRole('button', { name: 'Save item' }).click();
 
@@ -122,7 +122,7 @@ test('records where an item was transferred, suggests it again, and clears it', 
 
   // The item list shows the same badge, and the normal search finds the item by that value.
   await page.getByRole('link', { name: 'Items', exact: true }).click();
-  await page.getByPlaceholder('Search name, description, serial number, transferred to or text fields…').fill(person);
+  await page.getByPlaceholder('Search name, description, serial number, transferred to, specific location or text fields…').fill(person);
   await expect(page.getByRole('link', { name: itemName, exact: true })).toBeVisible();
   await expect(badge.filter({ visible: true })).toBeVisible();
 
@@ -136,7 +136,7 @@ test('records where an item was transferred, suggests it again, and clears it', 
   // Clearing the field removes the badge and leaves the location untouched.
   await page.goto('/items');
   await page.mouse.move(600, 400);
-  await page.getByPlaceholder('Search name, description, serial number, transferred to or text fields…').fill(itemName);
+  await page.getByPlaceholder('Search name, description, serial number, transferred to, specific location or text fields…').fill(itemName);
   await page.getByRole('link', { name: `Edit ${itemName}` }).filter({ visible: true }).click();
   await expect(page.getByLabel('Transferred To')).toHaveValue(person);
   await page.getByLabel('Transferred To').fill('');
