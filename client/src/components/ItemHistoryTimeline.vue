@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { IconArchive, IconArrowBackUp, IconBox, IconMapPin, IconRestore, IconUserEdit, IconUserShare } from '@tabler/icons-vue';
 import { api } from '../api.js';
 import { formatDate, formatDateTime } from '../i18n/index.js';
+import { placementText } from '../itemColumns.js';
 
 /*
   The activity timeline of one item, newest first. `preview` shows only the most recent changes;
@@ -69,9 +70,13 @@ function title(event) {
   return t(`history.events.${event.type}`);
 }
 
+// A recorded location with the Specific location that was effective beside it, if any.
+const fromPlacement = event => placementText(event.from, event.from_detail) || t('history.noLocation');
+const toPlacement = event => placementText(event.to, event.to_detail) || t('history.noLocation');
+
 // The before and after values of a change; loans describe their period instead.
 function change(event) {
-  if (event.type === 'location_changed') return [event.from || t('history.noLocation'), event.to || t('history.noLocation')];
+  if (event.type === 'location_changed') return [fromPlacement(event), toPlacement(event)];
   if (event.type === 'recipient_changed') return [event.from || t('history.nobody'), event.to || t('history.nobody')];
   return null;
 }
@@ -205,7 +210,7 @@ defineExpose({ reload: () => load() });
               </p>
               <template v-if="event.type === 'retired'">
                 <p class="mb-1 text-break">
-                  {{ $t('history.lastLocation', { location: event.from || $t('history.noLocation') }) }}
+                  {{ $t('history.lastLocation', { location: fromPlacement(event) }) }}
                 </p>
                 <p
                   v-if="event.from_item"
@@ -216,7 +221,7 @@ defineExpose({ reload: () => load() });
               </template>
               <template v-else-if="event.type === 'restored'">
                 <p class="mb-1 text-break">
-                  {{ $t('history.restoredTo', { location: event.to || $t('history.noLocation') }) }}
+                  {{ $t('history.restoredTo', { location: toPlacement(event) }) }}
                 </p>
                 <p
                   v-if="event.to_item"

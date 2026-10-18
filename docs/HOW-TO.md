@@ -90,8 +90,9 @@ the English names.
    and any other values you want.
 4. Select photos at the bottom of the form. They are uploaded when you save the item; the first one
    is the cover.
-5. Fill in **Location** (free text, such as `Garage`) and, if the item sits inside another item you
-   have already recorded, set **Stored inside**.
+5. Fill in **Location** (free text, such as `Garage`), optionally **Specific location** for the exact
+   spot within it (such as `Shelf 2, left`), and, if the item sits inside another item you have
+   already recorded, set **Stored inside**.
 6. Press **Save item**. You land on the item page; check that it also appears on **Items** and that
    the search finds it by name.
 7. Open **Data / Backup** and press **Download backup** to get your first copy of the database.
@@ -166,6 +167,7 @@ saved.
 | **Category** | A group of items, such as `Cameras`. Category names are unique and case-insensitive. |
 | **Custom field** | An extra field that belongs to one category. Types: Text, Number, Date, Boolean, Color. Items of that category get the field in their form. |
 | **Location** | A free-text note about where the object physically is, such as `Garage` or `Shelf 2`. An item stored inside another item is displayed at the location of its outermost container instead. |
+| **Specific location** | An optional free-text note about the exact spot within the location, such as `Bedroom, wardrobe, top shelf`. An item stored inside another item is displayed at the specific location of its outermost container instead. |
 | **Stored inside** | A real link to another item that contains this one, such as a lens inside `Box A`. |
 | **Transferred To** | A free-text note about who or where an item went when it was lent, given away, sold, or otherwise transferred, such as `Vasyl` or `Sold via OLX`. It is informational only and never changes the location. |
 | **QR code** | A code generated from the item's UUID, shown on request from the item page and printed on labels. It identifies the record and contains no address of your server. **Scan QR** reads it back and opens the item. |
@@ -186,7 +188,10 @@ saved.
 every view shows the location of the outermost container of the chain, through as many levels as
 there are. The item's own **Location** text is never overwritten: the form still edits it, and it
 becomes visible again as soon as the item is taken out of its container. If no container in the
-chain has location text, the location is displayed as empty.
+chain has location text, the location is displayed as empty. **Specific location** follows the same
+outermost container: when that container has none, none is shown, even if an item in between has
+one. Moving `Box A` to another shelf therefore changes where everything inside it is shown, without
+changing anything saved on those items.
 
 A custom field belongs to one category only. `Brand` in `Cameras` and `Brand` in `Lenses` are two
 separate fields, and they keep separate value suggestions.
@@ -322,7 +327,8 @@ unusable, the message explains why and your description stays in the modal for a
    set**; the chosen grade is shown as its colored badge. Press the info button beside **Condition**
    to open **Condition grading**, which explains every grade; close it with **Close**, ×, Escape, or a
    click outside. Put details such as *Small crack near the left hinge* in **Condition Notes**.
-   Optionally fill in **Condition**, **Condition Notes**, **Location**, **Transferred To**, **Purchase Date**, **Purchase
+   Optionally fill in **Condition**, **Condition Notes**, **Location**, **Specific location** (the exact
+   spot within the location, up to 255 characters), **Transferred To**, **Purchase Date**, **Purchase
    Price**, **Serial Number**, **Source URL**, **Stored inside**, and **Description**. Purchase Price has separate amount and currency
    controls; clear the amount to leave the whole price unspecified. **Source URL** keeps the product page the item
    was described from as a full `http://` or `https://` address; the item page shows it as a link that
@@ -491,7 +497,8 @@ audits, and deleting the container keeps its audits readable.
    elsewhere. `"new": true` marks an item as new; leave it out or set `false` otherwise. Only
    `true` or `false` is accepted. `"conditionGrade"` is one of `"excellent"`, `"good"`, `"fair"`,
    `"poor"`, `"broken"`, or `null`, and `"conditionNotes"` is free text. `"sourceUrl"` is the optional
-   `http://` or `https://` product page address. Older documents with a
+   `http://` or `https://` product page address, and `"locationDetail"` the optional **Specific
+   location**. Older documents with a
    `"condition"` text are still accepted: that text becomes the Condition Notes, never a grade. A
    Color field takes `{ "key": "brown", "hex": "#795548" }` — one of the twelve color keys
    (`black`, `white`, `gray`, `brown`, `beige`, `red`, `orange`, `yellow`, `green`, `blue`,
@@ -641,10 +648,11 @@ and a retired item cannot be lent.
    - **Move the contents out first** retires nothing. Move the contents elsewhere (open each one, or
      select them on **Items** and use **Move to…**), then retire the container.
 4. Press **Retire**. The item page shows a gray **Retired** badge and a **Retirement** card with the
-   reason, the date, the recipient and note, the **Last location** it had, and its **Former container**.
+   reason, the date, the recipient and note, the **Last location** it had (with its specific location),
+   and its **Former container**.
    These are a snapshot: renaming or moving the former container later does not change them.
 5. A retired item leaves its container, so active items are never hidden inside something that is
-   gone. Its own saved **Location** is kept unchanged.
+   gone. Its own saved **Location** and **Specific location** are kept unchanged.
 
 Retired items are hidden by default. On **Items** and **Hierarchy**, choose **Retired** under
 **Inventory** to see only them, or **All** to see everything; **Active** is the default. The Dashboard
@@ -652,7 +660,7 @@ counts only active items and shows how many are retired under the total. Direct 
 retired item still open it.
 
 To bring an item back, open it and press **Restore to inventory**. Choose where it goes: **On its own,
-at a location** (its saved location is filled in; change or clear it) or **Inside an active container**
+at a location** (its saved location and specific location are filled in; change or clear them) or **Inside an active container**
 (search and pick one). It is never put back into its former container automatically. Everything that
 was retired inside it comes back with it and stays inside it. Restoring keeps the same item, UUID,
 photos, and details, and clears the retirement details.
@@ -757,8 +765,10 @@ enables the live camera.
 
 1. Open **Items**.
 2. Type into **Search**. The search runs as you type and matches the item name, description, serial
-   number, **Transferred To**, and the values of **text** custom fields — whether or not their column
-   is shown. It does not match condition, condition notes, location, or number, date, yes/no, and color fields.
+   number, **Transferred To**, the displayed **Specific location** (for an item inside a container, the
+   container's), and the values of **text** custom fields — whether or not their column is shown. It
+   does not match condition, condition notes, the broad location, or number, date, yes/no, and color
+   fields.
 3. Narrow the list with **Category** (**All categories** by default) and **Condition** (**All
    conditions**, one grade, or **Not set**). **Inventory** chooses **Active** (the default), **All**,
    or **Retired** items; the choice is kept while you move around during this browser session, and a
@@ -768,13 +778,15 @@ enables the live camera.
    colors**, one of the twelve colors, **Custom** (every custom shade, whatever its HEX code), or
    **Not set** (items of the categories with that field that have no color).
 4. Choose what the list shows with **Columns**: tick or untick Photo, Category, Condition, Condition
-   Notes, New, Location,
+   Notes, New, Location, Specific location,
    **Stored inside**, Purchase Date, Purchase Price, Serial Number, Transferred To, Created, Updated,
    and your custom fields. **Name** always stays. Custom fields with the same name and type in
    different categories share one column, so one **Brand** column shows the brand of every category
    that has it; two fields with the same name but different types are listed separately with their
    type in brackets. **Reset to default** returns to Photo, Name, Category, Condition, Location, and
-   **Stored inside**. The choice and the sort are remembered in this browser only.
+   **Stored inside**. The choice and the sort are remembered in this browser only. **Specific
+   location** is off by default; while its column is hidden, the table shows it in small text under
+   **Location**, and the phone card adds it to the **Location** line after a dot.
 5. On a wide screen, click a column header to sort by it; the first click sorts ascending, the next
    one descending, and an arrow marks the sorted column. Photo and **Stored inside** do not sort.
    **Condition** sorts by grade from Broken to Excellent (or back), with **Not set** always last. A
@@ -788,7 +800,8 @@ enables the live camera.
    photo if that column is on, the category, and every other chosen field as a labelled line (empty
    ones are left out), plus the same two buttons. Phones sort with the **Sort** box above the list,
    which offers the visible sortable columns, and the arrow button beside it, which reverses the
-   order. The location shown is the inherited one for items that sit inside a container. While the
+   order. The location and specific location shown are the inherited ones for items that sit inside a
+   container. While the
    **Transferred To** column is hidden, an item with a transfer shows a **Transferred to: …** badge
    under its name. The checkbox in front of each item selects it for label printing.
 7. The list shows 12 items per page; use **Previous** and **Next** below the results. The total count
@@ -837,7 +850,8 @@ all of them, newest first, with **All**, **Locations**, **Transfers**, and **Lif
 History is recorded by the server when a change is saved, from the moment History was installed;
 nothing earlier is invented.
 
-- **Location changed** — the location you see for the item changed, from → to. This includes moves
+- **Location changed** — the location or specific location you see for the item changed, from → to;
+  both are shown, joined by a dot. This includes moves
   of a container it is in, at any depth: such entries say *Moved together with …*, linking to the
   container that moved. Editing the own saved location of an item that shows its container's location
   is not a move, because what you see stays the same; neither are changes of letter case or spaces.
@@ -863,12 +877,13 @@ deleted since then is marked *(deleted)*. Deleting an item permanently deletes i
 3. Click the result you want. It appears as a badge above the search box.
 4. Press **Clear** next to the badge to take the item out of its container and make it top-level
    again. The form then asks *Where is this item now?*: choose where it was (the container's
-   location), its own saved location (if it differs), **Another location** (then type it in
-   **Location**), or **No location**. Saving is not possible until you choose, so an old saved
-   location never silently becomes the item's place.
+   location and specific location), its own saved location and specific location (if they differ),
+   **Another location** (then type it in **Location** and **Specific location**), or **No location**.
+   The choice fills both fields together. Saving is not possible until you choose, so an old saved
+   location or specific location never silently becomes the item's place.
 5. Save. The item page now shows a **Storage** card with **Stored inside** linking to the container,
-   and the container's page lists the item under **Contents**. **Location** on the item page now
-   shows the container's location with a short note that it is inherited.
+   and the container's page lists the item under **Contents**. **Location** and **Specific location**
+   on the item page now show the container's values with a short note that they are inherited.
 
 Nesting can go several levels deep. An item cannot be placed inside itself or inside anything it
 already contains; the server rejects such a move with an error message.

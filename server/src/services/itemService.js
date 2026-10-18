@@ -9,11 +9,12 @@ import { COLOR_KEYS } from '../../../shared/colors.js';
 import { LIFECYCLE_FILTERS } from '../../../shared/itemLifecycle.js';
 
 const RETIREMENT_COLUMNS = ['retired_at', 'retired_reason', 'retired_recipient', 'retired_note', 'retired_location_snapshot',
-  'retired_parent_uuid_snapshot', 'retired_parent_name_snapshot'];
+  'retired_location_detail_snapshot', 'retired_parent_uuid_snapshot', 'retired_parent_name_snapshot'];
 
 /*
-  The retirement columns as one object, or null for an active item. The location and the former
-  container are snapshots taken when the item was retired; they never follow later changes.
+  The retirement columns as one object, or null for an active item. The location, the Specific
+  location, and the former container are snapshots taken when the item was retired; they never follow
+  later changes.
 */
 const retirementResponse = row => (row.lifecycle_status === 'retired' ? {
   reason: row.retired_reason,
@@ -21,6 +22,7 @@ const retirementResponse = row => (row.lifecycle_status === 'retired' ? {
   recipient: row.retired_recipient,
   note: row.retired_note,
   last_location: row.retired_location_snapshot,
+  last_location_detail: row.retired_location_detail_snapshot,
   former_parent: row.retired_parent_name_snapshot === null ? null
     : { uuid: row.retired_parent_uuid_snapshot, name: row.retired_parent_name_snapshot }
 } : null);
@@ -49,18 +51,23 @@ export const readLifecycleFilter = value => {
 
 export const presentLocation = value => (value && value.trim() ? value : null);
 
-// A nested item is displayed at the location of the top-most container that holds it, while its own
-// saved location stays untouched in the database. `root` is that container, or the item itself.
+/*
+  A nested item is displayed at the location and Specific location of the top-most container that
+  holds it, while its own saved values stay untouched in the database. `root` is that container, or
+  the item itself. Both come from the same root, so a root without a Specific location shows none,
+  even when an item between them has one; `effective_location_source` names that root for both.
+*/
 const withEffectiveLocation = (item, root) => ({
   ...item,
   effective_location: presentLocation(root ? root.location : item.location),
+  effective_location_detail: presentLocation(root ? root.location_detail : item.location_detail),
   effective_location_source: root && root.id !== item.id ? { id: root.id, uuid: root.uuid, name: root.name } : null
 });
 
 // The list query labels every row with its root in one pass, so no extra query is made per item.
 const listedItemResponse = row => {
-  const { root_id: id, root_uuid: uuid, root_name: name, root_location: location, ...rest } = row;
-  return withEffectiveLocation(itemResponse(rest), id ? { id, uuid, name, location } : null);
+  const { root_id: id, root_uuid: uuid, root_name: name, root_location: location, root_location_detail: detail, ...rest } = row;
+  return withEffectiveLocation(itemResponse(rest), id ? { id, uuid, name, location, location_detail: detail } : null);
 };
 
 // Generous enough for a whole shelf of boxes, small enough that the browser can still lay out and
@@ -142,10 +149,14 @@ export class ItemService {
   */
   hierarchy(query = {}) {
     return {
-      items: this.items.listHierarchy(readLifecycleFilter(query.lifecycle)).map(({ location, root_id: rootId, root_location: rootLocation, ...node }) => ({
-        ...node,
-        effective_location: presentLocation(rootId ? rootLocation : location)
-      }))
+      items: this.items.listHierarchy(readLifecycleFilter(query.lifecycle)).map(row => {
+        const { location, location_detail: detail, root_id: rootId, root_location: rootLocation, root_location_detail: rootDetail, ...node } = row;
+        return {
+          ...node,
+          effective_location: presentLocation(rootId ? rootLocation : location),
+          effective_location_detail: presentLocation(rootId ? rootDetail : detail)
+        };
+      })
     };
   }
 
@@ -186,7 +197,8 @@ export class ItemService {
       name: row.name,
       description: row.description,
       category_name: row.category_name,
-      effective_location: presentLocation(row.root_id ? row.root_location : row.location)
+      effective_location: presentLocation(row.root_id ? row.root_location : row.location),
+      effective_location_detail: presentLocation(row.root_id ? row.root_location_detail : row.location_detail)
     }]));
     return {
       items: requested.filter(uuid => found.has(uuid)).map(uuid => found.get(uuid)),
@@ -322,7 +334,9 @@ export class ItemService {
     const parentId = this.resolveParentId(body.parent_item_id, item);
     return {
       values,
-      attributes: { name, categoryId, isNew: validateIsNew(body.is_new), ...readItemDetails(body), sourceUrl: validateSourceUrl(body.source_url), parentId }
+      attributes: {
+        name, categoryId, isNew: validateIsNew(body.is_new), ...readItemDetails(body, item), sourceUrl: validateSourceUrl(body.source_url), parentId
+      }
     };
   }
 

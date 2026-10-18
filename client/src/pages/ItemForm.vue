@@ -10,6 +10,7 @@ import UrlImportDialog from '../components/UrlImportDialog.vue';
 import { takePendingAiDraft } from '../aiDraft.js';
 import { capabilities, loadCapabilities } from '../capabilities.js';
 import { draftFromItem, useItemDraftForm } from '../itemDraft.js';
+import { placementText } from '../itemColumns.js';
 
 const route = useRoute(); const router = useRouter(); const { t } = useI18n();
 const editing = computed(() => Boolean(route.params.id));
@@ -35,26 +36,32 @@ function selectParent(candidate) {
 }
 
 /*
-  Taking an item out of its container ends the inherited location, and its own saved location may
-  be long out of date. Saving then requires an explicit choice of where the item physically is, so a
-  stale value never silently becomes the new truth. `stored` is what the item had when it was loaded.
+  Taking an item out of its container ends the inherited location and Specific location, and its own
+  saved values may be long out of date. Saving then requires an explicit choice of where the item
+  physically is, and the choice sets both fields together, so a stale value never silently becomes
+  the new truth. `stored` is what the item had when it was loaded: `effective` and `own` are each a
+  { location, detail } pair.
 */
 const stored = ref(null); const placement = ref('');
 const detaching = computed(() => Boolean(stored.value?.parent && !form.parent_item_id));
-const sameLocation = (a, b) => (a ?? '').trim().toLowerCase() === (b ?? '').trim().toLowerCase();
+const placementKey = ({ location, detail }) => [location, detail].map(value => (value ?? '').trim().toLowerCase()).join('\n');
 const placementOptions = computed(() => {
   if (!detaching.value) return [];
   const { effective, own } = stored.value;
+  const effectiveText = placementText(effective.location, effective.detail);
+  const ownText = placementText(own.location?.trim(), own.detail?.trim());
   return [
-    effective && { value: 'keep', label: t('itemForm.detach.keep', { location: effective }) },
-    own?.trim() && !sameLocation(own, effective) && { value: 'saved', label: t('itemForm.detach.saved', { location: own }) },
+    effectiveText && { value: 'keep', label: t('itemForm.detach.keep', { location: effectiveText }) },
+    ownText && placementKey(own) !== placementKey(effective) && { value: 'saved', label: t('itemForm.detach.saved', { location: ownText }) },
     { value: 'other', label: t('itemForm.detach.other') },
     { value: 'none', label: t('itemForm.detach.none') }
   ].filter(Boolean);
 });
 async function choosePlacement(value) {
   placement.value = value;
-  form.location = { keep: stored.value.effective, saved: stored.value.own }[value] ?? '';
+  const chosen = { keep: stored.value.effective, saved: stored.value.own }[value];
+  form.location = chosen?.location ?? '';
+  form.location_detail = chosen?.detail ?? '';
   if (value === 'other') {
     await nextTick();
     document.getElementById('item-location')?.focus();
@@ -167,7 +174,11 @@ async function loadDraft() {
     form.parent_item_id = item.parent_item_id;
     itemId.value = item.id; parent.value = item.parent; itemLifecycle.value = item.lifecycle_status;
     savedSourceUrl.value = item.source_url || '';
-    stored.value = { parent: item.parent, effective: item.effective_location, own: item.location };
+    stored.value = {
+      parent: item.parent,
+      effective: { location: item.effective_location, detail: item.effective_location_detail },
+      own: { location: item.location, detail: item.location_detail }
+    };
     photos.value = item.photos.map(savedPhoto);
     savedOrder.value = item.photos.map(photo => photo.id);
     return draftFromItem(item);

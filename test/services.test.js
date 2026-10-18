@@ -171,7 +171,8 @@ test('batch item import creates every item through the regular item rules', () =
   refused(batch([{ name: 'X', uuid: '00000000-0000-4000-8000-000000000000' }]),
     { code: 'IMPORT_ITEM_UNSUPPORTED_PROPERTY', params: {
       index: 1, property: 'uuid',
-      supported: 'name, conditionGrade, conditionNotes, location, description, transferredTo, purchaseDate, serialNumber, sourceUrl, new, purchasePrice, customFields, condition'
+      supported: 'name, conditionGrade, conditionNotes, location, locationDetail, description, transferredTo, purchaseDate, serialNumber, sourceUrl, new, '
+        + 'purchasePrice, customFields, condition'
     } });
   refused(batch([{ name: 'X', customFields: { Colour: 'Red' } }]), { code: 'IMPORT_UNKNOWN_CUSTOM_FIELD', params: { index: 1, field: 'Colour', known: 'Brand, Ports, Released, Working' } });
   refused(batch([{ name: 'X' }, { name: 'Y', customFields: { Ports: 'many' } }]), inItem(2, 'INVALID_CUSTOM_FIELD_NUMBER', { field: 'Ports' }));
@@ -668,8 +669,8 @@ test('label data is returned in selection order with the effective location and 
   const { categoryService, itemService } = build();
   const boxes = categoryService.create({ name: 'Boxes' });
   const cables = categoryService.create({ name: 'Cables' });
-  const crate = itemService.create({ name: 'Crate', category_id: boxes.id, description: 'Blue lid', location: 'Garage' });
-  const cable = itemService.create({ name: 'USB cable', category_id: cables.id, location: 'Desk', parent_item_id: crate.id });
+  const crate = itemService.create({ name: 'Crate', category_id: boxes.id, description: 'Blue lid', location: 'Garage', location_detail: 'Shelf 2' });
+  const cable = itemService.create({ name: 'USB cable', category_id: cables.id, location: 'Desk', location_detail: 'Drawer', parent_item_id: crate.id });
   const loose = itemService.create({ name: 'Loose cable', category_id: cables.id });
   const deleted = itemService.create({ name: 'Gone', category_id: cables.id });
   itemService.remove(deleted.id);
@@ -677,9 +678,9 @@ test('label data is returned in selection order with the effective location and 
   const result = itemService.labels({ uuids: [cable.uuid, ` ${crate.uuid.toUpperCase()} `, deleted.uuid, loose.uuid, cable.uuid] });
   assert.deepEqual(result, {
     items: [
-      { uuid: cable.uuid, name: 'USB cable', description: null, category_name: 'Cables', effective_location: 'Garage' },
-      { uuid: crate.uuid, name: 'Crate', description: 'Blue lid', category_name: 'Boxes', effective_location: 'Garage' },
-      { uuid: loose.uuid, name: 'Loose cable', description: null, category_name: 'Cables', effective_location: null }
+      { uuid: cable.uuid, name: 'USB cable', description: null, category_name: 'Cables', effective_location: 'Garage', effective_location_detail: 'Shelf 2' },
+      { uuid: crate.uuid, name: 'Crate', description: 'Blue lid', category_name: 'Boxes', effective_location: 'Garage', effective_location_detail: 'Shelf 2' },
+      { uuid: loose.uuid, name: 'Loose cable', description: null, category_name: 'Cables', effective_location: null, effective_location_detail: null }
     ],
     missing: [deleted.uuid]
   });
@@ -760,7 +761,7 @@ test('using a template yields an item draft that survives deleted fields and blo
   const rpm = customFieldService.create(drives.id, { name: 'RPM', type: 'number' });
   const template = itemTemplateService.create({
     name: 'IronWolf 4 TB', category_id: drives.id, item_name: 'Seagate IronWolf 4 TB', condition_grade: 'excellent', condition_notes: 'Sealed',
-    transferred_to: 'Office', field_values: { [capacity.id]: '4 TB', [rpm.id]: '5400' }
+    location_detail: 'Rack, bay 3', transferred_to: 'Office', field_values: { [capacity.id]: '4 TB', [rpm.id]: '5400' }
   });
 
   const draft = itemTemplateService.itemDraft(template.id);
@@ -769,7 +770,7 @@ test('using a template yields an item draft that survives deleted fields and blo
     categoryId: drives.id,
     baseFields: {
       name: 'Seagate IronWolf 4 TB', description: null, is_new: null, condition_grade: 'excellent', condition_notes: 'Sealed', location: null,
-      purchase_date: null,
+      location_detail: 'Rack, bay 3', purchase_date: null,
       purchase_price: null, serial_number: null, transferred_to: 'Office'
     },
     dynamicFields: { [capacity.id]: '4 TB', [rpm.id]: '5400' },

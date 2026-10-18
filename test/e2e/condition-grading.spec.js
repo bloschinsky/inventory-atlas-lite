@@ -159,7 +159,7 @@ test.describe('narrow screens', () => {
     await createItem(request, { name: itemName, category_id: category.id, condition_grade: 'fair' });
 
     await page.goto('/items');
-    await page.getByPlaceholder('Search name, description, serial number, transferred to or text fields…').fill(itemName);
+    await page.getByPlaceholder('Search name, description, serial number, transferred to, specific location or text fields…').fill(itemName);
     const card = page.getByRole('listitem').filter({ has: page.getByRole('link', { name: itemName, exact: true }) });
     await expect(card.locator('.badge', { hasText: 'Fair' })).toHaveClass(/\bcondition-badge-yellow\b/);
 

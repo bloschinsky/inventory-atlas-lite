@@ -23,7 +23,7 @@ test('uploads a photo with a new item and shows it', async ({ page, request }) =
   await expect.poll(() => photo.evaluate(image => image.naturalWidth)).toBeGreaterThan(0);
 
   await page.getByRole('link', { name: 'Items', exact: true }).click();
-  await page.getByPlaceholder('Search name, description, serial number, transferred to or text fields…').fill(itemName);
+  await page.getByPlaceholder('Search name, description, serial number, transferred to, specific location or text fields…').fill(itemName);
   await expect(page.getByRole('img', { name: itemName })).toBeVisible();
 });
 
@@ -221,7 +221,7 @@ test('the cover is chosen and photos are reordered in the item form', async ({ p
   await page.getByRole('button', { name: 'Next photo' }).click();
   await expect(slide(page, 1)).toBeVisible();
   await page.goto('/items');
-  await page.getByPlaceholder('Search name, description, serial number, transferred to or text fields…').fill(item.name);
+  await page.getByPlaceholder('Search name, description, serial number, transferred to, specific location or text fields…').fill(item.name);
   await expect(page.getByRole('img', { name: item.name })).toHaveAttribute('src', `/api/photos/${third}`);
 
   // Left and right moves, also from the keyboard, persist across a reload.

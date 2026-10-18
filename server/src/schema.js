@@ -20,11 +20,13 @@ import { FIELD_TYPES } from '../../shared/fieldDefinitions.js';
   the retirement columns with their snapshots of the last effective location and former container,
   and checklist_runs.skipped_retired_count; version 9 added the item activity history tables
   (item_operations, item_events, item_transfers); version 10 allowed the color type in custom_fields.type;
-  version 11 added items.source_url, the optional product page an item was described from.
+  version 11 added items.source_url, the optional product page an item was described from; version 12
+  added the optional Specific location: items.location_detail with its retirement snapshot,
+  item_templates.location_detail, and the from_detail/to_detail of item_events.
   user_version stays the source of truth: database_metadata.schema_version mirrors it and is written
   in the same transaction, so the two never disagree.
 */
-export const SCHEMA_VERSION = 11;
+export const SCHEMA_VERSION = 12;
 
 export const DEFAULT_DATABASE_NAME = 'Inventory Atlas';
 
@@ -60,6 +62,7 @@ const LIFECYCLE_COLUMNS = [
   ['retired_recipient', 'TEXT'],
   ['retired_note', 'TEXT'],
   ['retired_location_snapshot', 'TEXT'],
+  ['retired_location_detail_snapshot', 'TEXT'],
   ['retired_parent_uuid_snapshot', 'TEXT'],
   ['retired_parent_name_snapshot', 'TEXT']
 ];
@@ -83,12 +86,12 @@ export const CURRENT_SCHEMA = {
   ...CORE_SCHEMA,
   categories: [...CORE_SCHEMA.categories, 'created_at', 'updated_at'],
   items: [...CORE_SCHEMA.items, 'condition_grade', 'condition_notes', 'purchase_date', 'purchase_price_amount', 'purchase_price_currency',
-    'serial_number', 'transferred_to', 'parent_item_id', 'last_verified_at', 'is_new', 'source_url', 'created_at', 'updated_at',
-    ...LIFECYCLE_COLUMNS.map(([name]) => name)],
+    'serial_number', 'transferred_to', 'parent_item_id', 'last_verified_at', 'is_new', 'source_url', 'location_detail', 'created_at',
+    'updated_at', ...LIFECYCLE_COLUMNS.map(([name]) => name)],
   custom_fields: [...CORE_SCHEMA.custom_fields, 'created_at', 'updated_at'],
   item_photos: [...CORE_SCHEMA.item_photos, 'sort_order', 'created_at'],
-  item_templates: ['id', 'name', 'category_id', 'item_name', 'description', 'condition_grade', 'condition_notes', 'location', 'purchase_date',
-    'purchase_price_amount', 'purchase_price_currency', 'serial_number', 'transferred_to', 'is_new', 'created_at', 'updated_at'],
+  item_templates: ['id', 'name', 'category_id', 'item_name', 'description', 'condition_grade', 'condition_notes', 'location', 'location_detail',
+    'purchase_date', 'purchase_price_amount', 'purchase_price_currency', 'serial_number', 'transferred_to', 'is_new', 'created_at', 'updated_at'],
   item_template_field_values: ['id', 'template_id', 'field_id', 'value'],
   database_metadata: ['id', 'database_uuid', 'name', 'created_at', 'last_updated_at', 'schema_version'],
   checklists: ['id', 'name', 'description', 'mode', 'created_at', 'updated_at'],
@@ -98,7 +101,7 @@ export const CURRENT_SCHEMA = {
   checklist_run_items: ['id', 'run_id', 'item_id', 'item_name_snapshot', 'position', 'status', 'checked_at', 'note'],
   item_operations: ['id', 'type', 'created_at'],
   item_events: ['id', 'operation_id', 'item_id', 'event_type', 'occurred_at', 'from_value', 'to_value', 'from_item_id',
-    'from_item_name', 'to_item_id', 'to_item_name', 'via_item_id', 'via_item_name', 'transfer_id'],
+    'from_item_name', 'to_item_id', 'to_item_name', 'via_item_id', 'via_item_name', 'transfer_id', 'from_detail', 'to_detail'],
   item_transfers: ['id', 'item_id', 'recipient', 'transferred_at', 'expected_return_on', 'returned_at', 'note', 'return_note', 'created_at']
 };
 
@@ -213,6 +216,7 @@ const migrate = (connection, rebuild) => connection.transaction(() => {
       condition_grade TEXT ${CONDITION_GRADE_CHECK},
       condition_notes TEXT,
       location TEXT,
+      location_detail TEXT,
       purchase_date TEXT,
       purchase_price_amount TEXT,
       purchase_price_currency TEXT,
@@ -263,6 +267,7 @@ const migrate = (connection, rebuild) => connection.transaction(() => {
       condition_grade TEXT ${CONDITION_GRADE_CHECK},
       condition_notes TEXT,
       location TEXT,
+      location_detail TEXT,
       purchase_date TEXT,
       purchase_price_amount TEXT,
       purchase_price_currency TEXT,
@@ -349,7 +354,8 @@ const migrate = (connection, rebuild) => connection.transaction(() => {
       type TEXT NOT NULL CHECK(type IN (${quotedList(ITEM_OPERATION_TYPES)})),
       created_at TEXT NOT NULL
     );
-    -- from_/to_value hold the effective location or the recipient; from_/to_item_* the direct container;
+    -- from_/to_value hold the effective location or the recipient, and from_/to_detail the effective
+    -- Specific location beside that location; from_/to_item_* the direct container;
     -- via_item_* the moved container a descendant travelled with; transfer_id the loan period.
     CREATE TABLE IF NOT EXISTS item_events (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -365,7 +371,9 @@ const migrate = (connection, rebuild) => connection.transaction(() => {
       to_item_name TEXT,
       via_item_id INTEGER,
       via_item_name TEXT,
-      transfer_id INTEGER
+      transfer_id INTEGER,
+      from_detail TEXT,
+      to_detail TEXT
     );
     -- One row per temporary loan; returned_at stays NULL while it is open.
     CREATE TABLE IF NOT EXISTS item_transfers (
@@ -412,7 +420,9 @@ const migrate = (connection, rebuild) => connection.transaction(() => {
     // Version 8: every existing item becomes active, with no retirement data.
     ...LIFECYCLE_COLUMNS,
     // Version 11: existing items have no source page.
-    ['source_url', 'TEXT']
+    ['source_url', 'TEXT'],
+    // Version 12: existing items have no Specific location.
+    ['location_detail', 'TEXT']
   ];
   for (const [name, definition] of missingItemColumns) {
     if (!itemColumns.has(name)) connection.exec(`ALTER TABLE items ADD COLUMN ${name} ${definition}`);
@@ -420,6 +430,12 @@ const migrate = (connection, rebuild) => connection.transaction(() => {
   // Existing templates keep no New default.
   const templateColumns = new Set(connection.prepare('PRAGMA table_info(item_templates)').all().map(column => column.name));
   if (!templateColumns.has('is_new')) connection.exec('ALTER TABLE item_templates ADD COLUMN is_new INTEGER CHECK (is_new IN (0, 1))');
+  if (!templateColumns.has('location_detail')) connection.exec('ALTER TABLE item_templates ADD COLUMN location_detail TEXT');
+  // Version 12: events recorded before it named no Specific location, so theirs stays unset.
+  const eventColumns = new Set(connection.prepare('PRAGMA table_info(item_events)').all().map(column => column.name));
+  for (const name of ['from_detail', 'to_detail']) {
+    if (!eventColumns.has(name)) connection.exec(`ALTER TABLE item_events ADD COLUMN ${name} TEXT`);
+  }
   /*
     Version 7: the old free-text condition keeps every value, untouched, as condition_notes. The new
     grade starts unset: free text such as "Good" is never parsed into a grade.

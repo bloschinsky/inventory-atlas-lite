@@ -298,6 +298,21 @@ onBeforeUnmount(() => {
                 <div class="col-md-6">
                   <label
                     class="form-label"
+                    :for="inputId(index, 'location-detail')"
+                  >{{ $t('items.fields.locationDetail') }}</label>
+                  <input
+                    :id="inputId(index, 'location-detail')"
+                    v-model="draft.locationDetail"
+                    class="form-control"
+                    :class="{ 'is-invalid': reviews[index].locationDetail }"
+                  >
+                  <div class="invalid-feedback">
+                    {{ translateError(reviews[index].locationDetail) }}
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label
+                    class="form-label"
                     :for="inputId(index, 'transferred-to')"
                   >{{ $t('items.fields.transferredTo') }}</label>
                   <input

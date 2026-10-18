@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { api, jsonOptions } from '../api.js';
+import { placementText } from '../itemColumns.js';
 import ItemQrCode from '../components/ItemQrCode.vue';
 import PageHeader from '../components/PageHeader.vue';
 import { IconPrinter } from '@tabler/icons-vue';
@@ -251,10 +252,10 @@ onMounted(async () => {
                 {{ item.category_name }}
               </p>
               <p
-                v-if="show.location && item.effective_location"
+                v-if="show.location && (item.effective_location || item.effective_location_detail)"
                 class="print-label-line"
               >
-                {{ item.effective_location }}
+                {{ placementText(item.effective_location, item.effective_location_detail) }}
               </p>
             </div>
           </div>

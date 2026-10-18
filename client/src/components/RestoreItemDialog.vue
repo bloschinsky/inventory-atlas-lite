@@ -1,17 +1,20 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { api, jsonOptions } from '../api.js';
+import { placementText } from '../itemColumns.js';
 
 /*
   Restore to inventory: the retired item, with everything stored in it, becomes active again. It is
   never put back into its former container on its own: the user chooses to keep it on its own at a
-  saved location (prefilled with the location it already has) or to put it inside an active container.
+  saved location and Specific location (prefilled with the ones it already has) or to put it inside
+  an active container.
 */
 const props = defineProps({ item: { type: Object, required: true } });
 const emit = defineEmits(['close', 'restored']);
 
 const placement = ref('own');
 const location = ref(props.item.location ?? '');
+const locationDetail = ref(props.item.location_detail ?? '');
 const search = ref('');
 const candidates = ref([]);
 const destination = ref(null);
@@ -39,7 +42,7 @@ async function submit() {
   saving.value = true; error.value = '';
   const body = placement.value === 'container'
     ? { status: 'active', parent_item_id: destination.value.id }
-    : { status: 'active', parent_item_id: null, location: location.value };
+    : { status: 'active', parent_item_id: null, location: location.value, location_detail: locationDetail.value };
   try {
     emit('restored', await api(`/api/items/${props.item.id}/lifecycle`, jsonOptions('PATCH', body)));
   } catch (e) { error.value = e.message; } finally { saving.value = false; }
@@ -101,7 +104,7 @@ onBeforeUnmount(() => {
             class="meta-text text-break"
           >
             {{ $t('lifecycle.restore.before', {
-              location: retirement.last_location || $t('lifecycle.noLocation'),
+              location: placementText(retirement.last_location, retirement.last_location_detail) || $t('lifecycle.noLocation'),
               container: retirement.former_parent?.name || $t('lifecycle.noContainer')
             }) }}
           </p>
@@ -139,6 +142,18 @@ onBeforeUnmount(() => {
               class="form-control"
             >
             <small class="form-hint">{{ $t('lifecycle.restore.locationHelp') }}</small>
+            <label
+              class="form-label mt-3"
+              for="restore-location-detail"
+            >{{ $t('items.fields.locationDetail') }}</label>
+            <input
+              id="restore-location-detail"
+              v-model="locationDetail"
+              type="text"
+              class="form-control"
+              maxlength="255"
+              :placeholder="$t('itemForm.locationDetailPlaceholder')"
+            >
           </div>
           <template v-else>
             <label

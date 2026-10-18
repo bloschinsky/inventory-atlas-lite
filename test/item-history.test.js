@@ -441,8 +441,11 @@ test('detectChanges names the highest changed item above one reached from severa
     { id: 1, top_id: 1, top_name: 'Box', depth: 0, parent_item_id: null, parent_name: null, location, transferred_to: null }
   ];
   assert.deepEqual(detectChanges(rows('Garage'), rows('Attic')), [
-    { item_id: 2, event_type: 'location_changed', from_value: 'Garage', to_value: 'Attic', via_item_id: 1, via_item_name: 'Box' },
-    { item_id: 1, event_type: 'location_changed', from_value: 'Garage', to_value: 'Attic' }
+    {
+      item_id: 2, event_type: 'location_changed', from_value: 'Garage', to_value: 'Attic', from_detail: null, to_detail: null,
+      via_item_id: 1, via_item_name: 'Box'
+    },
+    { item_id: 1, event_type: 'location_changed', from_value: 'Garage', to_value: 'Attic', from_detail: null, to_detail: null }
   ]);
 });
 

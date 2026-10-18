@@ -1,7 +1,7 @@
 # Active database indicator and optional instance label
 
 - Completed: 2026-10-18
-- Version: 0.66.0
+- Version: 0.66.0 (released together with #42, the Specific location)
 - Task: GitHub issue #41
 
 ## Summary

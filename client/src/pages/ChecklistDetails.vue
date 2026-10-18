@@ -171,7 +171,7 @@ onMounted(load);
                   class="me-1"
                   status="retired"
                 />
-                {{ [entry.category_name, entry.effective_location].filter(Boolean).join(' · ') }}
+                {{ [entry.category_name, entry.effective_location, entry.effective_location_detail].filter(Boolean).join(' · ') }}
               </template>
             </div>
           </div>

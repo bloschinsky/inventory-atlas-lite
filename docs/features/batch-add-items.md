@@ -39,7 +39,7 @@ base64 data, or call any AI service; photos are added to each item afterwards th
 - `category` must name the category selected in the dialog (compared trimmed and case-insensitively).
   The selected category is authoritative; the document cannot redirect items to another one.
 - `items` must contain between 1 and 100 entries.
-- An item accepts only `name`, `new`, `conditionGrade`, `conditionNotes`, `location`, `description`,
+- An item accepts only `name`, `new`, `conditionGrade`, `conditionNotes`, `location`, `locationDetail`, `description`,
   `transferredTo`, `purchaseDate`, `purchasePrice` (`amount` and `currency` only), `serialNumber`,
   `customFields`, and the legacy `condition`.
   All of them are optional in the document; the name is required before the batch can be created.

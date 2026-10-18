@@ -15,7 +15,7 @@ export class ItemHistoryRepository {
   /*
     What history compares before and after a change: every item at or below the given ones, with its
     direct container, its recipient, and the top-level container (`root`) that provides its effective
-    location. `top_id` is the given item the row was reached from and `depth` how far below it the row
+    location and Specific location. `top_id` is the given item the row was reached from and `depth` how far below it the row
     is; overlapping ids reach an item more than once, and the caller keeps its nearest top. UNION and
     the depth guards end every walk even over a damaged row that forms a cycle.
   */
@@ -38,7 +38,7 @@ export class ItemHistoryRepository {
           WHERE tree.depth < 100
         )
       SELECT tree.id, tree.top_id, top.name AS top_name, tree.depth, i.transferred_to,
-        i.parent_item_id, parent.name AS parent_name, root.location
+        i.parent_item_id, parent.name AS parent_name, root.location, root.location_detail
       FROM tree JOIN items i ON i.id = tree.id
       JOIN items top ON top.id = tree.top_id
       JOIN items root ON root.id = tree.root_id
@@ -52,15 +52,15 @@ export class ItemHistoryRepository {
 
   insertEvents(operationId, events) {
     const statement = this.db.prepare(`
-      INSERT INTO item_events (operation_id, item_id, event_type, occurred_at, from_value, to_value, from_item_id, from_item_name,
-        to_item_id, to_item_name, via_item_id, via_item_name, transfer_id)
-      VALUES (@operationId, @item_id, @event_type, @occurred_at, @from_value, @to_value, @from_item_id, @from_item_name,
-        @to_item_id, @to_item_name, @via_item_id, @via_item_name, @transfer_id)
+      INSERT INTO item_events (operation_id, item_id, event_type, occurred_at, from_value, to_value, from_detail, to_detail,
+        from_item_id, from_item_name, to_item_id, to_item_name, via_item_id, via_item_name, transfer_id)
+      VALUES (@operationId, @item_id, @event_type, @occurred_at, @from_value, @to_value, @from_detail, @to_detail,
+        @from_item_id, @from_item_name, @to_item_id, @to_item_name, @via_item_id, @via_item_name, @transfer_id)
     `);
     for (const event of events) {
       statement.run({
-        from_value: null, to_value: null, from_item_id: null, from_item_name: null, to_item_id: null, to_item_name: null,
-        via_item_id: null, via_item_name: null, transfer_id: null, ...event, operationId
+        from_value: null, to_value: null, from_detail: null, to_detail: null, from_item_id: null, from_item_name: null,
+        to_item_id: null, to_item_name: null, via_item_id: null, via_item_name: null, transfer_id: null, ...event, operationId
       });
     }
   }
@@ -85,6 +85,7 @@ export class ItemHistoryRepository {
     }
     return this.db.prepare(`
       SELECT e.id, e.operation_id, o.type AS operation_type, e.event_type, e.occurred_at, e.from_value, e.to_value,
+        e.from_detail, e.to_detail,
         e.from_item_id, e.from_item_name, from_item.id IS NOT NULL AS from_item_exists,
         e.to_item_id, e.to_item_name, to_item.id IS NOT NULL AS to_item_exists,
         e.via_item_id, e.via_item_name, via_item.id IS NOT NULL AS via_item_exists,

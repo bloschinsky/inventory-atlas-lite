@@ -64,7 +64,8 @@ export class ItemTemplateService {
     return this.present(this.requireTemplate(id));
   }
 
-  read(body) {
+  // `current` is the edited template, or null for a new one.
+  read(body, current = null) {
     const name = requiredText(body?.name, 'TEMPLATE_NAME_REQUIRED');
     const categoryId = Number.parseInt(body?.category_id);
     if (!this.categories.findById(categoryId)) throw httpError(400, 'CATEGORY_REQUIRED');
@@ -73,7 +74,7 @@ export class ItemTemplateService {
       // An empty field is simply not part of the template.
       values: values.filter(([, value]) => value !== null),
       attributes: {
-        name, categoryId, itemName: nullableText(body.item_name), isNew: validateTemplateIsNew(body.is_new), ...readItemDetails(body)
+        name, categoryId, itemName: nullableText(body.item_name), isNew: validateTemplateIsNew(body.is_new), ...readItemDetails(body, current)
       }
     };
   }
@@ -91,7 +92,7 @@ export class ItemTemplateService {
   update(id, body) {
     const templateId = this.templates.transaction(() => {
       const current = this.requireTemplate(id);
-      const { values, attributes } = this.read(body);
+      const { values, attributes } = this.read(body, current);
       this.templates.update(current.id, attributes);
       this.templates.replaceFieldValues(current.id, values);
       return current.id;
@@ -121,6 +122,7 @@ export class ItemTemplateService {
         condition_grade: template.condition_grade,
         condition_notes: template.condition_notes,
         location: template.location,
+        location_detail: template.location_detail,
         purchase_date: template.purchase_date,
         purchase_price: template.purchase_price,
         serial_number: template.serial_number,

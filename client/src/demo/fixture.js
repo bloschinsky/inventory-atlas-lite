@@ -82,7 +82,8 @@ const secondBattery = { en: 'Second battery holds about half its charge.', uk: '
 
 /*
   Containers come first, so every `parent` names an item that already exists. Only a top-level item
-  has a `location` (a key of `locations`); the items inside a container inherit the container's.
+  has a `location` (a key of `locations`) and, optionally, a `location_detail`; the items inside a
+  container inherit both from it.
   `fields` are keyed by field key. `previously` gives the item a short activity history: it is added
   with that `location` or `parent` and moved to its own one `daysAgo` days ago through the regular
   services, so its History (and that of everything inside it) shows a real recorded move.
@@ -100,6 +101,7 @@ const items = [
   },
   {
     key: 'tool-cabinet', name: { en: 'Tool Cabinet', uk: 'Шафа для інструментів' }, category: 'storage', location: 'workshop', addedDaysAgo: 56,
+    location_detail: { en: 'North wall, above the workbench', uk: 'Північна стіна, над верстаком' },
     description: { en: 'Wall-mounted cabinet with two shelves.', uk: 'Настінна шафа з двома полицями.' }, condition_grade: 'fair',
     condition_notes: { en: 'Lower hinge squeaks.', uk: 'Нижня петля скрипить.' }, fields: { material: { en: 'Steel', uk: 'Сталь' }, labeled: false }
   },
@@ -111,6 +113,7 @@ const items = [
   },
   {
     key: 'archive-box', name: { en: 'Archive Box', uk: 'Архівна коробка' }, category: 'storage', location: 'home-storage', addedDaysAgo: 54,
+    location_detail: { en: 'Metal rack, top shelf', uk: 'Металевий стелаж, верхня полиця' },
     description: { en: 'Acid-free box on the storage room shelf.', uk: 'Безкислотна коробка на полиці в коморі.' },
     fields: { material: { en: 'Cardboard', uk: 'Картон' }, labeled: true }
   },
@@ -272,7 +275,7 @@ export function demoItemUuid(key) {
   return demoUuid(index + 1);
 }
 
-const TEXT_ATTRIBUTES = ['name', 'description', 'condition_notes', 'item_name'];
+const TEXT_ATTRIBUTES = ['name', 'description', 'condition_notes', 'item_name', 'location_detail'];
 
 /*
   The demo inventory in one language. Keys, relations, and every non-text value are the same for

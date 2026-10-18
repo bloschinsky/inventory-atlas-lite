@@ -21,7 +21,7 @@ test('creates, edits, uses, and deletes an item template without linking the ite
   await page.getByLabel('Template name *').fill(templateName);
   await page.getByLabel('Default item name').fill('Cardboard box');
   await page.getByLabel('Category *').selectOption({ label: categoryName });
-  await page.getByLabel('Location').fill('Garage');
+  await page.getByLabel('Location', { exact: true }).fill('Garage');
   await page.getByLabel('Size').fill('40x24x21');
   await page.getByLabel('Max weight').fill('5');
   // A yes/no field and the New default may stay unset in a template.
@@ -36,7 +36,7 @@ test('creates, edits, uses, and deletes an item template without linking the ite
 
   // Editing keeps the saved values and changes only what the user changes.
   await page.getByRole('link', { name: `Edit ${templateName}` }).click();
-  await expect(page.getByLabel('Location')).toHaveValue('Garage');
+  await expect(page.getByLabel('Location', { exact: true })).toHaveValue('Garage');
   await expect(page.getByLabel('Size')).toHaveValue('40x24x21');
   await page.getByLabel('Condition', { exact: true }).selectOption('excellent');
   await page.getByLabel('Condition Notes').fill('Sealed box');
@@ -55,14 +55,14 @@ test('creates, edits, uses, and deletes an item template without linking the ite
   await expect(page.getByRole('checkbox', { name: 'New', exact: true })).toBeChecked();
   await expect(page.getByLabel('Condition', { exact: true })).toHaveValue('excellent');
   await expect(page.getByLabel('Condition Notes')).toHaveValue('Sealed box');
-  await expect(page.getByLabel('Location')).toHaveValue('Garage');
+  await expect(page.getByLabel('Location', { exact: true })).toHaveValue('Garage');
   await expect(page.getByLabel('Size')).toHaveValue('40x24x21');
   await expect(page.getByLabel('Max weight')).toHaveValue('5');
   await expect(page.getByLabel('Sealed')).toHaveValue('1');
 
   const itemName = unique('Box');
   await page.getByLabel('Name *').fill(itemName);
-  await page.getByLabel('Location').fill('Attic');
+  await page.getByLabel('Location', { exact: true }).fill('Attic');
   await page.getByRole('button', { name: 'Save item' }).click();
   await expect(page).toHaveURL(/\/items\/\d+$/);
   await expect(page.getByRole('heading', { name: itemName })).toBeVisible();

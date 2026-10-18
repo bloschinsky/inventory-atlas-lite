@@ -42,11 +42,11 @@ before and after `mutate()` inside one transaction and records only real differe
 | Event | When | Values |
 | --- | --- | --- |
 | `container_changed` | the item's own `parent_item_id` changed | `from_item_*`/`to_item_*` id and name snapshots |
-| `location_changed` | the item's **effective** location changed, also when inherited from any ancestor | `from_value`/`to_value` exact text; `via_item_*` names the moved item above it |
+| `location_changed` | the item's **effective** location or [Specific location](specific-location.md) changed, also when inherited from any ancestor | `from_value`/`to_value` exact location text and `from_detail`/`to_detail` the specific location beside it; `via_item_*` names the moved item above it |
 | `recipient_changed` | `transferred_to` changed by an edit or bulk replace | `from_value`/`to_value` |
 | `transferred` / `returned` | Transfer / Mark as returned | recipient and `transfer_id` |
-| `retired` | Retire item, for the item and everything retired with it | `to_value` the reason key, `from_value` the last effective location, `from_item_*` the container the item itself left; contents get `via_item_*` |
-| `restored` | Restore to inventory, for the item and its contents | `to_value` the effective location it came back to, `to_item_*` its new container; contents get `via_item_*` |
+| `retired` | Retire item, for the item and everything retired with it | `to_value` the reason key, `from_value`/`from_detail` the last effective location and specific location, `from_item_*` the container the item itself left; contents get `via_item_*` |
+| `restored` | Restore to inventory, for the item and its contents | `to_value`/`to_detail` the effective location and specific location it came back to, `to_item_*` its new container; contents get `via_item_*` |
 
 - Free-text locations and recipients are compared trimmed and case-insensitively (the same rule the
   Hierarchy groups by); blank is no value. Snapshots keep the exact text.
@@ -102,7 +102,8 @@ start, due date, end, and notes in one row; the `transferred`/`returned` events 
 - `item_operations(id, type, created_at)` — one row per user action that changed something.
 - `item_events(id, operation_id → item_operations ON DELETE CASCADE, item_id → items ON DELETE
   CASCADE, event_type, occurred_at, from_value, to_value, from_item_id, from_item_name, to_item_id,
-  to_item_name, via_item_id, via_item_name, transfer_id)`. Referenced items are plain ids with name
+  to_item_name, via_item_id, via_item_name, transfer_id, from_detail, to_detail)`; the two detail columns
+  were added in schema version 12 and are `NULL` on older events. Referenced items are plain ids with name
   snapshots, not foreign keys, so deleting a container never touches or blocks other items' history.
 - `item_transfers(id, item_id → items ON DELETE CASCADE, recipient, transferred_at,
   expected_return_on, returned_at, note, return_note, created_at)`.

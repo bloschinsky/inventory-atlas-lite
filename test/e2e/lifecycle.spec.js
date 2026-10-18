@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { createCategory, createItem, detail, unique } from './helpers.js';
 
-const SEARCH = 'Search name, description, serial number, transferred to or text fields…';
+const SEARCH = 'Search name, description, serial number, transferred to, specific location or text fields…';
 const LOCALE_KEY = 'inventory-atlas.locale';
 const phone = { width: 390, height: 844 };
 

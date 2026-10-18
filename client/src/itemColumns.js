@@ -24,12 +24,16 @@ export function labelColumns(columns) {
   }));
 }
 
+// A placement as one line: the broad Location, then the Specific location within it.
+export const placementText = (location, detail) => [location, detail].filter(Boolean).join(' · ');
+
 const coreText = {
   category: item => item.category_name,
   isNew: item => t(item.is_new ? 'items.newStatus.new' : 'items.newStatus.used'),
   condition: item => item.condition_grade && t(conditionGradeLabelKey(item.condition_grade)),
   conditionNotes: item => item.condition_notes,
   location: item => item.effective_location,
+  locationDetail: item => item.effective_location_detail,
   storedInside: item => item.parent_name,
   purchaseDate: item => formatDate(item.purchase_date),
   purchasePrice: item => item.purchase_price && formatMoney(item.purchase_price.amount, item.purchase_price.currency),

@@ -50,7 +50,7 @@ prefilled; the item is created only when that form is saved. There are no built-
 ## Storage and API
 
 - `item_templates` holds the template name, a nullable `category_id`, the default item name, and the
-  same base columns as `items` (description, condition grade and notes, location, purchase date, purchase price
+  same base columns as `items` (description, condition grade and notes, location, specific location, purchase date, purchase price
   amount and currency, serial number, transferred to) plus timestamps.
 - `item_template_field_values` holds `(template_id, field_id, value)` rows. `template_id` cascades on
   template deletion; `field_id` deliberately has no foreign key, so the value of a deleted field is

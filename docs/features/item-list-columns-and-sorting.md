@@ -10,7 +10,7 @@ server before the page is cut, and the view choice is remembered in the browser.
 ## Behavior
 
 - **Columns** lists the core columns in a fixed order — Photo, Name, Category, Condition, Condition
-  Notes, New, Location,
+  Notes, New, Location, Specific location (off by default),
   Stored inside, Purchase Date, Purchase Price, Serial Number, Transferred To, Created, Updated —
   followed by the custom field columns in alphabetical order. **Name** is always checked and
   disabled. **Reset to default** restores Photo, Name, Category, Condition, Location, and Stored
@@ -22,7 +22,9 @@ server before the page is cut, and the view choice is remembered in the browser.
   type in brackets, for example *Year (Number)* and *Year (Text)*.
 - **Desktop table** (`lg` and wider): one cell per chosen column in the catalog order; a missing value
   is `—`; text is truncated with the full value in `title`; Location is the effective (inherited)
-  location; Stored inside links to the container. Purchase Price uses the locale money formatter,
+  location, with the effective [Specific location](specific-location.md) in secondary text under it
+  while the Specific location column is hidden (the phone card joins it to the Location line); Stored
+  inside links to the container. Purchase Price uses the locale money formatter,
   Purchase Date and custom dates the date formatter, Created/Updated the date-time formatter, and
   yes/no fields show the translated Yes/No, and color fields a swatch with the color's localized name. Other custom values are shown exactly as stored.
 - **Sorting.** Sortable headers are Tabler `table-sort` buttons and the header cell carries
@@ -67,8 +69,8 @@ server before the page is cut, and the view choice is remembered in the browser.
   per-type custom wrapper whose field ids are bound as one JSON parameter. It orders by
   `(expression) IS NULL`, the expression, and `i.id`, so empty values stay last in both directions
   and pages are stable. Text sorts `COLLATE NOCASE`, numbers and purchase prices `CAST(... AS REAL)`
-  (the amount only, whatever the currency), colors by palette rank and HEX, ISO dates and timestamps as text, and Location by the
-  effective location. The text custom search is an `EXISTS` subquery inside the same count and page
+  (the amount only, whatever the currency), colors by palette rank and HEX, ISO dates and timestamps as text, and Location and
+  Specific location by their effective values. The text custom search is an `EXISTS` subquery inside the same count and page
   statements. `ItemRepository.listColumnValues()` loads the requested values for the page with
   `json_each` parameters.
 - Client: `client/src/useTablePreferences.js` is a reusable browser-storage view state (visible keys,

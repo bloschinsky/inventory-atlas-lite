@@ -67,7 +67,8 @@ item's own saved `location` is never modified and stays the value the form edits
 - Inheritance always resolves to the outermost container, never to the nearest container that
   happens to have location text.
 - The items list cannot be searched or filtered by the effective location; only the displayed value
-  is inherited.
+  is inherited. The optional [Specific location](specific-location.md) follows the same root and is
+  searched by its effective value.
 - The dashboard placement metrics intentionally keep their previous meaning; see
   [Inventory Dashboard](dashboard.md).
 - The related container behaviour is documented in [Nested items](nested-items.md).

@@ -36,7 +36,7 @@ test('Duplicate opens a prefilled Add Item form and saves a separate item', asyn
   // New and a Poor grade are a valid pair; both are copied as they are.
   await expect(page.getByLabel('Condition', { exact: true })).toHaveValue('poor');
   await expect(page.getByLabel('Condition Notes')).toHaveValue('Dented corner');
-  await expect(page.getByLabel('Location')).toHaveValue('Garage');
+  await expect(page.getByLabel('Location', { exact: true })).toHaveValue('Garage');
   await expect(page.getByLabel('Transferred To')).toHaveValue('Neighbor');
   await expect(page.getByLabel('Purchase Date')).toHaveValue('2024-11-18');
   await expect(page.getByLabel('Purchase Price', { exact: true })).toHaveValue('12.50');

@@ -65,6 +65,9 @@ export const validateSerialNumber = value => shortText(value, { invalid: 'INVALI
 
 export const validateTransferredTo = value => shortText(value, { invalid: 'INVALID_TRANSFERRED_TO', tooLong: 'TRANSFERRED_TO_TOO_LONG' });
 
+// The optional Specific location: free text for the exact place within the broad Location.
+export const validateLocationDetail = value => shortText(value, { invalid: 'INVALID_LOCATION_DETAIL', tooLong: 'LOCATION_DETAIL_TOO_LONG' });
+
 export const MAX_SOURCE_URL_LENGTH = 2048;
 
 /*
@@ -105,8 +108,12 @@ export const validateConditionGrade = value => {
   return value;
 };
 
-// The optional base attributes shared by items and item templates, validated the same way for both.
-export const readItemDetails = body => {
+/*
+  The optional base attributes shared by items and item templates, validated the same way for both.
+  `current` is the saved row of an update: a request without `location_detail`, such as one from a
+  client that predates it, keeps the saved Specific location instead of clearing it.
+*/
+export const readItemDetails = (body, current = null) => {
   const purchaseDate = validatePurchaseDate(body.purchase_date);
   const purchasePrice = validatePurchasePrice(body.purchase_price);
   return {
@@ -114,6 +121,7 @@ export const readItemDetails = body => {
     conditionGrade: validateConditionGrade(body.condition_grade),
     conditionNotes: nullableText(body.condition_notes),
     location: nullableText(body.location),
+    locationDetail: body.location_detail === undefined && current ? current.location_detail ?? null :validateLocationDetail(body.location_detail),
     purchaseDate,
     purchasePriceAmount: purchasePrice.amount,
     purchasePriceCurrency: purchasePrice.currency,

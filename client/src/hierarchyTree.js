@@ -224,12 +224,12 @@ export function rowName(row, t) {
 
 /*
   The secondary line of an item row: Retired for a retired item, the category (redundant under a
-  category, so left out there), the effective location, and the physical container the projection does
-  not already show as the parent.
+  category, so left out there), the effective location and Specific location, and the physical container
+  the projection does not already show as the parent.
 */
 export function itemMeta(row, t) {
   const { item, group, storedIn } = row;
   return [item.lifecycle_status === 'retired' ? t('lifecycle.statuses.retired') : null,
-    group.type === 'category' ? null : item.category_name, item.effective_location,
+    group.type === 'category' ? null : item.category_name, item.effective_location, item.effective_location_detail,
     storedIn ? t('hierarchy.storedIn', { name: storedIn.name }) : null].filter(Boolean).join(' · ');
 }

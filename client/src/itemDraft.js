@@ -6,7 +6,8 @@ import { api } from './api.js';
   shape the AI analysis and the template API return — { categoryId, baseFields, dynamicFields } — so a
   blank form, an AI suggestion, a template, and an existing item all initialize the same fields.
 */
-const BASE_FIELDS = ['description', 'is_new', 'condition_grade', 'condition_notes', 'location', 'purchase_date', 'purchase_price', 'serial_number', 'transferred_to', 'source_url'];
+const BASE_FIELDS = ['description', 'is_new', 'condition_grade', 'condition_notes', 'location', 'location_detail', 'purchase_date', 'purchase_price',
+  'serial_number', 'transferred_to', 'source_url'];
 const baseFields = (source, name) => ({ name, ...Object.fromEntries(BASE_FIELDS.map(key => [key, source[key]])) });
 
 export const draftFromItem = item => ({
@@ -30,7 +31,7 @@ export const draftFromTemplate = template => ({
 export function useItemDraftForm({ emptyBoolean = '0' } = {}) {
   const emptyIsNew = emptyBoolean === '' ? null : false;
   const form = reactive({
-    name: '', category_id: '', description: '', is_new: emptyIsNew, condition_grade: null, condition_notes: '', location: '', purchase_date: '',
+    name: '', category_id: '', description: '', is_new: emptyIsNew, condition_grade: null, condition_notes: '', location: '', location_detail: '', purchase_date: '',
     purchase_price: { amount: '', currency: 'UAH' }, serial_number: '', transferred_to: '', source_url: '', field_values: {}
   });
   const categories = ref([]);
@@ -60,6 +61,7 @@ export function useItemDraftForm({ emptyBoolean = '0' } = {}) {
         condition_grade: base.condition_grade || null,
         condition_notes: base.condition_notes || '',
         location: base.location || '',
+        location_detail: base.location_detail || '',
         purchase_date: base.purchase_date || '',
         purchase_price: base.purchase_price ? { ...base.purchase_price } : { amount: '', currency: 'UAH' },
         serial_number: base.serial_number || '',

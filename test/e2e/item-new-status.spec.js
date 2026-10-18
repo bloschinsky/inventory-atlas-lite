@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { createCategory, createItem, detail, unique } from './helpers.js';
 
-const searchBox = page => page.getByPlaceholder('Search name, description, serial number, transferred to or text fields…');
+const searchBox = page => page.getByPlaceholder('Search name, description, serial number, transferred to, specific location or text fields…');
 const newBadge = /bg-success-subtle text-success-emphasis/;
 const usedBadge = /bg-warning-subtle text-warning-emphasis/;
 

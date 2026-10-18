@@ -1,5 +1,5 @@
 import { httpError } from '../httpError.js';
-import { nullableText } from '../../../shared/itemValidation.js';
+import { nullableText, validateLocationDetail } from '../../../shared/itemValidation.js';
 import { MAX_RETIREMENT_NOTE, MAX_RETIREMENT_RECIPIENT, isRetirementReason } from '../../../shared/itemLifecycle.js';
 
 // A retirement may be dated a little ahead of the server clock without being refused for it.
@@ -82,8 +82,9 @@ export class ItemLifecycleService {
   /*
     Restores the item with everything stored in it, keeping their nesting. The item itself leaves a
     retired container it may still be in, and goes where the request says: into the active container
-    `parent_item_id`, or nowhere. It is never put back into its former container on its own. `location`,
-    when sent, replaces its saved location; otherwise the saved location is kept as it was.
+    `parent_item_id`, or nowhere. It is never put back into its former container on its own. `location`
+    and `location_detail`, when sent, replace its saved location and Specific location; otherwise the
+    saved values are kept as they were.
   */
   restore(id, body) {
     const item = this.itemService.requireItem(id);
@@ -96,8 +97,9 @@ export class ItemLifecycleService {
       if (parent.lifecycle_status !== 'active') throw httpError(400, 'ITEM_PARENT_LIFECYCLE_MISMATCH');
     }
     const location = body.location === undefined ? undefined : limitedText(body.location, Infinity);
+    const locationDetail = body.location_detail === undefined ? undefined : validateLocationDetail(body.location_detail);
     const ids = this.items.listSubtreeIds([item.id]);
-    this.history.trackLifecycle('restore', item.id, () => this.items.restore(ids, item.id, { parentId, location }));
+    this.history.trackLifecycle('restore', item.id, () => this.items.restore(ids, item.id, { parentId, location, locationDetail }));
     return { item_id: item.id, affected_count: ids.length };
   }
 }

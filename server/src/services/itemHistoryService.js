@@ -12,8 +12,9 @@ export const HISTORY_PAGE_SIZE = 20;
 export const MAX_HISTORY_PAGE_SIZE = 50;
 
 /*
-  Free-text locations and recipients are compared without surrounding whitespace and letter case,
-  like the Hierarchy groups them, so a formatting edit is never reported as a move. Blank is no value.
+  Free-text locations, Specific locations, and recipients are compared without surrounding whitespace
+  and letter case, like the Hierarchy groups them, so a formatting edit is never reported as a move.
+  Blank is no value.
   The stored snapshots keep the exact text.
 */
 export const historyKey = value => (value ?? '').trim().toLowerCase();
@@ -36,9 +37,11 @@ const byItem = rows => {
 /*
   The events one change produced, from the snapshots taken before and after it in the same
   transaction. An item records a container change only when its own direct container changed, a
-  location change only when its effective location did, wherever that came from, and a recipient
-  change only when its Transferred To did. An item below a changed one names that item as the one it
-  moved with. Nothing is recorded for an item whose visible state stayed the same.
+  location change only when its effective location or effective Specific location did, wherever that
+  came from, and a recipient change only when its Transferred To did. One location change carries both
+  values, so editing the Location and the Specific location together is one move, and a saved value
+  hidden behind an inherited one is never reported as a move. An item below a changed one names that
+  item as the one it moved with. Nothing is recorded for an item whose visible state stayed the same.
 */
 export function detectChanges(beforeRows, afterRows) {
   const before = byItem(beforeRows);
@@ -53,9 +56,10 @@ export function detectChanges(beforeRows, afterRows) {
         to_item_id: after.parent_item_id, to_item_name: after.parent_name
       });
     }
-    if (historyKey(previous.location) !== historyKey(after.location)) {
+    if (['location', 'location_detail'].some(key => historyKey(previous[key]) !== historyKey(after[key]))) {
       events.push({
         item_id: id, event_type: 'location_changed', from_value: present(previous.location), to_value: present(after.location),
+        from_detail: present(previous.location_detail), to_detail: present(after.location_detail),
         ...(after.depth > 0 && { via_item_id: after.top_id, via_item_name: after.top_name })
       });
     }
@@ -79,6 +83,8 @@ const presentEvent = row => ({
   occurred_at: row.occurred_at,
   from: row.from_value,
   to: row.to_value,
+  from_detail: row.from_detail,
+  to_detail: row.to_detail,
   from_item: reference(row.from_item_id, row.from_item_name, row.from_item_exists),
   to_item: reference(row.to_item_id, row.to_item_name, row.to_item_exists),
   via_item: reference(row.via_item_id, row.via_item_name, row.via_item_exists),
@@ -113,8 +119,9 @@ export class ItemHistoryService {
   /*
     Retire and Restore of the subtree below `rootId`. Each item records one lifecycle event that
     carries its own context instead of separate location and container events: a retirement keeps
-    the reason (a stable key, in `to`), the last effective location, and, for the item itself, the
-    container it was taken out of; a restoration keeps the location and container it came back to.
+    the reason (a stable key, in `to`), the last effective location and Specific location, and, for
+    the item itself, the container it was taken out of; a restoration keeps the location, Specific
+    location, and container it came back to.
     The contents name the item they were retired or restored with. A retirement is dated when it
     happened (`occurredAt`), like a loan; a restoration when it is recorded.
   */
@@ -128,7 +135,9 @@ export class ItemHistoryService {
         item_id: row.id,
         event_type: retiring ? 'retired' : 'restored',
         ...(occurredAt && { occurred_at: occurredAt }),
-        ...(retiring ? { from_value: present(row.location), to_value: reason } : { to_value: present(row.location) }),
+        ...(retiring
+          ? { from_value: present(row.location), from_detail: present(row.location_detail), to_value: reason }
+          : { to_value: present(row.location), to_detail: present(row.location_detail) }),
         ...(row.depth === 0
           ? (retiring
             ? { from_item_id: row.parent_item_id, from_item_name: row.parent_name }

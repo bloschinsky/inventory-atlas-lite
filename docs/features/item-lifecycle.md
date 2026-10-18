@@ -17,7 +17,7 @@ Schema version 8 adds to `items`:
 | `retired_at` | When the item left, ISO 8601 in UTC. |
 | `retired_reason` | One of `sold`, `gifted`, `lost`, `stolen`, `disposed`, `consumed`, `other` (`CHECK`). |
 | `retired_recipient`, `retired_note` | Optional recipient or context (255 characters) and note (2000 characters). |
-| `retired_location_snapshot` | The effective location at the moment of retirement. |
+| `retired_location_snapshot`, `retired_location_detail_snapshot` | The effective location and [Specific location](specific-location.md) at the moment of retirement. |
 | `retired_parent_uuid_snapshot`, `retired_parent_name_snapshot` | The direct container at that moment. |
 
 `checklist_runs.skipped_retired_count` records how many checklist entries a run left out because their
@@ -66,7 +66,8 @@ stranded inside a retired container, and retired items never move with an active
   `ITEM_PARENT_LIFECYCLE_MISMATCH`, and `409 ITEM_RETIRE_HAS_OPEN_LOAN` while the item or anything
   in it is on loan. Every affected item and its history events change in one transaction.
 - Every item response carries `lifecycle_status` and `retirement`: `null` for an active item, otherwise
-  `{ reason, retired_at, recipient, note, last_location, former_parent: { uuid, name } | null }`.
+  `{ reason, retired_at, recipient, note, last_location, last_location_detail, former_parent: { uuid, name } | null }`.
+  Restore accepts an optional `location_detail` beside `location` for the restored item.
   `GET /api/items/:id` keeps answering retired items, so direct links and QR lookups still open them.
 - `GET /api/items?lifecycle=active|all|retired` and `GET /api/items/hierarchy?lifecycle=…` default to
   `active`. The filter is applied in SQL to the count and the page together, before pagination, with

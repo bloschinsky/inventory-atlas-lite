@@ -93,7 +93,7 @@ const legacyDatabase = (db = new Database(':memory:')) => {
 
 test('the schema stores the lifecycle with constraints, and every new item is active', () => {
   const { db, add, itemService } = build();
-  assert.equal(SCHEMA_VERSION, 11);
+  assert.equal(SCHEMA_VERSION, 12);
   for (const column of ['lifecycle_status', 'retired_at', 'retired_reason', 'retired_location_snapshot', 'retired_parent_name_snapshot']) {
     assert.ok(CURRENT_SCHEMA.items.includes(column), column);
   }
@@ -142,7 +142,7 @@ test('retiring a leaf keeps its data, snapshots where it was, and detaches it fr
   assert.equal(result.item.lifecycle_status, 'retired');
   assert.deepEqual(result.item.retirement, {
     reason: 'sold', retired_at: '2026-01-02T10:00:00.000Z', recipient: 'Olena', note: 'Paid in cash',
-    last_location: 'Garage', former_parent: { uuid: box.uuid, name: 'Box' }
+    last_location: 'Garage', last_location_detail: null, former_parent: { uuid: box.uuid, name: 'Box' }
   });
   const after = row(lens);
   assert.equal(after.parent_item_id, null);

@@ -70,7 +70,7 @@ test.describe('a Full HD desktop', () => {
     await createItem(request, { name, category_id: category.id });
 
     await open(page, '/items');
-    await page.getByPlaceholder('Search name, description, serial number, transferred to or text fields…').fill(name);
+    await page.getByPlaceholder('Search name, description, serial number, transferred to, specific location or text fields…').fill(name);
     await expect(page.getByRole('link', { name, exact: true })).toBeVisible();
     const { inner } = await shellWidths(page);
     const table = await page.getByRole('table').boundingBox();
