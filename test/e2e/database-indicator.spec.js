@@ -44,9 +44,11 @@ test('the active database stays visible on every page beside the folded sidebar 
   await expect(indicator(page)).toHaveAccessibleName(`Active database: ${name}`);
   await expect(indicator(page)).toBeVisible();
   await expect(indicator(page)).toHaveAttribute('title', `${name} · Open database settings`);
-  // The rail is folded, and the indicator sits beside it rather than inside it.
-  const rail = await page.locator('aside.navbar-vertical').boundingBox();
-  expect(rail.width).toBeLessThan(80);
+  // The rail is folded, and the indicator sits beside it rather than inside it. Tabler animates the
+  // fold, so wait until the rail has folded after the pointer left it.
+  const railBox = () => page.locator('aside.navbar-vertical').boundingBox();
+  await expect.poll(async () => (await railBox()).width).toBeLessThan(80);
+  const rail = await railBox();
   expect((await indicator(page).boundingBox()).x).toBeGreaterThanOrEqual(rail.x + rail.width);
 
   for (const path of ['/dashboard', '/hierarchy', '/checklists', '/data']) {

@@ -77,3 +77,7 @@ the Specific location.
   in `test/landing.test.js` described above.
 - `npm run build` — passed.
 - `APP_VERSION=0.66.0 npm run test:e2e` — 264 of 264 passed, including the landing and guide build.
+- The first release run of `v0.66.0` failed before publishing anything: on the Linux runner
+  `test/e2e/database-indicator.spec.js` measured the sidebar while Tabler was still animating its
+  fold (101px). The test now waits until the rail has folded; the spec passed 24 of 24 locally with
+  `--repeat-each 3`, and the tag was moved to the fixed commit.
