@@ -83,6 +83,23 @@ test('creates an item, finds it in the list, and edits its values', async ({ pag
   await expect(detail(page, 'Insured')).toHaveText('No');
 });
 
+test('does not warn about missing categories while they are still loading', async ({ page, request }) => {
+  const categoryName = unique('Loading');
+  await createCategory(request, categoryName);
+  // Holds the category list until the form has rendered without it.
+  let release;
+  const held = new Promise(resolve => { release = resolve; });
+  await page.route('**/api/categories', async route => { await held; await route.continue(); });
+
+  await page.goto('/items/new');
+  await expect(page.getByRole('heading', { name: 'Add item' })).toBeVisible();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+
+  release();
+  await expect(page.getByLabel('Category *')).toContainText(categoryName);
+  await expect(page.getByRole('alert')).toHaveCount(0);
+});
+
 test('deletes an item and removes it from the list', async ({ page, request }) => {
   const categoryName = unique('Tools');
   const category = await createCategory(request, categoryName);

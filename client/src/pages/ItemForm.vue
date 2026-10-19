@@ -17,6 +17,8 @@ const editing = computed(() => Boolean(route.params.id));
 const { form, categories, fields, start, fieldValues } = useItemDraftForm();
 form.parent_item_id = null;
 const error = ref(''); const saving = ref(false);
+// The categories are empty until start() loads them, so only a loaded empty list means there are none.
+const categoriesLoaded = ref(false);
 const aiDraft = ref(null); const templateDraft = ref(null); const duplicateSource = ref(null);
 const photoWarning = ref('');
 // A retired item can only be kept inside a retired container, so its picker offers those instead.
@@ -211,7 +213,7 @@ async function loadDraft() {
   return null;
 }
 onMounted(async () => {
-  try { await start(await loadDraft()); } catch (e) { error.value = e.message; }
+  try { await start(await loadDraft()); categoriesLoaded.value = true; } catch (e) { error.value = e.message; }
   // ?import=url opens the URL import as soon as the form is ready, from Add item or Item details;
   // ?import=refresh opens Refresh from Source for an item with a saved Source URL.
   await loadCapabilities();
@@ -299,7 +301,7 @@ onMounted(async () => {
       {{ photoWarning }}
     </div>
     <div
-      v-if="!categories.length"
+      v-if="categoriesLoaded && !categories.length"
       class="alert alert-warning"
       role="alert"
     >

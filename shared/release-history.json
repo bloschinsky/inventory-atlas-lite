@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.66.1",
+    "date": "2026-10-19",
+    "changes": [
+      "The Add item and Edit item pages no longer flash the warning \"Create a category before adding an item\" while the categories are still loading. The warning now appears only when there really are no categories."
+    ]
+  },
+  {
     "version": "0.66.0",
     "date": "2026-10-18",
     "changes": [
