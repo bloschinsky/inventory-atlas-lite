@@ -61,8 +61,10 @@ The browser tests start their own API and Vite processes on separate ports and u
 `landing/` with `npm run landing:build` and deployed to GitHub Pages by
 `.github/workflows/pages.yml`; `npm run landing:dev` serves it locally. The page is in English and
 Ukrainian, with a screenshot set per language that `npm run landing:screenshots` captures from the
-public demo. See [`docs/features/landing-page.md`](docs/features/landing-page.md) for the deployment,
-the languages, the screenshot capture, and the release information it shows.
+public demo, and `npm run landing:social` renders the localized social preview images of the landing,
+the guide, and the demo from them. See [`docs/features/landing-page.md`](docs/features/landing-page.md)
+for the deployment, the languages, the screenshot capture, the social images, and the release
+information it shows.
 
 ## Public demo
 

@@ -10,6 +10,7 @@ import { guideDiagrams, guidePresentation } from '../landing/guidePresentation.j
 import { buildGuide, githubSlug, guideSectionIds, presentationProblems, readDemoRoutes, readGuideSource } from '../landing/guideSource.js';
 import { screenshotFile, screenshotNames, screenshotSizes } from '../landing/screenshots.js';
 import { defaultSiteUrl, guideSourceFile, guideSourceUrl, landingRelease, links, repositoryUrl, siteUrl } from '../landing/site.js';
+import { socialImageFile, socialImageMaxBytes, socialImageSize, socialPages } from '../landing/socialImages.js';
 import { readReleaseHistory } from '../shared/releaseHistory.js';
 
 // The landing page build facts: the announced release, the Pages address, and the documentation links.
@@ -132,6 +133,29 @@ test('the page reserves the real size of every screenshot in every language', as
       assert.deepEqual([width, height], screenshotSizes[name], `${code}/${name} is ${width} × ${height}`);
     }
   }
+});
+
+test('every page has a distinct social preview image in every language', async () => {
+  const seen = new Set();
+  for (const { code } of SUPPORTED_LOCALES) {
+    for (const page of socialPages) {
+      assert.ok(landingMessages[code].social[page].title, `${code} has the ${page} card copy`);
+      const file = path.join(root, socialImageFile(page, code));
+      assert.ok(fs.existsSync(file), `${socialImageFile(page, code)} exists`);
+      const bytes = fs.readFileSync(file);
+      const { format, width, height } = await sharp(bytes).metadata();
+      assert.equal(format, 'png', `${page}-${code} is a PNG image`);
+      assert.deepEqual([width, height], socialImageSize, `${page}-${code} is ${width} × ${height}`);
+      assert.ok(bytes.length < socialImageMaxBytes, `${page}-${code} is optimized for the web`);
+      const hash = bytes.toString('base64');
+      assert.ok(!seen.has(hash), `${page}-${code} is not a copy of another image`);
+      seen.add(hash);
+    }
+  }
+  const expected = SUPPORTED_LOCALES.flatMap(({ code }) => socialPages.map(page => path.basename(socialImageFile(page, code))));
+  assert.deepEqual(fs.readdirSync(path.join(root, 'landing/public/og')).sort(), expected.sort(), 'no stray social images');
+  // The shared og-image.png stays until the pages switch to the localized images.
+  assert.ok(fs.existsSync(path.join(root, 'landing/public/og-image.png')));
 });
 
 // The public user guide, rendered from docs/HOW-TO.md and its translations (landing/guideSource.js).

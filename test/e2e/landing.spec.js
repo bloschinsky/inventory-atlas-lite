@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import { expect, test } from '@playwright/test';
 import { landingRelease, links, repositoryUrl } from '../../landing/site.js';
+import { socialImagePath, socialPages } from '../../landing/socialImages.js';
 import { baseURL, demoURL, landingURL } from './environment.js';
 
 // The public landing page, built for production under a Pages-style base path (see playwright.config.js).
@@ -78,6 +79,14 @@ test('assets, icons, and sharing metadata respect the Pages base path', async ({
   expect(icon.startsWith(basePath)).toBe(true);
   expect((await page.request.get(new URL(icon, landingURL).href)).ok()).toBe(true);
   expect((await page.request.get(`${landingURL}og-image.png`)).ok()).toBe(true);
+  // The localized social preview images are published under the base path too.
+  for (const locale of ['en', 'uk']) {
+    for (const name of socialPages) {
+      const response = await page.request.get(`${landingURL}${socialImagePath(name, locale)}`);
+      expect(response.ok()).toBe(true);
+      expect(response.headers()['content-type']).toBe('image/png');
+    }
+  }
 
   // Every screenshot loads from the base path and describes what it shows.
   const images = page.locator('main img');
