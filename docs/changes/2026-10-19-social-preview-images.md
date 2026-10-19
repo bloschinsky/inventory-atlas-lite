@@ -1,7 +1,7 @@
 # Social preview images, phase 1
 
 - **Date:** 2026-10-19
-- **Version:** 0.66.0 (unchanged: only the public site's assets and tooling changed, not the application)
+- **Version:** 0.66.1 (unchanged: only the public site's assets and tooling changed, not the application)
 - **Task:** GitHub issue #39
 
 ## Summary
