@@ -8,8 +8,10 @@ export { SUPPORTED_LOCALES } from './core.js';
 /*
   The interface language is a preference of this browser only, in the same style as theme.js: it is
   kept in localStorage and never sent to the server. Without a saved choice the interface is English.
-  The public demo also reads it from its address (?lang=), which the landing's Try Demo link and
-  shared demo links carry; that explicit choice wins over the saved one.
+
+  The public demo takes its language from its address instead, so a shared link always opens in the
+  language it names: the demo is published once per locale (demo/, uk/demo/, see landing/publicPages.js),
+  each shell names its language in <html lang>, and an older ?lang= link is an explicit choice over it.
 */
 const readStoredLocale = () => {
   try {
@@ -18,16 +20,39 @@ const readStoredLocale = () => {
     return null; // Storage can be blocked; the default language still works.
   }
 };
-const readAddressLocale = () => (__DEMO__ ? new URLSearchParams(window.location.search).get('lang') : null);
+const readDemoLocale = () => [new URLSearchParams(window.location.search).get('lang'), document.documentElement.lang];
 
 export const i18n = createI18n(core.createI18nOptions({
-  locale: core.pickLocale(readAddressLocale(), readStoredLocale()),
+  locale: core.pickLocale(...(__DEMO__ ? readDemoLocale() : [readStoredLocale()])),
   messages: { en, uk },
   warn: import.meta.env.DEV
 }));
 
 const locale = i18n.global.locale;
 document.documentElement.lang = locale.value;
+
+/*
+  The demo address names the shown language, so a reload or a copied link opens it again: the address
+  of the demo shell in that language (its hreflang link), keeping the #/route. A ?lang= link moves to
+  it too. Without such a link (the development server) or on another origin, ?lang= names it instead.
+*/
+function showDemoLocaleInAddress() {
+  const url = new URL(window.location.href);
+  const shell = document.querySelector(`link[rel="alternate"][hreflang="${locale.value}"]`);
+  const target = shell && new URL(shell.href);
+  if (target?.origin === url.origin) {
+    target.hash = url.hash;
+    window.history.replaceState(window.history.state, '', target);
+  } else {
+    url.searchParams.set('lang', locale.value);
+    window.history.replaceState(window.history.state, '', url);
+  }
+}
+if (__DEMO__) {
+  if (new URLSearchParams(window.location.search).has('lang')) showDemoLocaleInAddress();
+  // Back and Forward can return to an entry made before a language change (closing Settings does).
+  window.addEventListener('popstate', showDemoLocaleInAddress);
+}
 
 // Applied at once: every translated text and formatted value follows without a page reload.
 export function setLocale(value) {
@@ -38,12 +63,7 @@ export function setLocale(value) {
   } catch {
     // A blocked storage only costs the persistence, not the switch itself.
   }
-  // The demo address keeps naming the shown language, so a reload or a copied link opens it again.
-  if (__DEMO__) {
-    const url = new URL(window.location.href);
-    url.searchParams.set('lang', locale.value);
-    window.history.replaceState(window.history.state, '', url);
-  }
+  if (__DEMO__) showDemoLocaleInAddress();
 }
 
 // Server errors and notices arrive as { code, params } and are translated in the active locale.

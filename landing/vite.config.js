@@ -6,6 +6,8 @@ import { SUPPORTED_LOCALES } from '../client/src/i18n/core.js';
 import { guideDiagrams, guidePresentation } from './guidePresentation.js';
 import { buildGuide, presentationProblems, readDemoRoutes } from './guideSource.js';
 import { screenshotFile, screenshotNames } from './screenshots.js';
+import { publicPageUrl } from './publicPages.js';
+import { publicPageShells } from './publicPagesPlugin.js';
 import { guideSourceFile, landingRelease, siteUrl } from './site.js';
 
 /*
@@ -13,6 +15,8 @@ import { guideSourceFile, landingRelease, siteUrl } from './site.js';
   GitHub Pages by .github/workflows/pages.yml. LANDING_SITE_URL is the Pages address, which also sets
   the asset base path; LANDING_RELEASE_TAG is the latest published release; LANDING_DEMO_URL, the
   address of the public demo the Pages workflow builds into the same site, shows the Try Demo button.
+  Each page is published once per supported locale (landing/publicPages.js), and the demo is too, so
+  LANDING_DEMO_URL can only be the English demo of this site, demo/ under LANDING_SITE_URL.
 */
 const site = siteUrl(process.env.LANDING_SITE_URL);
 const history = JSON.parse(readFileSync(new URL('../shared/release-history.json', import.meta.url), 'utf8'));
@@ -68,6 +72,9 @@ const info = {
   release: landingRelease(history, process.env.LANDING_RELEASE_TAG?.trim()),
   demoUrl: process.env.LANDING_DEMO_URL?.trim() || null
 };
+if (info.demoUrl && info.demoUrl !== publicPageUrl(site, 'demo', 'en')) {
+  throw new Error(`LANDING_DEMO_URL must be ${publicPageUrl(site, 'demo', 'en')}, the demo published with this site.`);
+}
 
 export default defineConfig({
   root: fileURLToPath(new URL('.', import.meta.url)),
@@ -75,8 +82,8 @@ export default defineConfig({
   plugins: [
     vue(),
     userGuide(),
-    // The canonical and Open Graph addresses must be absolute, so they are written into the HTML.
-    { name: 'landing-site-url', transformIndexHtml: html => html.replaceAll('%SITE_URL%', site.href) }
+    // Both pages in every locale, each with its own absolute canonical and sharing addresses.
+    publicPageShells({ site, pages: { 'index.html': 'landing', 'guide/index.html': 'guide' } })
   ],
   // Tabler and Tabler Icons are MIT licensed: keep their /*! */ copyright banners in the bundles.
   esbuild: { legalComments: 'inline' },
@@ -90,7 +97,8 @@ export default defineConfig({
   build: {
     outDir: fileURLToPath(new URL('../dist-landing', import.meta.url)),
     emptyOutDir: true,
-    // Two pages: the product page and the user guide, which GitHub Pages serves at guide/.
+    // Two pages: the product page and the user guide, which GitHub Pages serves at guide/; their
+    // shells in the other locales (uk/, uk/guide/) are written after the build and share these bundles.
     // Each screenshot set keeps its language in the published path: assets/screenshots/<locale>/.
     rollupOptions: {
       input: {

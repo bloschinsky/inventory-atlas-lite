@@ -10,7 +10,10 @@ import { links } from '../site.js';
 */
 defineProps({
   // Where the product mark leads: the top of this page, or the product page from the guide.
-  home: { type: String, required: true }
+  home: { type: String, required: true },
+  // The public page and, optionally, the anchor that the language menu keeps (see LanguageMenu.vue).
+  page: { type: String, required: true },
+  anchor: { type: String, default: null }
 });
 const { t } = useI18n();
 </script>
@@ -44,7 +47,10 @@ const { t } = useI18n();
       </a>
       <div class="d-flex align-items-center gap-2 gap-md-3">
         <slot />
-        <LanguageMenu />
+        <LanguageMenu
+          :page="page"
+          :anchor="anchor"
+        />
         <a
           class="btn btn-outline-secondary"
           :href="links.github"

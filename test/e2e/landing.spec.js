@@ -50,7 +50,7 @@ test('the hero offers real install, repository, and demo destinations', async ({
   // Try Demo is an extra path next to the install one, never a replacement for it, and opens the
   // demo in a new tab that it announces to every visitor.
   const demo = hero.getByRole('link', { name: 'Try Demo (opens in a new tab)' });
-  await expect(demo).toHaveAttribute('href', `${demoURL}?lang=en#/dashboard`);
+  await expect(demo).toHaveAttribute('href', `${demoURL}#/dashboard`);
   await expect(demo).toHaveAttribute('target', '_blank');
   await expect(demo).toHaveAttribute('rel', 'noopener noreferrer');
   await expect(demo.locator('svg.landing-external')).toBeVisible();
@@ -73,12 +73,11 @@ test('assets, icons, and sharing metadata respect the Pages base path', async ({
 
   await expect(page).toHaveTitle(/Inventory Atlas Lite/);
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', landingURL);
-  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', `${landingURL}og-image.png`);
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', `${landingURL}og/landing-en.png`);
   await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', /self-hosted/);
   const icon = await page.locator('link[rel="icon"]').getAttribute('href');
   expect(icon.startsWith(basePath)).toBe(true);
   expect((await page.request.get(new URL(icon, landingURL).href)).ok()).toBe(true);
-  expect((await page.request.get(`${landingURL}og-image.png`)).ok()).toBe(true);
   // The localized social preview images are published under the base path too.
   for (const locale of ['en', 'uk']) {
     for (const name of socialPages) {
@@ -337,10 +336,12 @@ test.describe('in every language', () => {
   const screenshotLocales = page => page.locator('main img').evaluateAll(images =>
     [...new Set(images.map(image => new URL(image.getAttribute('src'), window.location.href).pathname.match(/\/screenshots\/([^/]+)\//)?.[1]))]);
 
+  // Each language is its own page: the choice opens the Ukrainian product page.
   async function chooseUkrainian(page) {
     await languageButton(page).click();
     await expect(menu(page)).toBeVisible();
     await menu(page).getByRole('menuitemradio', { name: 'Українська' }).click();
+    await expect(page).toHaveURL(`${landingURL}uk/`);
     await expect(page.locator('html')).toHaveAttribute('lang', 'uk');
   }
 
@@ -369,8 +370,8 @@ test.describe('in every language', () => {
     await expect(button).toBeFocused();
   });
 
-  test('Ukrainian translates the page at once, with its own screenshots and metadata, and survives a reload', async ({ page }) => {
-    await page.goto(landingURL);
+  test('Ukrainian opens the Ukrainian page, with its own screenshots and metadata, and survives a reload', async ({ page }) => {
+    await page.goto(`${landingURL}#install`);
     const englishShot = await page.locator('#hierarchy img').getAttribute('src');
     // Keyboard only: the arrow keys open the menu and move to the language, Enter picks it.
     await languageButton(page).focus();
@@ -379,10 +380,11 @@ test.describe('in every language', () => {
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('Enter');
 
+    // The same page in Ukrainian, at the same place.
+    await expect(page).toHaveURL(`${landingURL}uk/#install`);
     await expect(page.locator('html')).toHaveAttribute('lang', 'uk');
     await expect(menu(page)).toBeHidden();
     await expect(languageButton(page)).toHaveAccessibleName('Мова: Українська');
-    await expect(languageButton(page)).toBeFocused();
     await expect(page.getByRole('navigation', { name: 'Головна' })).toBeVisible();
     await expect(page.getByRole('heading', { level: 1, name: 'Inventory Atlas Lite' })).toBeVisible();
     for (const id of ['hierarchy', 'items', 'photos-qr', 'find', 'dashboard']) {
@@ -393,11 +395,13 @@ test.describe('in every language', () => {
     await expect(page.locator('header').getByRole('link', { name: uk.hero.get })).toHaveAttribute('href', links.get);
     await expect(page.getByTestId('release')).toContainText(`${uk.hero.release} v${release.version}`);
     await expect(page.getByRole('link', { name: uk.install.options.docker.label })).toHaveAttribute('href', links.docker);
-    await expect(page).toHaveTitle(uk.meta.title);
-    await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', uk.meta.description);
-    await expect(page.locator('meta[property="og:title"]')).toHaveAttribute('content', uk.meta.ogTitle);
-    await expect(page.locator('meta[property="og:image:alt"]')).toHaveAttribute('content', uk.meta.ogImageAlt);
-    expect(await page.evaluate(key => localStorage.getItem(key), STORAGE_KEY)).toBe('uk');
+    await expect(page).toHaveTitle(uk.meta.landing.title);
+    await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', uk.meta.landing.description);
+    await expect(page.locator('meta[property="og:title"]')).toHaveAttribute('content', uk.meta.landing.ogTitle);
+    await expect(page.locator('meta[property="og:image:alt"]')).toHaveAttribute('content', uk.meta.landing.ogImageAlt);
+    await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', `${landingURL}og/landing-uk.png`);
+    // The address is the language; the application's saved preference is left alone.
+    expect(await page.evaluate(key => localStorage.getItem(key), STORAGE_KEY)).toBeNull();
     // No English sentence is left on the page, visible or for assistive technology.
     for (const english of ['Everything has a place', 'Skip to content', 'Opens a larger view', 'Your server, your data', 'Latest release']) {
       await expect(page.getByText(english)).toHaveCount(0);
@@ -422,6 +426,7 @@ test.describe('in every language', () => {
 
     await languageButton(page).click();
     await menu(page).getByRole('menuitemradio', { name: 'English' }).click();
+    await expect(page).toHaveURL(`${landingURL}#install`);
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
     await expect(page.getByRole('heading', { level: 2, name: 'Everything has a place' })).toBeAttached();
   });
@@ -447,7 +452,7 @@ test.describe('in every language', () => {
     await page.goto(landingURL);
     await chooseUkrainian(page);
     const demo = page.locator('header').getByRole('link', { name: `${uk.hero.demo} ${uk.hero.newTab}` });
-    await expect(demo).toHaveAttribute('href', `${demoURL}?lang=uk#/dashboard`);
+    await expect(demo).toHaveAttribute('href', `${landingURL}uk/demo/#/dashboard`);
     await expect(demo).toHaveAttribute('target', '_blank');
 
     const [tab] = await Promise.all([page.context().waitForEvent('page'), demo.click()]);
@@ -458,7 +463,7 @@ test.describe('in every language', () => {
 
     await languageButton(page).click();
     await menu(page).getByRole('menuitemradio', { name: 'English' }).click();
-    await expect(page.locator('header').getByRole('link', { name: 'Try Demo (opens in a new tab)' })).toHaveAttribute('href', `${demoURL}?lang=en#/dashboard`);
+    await expect(page.locator('header').getByRole('link', { name: 'Try Demo (opens in a new tab)' })).toHaveAttribute('href', `${demoURL}#/dashboard`);
   });
 
   test('a blocked storage still switches the language for the page', async ({ page }) => {
@@ -470,14 +475,13 @@ test.describe('in every language', () => {
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
     await chooseUkrainian(page);
     await expect(page.getByRole('heading', { level: 2, name: uk.sections.hierarchy.title })).toBeAttached();
-    await expect(page.locator('header').getByRole('link', { name: new RegExp(uk.hero.demo) })).toHaveAttribute('href', `${demoURL}?lang=uk#/dashboard`);
+    await expect(page.locator('header').getByRole('link', { name: new RegExp(uk.hero.demo) })).toHaveAttribute('href', `${landingURL}uk/demo/#/dashboard`);
   });
 
   for (const viewport of phones) {
     test(`the Ukrainian landing fits a ${viewport.width} px phone with the language menu`, async ({ page }) => {
       await page.setViewportSize(viewport);
-      await page.addInitScript(key => localStorage.setItem(key, 'uk'), STORAGE_KEY);
-      await page.goto(landingURL);
+      await page.goto(`${landingURL}uk/`);
       const nav = await page.getByRole('navigation', { name: 'Головна' }).boundingBox();
       expect(nav.height).toBeLessThanOrEqual(72);
       await languageButton(page).click();

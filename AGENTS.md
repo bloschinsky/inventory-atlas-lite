@@ -127,7 +127,7 @@ The project stays small and readable. Do not add:
   through `data-tour` attributes, and `backend.js` `reset(locale)` gives it a fresh fixture. A
   language change in the demo seeds it again in the new language (`DemoBanner.vue`) and closes the tour.
 - `client/src/i18n/index.js` — the `vue-i18n` instance, the browser-local language preference, and display formatting in the active locale.
-- `client/src/i18n/core.js` — supported locales, the shared locale storage key, `pickLocale()` (the demo's `?lang=`, then the saved choice, then English), vue-i18n options (English default and fallback, Ukrainian plural rule), and the `Intl` date, number, money, and file-size formatters; the landing page reuses it.
+- `client/src/i18n/core.js` — supported locales, the shared locale storage key, `pickLocale()` (the saved choice in the application; the demo's `?lang=`, then its page language, in the demo), vue-i18n options (English default and fallback, Ukrainian plural rule), and the `Intl` date, number, money, and file-size formatters; the landing page reuses it.
 - `client/src/i18n/locales/` — `en.json` and `uk.json`, the interface messages grouped by feature.
 - `client/src/update.js` — shared state and polling of the update panel in the About dialog.
 - `client/src/whatsNew.js` — the last acknowledged version in browser storage and the unseen releases shown after an update; `client/src/components/WhatsNewDialog.vue` renders them.
@@ -238,12 +238,17 @@ The project stays small and readable. Do not add:
 - `landing/` — the public landing page and user guide, a separate two-page Vue/Vite/Tabler build into
   `dist-landing/` (ignored by Git) published to GitHub Pages by `.github/workflows/pages.yml`:
   `index.html` and `guide/index.html` (the pages), `vite.config.js` (base path from
-  `LANDING_SITE_URL`, release from `LANDING_RELEASE_TAG`, demo buttons from `LANDING_DEMO_URL`, and
+  `LANDING_SITE_URL`, release from `LANDING_RELEASE_TAG`, demo buttons from `LANDING_DEMO_URL`, the
+  page shells in every locale, and
   the `virtual:guide` modules; it fails without a full screenshot set per locale, on a guide
   translation that drifted from `docs/HOW-TO.md`, or on invalid guide presentation metadata),
   `socialImages.js` (the names, size, and budget of the six social preview PNGs in
   `public/og/`, one per page — landing, guide, demo — and locale), `social/` (`layouts.js` and `card.css`,
-  their editable layouts), `site.js` (repository and documentation links, the guide source file of each locale,
+  their editable layouts), `publicPages.js` (the public pages, their address per locale — English at
+  `/`, `/guide/`, `/demo/`, other locales under `/<locale>/` — and `pageHead()`, the title, canonical,
+  `hreflang`, Open Graph, and X/Twitter tags of one page and locale from `meta.<page>` in the landing
+  locales), `publicPagesPlugin.js` (the Vite plugin, also used by the demo build, that writes one static
+  HTML shell per page and locale over the same bundle; the address is the page language), `site.js` (repository and documentation links, the guide source file of each locale,
   `landingRelease()` over the release history), `screenshots.js` (the screenshot names, sizes, and
   per-locale files), `guideSource.js` (renders `docs/HOW-TO.md` and `docs/HOW-TO.<locale>.md` with
   markdown-it at build time into sections with stable ids, checks their structural parity, and reads
@@ -262,13 +267,16 @@ The project stays small and readable. Do not add:
   `render-social-images.mjs`, `npm run landing:social`, which renders and checks the social preview images).
 - `test/landing.test.js` — landing release resolution, site address, documentation links, landing
   message parity and compilation, the screenshot set and sizes of every locale, the social preview
-  images, and the user guide:
+  images, the page addresses and shell metadata of every page and locale, and the user guide:
   its sources, the same section ids in every language, structural drift that fails the build, safe
   Markdown rendering and links, valid presentation metadata and demo routes, and no guide text copied
   into the landing sources;
   `test/e2e/landing.spec.js` — the built landing page under a Pages-style base path, in English and
-  Ukrainian: the language dropdown, persistence, metadata, localized screenshots, and Try Demo's
-  `?lang=`;
+  Ukrainian: the language dropdown that opens `uk/` and back, metadata, localized screenshots, and Try
+  Demo's localized address;
+  `test/e2e/public-pages.spec.js` — the six public addresses as a crawler reads them (raw HTML
+  metadata, `hreflang`, and each 1200 × 630 PNG preview under the base path), the one shared demo
+  bundle, and each address opening in its own language over a stale saved choice;
   `test/e2e/guide.spec.js` — the built user guide under the base path: the landing links, metadata,
   accessibility, anchors and reloads, the desktop and phone tables of contents, screenshots and the
   viewer, diagrams, tables and code on phones, Try this in Demo and the self-hosted notes, the language
@@ -279,7 +287,7 @@ The project stays small and readable. Do not add:
   and the guided tour's copy and action label rules;
   `test/e2e/demo.spec.js` — the built demo inside the landing build: no server requests, photos,
   temporary changes and Reset demo, reloaded deep links, unavailable features, no bundled secrets,
-  `?lang=` and the language change that seeds the demo again;
+  older `?lang=` links moving to the locale address, and the language change that seeds the demo again;
   `test/e2e/tour.spec.js` — the demo's guided tour: every chapter pressed scene by scene, scenes
   that wait for their action, Auto Play with Pause/Resume, idempotent Replay/Back/Next, close,
   failing scenes, the inverse theme, the keyboard, the tour on the Ukrainian inventory, a language

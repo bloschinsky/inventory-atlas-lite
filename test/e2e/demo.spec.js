@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import { expect, test } from '@playwright/test';
 import { byKey, createDemoFixture, demoItemUuid, photoFiles } from '../../client/src/demo/fixture.js';
-import { demoURL } from './environment.js';
+import { demoURL, landingURL } from './environment.js';
 
 /*
   The public demo, built with `vite build --mode demo` into the landing page and served under the
@@ -11,6 +11,8 @@ import { demoURL } from './environment.js';
 const { items, databaseName } = createDemoFixture('en');
 const ukrainian = createDemoFixture('uk');
 const uuidOf = demoItemUuid;
+// The demo published in Ukrainian: its own page over the same bundle (landing/publicPages.js).
+const ukDemoURL = `${landingURL}uk/demo/`;
 const search = page => page.getByPlaceholder('Search name, description, serial number, transferred to, specific location or text fields…');
 
 // Every request of a demo page, so a test can prove that nothing reached a server API.
@@ -161,10 +163,12 @@ test.describe('in every language', () => {
   const STORAGE_KEY = 'inventory-atlas.locale';
   const banner = page => page.getByRole('complementary', { name: /^(Demo mode|Демо-режим)$/ });
 
-  test('?lang= opens the demo in that language, with the demo inventory in it, over the saved choice', async ({ page }) => {
+  test('an older ?lang= link opens the demo in that language, at its own address, over the saved choice', async ({ page }) => {
     await page.addInitScript(key => localStorage.setItem(key, 'en'), STORAGE_KEY);
     await open(page, '?lang=uk#/hierarchy');
     await expect(page.locator('html')).toHaveAttribute('lang', 'uk');
+    // The address becomes the Ukrainian demo's, with the same page.
+    await expect(page).toHaveURL(`${ukDemoURL}#/hierarchy`);
     await expect(page.getByRole('heading', { name: 'Ієрархія', level: 1 })).toBeVisible();
     for (const location of Object.values(ukrainian.locations)) await expect(page.getByText(location, { exact: true }).first()).toBeVisible();
     await expect(page.getByText('Home / Office', { exact: true })).toHaveCount(0);
@@ -180,11 +184,13 @@ test.describe('in every language', () => {
 
     await open(page, '?lang=en#/dashboard');
     await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible();
+    await expect(page).toHaveURL(`${demoURL}#/dashboard`);
   });
 
   test('an unsupported ?lang= falls back safely to English', async ({ page }) => {
     await open(page, '?lang=fr#/items');
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    await expect(page).toHaveURL(`${demoURL}#/items`);
     await expect(page.getByRole('heading', { name: 'Items', level: 1 })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Camera Bag', exact: true }).first()).toBeVisible();
   });
@@ -201,9 +207,8 @@ test.describe('in every language', () => {
     await page.mouse.move(600, 400);
     await page.getByLabel('Language').selectOption('uk');
     await expect(page.getByRole('heading', { name: 'Налаштування', level: 1 })).toBeVisible();
-    // The address names the shown language, so a reload or a copied link opens it again.
-    expect(new URL(page.url()).searchParams.get('lang')).toBe('uk');
-    expect(await page.evaluate(key => localStorage.getItem(key), STORAGE_KEY)).toBe('uk');
+    // The address becomes the Ukrainian demo's, on the same page, so a reload or a copied link opens it again.
+    await expect(page).toHaveURL(new RegExp(`^${ukDemoURL}#/settings`));
     // Settings is a dialog over the page; the demo strip under it reports the new data once it closes.
     await page.getByRole('button', { name: 'Закрити налаштування' }).click();
     await expect(banner(page)).toContainText('Демо-дані оновлено українською мовою.');
@@ -237,6 +242,6 @@ test.describe('in every language', () => {
     await page.getByRole('link', { name: 'Items', exact: true }).click();
     await expect(page.getByRole('link', { name: 'Camera Bag', exact: true }).first()).toBeVisible();
     await expect(page.getByRole('link', { name: byKey(ukrainian.items, 'camera-bag').name, exact: true })).toHaveCount(0);
-    expect(new URL(page.url()).searchParams.get('lang')).toBe('en');
+    await expect(page).toHaveURL(`${demoURL}#/items`);
   });
 });

@@ -41,7 +41,7 @@ copied into the landing sources, and a change to it reaches the page with the ne
   - **Try this in Demo** — for workflows the static demo really performs: the Dashboard, categories
     and fields, Items (adding, searching, labels, Batch Add, Move to…), Templates, Checklists, the
     Hierarchy, and the Interface and Database settings. It opens that page of the demo in a new tab in
-    the guide's language (`demo/?lang=uk#/hierarchy`), with an external-link icon and *(opens in a new
+    the guide's language (`uk/demo/#/hierarchy`), with an external-link icon and *(opens in a new
     tab)* for screen readers. Without a published demo the buttons are not rendered.
   - **Requires a self-hosted installation.** — a small note for Download backup, Cloud Backup,
     Restore, Reset, Check for updates, and both AI features, which the public demo cannot do. Their
@@ -53,14 +53,15 @@ copied into the landing sources, and a change to it reaches the page with the ne
     Custom fields → Item values) under Core concepts, and *One file holds everything* (Inventory and
     photos → SQLite database → Download backup) under Backup and data safety. Each is a titled figure
     with an ordered list of steps, boxes joined by arrows across on wide screens and down on phones.
-- **Language:** the same language dropdown, `inventory-atlas.locale` preference, and `<html lang>`
-  handling as the product page. A change loads the other guide in place and keeps the section being
-  read; the title, description, Open Graph texts, table of contents, screenshots and captions,
-  diagrams, notes, and demo links follow it. The choice carries between the product page, the guide,
-  and the demo.
-- **Sharing:** a localized title (*User Guide — Inventory Atlas Lite*), description, and Open Graph
-  title and description, the canonical address `…/guide/` for every language, and the product's Open
-  Graph image. The static HTML carries the English metadata.
+- **Language:** the guide is published at `…/guide/` in English and `…/uk/guide/` in Ukrainian, and
+  the address decides the language, as on the product page. The same language dropdown opens the
+  other language's guide at the section being read (`…/uk/guide/#pack-or-verify-items-with-a-checklist`
+  and back), or at the top above the first section. Its table of contents, screenshots and captions,
+  diagrams, notes, and demo links are in the page language, and the product mark, Features, Install,
+  and Try Demo stay in it, so the language carries between the product page, the guide, and the demo.
+- **Sharing:** each language has its own static title (*User Guide — Inventory Atlas Lite*),
+  description, canonical address, `hreflang` links, Open Graph (`og:type` *article*) and X/Twitter
+  card, and its own Guide preview image of that language. Every `#section` shares that preview.
 - **Accessibility:** a skip link to the article, one `main` and one `article`, one `h1` and `h2`/`h3`
   headings without level jumps, sections labelled by their headings, keyboard-reachable table of
   contents, scrollable tables and code, visible focus outlines, localized alt text and captions,
@@ -72,9 +73,10 @@ copied into the landing sources, and a change to it reaches the page with the ne
 - **Pages:** `landing/vite.config.js` builds two inputs, `landing/index.html` and
   `landing/guide/index.html`, into `dist-landing/` and `dist-landing/guide/`, which GitHub Pages serves
   at `guide/` under the site's base path. `landing/src/guide.js` mounts `GuidePage.vue` with the same
-  Tabler stylesheet, Geist, `landing.css`, and vue-i18n instance as the product page; `followLocale()`
-  in `landing/src/i18n.js` keeps the document metadata of each page (`meta` or `guide.meta`) in the
-  page language. The navigation, footer, captioned screenshot figure, and the viewer are shared
+  Tabler stylesheet, Geist, `landing.css`, and vue-i18n instance as the product page.
+  `landing/publicPagesPlugin.js` also writes `dist-landing/uk/guide/`, the same page with the
+  Ukrainian `<html lang>` and the `meta.guide` copy of its language (see
+  [landing page](landing-page.md#implementation-overview)). The navigation, footer, captioned screenshot figure, and the viewer are shared
   components (`SiteNav.vue`, `SiteFooter.vue`, `ScreenshotFigure.vue`, `ScreenshotLightbox.vue` with
   `screenshotViewer.js`).
 - **Source of truth:** `guideSourceFile(locale)` in `landing/site.js` names the Markdown of a locale —
@@ -112,11 +114,12 @@ copied into the landing sources, and a change to it reaches the page with the ne
 - **Diagrams:** `GuideDiagram.vue` renders `guide.diagrams.<name>` — a title and a list of `{ term,
   text }` steps — as a `figure` labelled by its caption with an ordered list; the arrows are CSS
   pseudo-elements with empty alternative text.
-- **Demo links:** `demoLink(locale, route)` in `landing/src/content.js` builds `?lang=<locale>` and
-  `#<route>` on `LANDING_DEMO_URL` (the hero's Try Demo uses `/dashboard`).
+- **Demo links:** `demoLink(locale, route)` in `landing/src/content.js` builds `#<route>` on the
+  demo of the locale, `demo/` or `uk/demo/` (the hero's Try Demo uses `/dashboard`).
 - **Reading position:** `GuidePage.vue` tracks the heading being read on scroll (the last heading whose
-  top has passed the sticky bars). The first load scrolls to the address's anchor once the guide and
-  the typeface are ready; a language change scrolls back to the heading being read. The anchor offset
+  top has passed the sticky bars). The load scrolls to the address's anchor once the guide and the
+  typeface are ready; `GuidePage.vue` passes the heading being read (or `top`) to the language menu
+  as the anchor of the other language's guide. The anchor offset
   is the headings' `scroll-margin-top` (5.5 rem, 8 rem below 992 px, plus room for a section number),
   not the page's scroll padding, because Chrome scrolls the page when focus enters a sticky navigation
   inside the scroll padding; for the same reason the language menu and the On this page button move
@@ -159,15 +162,18 @@ pick the locale up from `SUPPORTED_LOCALES`.
   localized screenshot and the viewer; the diagrams in both languages; the table and code block that
   scroll inside their box on a 360 px phone; Try this in Demo in both languages and the demo opening
   in Ukrainian on the Hierarchy, and the self-hosted notes without demo links; the language change
-  that keeps the section and translates title, metadata, table of contents, captions, source link, and
-  screenshots, through a reload; the language from the landing to the guide and back; no sideways
+  that opens `uk/guide/` at the same section with the Ukrainian title, metadata, image, table of
+  contents, captions, source link, and screenshots, through a reload, and back to `guide/` at the
+  section scrolled to since; the language from the landing to the Ukrainian guide, its Ukrainian
+  product mark and Try Demo, and back; no sideways
   scrolling at 360, 390, 430, 768, 1366, and 1920 px with the sidebar only from 992 px; and the 24 px
   gutter on phones.
 
 ## Notes and limitations
 
 - The guide is rendered in the browser from the built JSON; crawlers that do not run scripts see the
-  title band's static metadata only. There is one canonical address for every language.
+  static metadata of its language only. Every section shares the guide's preview: a `#fragment`
+  never reaches a crawler.
 - The screenshots are the landing's light-mode captures; no section has a guide-only screenshot.
 - The release notes, technical documents such as `docs/proxmox.md` and `docs/features/`, and the
   links to them stay in English on GitHub.

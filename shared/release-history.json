@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.67.0",
+    "date": "2026-10-19",
+    "changes": [
+      "The product page, the user guide, and the public demo now each have a Ukrainian address of their own: /uk/, /uk/guide/, and /uk/demo/ next to the English /, /guide/, and /demo/. A shared link always opens in the language of its address, whatever language the person opening it used before.",
+      "Links to these pages now show a proper preview in Telegram, Discord, WhatsApp, and other apps: each page and language has its own title, description, and preview image, readable without running the page. Changing the language in the language menu opens the same page in that language, and the user guide keeps the section you were reading.",
+      "Older demo links with ?lang=uk keep working and move to the Ukrainian demo address, keeping the demo page they open."
+    ]
+  },
+  {
     "version": "0.66.1",
     "date": "2026-10-19",
     "changes": [

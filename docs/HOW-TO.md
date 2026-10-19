@@ -38,10 +38,15 @@ sample inventory. Download Backup, Restore, the Danger Zone,
 Settings → Cloud Backup and AI, and Check for updates need a real installation and say *Not
 available in the public demo* instead.
 
-The product page and the demo speak English and Ukrainian. Pick the language in the product page's
-language menu (the language icon in the top bar); **Try Demo** then opens the demo, its sample
-inventory, and its guided tour in that language, and the demo address carries it as `?lang=uk` or
-`?lang=en`, so a shared demo link opens in the same language. In the demo, changing the language in
+The product page, the user guide, and the demo speak English and Ukrainian, and each language has
+its own address: the Ukrainian ones start with `uk/`, for example
+[`…/uk/`](https://bloschinsky.github.io/inventory-atlas-lite/uk/) and
+[`…/uk/demo/`](https://bloschinsky.github.io/inventory-atlas-lite/uk/demo/). Pick the language in
+the language menu (the language icon in the top bar): it opens the same page in that language, and
+**Try Demo** then opens the demo, its sample inventory, and its guided tour in that language too. A
+shared link always opens in the language of its address, with a preview in that language, whatever
+language the person opening it used before. Older demo links with `?lang=uk` still open in
+Ukrainian. In the demo, changing the language in
 **Settings → Interface** reloads the sample inventory in the new language — the strip confirms it —
 which discards your demo changes and closes an open guided tour. Your own installation never
 changes or translates your data when you change the language.
@@ -53,7 +58,7 @@ adds a table of contents — **On this page** on a phone — screenshots, small 
 **Try this in Demo** buttons that open the page a section describes in the demo, in the guide's
 language. Sections about features that need a real installation say *Requires a self-hosted
 installation* instead. Every heading has a link to copy, and the address keeps the section through a
-reload and a language change.
+reload and a language change. A shared link to a section shows the guide's preview.
 
 ## 2. Before you start
 
