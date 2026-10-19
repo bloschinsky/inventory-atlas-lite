@@ -221,6 +221,14 @@ test('each page shell carries the truthful metadata of its own page and language
   assert.throws(() => localizeShell('<html><head></head></html>', { site: projectSite, page: 'landing', locale: 'en', meta: landingMessages.en.meta.landing }), /placeholder/);
 });
 
+test('the application build never resolves landing/, which the Docker build context leaves out', () => {
+  // Vite bundles vite.config.js, so even a dynamic import with a literal landing/ path fails there.
+  assert.ok(!read('Dockerfile').includes('COPY landing'), 'the Docker image is built without landing/');
+  const config = read('vite.config.js');
+  assert.doesNotMatch(config, /(?:from|import\()\s*['"`]\.{1,2}\/landing\//);
+  assert.match(config, /new URL\(`landing\/\$\{file\}`, import\.meta\.url\)/);
+});
+
 test('the source pages leave every sharing tag to the shells', () => {
   for (const file of ['landing/index.html', 'landing/guide/index.html', 'index.html']) {
     const html = read(file);

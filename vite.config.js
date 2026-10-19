@@ -41,14 +41,18 @@ const buildInfo = {
   browser by client/src/demo/, relative asset paths, and its output in dist-landing/demo/, which the
   Pages workflow publishes next to the landing page. The build also writes the demo's shell in every
   supported locale (demo/, uk/demo/) with the sharing metadata of LANDING_SITE_URL, all of them
-  loading this one bundle. landing/ is loaded only then: the Docker build context leaves it out.
+  loading this one bundle. landing/ is loaded only then: the Docker build context leaves it out. Its
+  addresses are built at run time, because Vite bundles this file and would otherwise resolve them in
+  every build.
 */
+const landingModule = file => import(new URL(`landing/${file}`, import.meta.url).href);
+
 export default defineConfig(async ({ command, mode }) => {
   const demo = mode === 'demo';
   const shells = [];
   if (demo && command === 'build') {
-    const { publicPageShells } = await import('./landing/publicPagesPlugin.js');
-    const { siteUrl } = await import('./landing/site.js');
+    const { publicPageShells } = await landingModule('publicPagesPlugin.js');
+    const { siteUrl } = await landingModule('site.js');
     shells.push(publicPageShells({ site: siteUrl(process.env.LANDING_SITE_URL), pages: { 'index.html': 'demo' }, siteDir: '..' }));
   }
   return {

@@ -66,3 +66,16 @@
   drafted from a product page, reviewed, and saved without the page price* timed out; it is unrelated
   to this change and passed when run again alone. All landing, guide, demo, tour, and public-page
   tests passed.
+
+## Release fix
+
+- The first `v0.67.0` Release run failed in *Publish Docker image*: Vite bundles `vite.config.js`
+  before running it, so even the dynamic `import('./landing/…')` was resolved in the Docker build,
+  whose context has no `landing/` (`Could not resolve "./landing/site.js"`). Nothing was published.
+- `vite.config.js` now builds the address of each `landing/` module at run time with
+  `new URL(…, import.meta.url)`, which the config bundler leaves alone; they are still loaded only by
+  `vite build --mode demo`. `test/landing.test.js` fails on a literal `landing/` import in the config.
+- Fixed directly on `master`, and the `v0.67.0` tag moved to the fix, as agreed for this case.
+- Verified: `vite build` in a copy of the Docker build context (only the files the Dockerfile copies)
+  passed, as did `vite build --mode demo` with both demo shells, `npm run lint`, and
+  `test/landing.test.js` (apart from the two known Windows-only guide tests).
