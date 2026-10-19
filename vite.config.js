@@ -39,12 +39,20 @@ const buildInfo = {
 /*
   The `demo` mode builds the public demo: the same client, with every API request answered in the
   browser by client/src/demo/, relative asset paths, and its output in dist-landing/demo/, which the
-  Pages workflow publishes next to the landing page.
+  Pages workflow publishes next to the landing page. The build also writes the demo's shell in every
+  supported locale (demo/, uk/demo/) with the sharing metadata of LANDING_SITE_URL, all of them
+  loading this one bundle. landing/ is loaded only then: the Docker build context leaves it out.
 */
-export default defineConfig(({ mode }) => {
+export default defineConfig(async ({ command, mode }) => {
   const demo = mode === 'demo';
+  const shells = [];
+  if (demo && command === 'build') {
+    const { publicPageShells } = await import('./landing/publicPagesPlugin.js');
+    const { siteUrl } = await import('./landing/site.js');
+    shells.push(publicPageShells({ site: siteUrl(process.env.LANDING_SITE_URL), pages: { 'index.html': 'demo' }, siteDir: '..' }));
+  }
   return {
-    plugins: [vue()],
+    plugins: [vue(), ...shells],
     base: demo ? './' : '/',
     // The demo bundles the server's route tables, which then register into a stand-in for Express.
     resolve: demo ? { alias: [{ find: /^express$/, replacement: fileURLToPath(new URL('client/src/demo/express.js', import.meta.url)) }] } : {},

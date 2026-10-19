@@ -7,6 +7,7 @@ import { createI18n } from 'vue-i18n';
 import { SUPPORTED_LOCALES, createI18nOptions } from '../client/src/i18n/core.js';
 import sharp from 'sharp';
 import { guideDiagrams, guidePresentation } from '../landing/guidePresentation.js';
+import { localizeShell, ogLocales, publicPagePath, publicPageUrl, publicPages } from '../landing/publicPages.js';
 import { buildGuide, githubSlug, guideSectionIds, presentationProblems, readDemoRoutes, readGuideSource } from '../landing/guideSource.js';
 import { screenshotFile, screenshotNames, screenshotSizes } from '../landing/screenshots.js';
 import { defaultSiteUrl, guideSourceFile, guideSourceUrl, landingRelease, links, repositoryUrl, siteUrl } from '../landing/site.js';
@@ -154,8 +155,78 @@ test('every page has a distinct social preview image in every language', async (
   }
   const expected = SUPPORTED_LOCALES.flatMap(({ code }) => socialPages.map(page => path.basename(socialImageFile(page, code))));
   assert.deepEqual(fs.readdirSync(path.join(root, 'landing/public/og')).sort(), expected.sort(), 'no stray social images');
-  // The shared og-image.png stays until the pages switch to the localized images.
-  assert.ok(fs.existsSync(path.join(root, 'landing/public/og-image.png')));
+  // The pages share their own localized images; the former shared English image is gone.
+  assert.ok(!fs.existsSync(path.join(root, 'landing/public/og-image.png')));
+});
+
+// The static shells of the public pages: one per page and locale, with its sharing metadata.
+const projectSite = siteUrl('https://example.github.io/atlas');
+const attribute = (html, selector, name) => html.match(new RegExp(`<${selector}[^>]*? ${name}="([^"]*)"`))?.[1];
+const metaContent = (html, key) => attribute(html, `meta (?:name|property)="${key}"`, 'content');
+
+test('every public page has its own address in every language, English at the original ones', () => {
+  assert.deepEqual(Object.keys(publicPages).sort(), [...socialPages].sort());
+  assert.equal(publicPagePath('landing', 'en'), '');
+  assert.equal(publicPagePath('guide', 'en'), 'guide/');
+  assert.equal(publicPagePath('demo', 'en'), 'demo/');
+  assert.equal(publicPageUrl(projectSite, 'landing', 'uk'), 'https://example.github.io/atlas/uk/');
+  assert.equal(publicPageUrl(projectSite, 'guide', 'uk'), 'https://example.github.io/atlas/uk/guide/');
+  assert.equal(publicPageUrl(projectSite, 'demo', 'uk'), 'https://example.github.io/atlas/uk/demo/');
+  assert.equal(publicPageUrl(siteUrl('https://atlas.example.org'), 'demo', 'uk'), 'https://atlas.example.org/uk/demo/');
+  for (const { code } of SUPPORTED_LOCALES) assert.match(ogLocales[code] ?? '', new RegExp(`^${code}_[A-Z]{2}$`));
+});
+
+test('each page shell carries the truthful metadata of its own page and language', () => {
+  const source = '<!doctype html>\n<html lang="en" class="x">\n  <head>\n    <title>Inventory Atlas Lite</title>\n  </head>\n</html>';
+  const titles = new Set();
+  const images = new Set();
+  for (const page of socialPages) {
+    for (const { code } of SUPPORTED_LOCALES) {
+      const meta = landingMessages[code].meta[page];
+      const html = localizeShell(source, { site: projectSite, page, locale: code, meta });
+      const url = publicPageUrl(projectSite, page, code);
+      const image = `https://example.github.io/atlas/og/${page}-${code}.png`;
+      assert.match(html, new RegExp(`<html lang="${code}" class="x">`));
+      assert.equal(html.match(/<title>([^<]*)<\/title>/)[1], meta.title);
+      assert.equal(html.match(/<title>/g).length, 1, 'the placeholder title is replaced, not repeated');
+      assert.equal(metaContent(html, 'description'), meta.description);
+      assert.equal(attribute(html, 'link rel="canonical"', 'href'), url);
+      assert.equal(metaContent(html, 'og:url'), url);
+      assert.equal(metaContent(html, 'og:type'), page === 'guide' ? 'article' : 'website');
+      assert.equal(metaContent(html, 'og:site_name'), 'Inventory Atlas Lite');
+      assert.equal(metaContent(html, 'og:title'), meta.ogTitle);
+      assert.equal(metaContent(html, 'og:description'), meta.ogDescription);
+      assert.equal(metaContent(html, 'og:image'), image);
+      assert.equal(metaContent(html, 'og:image:width'), '1200');
+      assert.equal(metaContent(html, 'og:image:height'), '630');
+      assert.equal(metaContent(html, 'og:image:alt'), meta.ogImageAlt);
+      assert.equal(metaContent(html, 'og:locale'), ogLocales[code]);
+      assert.equal(metaContent(html, 'og:locale:alternate'), ogLocales[code === 'en' ? 'uk' : 'en']);
+      assert.equal(metaContent(html, 'twitter:card'), 'summary_large_image');
+      assert.equal(metaContent(html, 'twitter:title'), meta.ogTitle);
+      assert.equal(metaContent(html, 'twitter:image'), image);
+      for (const { code: other } of SUPPORTED_LOCALES) {
+        assert.equal(attribute(html, `link rel="alternate" hreflang="${other}"`, 'href'), publicPageUrl(projectSite, page, other));
+      }
+      assert.equal(attribute(html, 'link rel="alternate" hreflang="x-default"', 'href'), publicPageUrl(projectSite, page, 'en'));
+      titles.add(meta.title);
+      images.add(image);
+    }
+  }
+  assert.equal(titles.size, socialPages.length * SUPPORTED_LOCALES.length, 'every page and language has its own title');
+  assert.equal(images.size, socialPages.length * SUPPORTED_LOCALES.length, 'every page and language has its own image');
+  // Quotes and markup in the copy cannot break out of an attribute.
+  const html = localizeShell(source, { site: projectSite, page: 'landing', locale: 'en', meta: { ...landingMessages.en.meta.landing, ogTitle: 'A "quoted" <b>title</b> & more' } });
+  assert.ok(html.includes('content="A &quot;quoted&quot; &lt;b&gt;title&lt;/b&gt; &amp; more"'));
+  assert.throws(() => localizeShell('<html><head></head></html>', { site: projectSite, page: 'landing', locale: 'en', meta: landingMessages.en.meta.landing }), /placeholder/);
+});
+
+test('the source pages leave every sharing tag to the shells', () => {
+  for (const file of ['landing/index.html', 'landing/guide/index.html', 'index.html']) {
+    const html = read(file);
+    assert.equal(html.match(/<title>[^<]*<\/title>/g)?.length, 1, `${file} has one title placeholder`);
+    assert.ok(!/og:|twitter:|rel="canonical"|hreflang/.test(html), `${file} writes no sharing metadata by hand`);
+  }
 });
 
 // The public user guide, rendered from docs/HOW-TO.md and its translations (landing/guideSource.js).

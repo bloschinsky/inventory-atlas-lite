@@ -7,21 +7,25 @@ and published to GitHub Pages at <https://bloschinsky.github.io/inventory-atlas-
 the application as self-hosted software, shows its main workflows with real screenshots, and sends
 visitors to the official releases and installation documentation. It is a separate static build: the
 application, its build, and its release workflow are unchanged. The page is bilingual — English (the
-default) and Ukrainian — and the chosen language carries through to the public demo, its sample data,
-its guided tour, and the screenshots on the page.
+default) and Ukrainian — and every language has its own address: `/`, `/guide/`, and `/demo/` in
+English, `/uk/`, `/uk/guide/`, and `/uk/demo/` in Ukrainian. Each address is a static HTML page
+whose title, description, and sharing preview are already in its language, and the language carries
+through to the guide, the public demo, its sample data, its guided tour, and the screenshots.
 
 ## User-visible behaviour
 
 - **Language:** a dropdown in the navigation, with a language icon and the current language's name
   (on phones only the icon; its accessible name is *Language: English*). It lists every supported
   language by its own name — *English*, *Українська* — as the application's Settings do, with a
-  check mark on the current one and no flags. Choosing a language translates the whole page at once,
-  without a reload: navigation, hero, facts, story, captions, screenshot descriptions, install cards,
-  final call to action, footer, the screenshot viewer's controls, and hidden accessibility text. The
-  document language (`<html lang>`), the page title, the description, and the Open Graph title,
-  description, and image text follow it. The choice is kept in the browser under the application's
-  own preference key, `inventory-atlas.locale`, so a reload — and the demo on the same site — opens
-  in it; with blocked storage the page still switches for the visit. Product and technical names
+  check mark on the current one and no flags. Choosing a language opens the same page in that
+  language at the same place — `/#install` becomes `/uk/#install` — with everything translated:
+  navigation, hero, facts, story, captions, screenshot descriptions, install cards, final call to
+  action, footer, the screenshot viewer's controls, hidden accessibility text, the document language
+  (`<html lang>`), the title, and the sharing metadata. **The address is the language:** `/uk/`
+  always opens in Ukrainian and `/` in English, whatever the browser chose before, so a shared link
+  never changes language. The landing and the guide neither read nor write the application's saved
+  interface language (`inventory-atlas.locale`); a reload keeps the language because the address
+  does, and blocked storage changes nothing. Product and technical names
   (Inventory Atlas Lite, GitHub, Docker, Proxmox, Node.js, SQLite, version numbers) are never
   translated. The menu is keyboard accessible: Enter, Space, or the arrow keys open it on the current
   language, the arrow keys, Home, and End move, Enter picks, Escape closes it back onto its button,
@@ -69,9 +73,9 @@ its guided tour, and the screenshots on the page.
   and release links. The navigation links Features, **Guide**, and Install on wide screens.
 - **Try Demo** in the hero opens the [public demo](public-demo.md), the real application running in
   the browser on an invented inventory, in a new tab (`target="_blank"`,
-  `rel="noopener noreferrer"`), so the landing stays open behind it. Its address names the page
-  language and the demo's start page — `demo/?lang=uk#/dashboard` — so the demo opens with its
-  interface, sample data, and guided tour in that language. An external-link icon after the
+  `rel="noopener noreferrer"`), so the landing stays open behind it. It opens the demo of the page
+  language at the demo's start page — `uk/demo/#/dashboard` — so the demo opens with its interface,
+  sample data, and guided tour in that language. An external-link icon after the
   label shows that, and screen readers hear *Try Demo (opens in a new tab)*. Get Inventory Atlas
   Lite stays the primary install path.
 - **Look:** the navigation, the hero with the facts rail, the final call to action, and the footer
@@ -96,10 +100,14 @@ its guided tour, and the screenshots on the page.
   screens without sideways scrolling, stacks the sections on narrow screens with full-width buttons,
   and has a skip link, semantic headings, visible focus outlines, and descriptive alt text on every
   screenshot. It contains no analytics or tracking.
-- Sharing metadata: a title, a description, a canonical URL, Open Graph and Twitter card tags with a
-  1200 × 630 Dashboard image, and an SVG favicon of the product mark. The static HTML carries the
-  English metadata, which crawlers read; the page script replaces it in the chosen language. There is
-  one canonical address for every language: the language is a visitor preference, not a URL.
+- **Sharing:** every page in every language has its own static metadata, which link previews read
+  without running a script: a natural title and description in its language, its own canonical
+  address, `hreflang` links to every translation and an English `x-default`, Open Graph tags
+  (`og:type` *website*, or *article* for the guide, `og:locale` with `og:locale:alternate`) and the
+  large-image X/Twitter card, all with that page's own 1200 × 630 social preview image of that
+  language and a description of it as its alt text. An English link never shares a Ukrainian image,
+  and the reverse. Every guide section shares the guide's preview and every demo page the demo's; the
+  favicon is an SVG of the product mark.
 
 ## Implementation overview
 
@@ -115,23 +123,37 @@ its guided tour, and the screenshots on the page.
   points are a message list rendered with `tm()`/`rt()`.
 - **`landing/src/i18n.js`** creates the landing's own vue-i18n instance from the application's locale
   rules in `client/src/i18n/core.js` — the same `SUPPORTED_LOCALES` codes and names, English default
-  and fallback, Ukrainian plural rule, and `LOCALE_STORAGE_KEY` — but only the landing messages, so
-  the application bundle and the landing bundle stay separate. `setLocale()` applies and saves the
-  choice (a blocked storage is ignored); a watcher sets `<html lang>`, the title, and the
-  description and Open Graph tags. `landing/vite.config.js` sets the same vue-i18n compile-time flags
-  as the application build.
+  and fallback, and Ukrainian plural rule — but only the landing messages, so the application bundle
+  and the landing bundle stay separate. Its language, `pageLocale`, is the `<html lang>` of the
+  page's shell. `landing/vite.config.js` sets the same vue-i18n compile-time flags as the application
+  build.
+- **Addresses and shells:** `landing/publicPages.js` names the public pages (`landing`, `guide`,
+  `demo`), their address in a locale (`publicPagePath()`: English at the original paths, every other
+  locale under its code), the Open Graph locales, and `pageHead()`, the head of one page in one
+  locale — title, description, canonical, `hreflang` alternates with `x-default`, Open Graph, and the
+  X/Twitter card, every address absolute under `LANDING_SITE_URL` and every value escaped. The copy
+  is `meta.<page>` (`title`, `description`, `ogTitle`, `ogDescription`, `ogImageAlt`) in
+  `landing/src/locales/<locale>.json`. `landing/publicPagesPlugin.js` is the Vite plugin that turns a
+  built page into its shell in every locale: it sets `<html lang>` and replaces the source page's
+  `<title>` placeholder with that head. The landing build applies it to both pages (`index.html`,
+  `uk/index.html`, `guide/index.html`, `uk/guide/index.html`, all loading the same bundles), and
+  the demo build to the demo (see [public demo](public-demo.md)); it fails on a locale without an Open
+  Graph locale or `meta` copy. In `npm run landing:dev` it serves `/uk/…` from the same source page
+  in Ukrainian. The source HTML files carry no sharing tags of their own.
 - **`landing/src/LanguageMenu.vue`** is the dropdown: a menu button (`aria-haspopup="menu"`,
   `aria-expanded`) and a Tabler `.dropdown-menu` of `menuitemradio` items (`aria-checked`, `lang`)
   built from `SUPPORTED_LOCALES`, so a new locale appears without a component change. It uses no
-  Bootstrap script.
-- `demoLink(locale, route)` in `content.js` builds the Try Demo address from `LANDING_DEMO_URL`:
-  `?lang=<locale>` plus a hash route — `#/dashboard` for Try Demo, the described page for the
-  guide's Try this in Demo — which works with the demo's hash routing on GitHub Pages.
+  Bootstrap script. A choice navigates to `pageUrl(page, locale)` with the anchor `SiteNav.vue` passes
+  (the guide's section being read) or the address's own fragment.
+- `pageUrl(page, locale)` in `content.js` is a public page under the base path; `homeUrl` and
+  `guideUrl` are the product page and the guide in the page language, and `demoLink(locale, route)`
+  is the demo of a language plus a hash route — `#/dashboard` for Try Demo, the described page for
+  the guide's Try this in Demo — which works with the demo's hash routing on GitHub Pages.
 - The site has two pages, the product page and the [public user guide](public-user-guide.md)
   (`landing/guide/index.html`), which share the navigation (`SiteNav.vue`), the footer
   (`SiteFooter.vue`), the captioned screenshot figure (`ScreenshotFigure.vue`), the viewer, the
   language menu, `landing.css`, and the messages; `homeUrl` and `guideUrl` in `content.js` are
-  their addresses under the base path, and `followLocale()` in `i18n.js` sets each page's metadata.
+  their addresses in the page language.
   Screenshots carry their pixel size from `screenshotSizes` in `landing/screenshots.js`.
 - `landing/src/ScreenshotLightbox.vue` is the viewer: one native modal `<dialog>` for the whole page,
   which gives the top layer, an inert page behind it, focus containment, and Escape without a
@@ -154,25 +176,27 @@ its guided tour, and the screenshots on the page.
   URL, the documentation links, the default Pages address, and `landingRelease()`.
 - `landing/vite.config.js` is the separate build (`npm run landing:build`, output `dist-landing/`):
   - `LANDING_SITE_URL` is the Pages address; its path is the Vite `base`, so every asset and the
-    favicon load from the repository path, and the address is written into the canonical and Open
-    Graph tags. The default is the repository's GitHub Pages address.
+    favicon load from the repository path, and the address is the root of every canonical,
+    `hreflang`, and image address of the shells. The default is the repository's GitHub Pages
+    address; a custom domain or another project path works the same way.
   - `LANDING_RELEASE_TAG` is the latest published GitHub Release. Its entry in
     `shared/release-history.json` provides the version and date; a tag without an entry fails the
     build. Without a tag (a local build) the newest history entry is used. Nothing on the page is
     edited for a release.
   - `LANDING_DEMO_URL` is the address of the public demo; without it the Try Demo button is not
-    rendered. The Pages workflow sets it to the Pages address plus `demo/`.
+    rendered. The demo is published with the site in every language, so it can only be the English
+    demo, `demo/` under `LANDING_SITE_URL`, and any other value fails the build. The Pages workflow
+    sets it to the Pages address plus `demo/`.
 - `.github/workflows/pages.yml` builds and deploys the page: on pushes to `master` that touch the
   landing or the release history, after every successful **Release** workflow run, and on demand.
   It reads the Pages address with `actions/configure-pages`, looks up the latest published release
   with `gh release view`, installs with `npm ci --ignore-scripts` (the install scripts only fetch the
   server's background-removal model), builds the page and then the [public demo](public-demo.md) into
-  `dist-landing/demo/`, checks that the demo is there, and deploys with `actions/upload-pages-artifact` and
+  `dist-landing/demo/` with the same `LANDING_SITE_URL`, checks that all six pages are there, and deploys with `actions/upload-pages-artifact` and
   `actions/deploy-pages`. Each step is named, so a failure points at the address, the release, the
   install, the build, or the deployment.
 - **Screenshots** are one set per language in `landing/src/assets/screenshots/<locale>/` (WebP,
-  35–75 KB each), with the same file names in every set; `landing/screenshots.js` lists them. The
-  Open Graph image is `landing/public/og-image.png` (the English Dashboard). `content.js` resolves a
+  35–75 KB each), with the same file names in every set; `landing/screenshots.js` lists them. `content.js` resolves a
   screenshot with `screenshotUrl(locale, name)` over an eager `import.meta.glob` of the URLs only, so
   the browser downloads just the set of the active language; the build writes each set to
   `assets/screenshots/<locale>/`. `landing/vite.config.js` fails the build, naming the files, when a
@@ -196,8 +220,8 @@ its guided tour, and the screenshots on the page.
   Your data.*; **Guide** a contents page listing the first sections of the localized user guide over
   a faded Hierarchy screenshot; **Demo** the Dashboard in a browser window with a checklist run on a
   phone. The copy is `social.<page>` in `landing/src/locales/<locale>.json`, and every language of a
-  page keeps the same composition. The pages do not reference these images yet: `og-image.png`
-  stays their Open Graph image until the locale-specific page addresses and metadata switch to them.
+  page keeps the same composition. Each page shell names its own image as `og:image` and
+  `twitter:image`; the former shared `og-image.png` is gone.
 - **Rendering them:** `npm run landing:social` runs `landing/scripts/render-social-images.mjs`,
   which builds each card from the editable layouts `landing/social/layouts.js` and `card.css`, the
   localized screenshots above (refresh them first with `npm run landing:screenshots` after an
@@ -225,6 +249,16 @@ Pages must be enabled once in the repository: **Settings → Pages → Build and
 GitHub Actions**. Until then the *Read the GitHub Pages address* step fails with *Get Pages site
 failed*. The `github-pages` environment that the deployment uses is created by GitHub automatically.
 
+### Checking a real link preview
+
+The automated tests read the published HTML and images, but not how a platform draws them. After a
+deployment that changes the sharing copy or images, paste each of the six addresses into a private
+chat or a draft in Telegram, Discord, WhatsApp, Slack, Facebook, LinkedIn, and X and check the title,
+description, and image of that page and language. Platforms cache a preview, often for days: a new
+image or text may need their re-scrape tools (Facebook's Sharing Debugger, LinkedIn's Post
+Inspector, Telegram's @WebpageBot) or a query string such as `?v=2` on the shared address to show.
+Local tests cannot guarantee a platform's own rendering or cropping.
+
 ### The demo button
 
 The *Build the landing page* step of `pages.yml` sets `LANDING_DEMO_URL` to the demo that the next
@@ -242,7 +276,7 @@ local build without the variable renders no Try Demo button.
   base path (an extra web server in `playwright.config.js` that also builds the demo into it): the Get Inventory Atlas Lite, View on
   GitHub, and install links, the Try Demo link to the demo built into the same site with its new-tab
   attributes and external-link icon, the release text and link from the release
-  history, the canonical, Open Graph, and favicon addresses under the base path, every screenshot
+  history, the canonical, Open Graph image, and favicon addresses under the base path, every screenshot
   loading from the base path with alt text and no failed request, and the section headings without
   sideways scrolling at 360, 390, 430, 768, 1366, and 1920 pixels, the dark bands in both system modes, and a
   section that is hidden until scrolled into view but shown at once with reduced motion. It also
@@ -253,18 +287,32 @@ local build without the variable renders no Try Demo button.
   Close, Escape, the backdrop, focus return, Previous/Next and the arrow keys, the hero gallery, and
   a phone screen without sideways scrolling where even the tall phone screenshot fits whole.
   In every language it checks English as the default, the dropdown (its accessible name, the
-  languages by their own names, `aria-checked`, focus, Escape, and keyboard-only choice), Ukrainian
-  copy, title, description, and Open Graph text, no English text left on the page, only the Ukrainian
-  screenshots loaded from `assets/screenshots/uk/` under the base path with Ukrainian captions and
-  alt text, the saved choice and a reload, the Ukrainian screenshot viewer, Try Demo's
-  `?lang=` address in both languages and the demo opening in Ukrainian in a new tab, switching with
-  blocked storage, and the Ukrainian page and open menu on 360, 390, and 430 pixel phones.
+  languages by their own names, `aria-checked`, focus, Escape, and keyboard-only choice), the choice
+  that opens `uk/` at the same `#install` and back, Ukrainian copy, title, description, and Open
+  Graph text and image, the untouched saved preference, no English text left on the page, only the
+  Ukrainian screenshots loaded from `assets/screenshots/uk/` under the base path with Ukrainian
+  captions and alt text, a reload, the Ukrainian screenshot viewer, Try Demo's `demo/` and
+  `uk/demo/` addresses and the demo opening in Ukrainian in a new tab, switching with blocked
+  storage, and the Ukrainian page and open menu on 360, 390, and 430 pixel phones.
+- `test/e2e/public-pages.spec.js` checks the six addresses as a crawler does — the raw HTTP response,
+  no script: status 200, `<html lang>`, exactly one title, description, canonical, `og:url`, type,
+  site name, Open Graph and X/Twitter title, description, and image alt text of that page and
+  language, `og:locale` and its alternate, both `hreflang` links and `x-default`, and the
+  `og:image` and `twitter:image` of that page and language, which load from their absolute address
+  as 1200 × 630 PNGs. It checks that both demo pages load the one bundle under `demo/assets/` and
+  that every page script and style loads; that each address opens in its own language, with its
+  screenshots or demo inventory, over a saved choice of the other language and after a reload,
+  with no failed request; and that the Ukrainian demo keeps its address through Reset demo and moves
+  to `demo/` on a language change. `test/landing.test.js` checks the address rules under a project
+  path and a domain root, the head of every page and locale with escaped copy, and that the source
+  pages write no sharing tags themselves.
 
 ## Notes and limitations
 
 - The screenshots are captured in light mode, one set per language; they are not regenerated
-  automatically. This is also why the viewer's surface is always light. The Open Graph image is
-  English only.
+  automatically. This is also why the viewer's surface is always light.
+- Link previews are per page and language only: a guide `#section` or a demo `#/route` shares the
+  preview of its page, because the fragment never reaches a server or a crawler.
 
 ## Adding another language
 
@@ -276,10 +324,14 @@ local build without the variable renders no Try Demo button.
    `client/src/demo/fixture.js`; `createDemoFixture()` fails on a missing one.
 4. Run `npm run landing:screenshots -- --locale=<locale>` for its screenshot set, then add the
    `social` copy and run `npm run landing:social -- --locale=<locale>` for its social preview images.
-5. Add `docs/HOW-TO.<locale>.md` for the [public user guide](public-user-guide.md#adding-another-locale).
+5. Add its `meta` copy for the three pages and its Open Graph locale to `ogLocales` in
+   `landing/publicPages.js`; the builds then publish `<locale>/`, `<locale>/guide/`, and
+   `<locale>/demo/` with their metadata, and add the locale to the `hreflang` links of every page.
+6. Add `docs/HOW-TO.<locale>.md` for the [public user guide](public-user-guide.md#adding-another-locale).
 
-The dropdown, the Try Demo address, the screenshot lookup, the demo seed, and the guided tour need no
-change.
+The dropdown, the page addresses, the Try Demo address, the screenshot lookup, the demo seed, and the
+guided tour need no change. The six-page check in `pages.yml` and the English–Ukrainian pairs in
+`test/e2e/public-pages.spec.js` list the pages by hand.
 - The viewer has no zoom control of its own: on a phone, the browser's pinch zoom enlarges the
   fitted screenshot further.
 - The published page shows the master branch copy with the latest *published* release, so a version

@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { byKey, createDemoFixture } from '../../client/src/demo/fixture.js';
 import en from '../../client/src/i18n/locales/en.json' with { type: 'json' };
 import uk from '../../client/src/i18n/locales/uk.json' with { type: 'json' };
-import { demoURL } from './environment.js';
+import { demoURL, landingURL } from './environment.js';
 
 /*
   The guided presentation of the public demo, on the built demo inside the landing build (see
@@ -582,8 +582,9 @@ test('the keyboard drives the tour: Enter presses the focused scene action, and 
 });
 
 test('the tour speaks Ukrainian when the interface does', async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem('inventory-atlas.locale', 'uk'));
-  await open(page);
+  // The Ukrainian demo's own address.
+  await page.goto(`${landingURL}uk/demo/#/dashboard`);
+  await page.mouse.move(600, 400);
   await page.getByRole('button', { name: 'Екскурсія' }).click();
   const ukDialog = page.getByRole('dialog', { name: 'Панель' });
   await expect(ukDialog.getByRole('progressbar')).toHaveAttribute('aria-valuetext', 'Розділ 1 з 8');

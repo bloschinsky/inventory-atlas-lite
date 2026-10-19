@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { IconBook, IconBrandGithub, IconChevronDown, IconExternalLink, IconLink, IconListDetails, IconPlayerPlay } from '@tabler/icons-vue';
 import { guideLoaders } from 'virtual:guide';
@@ -62,25 +62,23 @@ onBeforeUnmount(() => {
 });
 
 /*
-  Loads the guide of a language. The first load opens the section of the address's anchor, which
-  the browser could not find before the guide existed; a language change keeps the section being read.
+  Loads the guide of the page language and opens the section of the address's anchor, which the
+  browser could not find before the guide existed. The language menu opens the other language's
+  guide with the section being read as its anchor, so a language change keeps the place.
 */
-let request = 0;
-async function load(code) {
-  const current = ++request;
-  const keep = guide.value ? active.value : decodeURIComponent(window.location.hash.slice(1));
-  const { default: data } = await guideLoaders[code]();
-  if (current !== request) return;
+async function load() {
+  const keep = decodeURIComponent(window.location.hash.slice(1));
+  const { default: data } = await guideLoaders[locale.value]();
   guide.value = data;
   await nextTick();
   if (keep && headings.value.has(keep)) {
     // The typeface changes the line breaks, so the section is found once it has loaded.
     await document.fonts.ready;
-    if (current === request) document.getElementById(keep).scrollIntoView({ behavior: 'instant' });
+    document.getElementById(keep).scrollIntoView({ behavior: 'instant' });
   }
   track();
 }
-watch(locale, load, { immediate: true });
+onMounted(load);
 
 // The phone's On this page panel: a disclosure under the navigation that closes on a choice or Escape.
 const tocOpen = ref(false);
@@ -102,7 +100,11 @@ function closeToc(returnFocus = false) {
     href="#guide-content"
   >{{ t('nav.skip') }}</a>
 
-  <SiteNav :home="homeUrl">
+  <SiteNav
+    :home="homeUrl"
+    page="guide"
+    :anchor="active ?? 'top'"
+  >
     <a
       class="landing-nav-link d-none d-md-inline"
       :href="`${homeUrl}#hierarchy`"

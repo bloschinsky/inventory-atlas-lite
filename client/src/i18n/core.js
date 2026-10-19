@@ -18,7 +18,7 @@ export const resolveLocale = value => (isSupported(value) ? value : DEFAULT_LOCA
 
 /*
   The first supported locale among the candidates, in priority order, or English. The public demo
-  passes its address's ?lang= first and the saved preference second; an unsupported value is skipped.
+  passes its address's ?lang= first and the language of its page second; an unsupported value is skipped.
 */
 export const pickLocale = (...candidates) => candidates.find(isSupported) ?? DEFAULT_LOCALE;
 

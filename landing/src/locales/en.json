@@ -1,10 +1,26 @@
 {
   "meta": {
-    "title": "Inventory Atlas Lite — self-hosted inventory for physical items",
-    "description": "Inventory Atlas Lite is a small self-hosted inventory app: know what you own and where it is, with locations, containers, custom fields, photos, QR labels, checklists, and a dashboard — on your own server.",
-    "ogTitle": "Inventory Atlas Lite — know what you own and where it is",
-    "ogDescription": "A small self-hosted inventory app for physical items. Your server, your data.",
-    "ogImageAlt": "The Inventory Atlas Lite Dashboard with item totals, photo coverage, and charts."
+    "landing": {
+      "title": "Inventory Atlas Lite — self-hosted inventory for physical items",
+      "description": "Inventory Atlas Lite is a small self-hosted inventory app: know what you own and where it is, with locations, containers, custom fields, photos, QR labels, checklists, and a dashboard — on your own server.",
+      "ogTitle": "Inventory Atlas Lite — know what you own and where it is",
+      "ogDescription": "A small self-hosted inventory app for physical items. Your server, your data.",
+      "ogImageAlt": "Inventory Atlas Lite: “Know what you own. Know where it is.” next to the Items list and an item page on a phone."
+    },
+    "guide": {
+      "title": "User Guide — Inventory Atlas Lite",
+      "description": "The Inventory Atlas Lite user guide: setup, categories and custom fields, items and photos, containers and the hierarchy, QR labels, checklists, backups, and limitations.",
+      "ogTitle": "Inventory Atlas Lite User Guide",
+      "ogDescription": "How to set up and use Inventory Atlas Lite, the self-hosted inventory for physical items.",
+      "ogImageAlt": "The Inventory Atlas Lite User Guide: “How to use Inventory Atlas Lite”, its first contents entries, and the Hierarchy page."
+    },
+    "demo": {
+      "title": "Live Demo — Inventory Atlas Lite",
+      "description": "Try Inventory Atlas Lite in your browser: a sample inventory with locations, containers, custom fields, photos, QR labels, checklists, and a dashboard. No installation, no sign-up; changes are not saved.",
+      "ogTitle": "Try Inventory Atlas Lite right in your browser",
+      "ogDescription": "A live demo with a sample inventory. No installation, no sign-up.",
+      "ogImageAlt": "The Inventory Atlas Lite live demo: “Try it right in your browser” with the Dashboard and a checklist run on a phone."
+    }
   },
   "nav": {
     "skip": "Skip to content",
@@ -156,13 +172,6 @@
     "close": "Close"
   },
   "guide": {
-    "meta": {
-      "title": "User Guide — Inventory Atlas Lite",
-      "description": "The Inventory Atlas Lite user guide: setup, categories and custom fields, items and photos, containers and the hierarchy, QR labels, checklists, backups, and limitations.",
-      "ogTitle": "Inventory Atlas Lite User Guide",
-      "ogDescription": "How to set up and use Inventory Atlas Lite, the self-hosted inventory for physical items.",
-      "ogImageAlt": "The Inventory Atlas Lite Dashboard with item totals, photo coverage, and charts."
-    },
     "eyebrow": "User guide",
     "source": "View source on GitHub",
     "demo": "Try this in Demo",

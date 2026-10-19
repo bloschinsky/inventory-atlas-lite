@@ -3,7 +3,7 @@ import { computed, nextTick, onBeforeUnmount, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { IconCheck, IconLanguage } from '@tabler/icons-vue';
 import { SUPPORTED_LOCALES } from '../../client/src/i18n/core.js';
-import { setLocale } from './i18n.js';
+import { pageUrl } from './content.js';
 
 /*
   The language dropdown of the navigation: a menu button with one radio item per supported locale,
@@ -11,7 +11,15 @@ import { setLocale } from './i18n.js';
   follows the menu button pattern: Enter, Space, or the arrow keys open it on the chosen language,
   the arrow keys, Home, and End move between languages, Escape closes it back onto the button, and
   Tab or a click elsewhere closes it.
+
+  Each language of a page is its own address (../publicPages.js), so a choice opens the same page in
+  that language at the same place: `anchor` when the page names one (the guide section being read),
+  otherwise the address's own #fragment.
 */
+const props = defineProps({
+  page: { type: String, required: true },
+  anchor: { type: String, default: null }
+});
 const { locale, t } = useI18n();
 const current = computed(() => SUPPORTED_LOCALES.find(option => option.code === locale.value));
 const open = ref(false);
@@ -64,8 +72,9 @@ function onMenuKeydown(event) {
 }
 
 function choose(code) {
-  setLocale(code);
   hide(true);
+  if (code === locale.value) return;
+  window.location.assign(`${pageUrl(props.page, code)}${props.anchor ? `#${props.anchor}` : window.location.hash}`);
 }
 </script>
 

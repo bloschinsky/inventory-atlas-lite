@@ -7,13 +7,18 @@
 import {
   IconBrandDocker, IconCategory, IconChartPie, IconChecklist, IconDownload, IconQrcode, IconServer2, IconSitemap, IconTerminal2
 } from '@tabler/icons-vue';
+import { publicPagePath } from '../publicPages.js';
 import { links } from '../site.js';
+import { pageLocale } from './i18n.js';
 
 export const info = __LANDING_INFO__;
 
-// The two public pages under the site's base path: the product page and the user guide.
-export const homeUrl = import.meta.env.BASE_URL;
-export const guideUrl = `${import.meta.env.BASE_URL}guide/`;
+// A public page in a language, under the site's base path: /, /guide/, /demo/, or /uk/guide/ and so on.
+export const pageUrl = (page, locale = pageLocale) => `${import.meta.env.BASE_URL}${publicPagePath(page, locale)}`;
+
+// The product page and the user guide in the page language.
+export const homeUrl = pageUrl('landing');
+export const guideUrl = pageUrl('guide');
 
 /*
   One screenshot set per locale. The URLs of every set are known up front, but a browser downloads an
@@ -49,13 +54,8 @@ export const installOptions = [
 ];
 
 /*
-  Try Demo opens the demo in the page language: ?lang= is the explicit choice the demo applies before
-  its saved preference, and the hash route is the demo page to open — the Dashboard, its start page,
-  unless a guide section opens the page it describes.
+  Try Demo opens the demo published in the page language (demo/ or uk/demo/), and the hash route is
+  the demo page to open — the Dashboard, its start page, unless a guide section opens the page it
+  describes.
 */
-export function demoLink(locale, route = '/dashboard') {
-  const url = new URL(info.demoUrl, window.location.href);
-  url.searchParams.set('lang', locale);
-  url.hash = `#${route}`;
-  return url.href;
-}
+export const demoLink = (locale, route = '/dashboard') => new URL(`${pageUrl('demo', locale)}#${route}`, window.location.href).href;

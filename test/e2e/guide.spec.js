@@ -9,6 +9,8 @@ import { demoURL, landingURL } from './environment.js';
   contents, presentation layer, language, and links into the demo.
 */
 const guideURL = `${landingURL}guide/`;
+const ukGuideURL = `${landingURL}uk/guide/`;
+const ukDemoURL = `${landingURL}uk/demo/`;
 const basePath = new URL(landingURL).pathname;
 const STORAGE_KEY = 'inventory-atlas.locale';
 const uk = JSON.parse(fs.readFileSync(new URL('../../landing/src/locales/uk.json', import.meta.url), 'utf8'));
@@ -61,9 +63,9 @@ test('the guide loads under the Pages base path with its own metadata and the la
   await expect(page).toHaveTitle('User Guide — Inventory Atlas Lite');
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', guideURL);
   await expect(page.locator('meta[property="og:url"]')).toHaveAttribute('content', guideURL);
-  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', `${landingURL}og-image.png`);
-  await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', en.guide.meta.description);
-  await expect(page.locator('meta[property="og:title"]')).toHaveAttribute('content', en.guide.meta.ogTitle);
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', `${landingURL}og/guide-en.png`);
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', en.meta.guide.description);
+  await expect(page.locator('meta[property="og:title"]')).toHaveAttribute('content', en.meta.guide.ogTitle);
 
   // The English guide is the canonical HOW-TO, numbered section by section.
   const article = page.locator('article');
@@ -224,11 +226,11 @@ test('Try this in Demo opens the page a section describes, in the guide language
   await page.goto(`${guideURL}#browse-the-storage-hierarchy`);
   const section = id => page.locator(`#${id}`).locator('xpath=ancestor::section[1]');
   const demo = section('browse-the-storage-hierarchy').getByRole('link', { name: 'Try this in Demo (opens in a new tab)' }).first();
-  await expect(demo).toHaveAttribute('href', `${demoURL}?lang=en#/hierarchy`);
+  await expect(demo).toHaveAttribute('href', `${demoURL}#/hierarchy`);
   await expect(demo).toHaveAttribute('target', '_blank');
   await expect(demo).toHaveAttribute('rel', 'noopener noreferrer');
-  await expect(section('read-and-filter-the-dashboard').getByRole('link', { name: /Try this in Demo/ })).toHaveAttribute('href', `${demoURL}?lang=en#/dashboard`);
-  await expect(section('pack-or-verify-items-with-a-checklist').getByRole('link', { name: /Try this in Demo/ })).toHaveAttribute('href', `${demoURL}?lang=en#/checklists`);
+  await expect(section('read-and-filter-the-dashboard').getByRole('link', { name: /Try this in Demo/ })).toHaveAttribute('href', `${demoURL}#/dashboard`);
+  await expect(section('pack-or-verify-items-with-a-checklist').getByRole('link', { name: /Try this in Demo/ })).toHaveAttribute('href', `${demoURL}#/checklists`);
 
   // Server-only features say so instead of pretending to work in the demo.
   for (const id of ['restore-a-backup', 'back-up-to-dropbox-or-google-drive', 'check-for-a-newer-version-and-update', 'create-an-item-from-a-photo-or-a-description-with-ai']) {
@@ -239,31 +241,35 @@ test('Try this in Demo opens the page a section describes, in the guide language
   await expect(section('restore-a-backup').getByText('Type RESTORE in the confirmation field.', { exact: false })).toBeAttached();
 
   await chooseLanguage(page, 'Українська');
+  await expect(page).toHaveURL(new RegExp(`^${ukGuideURL}#`));
   const ukDemo = section('browse-the-storage-hierarchy').getByRole('link', { name: `${uk.guide.demo} ${uk.hero.newTab}` });
-  await expect(ukDemo).toHaveAttribute('href', `${demoURL}?lang=uk#/hierarchy`);
+  await expect(ukDemo).toHaveAttribute('href', `${ukDemoURL}#/hierarchy`);
   const [tab] = await Promise.all([page.context().waitForEvent('page'), ukDemo.click()]);
   await expect(tab.locator('html')).toHaveAttribute('lang', 'uk');
   await expect(tab.getByRole('heading', { level: 1, name: 'Ієрархія' })).toBeVisible();
   await tab.close();
 });
 
-test('a language change translates the guide in place and keeps the section being read', async ({ page }) => {
+test('a language change opens the guide in that language at the section being read', async ({ page }) => {
   await page.goto(`${guideURL}#pack-or-verify-items-with-a-checklist`);
   await expectAtTop(page, page.getByRole('heading', { level: 3, name: 'Pack or verify items with a checklist' }));
   const englishShot = await page.locator('article img').first().getAttribute('src');
 
   await chooseLanguage(page, 'Українська');
+  await expect(page).toHaveURL(`${ukGuideURL}#pack-or-verify-items-with-a-checklist`);
   await expect(page.locator('html')).toHaveAttribute('lang', 'uk');
   // The Ukrainian translation, under the same anchor.
   await expectAtTop(page, page.getByRole('heading', { level: 3, name: 'Пакувати або перевіряти предмети за чек-листом' }));
   await expect(page.getByRole('heading', { level: 1, name: 'Inventory Atlas Lite — короткий посібник' })).toBeVisible();
   await expect(page.locator('article').getByRole('heading', { level: 2 }).first()).toHaveText('Що вміє Inventory Atlas Lite');
   await expect(toc(page).getByRole('link', { name: 'Пакувати або перевіряти предмети за чек-листом' })).toHaveAttribute('aria-current', 'location');
-  await expect(page).toHaveTitle(uk.guide.meta.title);
-  await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', uk.guide.meta.description);
+  await expect(page).toHaveTitle(uk.meta.guide.title);
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', uk.meta.guide.description);
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', `${landingURL}og/guide-uk.png`);
   await expect(page.getByRole('link', { name: uk.guide.source })).toHaveAttribute('href', guideSourceUrl('uk'));
   await expect(page.getByRole('navigation', { name: uk.nav.label }).getByRole('link', { name: uk.nav.guide, exact: true })).toHaveAttribute('aria-current', 'page');
-  expect(await page.evaluate(key => localStorage.getItem(key), STORAGE_KEY)).toBe('uk');
+  // The address is the language; the application's saved preference is left alone.
+  expect(await page.evaluate(key => localStorage.getItem(key), STORAGE_KEY)).toBeNull();
 
   // The screenshots follow the language, with Ukrainian captions.
   const image = page.locator('article img').first();
@@ -278,18 +284,28 @@ test('a language change translates the guide in place and keeps the section bein
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('lang', 'uk');
   await expectAtTop(page, page.getByRole('heading', { level: 3, name: 'Пакувати або перевіряти предмети за чек-листом' }));
+
+  // Scrolled on to another section, English returns at that one.
+  await page.evaluate(() => document.getElementById('restore-a-backup').scrollIntoView({ behavior: 'instant' }));
+  await expect(toc(page).locator('[aria-current="location"]')).toHaveAttribute('href', '#restore-a-backup');
+  await chooseLanguage(page, 'English');
+  await expect(page).toHaveURL(`${guideURL}#restore-a-backup`);
+  await expectAtTop(page, page.getByRole('heading', { level: 3, name: 'Restore a backup' }));
 });
 
 test('one language choice carries through the landing, the guide, and the demo', async ({ page }) => {
   await page.goto(landingURL);
   await chooseLanguage(page, 'Українська');
   await page.getByRole('link', { name: uk.final.guide }).click();
-  await expect(page).toHaveURL(guideURL);
+  await expect(page).toHaveURL(ukGuideURL);
   await expect(page.locator('html')).toHaveAttribute('lang', 'uk');
   await expect(page.getByRole('heading', { level: 1, name: 'Inventory Atlas Lite — короткий посібник' })).toBeVisible();
-  await expect(page.locator('header').getByRole('link', { name: `${uk.hero.demo} ${uk.hero.newTab}` })).toHaveAttribute('href', `${demoURL}?lang=uk#/dashboard`);
+  await expect(page.locator('header').getByRole('link', { name: `${uk.hero.demo} ${uk.hero.newTab}` })).toHaveAttribute('href', `${ukDemoURL}#/dashboard`);
+  // The product mark leads back to the Ukrainian product page.
+  await expect(page.getByRole('link', { name: 'Inventory Atlas Lite', exact: true })).toHaveAttribute('href', `${basePath}uk/`);
 
   await chooseLanguage(page, 'English');
+  await expect(page).toHaveURL(`${guideURL}#top`);
   await page.getByRole('link', { name: 'Inventory Atlas Lite', exact: true }).click();
   await expect(page).toHaveURL(landingURL);
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');

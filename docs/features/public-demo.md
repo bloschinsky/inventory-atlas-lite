@@ -38,11 +38,15 @@ of the demo code.
 
 ## Languages
 
-- **Which language opens:** the `lang` query parameter of the demo address
-  (`…/demo/?lang=uk#/dashboard`) first, then the language saved in this browser under
-  `inventory-atlas.locale`, then English. An unsupported value (`?lang=fr`) is skipped. The
-  landing page's **Try Demo** passes its own language this way, and it saves the visitor's choice
-  under the same key, which the demo on the same site also reads.
+- **Every language has its own demo address:** `…/demo/` is English and `…/uk/demo/` Ukrainian,
+  each a static page with the demo's title, description, and sharing preview in its language (see
+  [Sharing](landing-page.md#user-visible-behaviour)). Both load the same single demo bundle from
+  `demo/assets/`. The address decides the language, whatever this browser chose before; the
+  landing's **Try Demo** and the guide's **Try this in Demo** open the demo of their own language.
+- **Older `?lang=` links keep working:** `…/demo/?lang=uk#/hierarchy` is an explicit choice over
+  the address and opens in Ukrainian, and the address becomes `…/uk/demo/#/hierarchy` at once,
+  without a reload, so the hash route is kept. An unsupported value (`?lang=fr`) is skipped, and
+  the page's own language is used.
 - **The inventory is in the same language as the interface.** In Ukrainian the database is *Демо
   Inventory Atlas*, the locations are *Дім / Кабінет*, *Дім / Комора*, *Майстерня*, and *Туристичне
   спорядження*, the categories, field names, item names, descriptions, condition notes, natural-
@@ -52,8 +56,9 @@ of the demo code.
 - **Changing the language** in **Settings → Interface** seeds the demo again in the new language and
   reloads the open page's data, so the interface and the sample data never mix two languages; the
   strip confirms *Demo data was reset in English.* / *Демо-дані оновлено українською мовою.* Changes
-  made before the switch are discarded, as with Reset demo. The address's `lang` follows the
-  choice, so a reload or a copied link opens the same language. An open guided tour closes, and
+  made before the switch are discarded, as with Reset demo. The address becomes the demo of the
+  chosen language on the same page (`…/uk/demo/#/settings/interface`), so a reload or a copied link
+  opens the same language; Reset demo stays at it. An open guided tour closes, and
   starts afresh in the new language. Only the demo does this: in the self-hosted application a
   language change never touches the inventory.
 
@@ -151,15 +156,26 @@ The demo reuses the server code instead of imitating it:
   `seedDemoInventory(services, photos, locale)` in `seed.js` maps category and field keys to the ids
   it creates.
 - `client/src/i18n/index.js` picks the demo's first language with `pickLocale()` from
-  `client/src/i18n/core.js` (`?lang=`, then the saved preference, then English), and in the demo
-  `setLocale()` also writes `lang` into the address with `history.replaceState()`, which leaves the
-  hash route alone. `DemoBanner.vue` watches the locale, calls `resetDemoData()`, and shows the
-  notice; `DemoTour.vue` closes an open tour on the same change.
+  `client/src/i18n/core.js` (`?lang=`, then the shell's `<html lang>`, then English); the saved
+  preference is the self-hosted application's and is not read in the demo. After a `?lang=` link
+  and on every `setLocale()` it moves the address to the shell of the shown language — the
+  same-origin `hreflang` link of the page — with `history.replaceState()`, keeping the hash route,
+  and again on `popstate`, because Back, Forward, and closing Settings return to history entries
+  made before a language change; without such a link (`npm run demo:dev`, or a preview on another origin) it writes `?lang=`
+  instead. `DemoBanner.vue` watches the locale, calls `resetDemoData()`, and shows the notice;
+  `DemoTour.vue` closes an open tour on the same change.
+- **Shells:** in `vite build --mode demo`, the root `vite.config.js` loads
+  `landing/publicPagesPlugin.js` (only then, because the Docker build context has no `landing/`) and
+  writes `dist-landing/demo/index.html` and `dist-landing/uk/demo/index.html` from the built
+  `index.html` with the `meta.demo` copy of `landing/src/locales/<locale>.json` and the addresses of
+  `LANDING_SITE_URL`; the Ukrainian shell's relative asset addresses point to `../../demo/assets/`.
+  The self-hosted build is unchanged.
 - `client/src/main.js` uses hash routing in the demo; `client/src/components/DemoBanner.vue` is the
   strip, and `DemoUnavailable.vue` stands in for the server-only Data cards and the Settings sections
   marked `serverOnly` in `client/src/settingsSections.js`.
 - `.github/workflows/pages.yml` builds the landing page with `LANDING_DEMO_URL` set to the Pages
-  address plus `demo/`, then the demo into `dist-landing/demo/`, checks that the demo is there, and
+  address plus `demo/`, then the demo into `dist-landing/demo/` with the same `LANDING_SITE_URL`,
+  checks that every page is there in both languages, and
   deploys both as one artifact, so Try Demo never points to a demo that was not deployed with it. The
   workflow also runs on changes to the client, the server source, the shared rules, and the Vite
   configuration.
@@ -197,11 +213,15 @@ npm run landing:preview  # serves the landing page and the built demo at …/inv
   site and none to `/api`, item details with a loaded photo, every photo served from the demo assets,
   creating and editing items and Reset demo restoring the fixture, a reloaded deep link, the
   not-available explanations, a scan of the built files for API keys and credentials, and the phone
-  layout and menu. In every language it checks that `?lang=uk` opens the Ukrainian interface and
-  inventory over a saved English choice and survives a reload of a deep link, that `?lang=fr` falls
-  back to English, and that a language change in Settings seeds the demo again (the visitor's item
-  is gone, the database name and items are Ukrainian, the notice shows, and the address and the
-  saved preference follow) and back to English.
+  layout and menu. In every language it checks that an older `?lang=uk` link opens the Ukrainian
+  interface and inventory over a saved English choice, moves to `uk/demo/` with its hash route, and
+  survives a reload of a deep link, that `?lang=fr` falls back to English at `demo/`, and that a
+  language change in Settings seeds the demo again (the visitor's item is gone, the database name and
+  items are Ukrainian, the notice shows, and the address follows) and back to English.
+- `test/e2e/public-pages.spec.js` checks the raw HTML and preview image of both demo shells, that
+  they load the same bundle, that each opens in its language over a saved choice of the other and
+  after a reload, and that the Ukrainian demo loads its photos from `demo/assets/`, keeps its
+  address through Reset demo, and moves to `demo/` on a language change.
 - `test/e2e/landing.spec.js` checks that Try Demo points to the demo in the landing language next
   to the install link, and that the Ukrainian landing opens the Ukrainian demo in a new tab.
 - `test/e2e/tour.spec.js` covers the guided tour; see [its document](demo-guided-tour.md#verification).

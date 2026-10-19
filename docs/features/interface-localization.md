@@ -17,8 +17,10 @@ the conventions of the active language; stored values and the API are unchanged.
 - The preference is stored in `localStorage` under `inventory-atlas.locale`. It is never sent to the
   server or written to SQLite, so every browser and device keeps its own language. A blocked storage
   only loses the persistence; the switch still works for the open page. The public
-  [landing page](landing-page.md) and the [public demo](public-demo.md) share this key and the
-  locale rules of `client/src/i18n/core.js`; the demo also accepts `?lang=` in its address. Only the
+  [landing page](landing-page.md), user guide, and [public demo](public-demo.md) share the locale
+  rules of `client/src/i18n/core.js` but take their language from their address instead (`/uk/`,
+  `/uk/guide/`, `/uk/demo/`, and an older demo `?lang=`), so a shared link never changes language;
+  they do not read this key, and only the demo's Settings writes it. Only the
   demo, whose sample inventory is written in every language, reloads its data on a language change;
   the self-hosted application never translates, replaces, or resets the inventory.
 - Translated: navigation, page headers, Dashboard, the items list and cards, item details, the item
@@ -74,7 +76,8 @@ browser's ICU data.
   `resolveLocale`, the vue-i18n options (`fallbackLocale: 'en'`, the Ukrainian plural rule built on
   `Intl.PluralRules('uk')`), and the formatters. `missingWarn` and `fallbackWarn` are enabled in
   development builds, so a missing key is reported in the console while the English text is shown.
-- `client/src/i18n/index.js` creates the instance from the saved preference, exports `setLocale`,
+- `client/src/i18n/index.js` creates the instance from the saved preference (in the public demo,
+  from its address), exports `setLocale`,
   and wraps the formatters so templates re-render when the language changes.
 - `client/src/i18n/locales/en.json` and `uk.json` group messages by feature (`nav`, `common`,
   `dashboard`, `items`, `items.fields`, `itemForm`, `settings`, `cloud`, `backup`, `update`, …).

@@ -4,7 +4,8 @@
   the demo build (`npm run demo:build` must have produced dist-landing/demo/), opens it in Chromium in
   each language through its ?lang= address, photographs the pages of the localized demo inventory
   (client/src/demo/fixture.js), and writes optimized WebP files to
-  landing/src/assets/screenshots/<locale>/ and the Open Graph image (English) to landing/public/.
+  landing/src/assets/screenshots/<locale>/. The social preview images are made from these by
+  `npm run landing:social`.
   The demo runs entirely in the browser on its invented inventory, so no real or private data can
   reach the public page; the demo strip and the tour launcher are hidden for the photographs.
 
@@ -23,7 +24,6 @@ import { screenshotFile, screenshotNames } from '../screenshots.js';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const demoDir = path.join(root, 'dist-landing/demo');
-const publicDir = path.join(root, 'landing/public');
 const port = Number(process.env.CAPTURE_PORT) || 4380;
 const baseURL = `http://127.0.0.1:${port}/`;
 
@@ -86,10 +86,6 @@ async function capture(browser, locale) {
   };
 
   await shoot('dashboard', '/dashboard');
-  if (locale === 'en') {
-    const og = await desktop.screenshot({ clip: { x: 0, y: 0, width: 1200, height: 630 } });
-    await sharp(og).resize(1200, 630).png({ compressionLevel: 9, palette: true }).toFile(path.join(publicDir, 'og-image.png'));
-  }
   await shoot('items', '/items');
   await shoot('items-search', '/items', async page => {
     await page.locator('#items-search').fill('Nikon');

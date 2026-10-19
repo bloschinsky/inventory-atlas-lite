@@ -72,12 +72,18 @@ jobs:
           LANDING_RELEASE_TAG: ${{ steps.release.outputs.tag }}
           LANDING_DEMO_URL: ${{ steps.pages.outputs.base_url }}/demo/
         run: npm run landing:build
+      # One demo bundle in dist-landing/demo, with its page in every language (demo/, uk/demo/), whose
+      # sharing metadata names the same site address as the landing page.
       - name: Build the public demo into dist-landing/demo
         env:
           APP_VERSION: ${{ steps.release.outputs.tag }}
+          LANDING_SITE_URL: ${{ steps.pages.outputs.base_url }}
         run: npm run demo:build
-      - name: Check that the demo is in the artifact
-        run: test -f dist-landing/demo/index.html
+      - name: Check that every page is in the artifact in every language
+        run: |
+          for page in index.html guide/index.html demo/index.html uk/index.html uk/guide/index.html uk/demo/index.html; do
+            test -f "dist-landing/$page" || { echo "dist-landing/$page is missing"; exit 1; }
+          done
       - uses: actions/upload-pages-artifact@v5
         with:
           path: dist-landing

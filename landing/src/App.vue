@@ -46,7 +46,10 @@ onBeforeUnmount(() => observer?.disconnect());
     href="#main"
   >{{ t('nav.skip') }}</a>
 
-  <SiteNav home="#top">
+  <SiteNav
+    home="#top"
+    page="landing"
+  >
     <a
       class="landing-nav-link d-none d-md-inline"
       href="#hierarchy"
