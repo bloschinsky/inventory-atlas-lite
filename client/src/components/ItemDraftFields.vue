@@ -1,10 +1,12 @@
 <script setup>
-import { ref } from 'vue';
+import { nextTick, ref } from 'vue';
 import { IconInfoCircle } from '@tabler/icons-vue';
 import ColorPicker from './ColorPicker.vue';
 import ConditionGradeBadge from './ConditionGradeBadge.vue';
 import ConditionHelpDialog from './ConditionHelpDialog.vue';
 import FieldAutocomplete from './FieldAutocomplete.vue';
+import TranslateFieldButton from './TranslateFieldButton.vue';
+import TranslateFieldDialog from './TranslateFieldDialog.vue';
 import { CONDITION_GRADES_BEST_FIRST } from '../conditionGrades.js';
 
 /*
@@ -12,24 +14,55 @@ import { CONDITION_GRADES_BEST_FIRST } from '../conditionGrades.js';
   useItemDraftForm. For a template every value is an optional default: the item name may stay empty
   and a yes/no field may stay unset. A duplicated item only gets a hint next to its copied serial
   number. The default slot sits before the description, for the item's container picker.
+  `translatable` adds the Translate action to the text fields; the item form passes it while AI is
+  enabled, and the template editor never does.
 */
 defineProps({
   categories: { type: Array, required: true },
   fields: { type: Array, required: true },
   template: { type: Boolean, default: false },
-  duplicate: { type: Boolean, default: false }
+  duplicate: { type: Boolean, default: false },
+  translatable: { type: Boolean, default: false }
 });
 const form = defineModel('form', { type: Object, required: true });
 const currencies = Intl.supportedValuesOf('currency');
 const conditionHelpOpen = ref(false);
+
+/*
+  The field being translated: `key` is a core field name or `field:<id>` for a custom text field, as
+  the translation API names them. The translation only replaces that one form value; focus then
+  returns to its input.
+*/
+const translating = ref(null);
+const customId = key => (key.startsWith('field:') ? key.slice('field:'.length) : null);
+const valueOf = key => (customId(key) ? form.value.field_values[customId(key)] : form.value[key]);
+const isBlank = key => !String(valueOf(key) ?? '').trim();
+const openTranslation = (key, label, inputId) => { translating.value = { key, label, inputId }; };
+async function applyTranslation(text) {
+  const { key, inputId } = translating.value;
+  if (customId(key)) form.value.field_values[customId(key)] = text;
+  else form.value[key] = text;
+  translating.value = null;
+  await nextTick();
+  document.getElementById(inputId)?.focus();
+}
 </script>
 
 <template>
   <div class="mb-3">
-    <label
-      class="form-label"
-      for="item-name"
-    >{{ template ? $t('templates.itemName') : `${$t('items.fields.name')} *` }}</label><input
+    <div class="d-flex align-items-center gap-1 mb-2">
+      <label
+        class="form-label mb-0"
+        for="item-name"
+      >{{ template ? $t('templates.itemName') : `${$t('items.fields.name')} *` }}</label>
+      <TranslateFieldButton
+        v-if="translatable"
+        :label="$t('items.fields.name')"
+        :disabled="isBlank('name')"
+        @click="openTranslation('name', $t('items.fields.name'), 'item-name')"
+      />
+    </div>
+    <input
       id="item-name"
       v-model="form.name"
       class="form-control"
@@ -142,10 +175,19 @@ const conditionHelpOpen = ref(false);
     </div>
   </div>
   <div class="mb-3">
-    <label
-      class="form-label"
-      for="item-condition-notes"
-    >{{ $t('items.fields.conditionNotes') }}</label><textarea
+    <div class="d-flex align-items-center gap-1 mb-2">
+      <label
+        class="form-label mb-0"
+        for="item-condition-notes"
+      >{{ $t('items.fields.conditionNotes') }}</label>
+      <TranslateFieldButton
+        v-if="translatable"
+        :label="$t('items.fields.conditionNotes')"
+        :disabled="isBlank('condition_notes')"
+        @click="openTranslation('condition_notes', $t('items.fields.conditionNotes'), 'item-condition-notes')"
+      />
+    </div>
+    <textarea
       id="item-condition-notes"
       v-model="form.condition_notes"
       class="form-control"
@@ -156,20 +198,38 @@ const conditionHelpOpen = ref(false);
   <!-- The broad Location and the exact spot within it; Stored inside stays a separate container link. -->
   <div class="row">
     <div class="col-md-6 mb-3">
-      <label
-        class="form-label"
-        for="item-location"
-      >{{ $t('items.fields.location') }}</label><input
+      <div class="d-flex align-items-center gap-1 mb-2">
+        <label
+          class="form-label mb-0"
+          for="item-location"
+        >{{ $t('items.fields.location') }}</label>
+        <TranslateFieldButton
+          v-if="translatable"
+          :label="$t('items.fields.location')"
+          :disabled="isBlank('location')"
+          @click="openTranslation('location', $t('items.fields.location'), 'item-location')"
+        />
+      </div>
+      <input
         id="item-location"
         v-model="form.location"
         class="form-control"
         :placeholder="$t('itemForm.locationPlaceholder')"
       >
     </div><div class="col-md-6 mb-3">
-      <label
-        class="form-label"
-        for="item-location-detail"
-      >{{ $t('items.fields.locationDetail') }}</label><input
+      <div class="d-flex align-items-center gap-1 mb-2">
+        <label
+          class="form-label mb-0"
+          for="item-location-detail"
+        >{{ $t('items.fields.locationDetail') }}</label>
+        <TranslateFieldButton
+          v-if="translatable"
+          :label="$t('items.fields.locationDetail')"
+          :disabled="isBlank('location_detail')"
+          @click="openTranslation('location_detail', $t('items.fields.locationDetail'), 'item-location-detail')"
+        />
+      </div>
+      <input
         id="item-location-detail"
         v-model="form.location_detail"
         class="form-control"
@@ -192,10 +252,18 @@ const conditionHelpOpen = ref(false);
     </div>
   </div>
   <div class="mb-3">
-    <label
-      class="form-label"
-      for="item-transferred-to"
-    >{{ $t('items.fields.transferredTo') }}</label>
+    <div class="d-flex align-items-center gap-1 mb-2">
+      <label
+        class="form-label mb-0"
+        for="item-transferred-to"
+      >{{ $t('items.fields.transferredTo') }}</label>
+      <TranslateFieldButton
+        v-if="translatable"
+        :label="$t('items.fields.transferredTo')"
+        :disabled="isBlank('transferred_to')"
+        @click="openTranslation('transferred_to', $t('items.fields.transferredTo'), 'item-transferred-to')"
+      />
+    </div>
     <FieldAutocomplete
       v-model="form.transferred_to"
       input-id="item-transferred-to"
@@ -297,10 +365,19 @@ const conditionHelpOpen = ref(false);
   </div>
   <slot />
   <div class="mb-3">
-    <label
-      class="form-label"
-      for="item-description"
-    >{{ $t('items.fields.description') }}</label><textarea
+    <div class="d-flex align-items-center gap-1 mb-2">
+      <label
+        class="form-label mb-0"
+        for="item-description"
+      >{{ $t('items.fields.description') }}</label>
+      <TranslateFieldButton
+        v-if="translatable"
+        :label="$t('items.fields.description')"
+        :disabled="isBlank('description')"
+        @click="openTranslation('description', $t('items.fields.description'), 'item-description')"
+      />
+    </div>
+    <textarea
       id="item-description"
       v-model="form.description"
       class="form-control"
@@ -328,11 +405,21 @@ const conditionHelpOpen = ref(false);
       >
         {{ field.name }}
       </div>
-      <label
+      <div
         v-else
-        class="form-label"
-        :for="`field-${field.id}`"
-      >{{ field.name }}</label>
+        class="d-flex align-items-center gap-1 mb-2"
+      >
+        <label
+          class="form-label mb-0"
+          :for="`field-${field.id}`"
+        >{{ field.name }}</label>
+        <TranslateFieldButton
+          v-if="translatable && field.type === 'text'"
+          :label="field.name"
+          :disabled="isBlank(`field:${field.id}`)"
+          @click="openTranslation(`field:${field.id}`, field.name, `field-${field.id}`)"
+        />
+      </div>
       <ColorPicker
         v-if="field.type === 'color'"
         v-model="form.field_values[field.id]"
@@ -371,4 +458,12 @@ const conditionHelpOpen = ref(false);
       >
     </div>
   </div>
+  <TranslateFieldDialog
+    v-if="translating"
+    :field="translating"
+    :category-id="form.category_id"
+    :read="() => valueOf(translating.key)"
+    @apply="applyTranslation"
+    @close="translating = null"
+  />
 </template>

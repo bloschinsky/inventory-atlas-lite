@@ -35,6 +35,7 @@ import { AiFieldService } from './services/aiFieldService.js';
 import { AiItemAnalysisService } from './services/aiItemAnalysisService.js';
 import { AiProviderService } from './services/aiProviderService.js';
 import { AiSettingsService } from './services/aiSettingsService.js';
+import { AiTranslationService } from './services/aiTranslationService.js';
 import { ModelListCache } from './services/modelListCache.js';
 import { BackupService } from './services/backupService.js';
 import { BulkReplaceService } from './services/bulkReplaceService.js';
@@ -151,6 +152,7 @@ export function createApp({ production = false, instanceLabel = null } = {}) {
   const imageService = new ImageService({ removeBackground });
   const aiItemAnalysisService = new AiItemAnalysisService({ aiProviderService, categoryRepository, customFieldRepository });
   const aiFieldService = new AiFieldService({ aiProviderService, categoryService, customFieldRepository });
+  const aiTranslationService = new AiTranslationService({ aiProviderService, categoryRepository, customFieldRepository });
   const backupService = new BackupService({ db, maintenance });
   const urlImportService = new UrlImportService({ webClient: new PublicWebClient(), categoryRepository, customFieldRepository });
   const urlImportAiService = new UrlImportAiService({ urlImportService, aiProviderService, categoryRepository, customFieldRepository });
@@ -188,7 +190,7 @@ export function createApp({ production = false, instanceLabel = null } = {}) {
   app.use(express.json({ limit: '1mb' }));
   app.use(maintenanceGuard(maintenance));
 
-  app.use(createAiRoutes({ aiSettingsService, aiProviderService, aiItemAnalysisService, imageUpload }));
+  app.use(createAiRoutes({ aiSettingsService, aiProviderService, aiItemAnalysisService, aiTranslationService, imageUpload }));
   app.use(createCapabilityRoutes({ aiSettingsService, urlImport: true, instanceLabel }));
   app.use(createImageRoutes({ imageService, imageUpload }));
   app.use(createCategoryRoutes({ categoryService }));

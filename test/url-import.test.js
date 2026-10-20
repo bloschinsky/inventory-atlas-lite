@@ -662,17 +662,17 @@ const version10Database = db => {
 };
 
 test('version 11 adds items.source_url to an existing database and to a restored older backup', () => {
-  assert.equal(SCHEMA_VERSION, 12);
+  assert.equal(SCHEMA_VERSION, 13);
   const db = version10Database(new Database(':memory:'));
   applySchema(db);
-  assert.equal(Number(db.pragma('user_version', { simple: true })), 12);
+  assert.equal(Number(db.pragma('user_version', { simple: true })), 13);
   assert.deepEqual(db.prepare('SELECT name, source_url FROM items').get(), { name: 'Old lamp', source_url: null });
 
   const file = path.join(dataDir, 'version-10-backup.sqlite');
   version10Database(new Database(file)).close();
   const summary = validateStagedDatabase(file);
   assert.equal(summary.migratedFrom, 10);
-  assert.equal(summary.schemaVersion, 12);
+  assert.equal(summary.schemaVersion, 13);
 });
 
 // ---------------------------------------------------------------------------------------------

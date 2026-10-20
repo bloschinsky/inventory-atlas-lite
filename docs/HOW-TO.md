@@ -623,6 +623,35 @@ JavaScript, because the import never runs a browser to render it. When the page 
 item stays exactly as it was. Addresses on this device or on a local or private network are always
 refused. The public demo does not offer the import.
 
+### Translate a field with AI
+
+When AI is enabled in **Settings → AI**, the text fields of the item form have a small **Translate**
+button beside their label: **Name**, **Description**, **Condition Notes**, **Location**, **Specific
+location**, **Transferred To**, and custom fields of the *Text* type. Numbers, dates, yes/no fields,
+colors, the serial number, the price, and the Source URL are never translated, and the template editor
+has no Translate buttons.
+
+1. Open **Add item**, or **Edit** on an item, and fill the field. An empty field cannot be translated.
+2. Press the **Translate** button beside the field. The dialog shows the **Original text**, the
+   **Source language** (**Auto-detect** unless you choose one, which helps with a short, ambiguous
+   text), and **Translate into**. The target starts at the database's **Preferred content language**
+   (see *Name the database*), or at the interface language while none is saved, and can be any listed
+   language, not only an interface language: type a name or code such as `japan` or `ja` into
+   **Search languages…** above a list to choose it.
+3. Press **Translate**. Nothing is sent before that, and a request is never repeated on its own.
+4. Review the **Translation** and edit it if needed. **Detected language** names the language AI
+   recognized. When the text is already in the target language, or holds only names, codes, and
+   numbers, the dialog says so instead.
+5. Press **Use translation** to put the text into the field, or **Cancel** to keep the original. Only
+   the form changes: **Save item** stores it, and leaving the page discards it.
+
+Brand and model names, serial numbers, SKUs and other codes, web addresses, prices, dates, numbers,
+and units must come back exactly as written, for example `Sony Walkman WM-FX195`. A translation that
+changes one of them, comes back malformed, or is too long is not offered at all; the dialog explains why,
+and you can translate again. If the field changes while a translation is running, its result is not
+offered either: press **Translate again** to translate the current text. The interface language and the
+content language are independent, so you can keep an English inventory under a Ukrainian interface.
+
 ### Edit or delete an item
 
 1. Open the item from **Items** and press **Edit**.
@@ -1070,9 +1099,14 @@ Dropbox or Google Drive sign-in shows Settings over the **Dashboard**, where clo
    not change it.
 4. **Technical details** shows when the database was **Created**, its **Database UUID**, and its
    **Schema version**. These are managed by the application and cannot be edited.
+5. **Preferred content language** is the language you keep inventory values in; **Translate** in the
+   item form offers it as the target. Until you save one, the interface language is only preselected
+   and the card says `Not saved yet`. Choose a language, or type its name into **Search languages…**,
+   and press **Save language**. Changing the interface language never changes it or any item.
 
-The name and these details are stored inside the database file, so a backup carries them and a
-restore brings them back. A reset starts a new database with a new UUID and the default name.
+The name, the preferred content language, and these details are stored inside the database file, so a
+backup carries them and a restore brings them back. A reset starts a new database with a new UUID, the
+default name, and no preferred content language.
 
 The name of the open database is always shown at the top of every page: in a small line above the
 page on a computer, and under the product name in the header on a phone. Select it to open
@@ -1384,6 +1418,10 @@ backup, and keep the copies on a different machine than the server.
   The original image is stored only after you confirm the draft. The provider settings and key stay
   in `ai-settings.json` under `DATA_DIR` and are not part of SQLite backups, so move or reconfigure
   them separately.
+- **Translate** sends only the text of that one field, the field name, and the category name to the
+  configured AI provider: no other values, photos, or credentials. A local model keeps the text on the
+  machine that runs it. One field's text is limited to 2,000 characters (255 for **Specific location**
+  and **Transferred To**), and translations are never stored on their own or run in the background.
 - **From URL** and **Fill from URL** read only public `http://` and `https://` pages, as static HTML,
   and need outbound Internet access on the server. They never run page scripts, log in, or get past
   bot protection, never send your browser's cookies, and refuse any address that belongs to this

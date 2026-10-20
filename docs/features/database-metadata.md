@@ -5,7 +5,8 @@
 Every Inventory Atlas Lite SQLite database carries its own identity: a UUID, a human-readable name,
 when it was created, when its data last changed, and its schema version. The values live in the
 database file itself, so they travel with every backup, restore, file copy, and move to another
-machine. **Settings → Database** shows them and lets the user rename the database.
+machine. **Settings → Database** shows them and lets the user rename the database. The row also
+holds the inventory's optional **Preferred Content Language** (schema version 13).
 
 ## User-visible behaviour
 
@@ -16,6 +17,12 @@ machine. **Settings → Database** shows them and lets the user rename the datab
 - Saving trims the name and reports `Database name saved.` An empty name is refused by the form; the
   server also refuses a blank name, one longer than 100 characters, or one with control characters,
   such as a line break. Any other text is allowed and shown exactly as saved.
+- **Preferred content language** (`LanguageSelect.vue`, `#database-content-language`) with **Save
+  language** chooses the language the inventory's values are kept in, from the list in
+  `shared/languages.js`. While none is saved the interface language is only preselected and the help
+  text says `Not saved yet`: nothing is written until the user saves. Saving reports
+  `Preferred content language saved.` and keeps an unsaved name edit, and vice versa. Changing the
+  interface language never changes it. [AI translation](ai-translation.md) offers it as the target.
 - Timestamps are shown in the browser's time zone and the active interface language.
 - There is no database switching; the card always describes the database the server has open.
 - The application chrome names the open database on every page, and a saved name shows there at
@@ -24,7 +31,9 @@ machine. **Settings → Database** shows them and lets the user rename the datab
 ## Storage
 
 - `database_metadata` has one row, enforced by `id INTEGER PRIMARY KEY CHECK (id = 1)`, with
-  `database_uuid`, `name`, `created_at`, `last_updated_at`, and `schema_version`.
+  `database_uuid`, `name`, `created_at`, `last_updated_at`, `schema_version`, and the nullable
+  `content_language` (a canonical tag from `shared/languages.js`; version 13 added it, `NULL` for
+  every existing database).
 - Timestamps are ISO 8601 UTC strings with milliseconds (`2026-09-29T10:15:30.123Z`), so two writes
   in the same second still order correctly.
 - The default name is `Inventory Atlas` (`DEFAULT_DATABASE_NAME` in `server/src/db.js`).
@@ -67,27 +76,31 @@ creates an `AFTER INSERT`, `AFTER UPDATE`, and `AFTER DELETE` trigger on every t
 
 ## Backend and API
 
-- `server/src/repositories/databaseMetadataRepository.js` reads the row and updates the name.
+- `server/src/repositories/databaseMetadataRepository.js` reads the row and updates the name or the
+  content language; both updates advance `last_updated_at`.
 - `server/src/services/databaseMetadataService.js` validates the name and exposes the metadata to the
   routes and to future features. A missing row, which only happens when the file was edited outside
   the application, answers `500 DATABASE_METADATA_MISSING`; the next start recreates it.
 - `server/src/routes/databaseMetadataRoutes.js`:
   - `GET /api/database/metadata` returns
-    `{ database_uuid, name, created_at, last_updated_at, schema_version }`;
+    `{ database_uuid, name, created_at, last_updated_at, schema_version, content_language }`;
   - `PUT /api/database/metadata` takes `{ "name": "…" }` and returns the updated metadata. Every
     other field in the body is ignored; the UUID, timestamps, and schema version cannot be set
-    through the API.
+    through the API;
+  - `PUT /api/database/metadata/content-language` takes `{ "contentLanguage": "de" }` (any listed
+    tag, stored canonically) or `null` to clear it, and returns the updated metadata.
 - Errors: `DATABASE_NAME_REQUIRED`, `DATABASE_NAME_TOO_LONG` (`{ max: 100 }`),
-  `DATABASE_NAME_INVALID`, and `DATABASE_METADATA_MISSING`.
+  `DATABASE_NAME_INVALID`, `CONTENT_LANGUAGE_INVALID`, and `DATABASE_METADATA_MISSING`.
 
 ## Backup, restore, and reset
 
 - Backups are SQLite snapshots, so they contain the metadata row. Restoring one brings back its UUID,
-  name, and both timestamps unchanged.
+  name, Preferred Content Language, and both timestamps unchanged.
 - Restore validation requires `database_metadata` in `CURRENT_SCHEMA`; an older backup gains it on
   its staged copy like any other migration. Restore does not change the identity of a restored
   database, and there is no import-as-new-database behaviour.
-- A reset creates a new database, so the fresh database gets a new UUID and the default name. Its
+- A reset creates a new database, so the fresh database gets a new UUID, the default name, and no
+  Preferred Content Language. Its
   checks expect exactly one row in `database_metadata` and no rows anywhere else. The pre-reset
   backup keeps the previous identity.
 
@@ -103,3 +116,6 @@ creates an `AFTER INSERT`, `AFTER UPDATE`, and `AFTER DELETE` trigger on every t
   pre-reset backup keeps the old one.
 - `test/e2e/database-metadata.spec.js`: the Settings card, the name validation, saving, reload, and
   the technical details.
+- `test/ai-translation.test.js`: content language validation, the version 13 migration, and the
+  preference across a restart and a backup restore; `test/e2e/translate-field.spec.js`: saving it in
+  Settings, the unsaved preselection, and an interface language change.

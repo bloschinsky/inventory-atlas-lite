@@ -1,11 +1,13 @@
 import { httpError } from '../httpError.js';
 import { requiredText } from '../../../shared/itemValidation.js';
+import { normalizeContentLanguage } from '../../../shared/languages.js';
 
 export const DATABASE_NAME_MAX_LENGTH = 100;
 
 /*
-  The identity of the current database: its UUID, name, timestamps, and schema version. Only the name
-  can be changed here; the other values are managed by the schema code and the write triggers in db.js.
+  The identity of the current database: its UUID, name, timestamps, and schema version, plus its
+  Preferred Content Language. Only the name and that language can be changed here; the other values
+  are managed by the schema code and the write triggers in db.js.
 */
 export class DatabaseMetadataService {
   constructor({ databaseMetadataRepository }) {
@@ -25,6 +27,15 @@ export class DatabaseMetadataService {
     // eslint-disable-next-line no-control-regex
     if (/[\u0000-\u001f\u007f]/.test(name)) throw httpError(400, 'DATABASE_NAME_INVALID');
     if (!this.metadata.updateName(name)) throw httpError(500, 'DATABASE_METADATA_MISSING');
+    return this.get();
+  }
+
+  // A listed language tag, stored canonically, or null to clear the preference.
+  setContentLanguage(input) {
+    const value = input?.contentLanguage;
+    const tag = value === null ? null : normalizeContentLanguage(value);
+    if (value !== null && !tag) throw httpError(400, 'CONTENT_LANGUAGE_INVALID');
+    if (!this.metadata.updateContentLanguage(tag)) throw httpError(500, 'DATABASE_METADATA_MISSING');
     return this.get();
   }
 }

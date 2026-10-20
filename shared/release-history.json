@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.68.0",
+    "date": "2026-10-21",
+    "changes": [
+      "With AI enabled, the text fields of the item form now have a Translate button: Name, Description, Condition Notes, Location, Specific location, Transferred To, and custom text fields. The dialog detects the source language or lets you choose it, translates into any listed language, and shows an editable translation that changes only the form until you press Save item.",
+      "Model names, serial numbers, codes, web addresses, prices, dates, and numbers stay exactly as written: a translation that changes them is not offered. If the field changes while a translation runs, the old result is never applied.",
+      "Settings → Database has a new Preferred content language, the language you keep your inventory in. It is stored in the database and travels with its backups, independent of the interface language, and AI translation offers it as the target."
+    ]
+  },
+  {
     "version": "0.67.0",
     "date": "2026-10-19",
     "changes": [

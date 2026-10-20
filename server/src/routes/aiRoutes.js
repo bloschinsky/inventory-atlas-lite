@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-export const createAiRoutes = ({ aiSettingsService, aiProviderService, aiItemAnalysisService, imageUpload }) => {
+export const createAiRoutes = ({ aiSettingsService, aiProviderService, aiItemAnalysisService, aiTranslationService, imageUpload }) => {
   const router = Router();
 
   router.get('/api/settings/ai', (_req, res) => res.json(aiSettingsService.publicSettings()));
@@ -16,6 +16,9 @@ export const createAiRoutes = ({ aiSettingsService, aiProviderService, aiItemAna
     // `hint` is the previous field name for the same text and is still accepted.
     res.json(await aiItemAnalysisService.analyze(req.file, req.body.description ?? req.body.hint));
   });
+
+  // Review-only translation of unsaved item text fields; it never writes items or settings.
+  router.post('/api/ai/translate', async (req, res) => res.json(await aiTranslationService.translate(req.body)));
 
   return router;
 };

@@ -48,3 +48,11 @@ export async function renameActiveDatabase(name) {
   show(metadata);
   return metadata;
 }
+
+// The Preferred Content Language of the open database, or null to clear it; a refusal changes nothing.
+export async function saveContentLanguage(contentLanguage) {
+  const metadata = await api('/api/database/metadata/content-language', jsonOptions('PUT', { contentLanguage }));
+  latest++;
+  show(metadata);
+  return metadata;
+}

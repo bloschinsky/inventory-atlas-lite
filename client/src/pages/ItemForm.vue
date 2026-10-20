@@ -327,6 +327,7 @@ onMounted(async () => {
           :categories="categories"
           :fields="fields"
           :duplicate="Boolean(duplicateSource)"
+          :translatable="capabilities.ai.enabled"
         >
           <div
             class="mb-3"

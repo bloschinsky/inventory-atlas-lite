@@ -83,9 +83,10 @@ test('a new database gets exactly one metadata row with a fresh identity', () =>
   assert.match(metadata.created_at, ISO);
   assert.equal(metadata.last_updated_at, metadata.created_at);
   assert.equal(metadata.schema_version, SCHEMA_VERSION);
-  assert.deepEqual(Object.keys(metadata).sort(), ['created_at', 'database_uuid', 'last_updated_at', 'name', 'schema_version']);
+  assert.deepEqual(Object.keys(metadata).sort(), ['content_language', 'created_at', 'database_uuid', 'last_updated_at', 'name', 'schema_version']);
+  assert.equal(metadata.content_language, null, 'a new inventory has no Preferred Content Language');
   // The table holds one row by construction.
-  assert.throws(() => db.prepare("INSERT INTO database_metadata VALUES (2, 'x', 'y', 'z', 'z', 3)").run(), /CHECK constraint/);
+  assert.throws(() => db.prepare("INSERT INTO database_metadata VALUES (2, 'x', 'y', 'z', 'z', 3, NULL)").run(), /CHECK constraint/);
 });
 
 test('the identity survives a restart and repeated schema application', async () => {

@@ -76,7 +76,7 @@ const version11Database = db => {
 };
 
 test('version 12 adds the Specific location to an existing database and to a restored older backup', async () => {
-  assert.equal(SCHEMA_VERSION, 12);
+  assert.equal(SCHEMA_VERSION, 13);
   for (const column of ['location_detail', 'retired_location_detail_snapshot']) assert.ok(CURRENT_SCHEMA.items.includes(column));
   assert.ok(CURRENT_SCHEMA.item_templates.includes('location_detail'));
   assert.ok(CURRENT_SCHEMA.item_events.includes('from_detail') && CURRENT_SCHEMA.item_events.includes('to_detail'));
@@ -84,7 +84,7 @@ test('version 12 adds the Specific location to an existing database and to a res
   const db = version11Database(new Database(':memory:'));
   applySchema(db);
   applySchema(db);
-  assert.equal(Number(db.pragma('user_version', { simple: true })), 12);
+  assert.equal(Number(db.pragma('user_version', { simple: true })), 13);
   assert.deepEqual(db.prepare('SELECT name, location, location_detail FROM items').get(), { name: 'Old lamp', location: 'Attic', location_detail: null });
   assert.equal(db.prepare('SELECT COUNT(*) AS count FROM item_events').get().count, 0, 'no history is fabricated for existing items');
 
@@ -92,7 +92,7 @@ test('version 12 adds the Specific location to an existing database and to a res
   version11Database(new Database(file)).close();
   const summary = validateStagedDatabase(file);
   assert.equal(summary.migratedFrom, 11);
-  assert.equal(summary.schemaVersion, 12);
+  assert.equal(summary.schemaVersion, 13);
 });
 
 test('the Specific location is optional trimmed text, and a request without it keeps the saved value', () => {

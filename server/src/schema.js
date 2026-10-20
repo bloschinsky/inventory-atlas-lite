@@ -22,11 +22,12 @@ import { FIELD_TYPES } from '../../shared/fieldDefinitions.js';
   (item_operations, item_events, item_transfers); version 10 allowed the color type in custom_fields.type;
   version 11 added items.source_url, the optional product page an item was described from; version 12
   added the optional Specific location: items.location_detail with its retirement snapshot,
-  item_templates.location_detail, and the from_detail/to_detail of item_events.
+  item_templates.location_detail, and the from_detail/to_detail of item_events; version 13 added
+  database_metadata.content_language, the Preferred Content Language of the inventory.
   user_version stays the source of truth: database_metadata.schema_version mirrors it and is written
   in the same transaction, so the two never disagree.
 */
-export const SCHEMA_VERSION = 12;
+export const SCHEMA_VERSION = 13;
 
 export const DEFAULT_DATABASE_NAME = 'Inventory Atlas';
 
@@ -93,7 +94,7 @@ export const CURRENT_SCHEMA = {
   item_templates: ['id', 'name', 'category_id', 'item_name', 'description', 'condition_grade', 'condition_notes', 'location', 'location_detail',
     'purchase_date', 'purchase_price_amount', 'purchase_price_currency', 'serial_number', 'transferred_to', 'is_new', 'created_at', 'updated_at'],
   item_template_field_values: ['id', 'template_id', 'field_id', 'value'],
-  database_metadata: ['id', 'database_uuid', 'name', 'created_at', 'last_updated_at', 'schema_version'],
+  database_metadata: ['id', 'database_uuid', 'name', 'created_at', 'last_updated_at', 'schema_version', 'content_language'],
   checklists: ['id', 'name', 'description', 'mode', 'created_at', 'updated_at'],
   checklist_items: ['id', 'checklist_id', 'item_id', 'item_name_snapshot', 'sort_order', 'created_at'],
   checklist_runs: ['id', 'checklist_id', 'checklist_name_snapshot', 'mode', 'status', 'started_at', 'completed_at', 'created_at',
@@ -294,7 +295,9 @@ const migrate = (connection, rebuild) => connection.transaction(() => {
       name TEXT NOT NULL,
       created_at TEXT NOT NULL,
       last_updated_at TEXT NOT NULL,
-      schema_version INTEGER NOT NULL
+      schema_version INTEGER NOT NULL,
+      -- The Preferred Content Language of the inventory (a tag from shared/languages.js), or NULL when unset.
+      content_language TEXT
     );
     -- A checklist is a reusable list of references to items; its state lives only in its runs.
     CREATE TABLE IF NOT EXISTS checklists (
@@ -436,6 +439,9 @@ const migrate = (connection, rebuild) => connection.transaction(() => {
   for (const name of ['from_detail', 'to_detail']) {
     if (!eventColumns.has(name)) connection.exec(`ALTER TABLE item_events ADD COLUMN ${name} TEXT`);
   }
+  // Version 13: an existing inventory has no Preferred Content Language until the user chooses one.
+  const metadataColumns = new Set(connection.prepare('PRAGMA table_info(database_metadata)').all().map(column => column.name));
+  if (!metadataColumns.has('content_language')) connection.exec('ALTER TABLE database_metadata ADD COLUMN content_language TEXT');
   /*
     Version 7: the old free-text condition keeps every value, untouched, as condition_notes. The new
     grade starts unset: free text such as "Good" is never parsed into a grade.

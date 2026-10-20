@@ -781,6 +781,27 @@
       "priceSuggested": "AI: current offer"
     }
   },
+  "translation": {
+    "action": "Translate {field}",
+    "title": "Translate {field}",
+    "original": "Original text",
+    "source": "Source language",
+    "target": "Translate into",
+    "autoDetect": "Auto-detect",
+    "searchLanguages": "Search languages for {label}",
+    "searchPlaceholder": "Search languages…",
+    "commonLanguages": "Common languages",
+    "allLanguages": "All languages",
+    "privacy": "Only this text, the field name, and the category name are sent to the AI provider configured in Settings. A local model keeps the text on the machine that runs it.",
+    "translate": "Translate",
+    "translateAgain": "Translate again",
+    "translating": "Translating…",
+    "result": "Translation",
+    "resultHelp": "Review and edit the translation before using it. It changes only this form; Save item stores it.",
+    "detected": "Detected language: {language}",
+    "use": "Use translation",
+    "conflict": "This field changed while the translation was running. Translate again to review a translation of the current text."
+  },
   "fieldTypes": {
     "text": "Text",
     "number": "Number",
@@ -977,7 +998,12 @@
       "technicalDetails": "Technical details",
       "created": "Created",
       "uuid": "Database UUID",
-      "schemaVersion": "Schema version"
+      "schemaVersion": "Schema version",
+      "contentLanguage": "Preferred content language",
+      "contentLanguageHelp": "The language you keep inventory values in; AI translation offers it as the target. It is stored in this database and travels with its backups. The interface language is a separate, per-browser setting.",
+      "contentLanguageUnset": "Not saved yet: the interface language is preselected.",
+      "saveContentLanguage": "Save language",
+      "contentLanguageSaved": "Preferred content language saved."
     },
     "ai": {
       "title": "AI",
@@ -1812,7 +1838,28 @@
     "URL_IMPORT_WARNING_VARIANTS_LIMITED": "The page offers more variants than can be listed; only the first 30 are offered.",
     "URL_IMPORT_AI_CHOOSE_CATEGORY": "Choose a category first: the inventory has too many categories and fields to send all of them to AI.",
     "URL_IMPORT_AI_WARNING_DROPPED": "{count} AI suggestion did not pass validation and was discarded. | {count} AI suggestions did not pass validation and were discarded.",
-    "URL_IMPORT_AI_WARNING_CONFLICT": "AI proposed different values for “{field}”, so none of them is offered."
+    "URL_IMPORT_AI_WARNING_CONFLICT": "AI proposed different values for “{field}”, so none of them is offered.",
+    "CONTENT_LANGUAGE_INVALID": "Choose a supported content language.",
+    "TRANSLATION_TARGET_LANGUAGE_INVALID": "Choose a supported language to translate into.",
+    "TRANSLATION_SOURCE_LANGUAGE_INVALID": "Choose Auto-detect or a supported source language.",
+    "TRANSLATION_CATEGORY_NOT_FOUND": "The item's category no longer exists. Choose another category and try again.",
+    "TRANSLATION_FIELDS_REQUIRED": "Choose at least one field with text to translate.",
+    "TRANSLATION_TOO_MANY_FIELDS": "Translate at most {max} fields at once.",
+    "TRANSLATION_FIELD_INVALID": "This field cannot be translated.",
+    "TRANSLATION_FIELD_DUPLICATE": "Each field can be translated only once per request.",
+    "TRANSLATION_FIELD_NOT_IN_CATEGORY": "This custom field does not belong to the item's category.",
+    "TRANSLATION_FIELD_NOT_TEXT": "Only text fields can be translated.",
+    "TRANSLATION_TEXT_REQUIRED": "There is no text to translate in this field.",
+    "TRANSLATION_TEXT_TOO_LONG": "The text is too long to translate: at most {max} characters.",
+    "TRANSLATION_REQUEST_TOO_LARGE": "The texts are too long to translate at once: at most {max} characters in total.",
+    "TRANSLATION_WARNING_MISSING": "AI returned no translation for this field.",
+    "TRANSLATION_WARNING_DUPLICATE": "AI returned more than one translation for this field, so none is offered.",
+    "TRANSLATION_WARNING_MALFORMED": "AI returned a translation in an invalid format, so it was discarded.",
+    "TRANSLATION_WARNING_TOO_LONG": "AI returned a translation longer than {max} characters, so it was discarded.",
+    "TRANSLATION_WARNING_PROTECTED_CHANGED": "AI changed data that must stay as written ({tokens}), so the translation was discarded.",
+    "TRANSLATION_WARNING_UNTRANSLATABLE": "AI found nothing to translate: the text holds only names, codes, or numbers.",
+    "TRANSLATION_WARNING_UNCHANGED": "The text is already in the target language.",
+    "TRANSLATION_WARNING_EXTRA": "AI returned {count} translation for a field that was not requested; it was ignored. | AI returned {count} translations for fields that were not requested; they were ignored."
   },
   "notices": {
     "AI_CONNECTED": "Connected to {provider}. {count} model is available. | Connected to {provider}. {count} models are available.",
