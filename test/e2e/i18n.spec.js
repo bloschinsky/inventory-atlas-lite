@@ -78,6 +78,8 @@ test('server errors arrive as codes and are shown in the active language', async
 
   await inUkrainian(page);
   await page.goto(`/items/${box.id}`);
+  // Linux Chromium can begin over the folded-hover sidebar, which overlays the wrapped item actions.
+  await page.mouse.move(600, 400);
   page.once('dialog', dialog => dialog.accept());
   await page.getByRole('button', { name: 'Видалити', exact: true }).click();
   await expect(page.getByRole('alert')).toHaveText('Цей предмет містить 3 предмети. Спершу перемістіть або видаліть їх.');

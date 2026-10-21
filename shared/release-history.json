@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.69.1",
+    "date": "2026-10-22",
+    "changes": [
+      "Publishes Translate with AI for whole items from 0.69.0, whose release was stopped by a browser test that failed only on the release server. The test now moves the pointer away from the sidebar first; the application itself is unchanged."
+    ]
+  },
+  {
     "version": "0.69.0",
     "date": "2026-10-21",
     "changes": [
