@@ -802,6 +802,35 @@
     "use": "Use translation",
     "conflict": "This field changed while the translation was running. Translate again to review a translation of the current text."
   },
+  "translateItem": {
+    "action": "Translate with AI",
+    "title": "Translate item with AI",
+    "fieldsLegend": "Fields to translate",
+    "selectedCount": "{n} field selected | {n} fields selected",
+    "selectAll": "Select all",
+    "selectNone": "Select none",
+    "empty": "This item has no text to translate yet. Fill in its name, description, or another text field first.",
+    "notes": {
+      "place": "Names a real place or person, so it is off by default. Check any translated name before you apply it.",
+      "identifier": "Looks like a name or a code, so it is off by default.",
+      "tooLong": "Too long to translate: at most {max} characters."
+    },
+    "reduceSelection": "Clear some fields and try again: the selection is sent as one request and never split.",
+    "privacy": "Only the selected texts, their field names, and the category name are sent to the AI provider configured in Settings. Codes, numbers, dates, prices, and every other item value stay as they are.",
+    "preview": "Preview translation",
+    "previewAgain": "Preview again",
+    "back": "Change selection",
+    "reviewHeading": "Review translations",
+    "reviewHelp": "Edit any translation and choose which ones to apply. They change only this form; Save item stores them.",
+    "current": "Current",
+    "translationOf": "Translation of {field}",
+    "applyRow": "Apply to {field}",
+    "verifyNames": "This field names a real place or person: check every translated name.",
+    "stale": "This field changed after the preview, so its translation cannot be applied. Preview again to translate the current text.",
+    "categoryChanged": "The category changed after the preview, so translations of its custom fields cannot be applied.",
+    "apply": "Apply {n} translation | Apply {n} translations",
+    "appliedNotice": "{n} translation applied to the form. Save item to keep it. | {n} translations applied to the form. Save item to keep them."
+  },
   "fieldTypes": {
     "text": "Text",
     "number": "Number",

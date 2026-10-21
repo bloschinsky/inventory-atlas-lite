@@ -2,8 +2,9 @@
 
 ## Summary
 
-Opt-in AI translation of one item text field in the unsaved Add/Edit Item form (Phase 1), on top of a
-reusable, provider-neutral translation backend that later item-wide and URL-import flows can call.
+Opt-in AI translation of the unsaved Add/Edit Item form: one text field at a time (**Translate**,
+Phase 1) or several fields of the item in one request with a per-field review (**Translate with AI**,
+Phase 2), both on one reusable, provider-neutral translation backend.
 Three languages stay independent: the per-browser **interface language**, the per-database
 **Preferred Content Language**, and the **source language** of each text (detected automatically
 unless the user chooses one). Translation is always review-only: nothing is saved until the user
@@ -38,6 +39,52 @@ presses **Save item**.
 - **Settings → Database** adds **Preferred content language** with **Save language**; see
   [Database metadata](database-metadata.md).
 
+## Translate Item with AI
+
+A different frontend orchestration of the same `POST /api/ai/translate`: no other endpoint, provider
+configuration, or validation.
+
+- Entry points, shown only while `capabilities.ai.enabled` (so never in the public demo, whose
+  capabilities report AI off): **Translate with AI** among the actions of Item Details, a link to
+  `/items/:id/edit?translate=item`, and a header button of `ItemForm.vue` on Add and Edit Item.
+  `?translate=item` opens the dialog once the form has loaded; the template editor has neither.
+  Opening never sends a request.
+- `TranslateItemDialog.vue` (a Tabler `modal-xl`, full screen below `md`) has two steps.
+  **Select**: Source (Auto-detect by default; the model detects each text's language) and Translate
+  into (the Preferred Content Language, else the interface language; `loadContentLanguage()` in
+  `activeDatabase.js`, shared with the field dialog), then one checkbox row per candidate with its
+  label, current value, and an optional note, **Select all** / **Select none**, a live count, and the
+  privacy note. **Review**: one section per requested field with **Current** beside an editable
+  **Translation of …** textarea, the detected language, the field's warnings, and **Apply to …**.
+- `client/src/itemTranslation.js` builds the candidates from the live form values
+  (`translationCandidates()`): non-empty Name, Description, and Condition Notes, the current
+  category's custom `text` fields in their order, then Location, Specific location, and Transferred
+  To. Empty texts get no row. Default selection: on, except the `explicitOnly` core fields (note:
+  real place or person), custom fields whose name reads as an identifier (brand, model, SKU, MPN, GTIN,
+  EAN, UPC, ISBN, serial, part number, barcode, and Ukrainian equivalents) or whose value is a single
+  token with a digit or has no words (note: name or code), and a text over its field's limit, which
+  cannot be chosen at all. Category, codes, dates, price, condition, New, Source URL, container,
+  photos, loan, and lifecycle are never candidates.
+- **Preview translation** sends only the chosen rows in one request. `selectionProblem()` checks the
+  shared bounds first (`shared/translationFields.js`, the same `TRANSLATION_LIMITS` the server
+  enforces): over 20 fields or 10,000 characters shows the error and asks the user to clear fields;
+  the selection is never split.
+- Review defaults: `translated` rows start ticked; `unchanged` rows show their reason with the text
+  and start unticked; `untranslatable` and `invalid` rows show only their reason and offer no
+  checkbox or textarea, so an omitted or invalid field never looks translated. Editing a proposal
+  ticks it. The rows of Location and Transferred To repeat the check-every-name note.
+- **Apply N translations** emits `{ key: text }` for the ticked, non-empty, non-stale rows;
+  `ItemForm.vue` applies it with `applyTranslations()` (core keys to the form, `field:<id>` to
+  `field_values`), closes the dialog, and shows *N translations applied to the form. Save item to
+  keep them.* Only the ordinary **Save item** stores anything; Cancel, close, Escape, and the backdrop
+  change nothing.
+- Conflicts: each row keeps the text that was sent. A row whose form value differs from it, or a
+  custom field row after the category changed, is marked stale with its Apply checkbox disabled until
+  **Preview again**. **Change selection** returns to the list with the choice kept. A response that
+  arrives after a newer preview, Change selection, or closing is ignored.
+- Nothing is persisted by the dialog: no translation tables, source or target copies, or history events;
+  the item keeps its id, UUID, photos, container, loan, lifecycle, price, and condition.
+
 ## Languages
 
 `shared/languages.js` is the single list of content languages: `COMMON_CONTENT_LANGUAGES` (`en`,
@@ -62,16 +109,18 @@ interface localizations: the interface stays English and Ukrainian.
 ```
 
 - `key` is a core key (`name`, `description`, `condition_notes`, `location`, `location_detail`,
-  `transferred_to`; `TRANSLATABLE_CORE_FIELDS`) or `field:<id>` of a custom field. Location,
-  Specific location, and Transferred To are marked `explicitOnly`: a future item-wide translation must
-  not include them by default.
+  `transferred_to`; `TRANSLATABLE_CORE_FIELDS` in `shared/translationFields.js`) or `field:<id>`
+  of a custom field. Location, Specific location, and Transferred To are marked `explicitOnly`: Translate
+  Item with AI never selects them by default.
 - Custom fields are resolved from the category's schema on the server: a field of another category or
   one that does not exist is `TRANSLATION_FIELD_NOT_IN_CATEGORY`, a non-text type
   `TRANSLATION_FIELD_NOT_TEXT`; a client-supplied type or label is ignored.
 - Bounds: 1–20 fields, unique keys, non-empty text of at most 2,000 characters per field (255 for
-  `location_detail` and `transferred_to`), 10,000 in total. Every refusal is a 400 with a stable code,
-  checked before the AI state, the provider, or anything else is used.
-- Several fields travel in one provider call; the Phase 1 UI sends one.
+  `location_detail` and `transferred_to`), 10,000 in total (`TRANSLATION_LIMITS`, shared with the
+  client). Every refusal is a 400 with a stable code, checked before the AI state, the provider, or
+  anything else is used.
+- Several fields travel in one provider call: Translate sends one field, Translate Item with AI every
+  chosen field.
 
 Response:
 
@@ -115,13 +164,17 @@ or numbers; translation is `null`), or `invalid` (no proposal; the warning says 
 ## Files
 
 - `shared/languages.js` — content language list, normalization, closest match, names.
+- `shared/translationFields.js` — the translatable core fields and the request bounds.
 - `server/src/services/aiTranslationService.js` — request reading, prompt, schema, and validation.
 - `server/src/routes/aiRoutes.js`, `server/src/app.js` — the route and its wiring.
 - `client/src/components/TranslateFieldButton.vue`, `TranslateFieldDialog.vue`, `LanguageSelect.vue`,
   `ItemDraftFields.vue`, `client/src/pages/ItemForm.vue`.
-- `test/ai-translation.test.js`, `test/e2e/translate-field.spec.js`.
+- `client/src/components/TranslateItemDialog.vue`, `client/src/itemTranslation.js`,
+  `client/src/pages/ItemDetails.vue`, `client/src/activeDatabase.js` (`loadContentLanguage()`).
+- `test/ai-translation.test.js`, `test/e2e/translate-field.spec.js`, `test/e2e/translate-item.spec.js`.
 
 ## Out of scope
 
-Whole-item translation, translation inside Smart URL import, bulk translation, multilingual storage,
-translation history, automatic translation, and new interface localizations.
+Translation inside Smart URL import, scheduled or bulk inventory translation, multilingual storage,
+translation history, automatic translation on an interface language change, and new interface
+localizations.

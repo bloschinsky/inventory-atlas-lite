@@ -2,7 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { api, jsonOptions } from '../api.js';
-import { activeDatabase, loadActiveDatabase } from '../activeDatabase.js';
+import { activeDatabase, loadContentLanguage } from '../activeDatabase.js';
 import { translateError } from '../i18n/index.js';
 import LanguageSelect from './LanguageSelect.vue';
 import { AUTO_DETECT, contentLanguageName, normalizeContentLanguage } from '../../../shared/languages.js';
@@ -77,12 +77,8 @@ onMounted(async () => {
   document.addEventListener('keydown', onKeydown);
   nextTick(() => document.getElementById('translate-submit')?.focus());
   // Settings → Database may not have been opened yet; without a saved preference the default stays.
-  if (!activeDatabase.metadata) {
-    try {
-      const saved = normalizeContentLanguage((await loadActiveDatabase()).content_language);
-      if (saved && sent.value === null) target.value = saved;
-    } catch { /* the interface language stays the default */ }
-  }
+  const saved = await loadContentLanguage();
+  if (saved && sent.value === null) target.value = saved;
 });
 onBeforeUnmount(() => {
   document.body.classList.remove('modal-open');

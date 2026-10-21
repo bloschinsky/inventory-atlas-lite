@@ -1,28 +1,12 @@
 import { httpError } from '../httpError.js';
 import { AUTO_DETECT, closestContentLanguage, contentLanguageName, normalizeContentLanguage } from '../../../shared/languages.js';
+import { TRANSLATABLE_CORE_FIELDS, TRANSLATION_LIMITS } from '../../../shared/translationFields.js';
 
-const MAX_FIELDS = 20;
-const MAX_TEXT = 2000;
-const MAX_TOTAL_TEXT = 10_000;
-const MAX_SHORT_TEXT = 255;
+const { fields: MAX_FIELDS, text: MAX_TEXT, totalText: MAX_TOTAL_TEXT } = TRANSLATION_LIMITS;
 const MAX_REPORTED_TOKENS = 5;
 const STATUSES = ['translated', 'unchanged', 'untranslatable'];
 const ENTRY = ['key', 'status', 'translation', 'detectedLanguage'];
 const CUSTOM_KEY = /^field:([1-9]\d{0,9})$/;
-
-/*
-  The core text fields that can be translated, by their stable key, with the English label the model
-  sees as context. `explicitOnly` fields are translated only when the user picks that one field: they
-  name places and people, so a translation of the whole item must never include them on its own.
-*/
-export const TRANSLATABLE_CORE_FIELDS = {
-  name: { label: 'Name', maxLength: MAX_TEXT },
-  description: { label: 'Description', maxLength: MAX_TEXT, multiline: true },
-  condition_notes: { label: 'Condition notes', maxLength: MAX_TEXT, multiline: true },
-  location: { label: 'Location', maxLength: MAX_TEXT, explicitOnly: true },
-  location_detail: { label: 'Specific location', maxLength: MAX_SHORT_TEXT, explicitOnly: true },
-  transferred_to: { label: 'Transferred to', maxLength: MAX_SHORT_TEXT, explicitOnly: true }
-};
 
 const isObject = value => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 const invalid = (code, params) => httpError(400, code, params);

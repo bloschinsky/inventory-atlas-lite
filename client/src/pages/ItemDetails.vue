@@ -157,6 +157,14 @@ onMounted(load);
           >
             {{ item.source_url ? $t('urlImport.refreshAction') : $t('urlImport.fillAction') }}
           </RouterLink>
+          <!-- Opens the edit form with Translate Item over it; only translations applied there and then saved change. -->
+          <RouterLink
+            v-if="capabilities.ai.enabled"
+            :to="{ path: `/items/${item.id}/edit`, query: { translate: 'item' } }"
+            class="btn"
+          >
+            {{ $t('translateItem.action') }}
+          </RouterLink>
           <!-- Opens the Add Item form prefilled from this item; the copy is created only when saved there. -->
           <RouterLink
             :to="{ path: '/items/new', query: { duplicate: item.id } }"

@@ -652,6 +652,41 @@ and you can translate again. If the field changes while a translation is running
 offered either: press **Translate again** to translate the current text. The interface language and the
 content language are independent, so you can keep an English inventory under a Ukrainian interface.
 
+### Translate an item with AI
+
+**Translate with AI** translates several text fields of one item together, with one request to the
+configured provider, so a whole entry can be brought into your **Preferred content language**. It is
+offered while AI is enabled: on the item page (it opens **Edit** with the dialog over it) and at the
+top of the **Add item** and **Edit item** forms. The template editor and the public demo do not offer it.
+
+1. Press **Translate with AI**. The dialog lists every text field that holds text in the form right
+   now, including unsaved changes, with its value and a checkbox. Opening it sends nothing.
+2. **Name**, **Description**, **Condition Notes**, and custom *Text* fields start checked. **Location**,
+   **Specific location**, and **Transferred To** start unchecked, because they name real places and
+   people; tick them only on purpose and check every translated name. A custom field that looks like a
+   brand, a model, or a code (such as one named *Model*, or a value like `WM-FX195`) also starts
+   unchecked. Use **Select all** and **Select none** to change the whole list.
+3. Choose the languages as for one field: **Source language** is **Auto-detect** unless you choose one,
+   and every text may be in a different language; **Translate into** starts at the Preferred content
+   language, or the interface language while none is saved.
+4. Press **Preview translation**. Only the checked texts, their field names, and the category name are
+   sent, in one request. At most 20 fields and 10,000 characters go at once; above that the dialog asks
+   you to clear some fields instead of sending several requests, and a text over its field's limit
+   cannot be checked.
+5. **Review translations** shows each field's **Current** text beside its editable translation. Real
+   translations start ticked under **Apply to …**; a text that is already in the target language starts
+   unticked, and a field AI could not translate safely shows the reason and offers nothing.
+6. Press **Apply … translations**; the button names how many. Only those fields of the form
+   change; everything else stays as it was. **Save item** stores them, and **Cancel**, closing the dialog,
+   or leaving the page discards them. **Change selection** goes back to the list, and **Preview again**
+   translates the current texts once more.
+
+The category, codes, serial number, dates, price, condition, New, Source URL, container, photos, loan,
+and lifecycle state are never part of the translation, and the translation is never stored on its own
+or added to the item's history. If a field changes after its preview, its translation can no longer be
+applied: press **Preview again**. If the category changes, translations of its custom fields cannot be
+applied either.
+
 ### Edit or delete an item
 
 1. Open the item from **Items** and press **Edit**.
@@ -1099,8 +1134,8 @@ Dropbox or Google Drive sign-in shows Settings over the **Dashboard**, where clo
    not change it.
 4. **Technical details** shows when the database was **Created**, its **Database UUID**, and its
    **Schema version**. These are managed by the application and cannot be edited.
-5. **Preferred content language** is the language you keep inventory values in; **Translate** in the
-   item form offers it as the target. Until you save one, the interface language is only preselected
+5. **Preferred content language** is the language you keep inventory values in; **Translate** and
+   **Translate with AI** in the item form offer it as the target. Until you save one, the interface language is only preselected
    and the card says `Not saved yet`. Choose a language, or type its name into **Search languages…**,
    and press **Save language**. Changing the interface language never changes it or any item.
 
@@ -1418,6 +1453,8 @@ backup, and keep the copies on a different machine than the server.
   The original image is stored only after you confirm the draft. The provider settings and key stay
   in `ai-settings.json` under `DATA_DIR` and are not part of SQLite backups, so move or reconfigure
   them separately.
+- **Translate with AI** sends only the checked texts, their field names, and the category name, in one
+  request of at most 20 fields and 10,000 characters; it never splits a selection into several requests.
 - **Translate** sends only the text of that one field, the field name, and the category name to the
   configured AI provider: no other values, photos, or credentials. A local model keeps the text on the
   machine that runs it. One field's text is limited to 2,000 characters (255 for **Specific location**

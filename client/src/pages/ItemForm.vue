@@ -6,10 +6,12 @@ import { IconChevronLeft, IconChevronRight, IconStar, IconStarFilled, IconTrash 
 import { api, jsonOptions, photoUrl } from '../api.js';
 import ItemDraftFields from '../components/ItemDraftFields.vue';
 import PageHeader from '../components/PageHeader.vue';
+import TranslateItemDialog from '../components/TranslateItemDialog.vue';
 import UrlImportDialog from '../components/UrlImportDialog.vue';
 import { takePendingAiDraft } from '../aiDraft.js';
 import { capabilities, loadCapabilities } from '../capabilities.js';
 import { draftFromItem, useItemDraftForm } from '../itemDraft.js';
+import { applyTranslations } from '../itemTranslation.js';
 import { placementText } from '../itemColumns.js';
 
 const route = useRoute(); const router = useRouter(); const { t } = useI18n();
@@ -137,6 +139,18 @@ function applyImport({ categoryId, base, fieldValues, purchasePrice, photos: fil
   importNotice.value = t('urlImport.appliedNotice');
 }
 
+/*
+  Translate Item with AI works on this form the same way: the dialog reads the current values and
+  hands back only the approved translations by key, which replace those values and nothing else.
+  ?translate=item opens it over the form, from Item details; nothing is sent until Preview.
+*/
+const translateOpen = ref(false); const translateNotice = ref('');
+function applyItemTranslation(translations) {
+  applyTranslations(form, translations);
+  translateOpen.value = false;
+  translateNotice.value = t('translateItem.appliedNotice', Object.keys(translations).length);
+}
+
 async function savePhotos(id) {
   const selected = photos.value.filter(photo => photo.file);
   if (selected.length) {
@@ -219,18 +233,24 @@ onMounted(async () => {
   await loadCapabilities();
   if (capabilities.urlImport && route.query.import === 'url') openImport(false);
   if (capabilities.urlImport && route.query.import === 'refresh' && savedSourceUrl.value) openImport(true);
+  if (capabilities.ai.enabled && route.query.translate === 'item' && categoriesLoaded.value) translateOpen.value = true;
 });
 </script>
 
 <template>
   <div class="form-card">
     <PageHeader :title="editing ? $t('itemForm.editTitle') : (aiDraft ? $t('itemForm.reviewTitle') : $t('items.add'))">
-      <template
-        v-if="capabilities.urlImport"
-        #actions
-      >
+      <template #actions>
         <button
-          v-if="savedSourceUrl"
+          v-if="capabilities.ai.enabled"
+          type="button"
+          class="btn"
+          @click="translateNotice = ''; translateOpen = true"
+        >
+          {{ $t('translateItem.action') }}
+        </button>
+        <button
+          v-if="capabilities.urlImport && savedSourceUrl"
           type="button"
           class="btn"
           @click="openImport(true)"
@@ -238,6 +258,7 @@ onMounted(async () => {
           {{ $t('urlImport.refreshAction') }}
         </button>
         <button
+          v-if="capabilities.urlImport"
           type="button"
           class="btn"
           @click="openImport(false)"
@@ -252,6 +273,13 @@ onMounted(async () => {
       role="status"
     >
       {{ importNotice }}
+    </div>
+    <div
+      v-if="translateNotice"
+      class="alert alert-info"
+      role="status"
+    >
+      {{ translateNotice }}
     </div>
     <div
       v-if="aiDraft"
@@ -539,6 +567,13 @@ onMounted(async () => {
       :photo-slots="photoSlots"
       @apply="applyImport"
       @close="importOpen = false"
+    />
+    <TranslateItemDialog
+      v-if="translateOpen"
+      :form="form"
+      :fields="fields"
+      @apply="applyItemTranslation"
+      @close="translateOpen = false"
     />
   </div>
 </template>

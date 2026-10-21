@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.69.0",
+    "date": "2026-10-21",
+    "changes": [
+      "With AI enabled, Translate with AI on the item page and in the Add item and Edit item forms translates several text fields of an item at once, in one request: the name, description, condition notes, and custom text fields are checked, while locations, the recipient, and fields that look like codes stay unchecked until you choose them.",
+      "Every proposal appears beside the current text, can be edited, and is applied only when you tick it; a text already in the target language or one AI could not translate safely is shown with the reason. Applied translations change only the form until you press Save item, and codes, prices, dates, photos, and history stay untouched."
+    ]
+  },
+  {
     "version": "0.68.0",
     "date": "2026-10-21",
     "changes": [

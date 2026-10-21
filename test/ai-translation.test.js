@@ -382,3 +382,75 @@ test('the HTTP API: a per-database preference survives a restart and a backup re
     await stopServer(child);
   }
 });
+
+/*
+  Phase 2, Translate Item with AI: the item form's candidates and the one request built from them.
+  `t` returns the message key, so the labels show which interface label a core field uses.
+*/
+const { applyTranslations, selectionProblem, translationCandidates } = await import('../client/src/itemTranslation.js');
+const t = key => key;
+
+test('a whole item: default candidates, one provider call for every selected field, and only approved values applied', async () => {
+  const context = setup({
+    reply: input => ({
+      translations: input.fields.map(({ key }) => ({
+        key,
+        status: 'translated',
+        translation: { name: 'Sony Walkman WM-FX195 cassette player', description: 'Belt replaced, works', condition_notes: 'Scratch on the lid' }[key] ?? 'Cleaned in 2024',
+        detectedLanguage: { name: 'ja', description: 'zh-CN', condition_notes: 'uk' }[key] ?? 'de'
+      }))
+    })
+  });
+  const { field, audio } = context;
+  const fields = [
+    { id: field.Notes, name: 'Notes', type: 'text' },
+    { id: 999, name: 'Model', type: 'text' },
+    { id: 998, name: 'Remark', type: 'text' },
+    { id: field.Weight, name: 'Weight', type: 'number' }
+  ];
+  const form = {
+    name: 'ソニー ウォークマン WM-FX195 カセットプレーヤー', category_id: audio.id, description: '更换了皮带，可以正常使用',
+    condition_notes: 'Подряпина на кришці', location: 'Гараж', location_detail: '', transferred_to: 'Олена',
+    serial_number: 'SN-1', purchase_date: '2020-01-01', purchase_price: { amount: '12.50', currency: 'EUR' }, source_url: 'https://example.com/p',
+    field_values: { [field.Notes]: '2024 gereinigt', 999: 'WM-FX195', 998: '   ', [field.Weight]: '320' }
+  };
+  const candidates = translationCandidates(form, fields, t);
+  // Empty texts get no row; places and people, and a code-like custom value, are offered but off.
+  assert.deepEqual(candidates.map(row => [row.key, row.label, row.selected, row.note]), [
+    ['name', 'items.fields.name', true, null],
+    ['description', 'items.fields.description', true, null],
+    ['condition_notes', 'items.fields.conditionNotes', true, null],
+    [`field:${field.Notes}`, 'Notes', true, null],
+    ['field:999', 'Model', false, 'identifier'],
+    ['location', 'items.fields.location', false, 'place'],
+    ['transferred_to', 'items.fields.transferredTo', false, 'place']
+  ]);
+
+  const selected = candidates.filter(row => row.selected);
+  assert.equal(selectionProblem(selected), null);
+  const result = await context.service.translate({
+    targetLanguage: 'en', sourceLanguage: 'auto', categoryId: audio.id, fields: selected.map(({ key, text }) => ({ key, text }))
+  });
+  assert.equal(context.calls.length, 1);
+  // Unselected fields never reach the provider, and the custom field keeps its exact id.
+  assert.deepEqual(JSON.parse(context.calls[0].input).fields.map(entry => entry.key), ['name', 'description', 'condition_notes', `field:${field.Notes}`]);
+  assert.deepEqual(result.fields.map(entry => [entry.key, entry.status, entry.detectedLanguage]), [
+    ['name', 'translated', 'ja'], ['description', 'translated', 'zh-Hans'], ['condition_notes', 'translated', 'uk'], [`field:${field.Notes}`, 'translated', 'de']
+  ]);
+
+  // The user approves two of them; everything else in the draft stays exactly as it was.
+  const before = structuredClone(form);
+  applyTranslations(form, { name: result.fields[0].translation, [`field:${field.Notes}`]: result.fields[3].translation });
+  assert.deepEqual(form, { ...before, name: 'Sony Walkman WM-FX195 cassette player', field_values: { ...before.field_values, [field.Notes]: 'Cleaned in 2024' } });
+});
+
+test('a whole item: over-long texts cannot be chosen, and a selection over the request limits is reported, never split', () => {
+  const form = { name: 'x'.repeat(2001), description: 'Text', condition_notes: '', location: '', location_detail: 'y'.repeat(256), transferred_to: '', field_values: {} };
+  const rows = translationCandidates(form, [], t);
+  assert.deepEqual(rows.map(row => [row.key, row.disabled, row.note]), [['name', true, 'tooLong'], ['description', false, null], ['location_detail', true, 'tooLong']]);
+
+  const row = (text, index) => ({ key: `field:${index + 1}`, text });
+  assert.equal(selectionProblem(Array.from({ length: 20 }, (_, index) => row('Text', index))), null);
+  assert.deepEqual(selectionProblem(Array.from({ length: 21 }, (_, index) => row('Text', index))), { code: 'TRANSLATION_TOO_MANY_FIELDS', params: { max: 20 } });
+  assert.deepEqual(selectionProblem(Array.from({ length: 6 }, (_, index) => row('x'.repeat(2000), index))), { code: 'TRANSLATION_REQUEST_TOO_LARGE', params: { max: 10000 } });
+});

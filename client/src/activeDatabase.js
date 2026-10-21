@@ -1,5 +1,6 @@
 import { reactive } from 'vue';
 import { api, jsonOptions } from './api.js';
+import { normalizeContentLanguage } from '../../shared/languages.js';
 
 /*
   Shared state of the database the server has open, in the same style as capabilities.js: the
@@ -55,4 +56,15 @@ export async function saveContentLanguage(contentLanguage) {
   latest++;
   show(metadata);
   return metadata;
+}
+
+/*
+  The target a translation starts with: the open database's Preferred Content Language, loaded first
+  when nothing has asked for the metadata yet, or null while none is saved or the load fails.
+*/
+export async function loadContentLanguage() {
+  if (!activeDatabase.metadata) {
+    try { await loadActiveDatabase(); } catch { return null; }
+  }
+  return normalizeContentLanguage(activeDatabase.metadata?.content_language);
 }
