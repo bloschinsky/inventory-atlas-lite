@@ -779,6 +779,28 @@
       "edit": "Edit the AI suggestion for {field}",
       "categorySuggested": "Suggested by AI from the details on the page.",
       "priceSuggested": "AI: current offer"
+    },
+    "translate": {
+      "title": "Translate imported values with AI",
+      "help": "Translates the values proposed below, as they are now, into the language you choose. Only when you choose this, the selected texts, their field names, and the category name are sent to the AI provider configured in Settings. Prices, codes, and the Source URL are never translated.",
+      "empty": "None of the values proposed now is a text that can be translated.",
+      "fieldsLegend": "Values to translate",
+      "choose": "Translate {field}",
+      "action": "Translate selected values",
+      "again": "Translate again",
+      "cancel": "Cancel translation",
+      "discard": "Discard translations",
+      "failed": "The original values and your choices below are unchanged.",
+      "result": "{n} translation added below. Check it and choose whether to use it. | {n} translations added below. Check them and choose which to use.",
+      "none": "Nothing was translated. The original values below are unchanged.",
+      "unavailable": "To translate imported values into your content language, turn on AI in Settings → AI.",
+      "heading": "Translation",
+      "use": "Use translation into {language}",
+      "badge": "AI translation",
+      "from": "Translated from the {source} value",
+      "edit": "Edit the translation for {field}",
+      "originalKept": "The original value is kept.",
+      "stale": "This value changed after the translation, so the translation cannot be used. Translate again to translate the current value."
     }
   },
   "translation": {

@@ -2,10 +2,15 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { api, apiBlob, jsonOptions } from '../api.js';
+import { activeDatabase, loadContentLanguage } from '../activeDatabase.js';
 import { capabilities } from '../capabilities.js';
 import { formatDateTime, formatMoney, translateError } from '../i18n/index.js';
+import { identifierLike, selectionProblem } from '../itemTranslation.js';
 import { matchCustomFields, productAttributes } from '../../../shared/productImport.js';
+import { AUTO_DETECT, contentLanguageName, normalizeContentLanguage } from '../../../shared/languages.js';
+import { TRANSLATABLE_CORE_FIELDS, TRANSLATION_LIMITS } from '../../../shared/translationFields.js';
 import ColorValue from './ColorValue.vue';
+import LanguageSelect from './LanguageSelect.vue';
 
 /*
   Smart URL import over the item form: the server reads a public product page, and this dialog shows
@@ -27,6 +32,14 @@ import ColorValue from './ColorValue.vue';
   soon as the dialog opens, and a page that cannot be read only shows its error. When the page offers
   several variants, nothing variant-specific is shown until the user chooses one; the server then
   answers a new preview for that variant alone, and the rows, price, and images follow it.
+
+  When AI is on, "Translate imported values with AI" translates the values the rows propose now (the
+  page value or the chosen AI one) of Name, Description, and the category's text fields, in one
+  request to the shared translation API and only on that click. Each translation joins its row below
+  the original it was made from, editable and with its own "Use translation" box; the row's own
+  checkbox is never changed by it. A new preview, variant, category, or AI answer discards every
+  translation, and a late answer is ignored. A row whose proposal changed after the request keeps its
+  original and needs a new translation.
 */
 const props = defineProps({
   form: { type: Object, required: true },
@@ -39,7 +52,7 @@ const props = defineProps({
   photoSlots: { type: Number, default: 10 }
 });
 const emit = defineEmits(['close', 'apply']);
-const { t } = useI18n();
+const { locale, t } = useI18n();
 
 const url = ref(props.refreshUrl || props.form.source_url || '');
 const loading = ref(false);
@@ -124,7 +137,9 @@ watch(rows, list => {
   for (const row of list) if (!(row.key in selected)) selected[row.key] = isEmpty(row.current) && (row.pageNew || row.ai.confidence !== 'low');
 });
 const choiceOf = row => (row.ai ? choice[row.key] ?? (row.pageNew ? 'page' : 'ai') : 'page');
-const valueOf = row => (choiceOf(row) === 'ai' ? edits[row.key] ?? row.ai.value : row.found);
+// What the row proposes before any translation: the page value, or the chosen and maybe edited AI one.
+const proposedOf = row => (choiceOf(row) === 'ai' ? edits[row.key] ?? row.ai.value : row.found);
+const valueOf = row => (usableTranslation(row) ? translations.value[row.key].translation.trim() : proposedOf(row));
 const editable = row => row.ai && !['color', 'boolean'].includes(row.type);
 function editAi(row, value) {
   edits[row.key] = value;
@@ -174,6 +189,7 @@ async function loadImages(token, candidates) {
 // A new preview replaces every choice made on the previous one, including the AI suggestions.
 function show(result) {
   for (const key of Object.keys(selected)) delete selected[key];
+  for (const key of Object.keys(translateChoices)) delete translateChoices[key];
   discardAi();
   preview.value = result;
   variant.value = result.variant === null || result.variant === undefined ? '' : String(result.variant);
@@ -185,6 +201,7 @@ function show(result) {
 
 async function read() {
   loading.value = true; error.value = ''; preview.value = null;
+  discardTranslations();
   try {
     const body = { url: url.value };
     if (props.form.category_id) body.categoryId = props.form.category_id;
@@ -238,6 +255,8 @@ async function enhance() {
     const token = preview.value.token;
     const result = await api(`/api/items/import-url/${encodeURIComponent(token)}/ai`, jsonOptions('POST', body));
     if (preview.value?.token !== token) return;
+    // Translations were made from the proposals before this answer.
+    discardTranslations();
     aiResult.value = result;
     if (!props.editing && !categoryId.value && result.categoryId) categoryId.value = result.categoryId;
     if (priceIndex.value === null && result.offerPriceIndex !== null) priceIndex.value = result.offerPriceIndex;
@@ -250,12 +269,106 @@ async function enhance() {
 
 // Rejects every AI suggestion; the rows fall back to the page values and their earlier choices.
 function discardAi() {
+  discardTranslations();
   for (const row of rows.value) if (row.ai && !row.pageNew) delete selected[row.key];
   for (const key of Object.keys(choice)) delete choice[key];
   for (const key of Object.keys(edits)) delete edits[key];
   aiResult.value = null;
   aiError.value = '';
 }
+
+/*
+  The translation candidates: what the rows of Name, Description, and the chosen category's text
+  fields propose now, under the translation API's keys. Source URL, prices, evidence, page details
+  that no field takes, and other variants are never offered. Text fields named or valued like a
+  brand, a model, or a code start unchecked, as in Translate Item with AI.
+*/
+const translationKey = row => (row.fieldId ? (row.type === 'text' ? `field:${row.fieldId}` : null)
+  : Object.hasOwn(TRANSLATABLE_CORE_FIELDS, row.key) ? row.key : null);
+const translationSource = ref(AUTO_DETECT);
+// The database's Preferred Content Language, or the interface language while none is saved.
+const defaultTarget = normalizeContentLanguage(activeDatabase.metadata?.content_language) ?? normalizeContentLanguage(locale.value) ?? 'en';
+const translationTarget = ref(defaultTarget);
+const translateChoices = reactive({});
+const translationCandidates = computed(() => rows.value.map(row => {
+  const key = translationKey(row);
+  const text = key ? String(proposedOf(row) ?? '').trim() : '';
+  if (!text) return null;
+  const maxLength = row.fieldId ? TRANSLATION_LIMITS.text : TRANSLATABLE_CORE_FIELDS[key].maxLength;
+  const tooLong = text.length > maxLength;
+  const identifier = Boolean(row.fieldId) && identifierLike(row.label, text);
+  return { row, key, label: row.label, text, maxLength, note: tooLong ? 'tooLong' : identifier ? 'identifier' : null, disabled: tooLong, selected: !tooLong && !identifier };
+}).filter(Boolean));
+const isTranslateChosen = candidate => !candidate.disabled && (translateChoices[candidate.row.key] ?? candidate.selected);
+const chosenForTranslation = computed(() => translationCandidates.value.filter(isTranslateChosen));
+const translationProblem = computed(() => selectionProblem(chosenForTranslation.value));
+
+// Translation results by row key; each remembers the preview, category, and original it was made from.
+const translations = ref({});
+const translationPending = ref(false);
+const translationError = ref('');
+const translationWarnings = ref([]);
+let translationRequest = 0;
+const translatedCount = computed(() => Object.values(translations.value).filter(result => result.offered).length);
+
+async function translate() {
+  const chosen = chosenForTranslation.value;
+  if (!chosen.length || translationProblem.value) return;
+  const request = ++translationRequest;
+  const made = { token: preview.value.token, categoryId: String(categoryId.value ?? '') };
+  const originals = Object.fromEntries(chosen.map(candidate => [candidate.key, {
+    rowKey: candidate.row.key, text: candidate.text, origin: choiceOf(candidate.row) === 'ai' ? 'ai' : candidate.row.source
+  }]));
+  translationPending.value = true; translationError.value = '';
+  try {
+    const response = await api('/api/ai/translate', jsonOptions('POST', {
+      targetLanguage: translationTarget.value,
+      sourceLanguage: translationSource.value,
+      categoryId: categoryId.value || null,
+      fields: chosen.map(candidate => ({ key: candidate.key, text: candidate.text }))
+    }));
+    if (request !== translationRequest) return;
+    const results = { ...translations.value };
+    for (const field of response.fields) {
+      const original = originals[field.key];
+      if (!original) continue;
+      results[original.rowKey] = {
+        ...field, ...made, original: original.text, origin: original.origin,
+        translation: field.translation ?? '', offered: field.status === 'translated', use: field.status === 'translated',
+        language: contentLanguageName(response.targetLanguage, locale.value),
+        detected: response.sourceLanguage === AUTO_DETECT && field.detectedLanguage ? contentLanguageName(field.detectedLanguage, locale.value) : ''
+      };
+    }
+    translations.value = results;
+    translationWarnings.value = response.warnings;
+  } catch (e) {
+    if (request === translationRequest) translationError.value = e.message;
+  } finally {
+    if (request === translationRequest) translationPending.value = false;
+  }
+}
+
+// A translation made from another preview, category, or proposal than the row holds now.
+function translationStale(row) {
+  const result = translations.value[row.key];
+  return result.token !== preview.value?.token || result.categoryId !== String(categoryId.value ?? '')
+    || String(proposedOf(row) ?? '').trim() !== result.original;
+}
+const translationOf = row => translations.value[row.key] ?? null;
+const usableTranslation = row => {
+  const result = translationOf(row);
+  return Boolean(result?.offered && result.use && result.translation.trim()) && !translationStale(row);
+};
+
+// Drops every translation and ignores an answer still on its way; the original proposals stay.
+function discardTranslations() {
+  translationRequest++;
+  translations.value = {};
+  translationPending.value = false;
+  translationError.value = '';
+  translationWarnings.value = [];
+}
+watch(categoryId, discardTranslations);
 
 function toggleImage(image) {
   if (!image.selected && selectedImages.value.length >= props.photoSlots) return;
@@ -276,12 +389,16 @@ function apply() {
 }
 
 const onKeydown = event => { if (event.key === 'Escape') emit('close'); };
-onMounted(() => {
+onMounted(async () => {
   document.body.classList.add('modal-open');
   document.addEventListener('keydown', onKeydown);
   // Refresh from Source reads the saved address right away; the other entry points wait for an address.
   if (props.refreshUrl) read();
   else nextTick(() => urlInput.value?.focus());
+  // Settings → Database may not have been opened yet; without a saved preference the default stays.
+  if (!capabilities.ai.enabled) return;
+  const saved = await loadContentLanguage();
+  if (saved && translationTarget.value === defaultTarget) translationTarget.value = saved;
 });
 onBeforeUnmount(() => {
   document.body.classList.remove('modal-open');
@@ -565,6 +682,152 @@ onBeforeUnmount(() => {
               </div>
             </section>
 
+            <section
+              v-if="capabilities.ai.enabled"
+              class="card card-sm mb-3"
+              aria-labelledby="url-import-translate-title"
+            >
+              <div class="card-body">
+                <h4
+                  id="url-import-translate-title"
+                  class="card-title mb-1"
+                >
+                  {{ $t('urlImport.translate.title') }}
+                </h4>
+                <p class="text-secondary small">
+                  {{ $t('urlImport.translate.help') }}
+                </p>
+                <p
+                  v-if="!translationCandidates.length"
+                  class="text-secondary mb-0"
+                >
+                  {{ $t('urlImport.translate.empty') }}
+                </p>
+                <template v-else>
+                  <div class="row">
+                    <div class="col-sm-6 mb-3">
+                      <label
+                        class="form-label"
+                        for="url-import-translate-source"
+                      >{{ $t('translation.source') }}</label>
+                      <LanguageSelect
+                        id="url-import-translate-source"
+                        v-model="translationSource"
+                        :label="$t('translation.source')"
+                        auto
+                      />
+                    </div>
+                    <div class="col-sm-6 mb-3">
+                      <label
+                        class="form-label"
+                        for="url-import-translate-target"
+                      >{{ $t('translation.target') }}</label>
+                      <LanguageSelect
+                        id="url-import-translate-target"
+                        v-model="translationTarget"
+                        :label="$t('translation.target')"
+                      />
+                    </div>
+                  </div>
+                  <fieldset class="mb-3">
+                    <legend class="form-label mb-1">
+                      {{ $t('urlImport.translate.fieldsLegend') }}
+                    </legend>
+                    <label
+                      v-for="candidate in translationCandidates"
+                      :key="candidate.key"
+                      class="form-check"
+                      :class="{ 'text-secondary': candidate.disabled }"
+                    >
+                      <input
+                        class="form-check-input"
+                        type="checkbox"
+                        :checked="isTranslateChosen(candidate)"
+                        :disabled="candidate.disabled"
+                        :aria-label="$t('urlImport.translate.choose', { field: candidate.label })"
+                        :aria-describedby="`url-import-translate-${candidate.row.key}-text`"
+                        @change="translateChoices[candidate.row.key] = $event.target.checked"
+                      >
+                      <span class="form-check-label">
+                        <span class="fw-medium text-break">{{ candidate.label }}</span>
+                        <span
+                          :id="`url-import-translate-${candidate.row.key}-text`"
+                          class="d-block small text-secondary text-break app-translate-preview"
+                        >{{ candidate.text }}</span>
+                        <span
+                          v-if="candidate.note"
+                          class="d-block small"
+                        >{{ $t(`translateItem.notes.${candidate.note}`, { max: candidate.maxLength }) }}</span>
+                      </span>
+                    </label>
+                  </fieldset>
+                  <div
+                    v-if="translationProblem"
+                    class="alert alert-warning"
+                    role="alert"
+                  >
+                    {{ translateError(translationProblem) }} {{ $t('translateItem.reduceSelection') }}
+                  </div>
+                  <div class="d-flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      class="btn btn-outline-primary"
+                      :disabled="translationPending || !chosenForTranslation.length || Boolean(translationProblem)"
+                      @click="translate"
+                    >
+                      <span
+                        v-if="translationPending"
+                        class="spinner-border spinner-border-sm me-1"
+                        aria-hidden="true"
+                      />
+                      {{ translationPending ? $t('translation.translating')
+                        : Object.keys(translations).length ? $t('urlImport.translate.again') : $t('urlImport.translate.action') }}
+                    </button>
+                    <button
+                      v-if="translationPending || Object.keys(translations).length"
+                      type="button"
+                      class="btn btn-ghost-secondary"
+                      @click="discardTranslations"
+                    >
+                      {{ translationPending ? $t('urlImport.translate.cancel') : $t('urlImport.translate.discard') }}
+                    </button>
+                  </div>
+                </template>
+                <div
+                  v-if="translationError"
+                  class="alert alert-danger mt-3 mb-0"
+                  role="alert"
+                >
+                  {{ translationError }} {{ $t('urlImport.translate.failed') }}
+                </div>
+                <div
+                  class="mt-2"
+                  role="status"
+                >
+                  <template v-if="Object.keys(translations).length">
+                    {{ translatedCount ? $t('urlImport.translate.result', translatedCount) : $t('urlImport.translate.none') }}
+                  </template>
+                </div>
+                <ul
+                  v-if="translationWarnings.length"
+                  class="text-warning small mt-2 mb-0 ps-3"
+                >
+                  <li
+                    v-for="warning in translationWarnings"
+                    :key="warning.code"
+                  >
+                    {{ translateError(warning) }}
+                  </li>
+                </ul>
+              </div>
+            </section>
+            <p
+              v-else
+              class="form-text"
+            >
+              {{ $t('urlImport.translate.unavailable') }}
+            </p>
+
             <fieldset class="mb-3">
               <legend class="form-label">
                 {{ $t('urlImport.foundValues') }}
@@ -719,6 +982,66 @@ onBeforeUnmount(() => {
                         >
                           {{ $t('urlImport.ai.evidence', { text: row.ai.evidence }) }}
                         </div>
+                      </div>
+                      <div
+                        v-if="translationOf(row)"
+                        class="border-top mt-2 pt-2"
+                      >
+                        <label
+                          v-if="translationOf(row).offered"
+                          class="form-check mb-1"
+                        >
+                          <input
+                            v-model="translationOf(row).use"
+                            class="form-check-input"
+                            type="checkbox"
+                            :disabled="translationStale(row)"
+                          >
+                          <span class="form-check-label">{{ $t('urlImport.translate.use', { language: translationOf(row).language }) }}</span>
+                        </label>
+                        <div
+                          v-else
+                          class="text-secondary"
+                        >
+                          {{ $t('urlImport.translate.heading') }}
+                        </div>
+                        <div
+                          v-if="translationOf(row).offered"
+                          class="mb-1"
+                        >
+                          <span class="badge bg-purple-lt">{{ $t('urlImport.translate.badge') }}</span>
+                          <span class="text-secondary ms-1">{{ $t('urlImport.translate.from', { source: sourceLabel(translationOf(row).origin) }) }}</span>
+                        </div>
+                        <textarea
+                          v-if="translationOf(row).offered"
+                          v-model="translationOf(row).translation"
+                          class="form-control form-control-sm"
+                          :rows="row.long ? 3 : 1"
+                          :aria-label="$t('urlImport.translate.edit', { field: row.label })"
+                          :disabled="translationStale(row)"
+                          @input="translationOf(row).use = true"
+                        />
+                        <ul class="list-unstyled mb-0 mt-1">
+                          <li
+                            v-if="translationOf(row).detected"
+                            class="text-secondary"
+                          >
+                            {{ $t('translation.detected', { language: translationOf(row).detected }) }}
+                          </li>
+                          <li
+                            v-for="warning in translationOf(row).warnings"
+                            :key="warning.code"
+                            :class="translationOf(row).status === 'invalid' ? 'text-danger' : 'text-secondary'"
+                          >
+                            {{ translateError(warning) }} {{ $t('urlImport.translate.originalKept') }}
+                          </li>
+                          <li
+                            v-if="translationStale(row)"
+                            class="fw-medium"
+                          >
+                            {{ $t('urlImport.translate.stale') }}
+                          </li>
+                        </ul>
                       </div>
                     </div>
                   </div>

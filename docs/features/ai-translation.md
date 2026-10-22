@@ -4,7 +4,8 @@
 
 Opt-in AI translation of the unsaved Add/Edit Item form: one text field at a time (**Translate**,
 Phase 1) or several fields of the item in one request with a per-field review (**Translate with AI**,
-Phase 2), both on one reusable, provider-neutral translation backend.
+Phase 2), and the values proposed by Smart URL import before they reach the form (**Translate imported
+values with AI**, Phase 3), all on one reusable, provider-neutral translation backend.
 Three languages stay independent: the per-browser **interface language**, the per-database
 **Preferred Content Language**, and the **source language** of each text (detected automatically
 unless the user chooses one). Translation is always review-only: nothing is saved until the user
@@ -171,10 +172,13 @@ or numbers; translation is `null`), or `invalid` (no proposal; the warning says 
   `ItemDraftFields.vue`, `client/src/pages/ItemForm.vue`.
 - `client/src/components/TranslateItemDialog.vue`, `client/src/itemTranslation.js`,
   `client/src/pages/ItemDetails.vue`, `client/src/activeDatabase.js` (`loadContentLanguage()`).
-- `test/ai-translation.test.js`, `test/e2e/translate-field.spec.js`, `test/e2e/translate-item.spec.js`.
+- `client/src/components/UrlImportDialog.vue` — Translate imported values with AI in Smart URL import (see
+  [Smart URL import](smart-url-import.md#translation-of-imported-values)).
+- `test/ai-translation.test.js`, `test/e2e/translate-field.spec.js`, `test/e2e/translate-item.spec.js`,
+  `test/e2e/url-import-translation.spec.js`.
 
 ## Out of scope
 
-Translation inside Smart URL import, scheduled or bulk inventory translation, multilingual storage,
+Scheduled or bulk inventory translation, multilingual storage,
 translation history, automatic translation on an interface language change, and new interface
 localizations.

@@ -26,6 +26,9 @@ const TRAILING = ['location', 'location_detail', 'transferred_to'];
 const IDENTIFIER_NAME = /\b(?:brand|make|model|sku|mpn|gtin|ean|upc|isbn|asin|serial|part\s*(?:no|number|#)|barcode|article)\b|бренд|марка|модель|артикул|серійн|штрих/iu;
 const looksLikeCode = text => !/\p{L}{2,}/u.test(text) || (!/\s/.test(text) && /\d/.test(text));
 
+// Whether a custom text field's name or value says it holds a brand, a model, or a code.
+export const identifierLike = (name, text) => IDENTIFIER_NAME.test(name) || looksLikeCode(text);
+
 const customId = key => (key.startsWith('field:') ? key.slice('field:'.length) : null);
 
 // The form's current value of a translation key.
@@ -47,7 +50,7 @@ export function translationCandidates(form, fields, t) {
   const core = key => row(key, t(CORE_LABELS[key]), TRANSLATABLE_CORE_FIELDS[key].maxLength, TRANSLATABLE_CORE_FIELDS[key]);
   const custom = fields.filter(field => field.type === 'text').map(field => {
     const text = formValue(form, `field:${field.id}`).trim();
-    return row(`field:${field.id}`, field.name, TRANSLATION_LIMITS.text, { identifier: IDENTIFIER_NAME.test(field.name) || looksLikeCode(text) });
+    return row(`field:${field.id}`, field.name, TRANSLATION_LIMITS.text, { identifier: identifierLike(field.name, text) });
   });
   return [...LEADING.map(core), ...custom, ...TRAILING.map(core)].filter(Boolean);
 }
