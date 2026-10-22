@@ -28,10 +28,13 @@ Express directly with Node.js and systemd. The pipeline does not ship a prebuilt
 The tag-only `.github/workflows/release.yml` workflow first refuses a tag whose commit is not on
 `master` (`git merge-base --is-ancestor` over the full history), so a tag pushed on a feature branch
 before its pull request is merged publishes nothing. It then validates the tag and committed versions
-and the release entry the tag must have in `shared/release-history.json`, installs dependencies, runs lint, API and shell tests, builds the client, installs Chromium, and runs
-the Playwright suite. A failed browser run retains its traces and screenshots as a seven-day workflow
-artifact. Docker publishing and Proxmox asset packaging depend on this validation job; the GitHub
-Release depends on both publishing jobs. After a successful run, the separate
+and the release entry the tag must have in `shared/release-history.json`, installs dependencies, runs lint, API and shell tests, and builds the client.
+Beside it, the `e2e` matrix runs the Playwright suite as two jobs, one per Playwright project: `app`
+one test at a time over its shared database, and the guided `tour` of the in-browser demo with three
+workers. Each installs Chromium itself, and a failed browser run retains its traces and screenshots
+as a seven-day workflow artifact named after its project. Docker publishing and Proxmox asset
+packaging depend on the validation job and both browser jobs; the GitHub Release depends on both
+publishing jobs. After a successful run, the separate
 `.github/workflows/pages.yml` workflow republishes the [public landing page](landing-page.md) so it
 announces the new release.
 

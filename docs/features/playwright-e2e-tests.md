@@ -21,8 +21,15 @@ failing test makes the command exit non-zero.
 
 ## Implementation overview
 
-- `playwright.config.js` defines the Chromium project, the isolated test ports, and the API and Vite
-  processes started for the run. Retries are disabled locally so unstable tests stay visible.
+- `playwright.config.js` defines the isolated test ports, the API and Vite processes started for the
+  run, and two Chromium projects. `tour` holds `tour.spec.js`, and `app` holds every other spec. The
+  guided tour plays at its real pace and takes most of the suite's time. It runs on the in-browser
+  demo and never touches the shared database, so its tests may run in parallel. The release workflow
+  runs each project as its own job and gives `tour` three workers. `npm run test:e2e` runs both
+  projects, one test at a time. `npm run test:e2e -- --project=tour --workers=3` runs only the tour.
+  The tests that play every chapter again for Replay, the Ukrainian demo, and the phone run under
+  reduced motion. That drops the beats and the typing cadence. The first full play and Auto Play keep
+  the animated pace. Retries are disabled locally so unstable tests stay visible.
 - `test/e2e/run.js` is the launcher behind `npm run test:e2e`: it allocates the ports, creates the
   temporary data directory, passes the environment to the processes, and cleans up on success and on
   failure. `test/e2e/environment.js` and `test/e2e/helpers.js` hold the shared setup.

@@ -9,7 +9,15 @@ export default defineConfig({
   retries: 0,
   reporter: process.env.CI ? [['list'], ['github']] : 'list',
   use: { baseURL, trace: 'retain-on-failure', screenshot: 'only-on-failure' },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  /*
+    The guided tour plays at its real pace and takes most of the suite's time, but it runs on the
+    in-browser demo and never touches the shared database. Its own project lets CI run it as a
+    separate job with several workers (`--project=tour --workers=3`); locally both still run here.
+  */
+  projects: [
+    { name: 'app', testIgnore: 'tour.spec.js', use: { ...devices['Desktop Chrome'] } },
+    { name: 'tour', testMatch: 'tour.spec.js', use: { ...devices['Desktop Chrome'] } }
+  ],
   webServer: [
     {
       // Cloud backup talks to this stub instead of Dropbox and Google.

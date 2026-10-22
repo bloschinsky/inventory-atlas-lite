@@ -449,6 +449,7 @@ Playwright is the browser-level safety net for user-facing behavior. It compleme
 - Never use fixed sleeps; wait for observable UI state. Keep tests independent and give created records unique names.
 - In Linux headless Chromium desktop tests, a new page can retain the pointer at `(0, 0)`. This expands the folded-hover sidebar, which intentionally overlays controls on the left of the page. After a direct `page.goto()` to a page with such controls, move the pointer into the page work area (for example, `await page.mouse.move(600, 400)`) before the locator action.
 - The suite uses a temporary SQLite database and its own ports. It must never touch `data/inventory.sqlite`.
+- `playwright.config.js` has two projects. `tour` holds `tour.spec.js`: it plays on the in-browser demo, so its tests run in parallel. `app` holds every other spec, and those share the database and run one at a time. The release workflow runs each project as its own job. A spec that touches only the demo may join `tour`. A spec that uses the API or the shared database must stay in `app`.
 - Run `npx playwright install chromium` once before the first run in a new environment.
 
 ## Verification
