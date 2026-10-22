@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.69.3",
+    "date": "2026-10-22",
+    "changes": [
+      "Publishes the faster release checks from 0.69.2, whose release was stopped by a test of the release workflow itself that still expected the old order of its steps. The application itself is unchanged."
+    ]
+  },
+  {
     "version": "0.69.2",
     "date": "2026-10-22",
     "changes": [
