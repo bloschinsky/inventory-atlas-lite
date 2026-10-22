@@ -38,23 +38,48 @@ jobs:
       - name: Validate the release-history entry
         run: node scripts/release-notes.mjs "$GITHUB_REF_NAME" > /dev/null
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
       - run: npm run lint
       - run: npm test
       - run: npm run build
-      - run: npm run test:e2e
+
+  # The browser suite runs beside the validation, split by Playwright project: `app` shares one
+  # database and runs one test at a time, while the guided `tour` plays on the in-browser demo, so its
+  # tests run in parallel. Nothing is published until every part has passed.
+  e2e:
+    name: End-to-end (${{ matrix.project }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: app
+            workers: 1
+          - project: tour
+            workers: 3
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e -- --project=${{ matrix.project }} --workers=${{ matrix.workers }}
       - name: Upload Playwright failure artifacts
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-failure
+          name: playwright-failure-${{ matrix.project }}
           path: test-results/
           if-no-files-found: warn
           retention-days: 7
 
   docker:
     name: Publish Docker image
-    needs: validate
+    needs: [validate, e2e]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -143,7 +168,7 @@ jobs:
 
   proxmox-assets:
     name: Package Proxmox source
-    needs: validate
+    needs: [validate, e2e]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

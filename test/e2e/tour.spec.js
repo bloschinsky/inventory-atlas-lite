@@ -12,7 +12,12 @@ import { demoURL, landingURL } from './environment.js';
   highlighted `data-tour` targets, and the data its actions left behind. The checks wait for
   observable states, never for fixed times; where a test must prove that nothing happens on its
   own, it moves the page clock forward instead of waiting.
+
+  Every test has its own demo in its own browser context and never touches the shared database, so
+  the tests may run at the same time: the `tour` project gets several workers in CI.
 */
+test.describe.configure({ mode: 'parallel' });
+
 const chapters = ['dashboard', 'categories', 'hierarchy', 'addItem', 'items', 'templates', 'checklists', 'result'];
 const { checklists, items, templates, tourItem, categories } = createDemoFixture('en');
 const photographyFields = byKey(categories, tourItem.category).fields;
@@ -79,6 +84,13 @@ const photography = count(item => item.category === tourItem.category);
 const good = count(item => item.condition_grade === tourItem.condition);
 const camerasLocation = locationOf(container);
 const atCamerasLocation = count(item => locationOf(item) === camerasLocation);
+
+/*
+  The presentation keeps its real pacing, so playing every chapter takes minutes. The first full play
+  checks it animated; the later full plays check other contracts under reduced motion, which drops the
+  beats and the typing cadence but keeps every scene waiting for its action.
+*/
+const withoutMotion = page => page.emulateMedia({ reducedMotion: 'reduce' });
 
 async function open(page, hash = '#/dashboard') {
   await page.goto(`${demoURL}${hash}`);
@@ -403,6 +415,7 @@ test('Auto Play is optional, presses the same scene actions, and holds on Pause 
 
 test('Replay, Back, and Next replay chapters without creating anything twice', async ({ page }) => {
   test.setTimeout(240_000);
+  await withoutMotion(page);
   await open(page);
   await startTour(page);
   await goTo(page, 3);
@@ -629,6 +642,7 @@ test.describe('on the Ukrainian demo', () => {
 
   test('the tour plays on the Ukrainian inventory, adds a Ukrainian item once, and reports the real changes', async ({ page }) => {
     test.setTimeout(300_000);
+    await withoutMotion(page);
     await open(page, '?lang=uk#/dashboard');
     await page.getByRole('button', { name: 'Екскурсія' }).click();
     await expect(page.getByRole('dialog', { name: ukCopy.dashboard.title })).toBeVisible();
@@ -764,6 +778,7 @@ test.describe('on a phone', () => {
 
   test('the compact presenter leaves the page visible, and every chapter plays', async ({ page }) => {
     test.setTimeout(300_000);
+    await withoutMotion(page);
     await open(page, '#/items');
     await startTour(page);
     await expect(card(page)).toContainText(`1/8 · ${title('dashboard')}`);

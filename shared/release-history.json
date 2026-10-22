@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.69.2",
+    "date": "2026-10-22",
+    "changes": [
+      "Release checks finish faster: the browser tests of the guided demo tour now run in parallel with the rest of the checks instead of after them. The application itself is unchanged."
+    ]
+  },
+  {
     "version": "0.69.1",
     "date": "2026-10-22",
     "changes": [
