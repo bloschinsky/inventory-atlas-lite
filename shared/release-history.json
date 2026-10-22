@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.70.0",
+    "date": "2026-10-22",
+    "changes": [
+      "With AI enabled, Smart URL import (From URL, Fill from URL, and Refresh from Source) can translate what it found: Translate imported values with AI translates the proposed name, description, and text field values, for example of a Japanese or Chinese store page, into your Preferred content language or any other listed language, in one request and only when you press it.",
+      "Each translation appears under the original value with its source, can be edited, and is used only when you keep Use translation ticked; a field that already has a value still starts unticked. Prices, the Source URL, images, and the price opt-in are never touched, and choosing another variant or category, reading the page again, or a new AI answer discards earlier translations."
+    ]
+  },
+  {
     "version": "0.69.3",
     "date": "2026-10-22",
     "changes": [

@@ -319,6 +319,43 @@ until **Use/Apply selected values**:
   is untouched.
 - A failed request shows its translated error and keeps the review usable.
 
+## Translation of imported values
+
+With AI enabled, the review has a **Translate imported values with AI** card. It is a small client
+integration of [AI translation](ai-translation.md): it calls the same `POST /api/ai/translate`, so
+there is no import-specific provider call, setting, or storage. The import pipeline and the AI
+enhancement don't change. Translation runs only after them and only in the browser's review, so
+translated text never reaches the source-word grounding of the AI enhancement.
+
+- **Candidates.** These are the values the rows propose now: the page value, or the chosen and maybe
+  edited AI suggestion. They cover Name, Description, and the text custom fields of the category
+  chosen now, under the translation keys `name`, `description`, and `field:<id>`. Source URL, prices,
+  evidence quotes, unmatched page details, and other variants are never candidates. A text over its
+  field's limit can't be chosen. Text fields whose name or value looks like a brand, a model, or a code
+  (`identifierLike()` in `client/src/itemTranslation.js`, shared with Translate Item) start unchecked,
+  and `selectionProblem()` enforces the one-request bounds.
+- **Languages.** The source is Auto-detect unless the user picks one. The target starts at the
+  database's Preferred Content Language, or the interface language when none is saved, and can be
+  any listed content language.
+- **Request.** **Translate selected values** sends one request with the chosen texts and the current
+  category. Nothing is sent by reading the page, choosing a variant, or enhancing with AI.
+- **Review.** Each result joins its row under the original value. It carries the **AI translation**
+  badge, *Translated from the … value* naming the original's provenance, the detected language, an
+  editable text, and its own **Use translation into …** checkbox, which starts on for a real
+  translation. The row's own checkbox never changes, so a filled field stays unchecked. Unchanged,
+  untranslatable, and withheld results show their warning and keep the original. Only a checked row
+  is applied, with the translation when it is used and the original otherwise.
+- **Invalidation.** Each result records the preview token, the category, and the original text it
+  was made from. A new reading, a variant, a category change, a new AI answer, and **Discard AI
+  suggestions** discard every translation. Each of them also bumps a request counter, so a late
+  answer is ignored. **Cancel translation** and **Discard translations** do the same. If the user
+  changes a row's proposal after the request, the translation can no longer be used, and the row
+  asks for a new translation instead of overwriting the edit.
+- **Failure.** A failed request shows its translated error. Rows, choices, edits, the price opt-in,
+  and selected images stay as they were.
+- **AI off.** Without AI, the card is replaced by one line that says to turn AI on in Settings → AI.
+  The import itself is unchanged.
+
 ## Source URL
 
 Schema version 11 adds the nullable `items.source_url` column; existing databases and restored older
@@ -370,4 +407,10 @@ background.
   immediate read of the saved address, the read time, selective apply that preserves identity,
   container, serial number, New, and Purchase Price), a dead source and a page built by scripts, and
   an explicit variant choice with its own values, offer, and images;
+  `test/e2e/url-import-translation.spec.js` — translating imported values: a Japanese page into a
+  Preferred Content Language outside the interface locales, Chinese with a manual source after AI
+  enhancement, the editable review and selective apply to new and existing items, filled values that
+  stay unchecked, a withheld translation, an edit after the request, a failure that keeps the
+  choices, a late answer after a variant change, category change and Read again discarding
+  translations, one request per click, no AI, and Ukrainian on a phone by keyboard;
   `test/e2e/demo.spec.js` checks that the demo does not offer the import.

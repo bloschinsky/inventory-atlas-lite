@@ -454,3 +454,44 @@ test('a whole item: over-long texts cannot be chosen, and a selection over the r
   assert.deepEqual(selectionProblem(Array.from({ length: 21 }, (_, index) => row('Text', index))), { code: 'TRANSLATION_TOO_MANY_FIELDS', params: { max: 20 } });
   assert.deepEqual(selectionProblem(Array.from({ length: 6 }, (_, index) => row('x'.repeat(2000), index))), { code: 'TRANSLATION_REQUEST_TOO_LARGE', params: { max: 10000 } });
 });
+
+const { identifierLike } = await import('../client/src/itemTranslation.js');
+
+test('imported values: page proposals keep their identifiers, and keys an import never offers are refused before sending', async () => {
+  const context = setup({
+    reply: input => ({
+      translations: [
+        ...input.fields.map(({ key }) => ({
+          key, status: 'translated', detectedLanguage: 'zh-CN',
+          translation: { name: 'Bluetooth speaker BT-300', description: 'Waterproof portable speaker, 1200 mAh' }[key] ?? 'Aluminium alloy'
+        })),
+        // A model that invents a value for a field nobody asked about is ignored, never applied.
+        { key: 'source_url', status: 'translated', translation: 'https://evil.example', detectedLanguage: null }
+      ]
+    })
+  });
+  const { field, audio } = context;
+  const result = await context.service.translate({
+    targetLanguage: 'uk', sourceLanguage: 'auto', categoryId: audio.id,
+    fields: [
+      { key: 'name', text: '蓝牙音箱 BT-300' },
+      { key: 'description', text: '防水便携式音箱，1200mAh' },
+      { key: `field:${field.Notes}`, text: '铝合金' }
+    ]
+  });
+  assert.deepEqual(result.fields.map(entry => [entry.key, entry.status, entry.detectedLanguage]), [
+    ['name', 'translated', 'zh-Hans'], ['description', 'translated', 'zh-Hans'], [`field:${field.Notes}`, 'translated', 'zh-Hans']
+  ]);
+  assert.deepEqual(result.warnings, [{ code: 'TRANSLATION_WARNING_EXTRA', params: { count: 1 } }]);
+
+  // The Source URL, a price, or a non-text field is never a translation key.
+  await refused(context.service.translate(one('source_url', 'https://shop.example/p')), 400, 'TRANSLATION_FIELD_INVALID');
+  await refused(context.service.translate(one('purchase_price', '5980')), 400, 'TRANSLATION_FIELD_INVALID');
+  await refused(context.service.translate({ targetLanguage: 'en', categoryId: audio.id, fields: [{ key: `field:${field.Weight}`, text: '320' }] }), 400, 'TRANSLATION_FIELD_NOT_TEXT');
+  assert.equal(context.calls.length, 1);
+
+  // Import candidates share the identifier rule of the whole-item selection.
+  assert.equal(identifierLike('Brand', 'Sony'), true);
+  assert.equal(identifierLike('Features', 'BT-300'), true);
+  assert.equal(identifierLike('Features', 'オートリバース、ドルビーB'), false);
+});

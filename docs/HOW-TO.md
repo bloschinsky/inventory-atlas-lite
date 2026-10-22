@@ -610,7 +610,23 @@ only be added on request.
    date, or Purchase Price; it may only mark one page price as the current offer, and the price is
    still copied only by **Use page price as Purchase Price**. If the provider fails or times out, the
    page values stay as they were.
-9. Press **Use selected values** for a new item or **Apply selected values** for an existing one. The
+9. Optional: when AI is enabled, **Translate imported values with AI** translates the values the
+   review proposes now (the page value, or the AI suggestion you chose or edited) of **Name**,
+   **Description**, and the category's text fields, for example a Japanese or Chinese store page into
+   your language. **Source language** is **Auto-detect** unless you choose one, and **Translate into**
+   starts at the **Preferred content language** of Settings → Database (or the interface language)
+   and accepts any listed language. Fields that look like a brand, a model, or a code start unticked;
+   the Source URL, prices, page text that no field takes, and other variants are never translated.
+   Pressing **Translate selected values** sends the ticked texts in one request. Each translation
+   appears under the original it was made from, marked **AI translation** with that original's
+   source, editable, and with its own **Use translation** box; the value's own tick is never changed,
+   so a value that would replace one the item already has still starts unticked. A translation AI
+   could not make safely, for example one that changed a model number, is not offered and the
+   original stays. Choosing another variant or category, reading the page again, or a new AI answer
+   discards the translations; a value you change after translating keeps your change and asks you to
+   translate again. If the request fails, the original values and your choices stay as they were.
+   Without AI, the review says how to turn it on.
+10. Press **Use selected values** for a new item or **Apply selected values** for an existing one. The
    values go into the form, where you can still change them, and are saved only when you press
    **Save item**. An existing item keeps its identity, container, photos, loan, and lifecycle state.
 
@@ -1455,6 +1471,8 @@ backup, and keep the copies on a different machine than the server.
   them separately.
 - **Translate with AI** sends only the checked texts, their field names, and the category name, in one
   request of at most 20 fields and 10,000 characters; it never splits a selection into several requests.
+  **Translate imported values with AI** in Smart URL import works the same way on the values the
+  review proposes, within the same limits.
 - **Translate** sends only the text of that one field, the field name, and the category name to the
   configured AI provider: no other values, photos, or credentials. A local model keeps the text on the
   machine that runs it. One field's text is limited to 2,000 characters (255 for **Specific location**
