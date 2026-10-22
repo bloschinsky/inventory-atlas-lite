@@ -25,8 +25,10 @@ test('release workflow gates both distributions and preserves the legacy asset c
   assert.match(workflow, /tags:\s*\n\s*- 'v\*'/);
   // Only a tag on a master commit releases; the check needs the full history and runs before any build.
   assert.match(workflow, /validate:[\s\S]*fetch-depth: 0[\s\S]*git merge-base --is-ancestor "\$GITHUB_SHA" origin\/master[\s\S]*validate-release-version\.mjs/);
-  assert.match(workflow, /docker:[\s\S]*needs: validate/);
-  assert.match(workflow, /proxmox-assets:[\s\S]*needs: validate/);
+  // Both Playwright projects run as their own jobs, and nothing is published until they pass too.
+  assert.match(workflow, /e2e:[\s\S]*project: app[\s\S]*project: tour[\s\S]*npm run test:e2e -- --project=\$\{\{ matrix\.project \}\}/);
+  assert.match(workflow, /docker:[\s\S]*needs: \[validate, e2e\]/);
+  assert.match(workflow, /proxmox-assets:[\s\S]*needs: \[validate, e2e\]/);
   assert.match(workflow, /release:[\s\S]*needs: \[docker, proxmox-assets\]/);
   assert.match(workflow, /inventory-atlas-lite-v\$\{version\}\.tar\.gz/);
   assert.match(workflow, /sha256sum "\$archive" > SHA256SUMS/);
