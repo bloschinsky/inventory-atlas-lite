@@ -66,9 +66,20 @@ presentation layer over the existing API, and no CDN or other runtime internet d
 
 ### Items list
 
-- A Tabler page header shows the title **Items**, the total item count as the page subtitle,
-  **Batch Add from JSON** (see [`batch-add-items.md`](batch-add-items.md)), and the primary
-  **Add item** action.
+- A Tabler page header shows the title **Items**, the total item count as the page subtitle, the
+  outline **AI Add Item** quick action while AI features are on, and the primary **Add item** split
+  button (`AddItemMenu.vue`). Its main part opens the blank form; its arrow opens the complete list
+  of entry points: **Blank item** and **From template…**, a divider, then **From URL** (when the
+  server offers URL import), **AI Add Item** (when AI is on; offered both as the shortcut and in the
+  menu on purpose), and **Batch Add from JSON** (see [`batch-add-items.md`](batch-add-items.md)),
+  which emits `batch-add` to the page that owns the dialog and is disabled while no category exists.
+  Cancelling that dialog returns focus to the menu toggle.
+- The menu uses Tabler's dropdown styles without Bootstrap's script: the toggle reflects
+  `aria-expanded`, Escape closes it and returns focus to the toggle, and an outside press closes it.
+  On opening, and on a resize while open, it is aligned to the end of the button and moved toward
+  the start only as far as needed to keep an 8 px margin inside the viewport; it is never wider than
+  the viewport, labels wrap instead of being cut, and coarse pointers get taller entries. The header
+  actions wrap as whole buttons on phones.
 - One card groups the labelled **Search** and **Category** controls and the **Columns** picker;
   below `lg` it also holds the compact **Sort** control. Search keeps its 250 ms debounce, and
   changing a filter or the sort resets to the first page. Column choice and sorting are described in

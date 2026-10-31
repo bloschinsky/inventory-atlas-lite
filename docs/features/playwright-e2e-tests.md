@@ -45,7 +45,10 @@ failing test makes the command exit non-zero.
   `fluid-workspace.spec.js` covers the full-width application workspace from phone to `2560px`.
   `print-labels.spec.js` covers item selection and the A4 label print view, including PDF page
   counts from Chromium's print output. `batch-items.spec.js` covers the Batch Add from JSON template,
-  preview editing, removal, and batch creation. `landing.spec.js` covers the public landing page,
+  preview editing, removal, and batch creation. `add-item-menu.spec.js` covers the Items page Add
+  item entry points: the AI Add Item shortcut, the complete menu and its order, Escape, outside
+  presses, focus return, disabled Batch Add without categories, and a menu inside the viewport with
+  untruncated English and Ukrainian labels from `320px` to `1440px`. `landing.spec.js` covers the public landing page,
   which an extra web server builds for production and previews under a Pages-style base path; see
   [Public landing page](landing-page.md). The same server builds the public demo into that site, and
   `demo.spec.js` runs it there without any API server; see [Public demo](public-demo.md).

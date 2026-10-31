@@ -65,8 +65,8 @@ base64 data, or call any AI service; photos are added to each item afterwards th
 
 ## User-visible behaviour
 
-- **Batch Add from JSON** sits next to **Add item** in the Items page header and is disabled until a
-  category exists. The dialog's **Category** selector starts at the category the list is filtered
+- **Batch Add from JSON** is the last entry of the Items page **Add item** menu and is disabled until
+  a category exists. The dialog's **Category** selector starts at the category the list is filtered
   by, and the dialog title names the selected category.
 - **Insert Template** builds a document for the selected category on demand: two blank items with
   every base attribute, the purchase fields (currency `UAH`, like the item form), the serial number,

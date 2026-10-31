@@ -14,6 +14,7 @@ test('batch add from JSON previews, edits, and creates a category batch', async 
   // A fresh headless page keeps the pointer at (0, 0), which expands the folded sidebar.
   await page.mouse.move(600, 400);
   await page.getByLabel('Category').selectOption({ label: categoryName });
+  await page.getByRole('button', { name: 'More ways to add an item' }).click();
   await page.getByRole('button', { name: 'Batch Add from JSON' }).click();
 
   const dialog = page.getByRole('dialog');
@@ -80,6 +81,7 @@ test('batch add refuses a New value that is not a boolean', async ({ page, reque
   await page.goto('/items');
   await page.mouse.move(600, 400);
   await page.getByLabel('Category').selectOption({ label: categoryName });
+  await page.getByRole('button', { name: 'More ways to add an item' }).click();
   await page.getByRole('button', { name: 'Batch Add from JSON' }).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Item import JSON').fill(JSON.stringify({ version: 1, category: categoryName, items: [{ name: 'Helios 44', new: 'yes' }] }));

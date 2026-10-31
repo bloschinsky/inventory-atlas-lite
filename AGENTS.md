@@ -161,7 +161,7 @@ The project stays small and readable. Do not add:
 - `client/src/pages/Templates.vue` and `TemplateForm.vue` — the item template list and the template editor (also started from an item through `?fromItem=`).
 - `client/src/pages/Checklists.vue`, `ChecklistForm.vue`, `ChecklistDetails.vue`, and `ChecklistRun.vue` — the checklist cards, the container audit history, and the deleted-checklist run history, the checklist editor, one checklist with its expected items and run history, and the phone-first run page (state buttons, notes, completion, Run again).
 - `client/src/components/ChecklistItemPicker.vue` and `ChecklistRunHistory.vue` — the checklist membership editor (item search, add, reorder, remove) and the run history table; `client/src/checklists.js` maps modes and run states to their labels.
-- `client/src/components/AddItemMenu.vue` and `TemplatePickerDialog.vue` — the Items page Add item split button and its template picker.
+- `client/src/components/AddItemMenu.vue` and `TemplatePickerDialog.vue` — the Items page Add item split button (its menu lists every entry point, AI Add Item included beside its quick action, and emits `batch-add` for the page's Batch Add dialog; it keeps itself inside the viewport) and its template picker.
 - `client/src/pages/PrintLabels.vue` — `/labels/print`: A4 QR label sheets for the selected items, their layout presets, and print styles.
 - `client/src/labelSelection.js` — the Items list selection used by label printing and Bulk Move, shared by the Items list, the QR modal, and the print view.
 - `client/src/components/BulkMoveDialog.vue` — the Items list **Move to…** dialog: destination search, the selection-root summary, confirmation, and the bulk move.
