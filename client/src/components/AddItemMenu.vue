@@ -1,6 +1,7 @@
 <script setup>
-import { nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import { ref } from 'vue';
 import { capabilities } from '../capabilities.js';
+import { useDropdownMenu } from '../useDropdownMenu.js';
 import TemplatePickerDialog from './TemplatePickerDialog.vue';
 import { IconFilePlus, IconJson, IconLink, IconSparkles, IconTemplate } from '@tabler/icons-vue';
 
@@ -13,35 +14,11 @@ const emit = defineEmits(['batch-add']);
 /*
   Add item as a split button: the main part keeps opening the blank form, and the menu lists every
   way to start an item. Like the Columns menu, it uses Tabler's dropdown styles without Bootstrap's
-  script, so opening, closing on an outside click, Escape, and placement are handled here.
+  script; useDropdownMenu() handles closing on an outside click, Escape, and placement.
 */
-const VIEWPORT_MARGIN = 8;
-const open = ref(false);
+const { open, root, menu, toggleButton, menuStyle, close } = useDropdownMenu();
 const pickerOpen = ref(false);
-const root = ref(null);
-const menu = ref(null);
-const toggleButton = ref(null);
-const menuStyle = ref({});
 
-/*
-  The menu is aligned to the end of the button, and moved toward the start only as far as the
-  viewport needs, so it is never cut off on a phone wherever the header puts the button.
-*/
-function place() {
-  if (!root.value || !menu.value) return;
-  const bounds = root.value.getBoundingClientRect();
-  const width = menu.value.offsetWidth;
-  const viewport = document.documentElement.clientWidth;
-  const left = Math.max(VIEWPORT_MARGIN, Math.min(bounds.right - width, viewport - VIEWPORT_MARGIN - width));
-  menuStyle.value = { left: `${left - bounds.left}px`, right: 'auto' };
-}
-const closeOnOutside = event => {
-  if (!root.value?.contains(event.target)) open.value = false;
-};
-function close() {
-  open.value = false;
-  toggleButton.value?.focus();
-}
 function pickTemplate() {
   open.value = false;
   pickerOpen.value = true;
@@ -50,24 +27,8 @@ function batchAdd() {
   open.value = false;
   emit('batch-add');
 }
-watch(open, async value => {
-  if (value) {
-    document.addEventListener('pointerdown', closeOnOutside);
-    window.addEventListener('resize', place);
-    menuStyle.value = {};
-    await nextTick();
-    place();
-  } else {
-    document.removeEventListener('pointerdown', closeOnOutside);
-    window.removeEventListener('resize', place);
-  }
-});
 // The Items page returns focus here when the Batch Add dialog opened from the menu is cancelled.
 defineExpose({ focus: () => toggleButton.value?.focus() });
-onBeforeUnmount(() => {
-  document.removeEventListener('pointerdown', closeOnOutside);
-  window.removeEventListener('resize', place);
-});
 </script>
 
 <template>

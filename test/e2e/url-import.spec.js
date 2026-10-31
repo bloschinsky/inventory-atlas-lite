@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
-import { createCategory, createItem, detail, unique } from './helpers.js';
+import { createCategory, createItem, detail, openItemActions, unique } from './helpers.js';
 
 /*
   Smart URL import in the browser. The server's page reading is covered by test/url-import.test.js
@@ -124,6 +124,7 @@ test('an existing item is enriched only with the chosen values and keeps its con
 
   await page.goto(`/items/${item.id}`);
   await page.mouse.move(600, 400);
+  await openItemActions(page);
   await page.getByRole('link', { name: 'Fill from URL' }).click();
   await expect(page).toHaveURL(new RegExp(`/items/${item.id}/edit\\?import=url$`));
   const dialog = page.getByRole('dialog', { name: 'Fill from URL' });
@@ -365,6 +366,7 @@ test('Refresh from Source reads the saved page on request and applies only the c
   await page.goto(`/items/${item.id}`);
   await page.mouse.move(600, 400);
   // An item with a saved Source URL offers to read it again; Fill from URL stays in the form.
+  await openItemActions(page);
   await expect(page.getByRole('link', { name: 'Fill from URL' })).toHaveCount(0);
   await page.getByRole('link', { name: 'Refresh from Source' }).click();
   await expect(page).toHaveURL(new RegExp(`/items/${item.id}/edit\\?import=refresh$`));

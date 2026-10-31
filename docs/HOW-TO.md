@@ -363,7 +363,7 @@ opens fully on the screen.
 ### Duplicate an item
 
 To add another item much like an existing one — `Box #2` after `Box #1`, for example — open the
-existing item and press **Duplicate**. The **Add item** form opens with all of the item's values,
+existing item and choose **More** → **Duplicate**. The **Add item** form opens with all of the item's values,
 including its custom fields, and a note naming the source item. Nothing is created yet.
 
 1. Change what differs, at least the **Name**. A copied **Serial Number** carries a reminder that
@@ -399,7 +399,7 @@ opens with the template's values and a note naming the template. Change anything
 photos, and press **Save item**. The new item keeps no link to the template: editing or deleting the
 template later never changes items created from it.
 
-To start a template from an existing item, open the item and press **Save as template**. The template
+To start a template from an existing item, open the item and choose **More** → **Save as template**. The template
 editor opens with the item's category, base fields, and custom field values, and its name as the
 template name. Nothing is saved yet. Clear values that belong only to that one item — a serial
 number or purchase date, for example — and press **Save template**. Photos and the container are
@@ -572,8 +572,8 @@ review before anything goes into the item form. It needs no AI provider and no A
 only be added on request.
 
 1. For a new item, open **Items**, press the arrow next to **Add item**, and choose **From URL**. For
-   an existing item, press **Fill from URL** on its page or in its **Edit** form. An item that already
-   has a **Source URL** offers **Refresh from Source** on its page instead (its **Edit** form has both):
+   an existing item, choose **Fill from URL** under **More** on its page, or press it in its **Edit** form.
+   An item that already has a **Source URL** offers **Refresh from Source** in **More** instead (its **Edit** form has both):
    it reads the saved address again, only when you press it, and opens the same review for the item.
    To use another page, change or clear **Source URL** in the form or use **Fill from URL**.
 2. Paste the page address into **Product page URL** and press **Read page** (**Refresh from Source**
@@ -676,7 +676,7 @@ content language are independent, so you can keep an English inventory under a U
 
 **Translate with AI** translates several text fields of one item together, with one request to the
 configured provider, so a whole entry can be brought into your **Preferred content language**. It is
-offered while AI is enabled: on the item page (it opens **Edit** with the dialog over it) and at the
+offered while AI is enabled: under **More** on the item page (it opens **Edit** with the dialog over it) and at the
 top of the **Add item** and **Edit item** forms. The template editor and the public demo do not offer it.
 
 1. Press **Translate with AI**. The dialog lists every text field that holds text in the form right
@@ -709,9 +709,16 @@ applied either.
 
 ### Edit or delete an item
 
+The top of an item page shows **Edit**, **Transfer** (while the item can be lent), **QR Code**, and
+**More**. **More** lists the other actions: **Fill from URL** or **Refresh from Source** and **Translate
+with AI** (when those features are on), **Duplicate**, **Save as template**, **Retire item** or **Restore
+to inventory**, and, last and set apart in red, **Delete item**. On a phone the top shows only **Edit**,
+**QR Code**, and **More** in one row, and **Transfer** moves into **More**. **Escape** or a click
+outside closes the menu.
+
 1. Open the item from **Items** and press **Edit**.
 2. Change what you need and press **Save item**.
-3. To delete, press **Delete** on the item page and confirm. The item and its photos are removed.
+3. To delete, choose **More** → **Delete item** on the item page and confirm. The item and its photos are removed.
 4. An item that still contains other items cannot be deleted. The message reports how many items are
    inside; move or delete them first.
 
@@ -727,7 +734,7 @@ inventory. Lending an item to someone is not a retirement; use **Transfer** for 
 or a container with something on loan inside it, is retired only after the loan is marked as returned,
 and a retired item cannot be lent.
 
-1. Open the item and press **Retire item**.
+1. Open the item and choose **More** → **Retire item**.
 2. Choose the **Reason** (required). **Retired on** is now by default; change it if the item left
    earlier. It cannot be in the future. **Recipient or context** (for example the buyer) and **Note**
    are optional.
@@ -748,14 +755,14 @@ Retired items are hidden by default. On **Items** and **Hierarchy**, choose **Re
 counts only active items and shows how many are retired under the total. Direct links and QR codes of a
 retired item still open it.
 
-To bring an item back, open it and press **Restore to inventory**. Choose where it goes: **On its own,
+To bring an item back, open it and choose **More** → **Restore to inventory**. Choose where it goes: **On its own,
 at a location** (its saved location and specific location are filled in; change or clear them) or **Inside an active container**
 (search and pick one). It is never put back into its former container automatically. Everything that
 was retired inside it comes back with it and stays inside it. Restoring keeps the same item, UUID,
 photos, and details, and clears the retirement details.
 
 An active item can only be stored inside an active container, and a retired item only inside a retired
-one, so **Move to…** refuses a selection that contains retired items. **Delete** stays a separate
+one, so **Move to…** refuses a selection that contains retired items. **Delete item** stays a separate
 action.
 
 ### Add, view, order, and remove photos
@@ -783,7 +790,7 @@ action.
 
 ### Show the QR code of an item
 
-1. Open the item from **Items** and press **QR Code**, next to **Edit**, **Duplicate**, and **Delete**.
+1. Open the item from **Items** and press **QR Code**, next to **Edit** and **More**.
 2. A small window shows the code, the item name, and the encoded text underneath.
 3. The code contains only the item's UUID, in the form `ial:item:v1:<uuid>`. It holds no address of
    your server, so a code you print stays valid if the installation moves to another machine, port,
@@ -913,7 +920,7 @@ list everything transferred to the same person.
 
 ### Lend an item and mark it as returned
 
-1. Open the item and press **Transfer** next to **Edit**.
+1. Open the item and press **Transfer** next to **Edit** (on a phone, choose **More** → **Transfer**).
 2. Enter the **Recipient** (suggestions come from earlier Transferred To values). **Transferred on**
    is now unless you change it; it cannot be in the future. **Expected return** and **Note** are
    optional. Press **Transfer**.

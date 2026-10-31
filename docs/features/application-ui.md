@@ -74,7 +74,7 @@ presentation layer over the existing API, and no CDN or other runtime internet d
   menu on purpose), and **Batch Add from JSON** (see [`batch-add-items.md`](batch-add-items.md)),
   which emits `batch-add` to the page that owns the dialog and is disabled while no category exists.
   Cancelling that dialog returns focus to the menu toggle.
-- The menu uses Tabler's dropdown styles without Bootstrap's script: the toggle reflects
+- The menu uses Tabler's dropdown styles without Bootstrap's script (`useDropdownMenu()`): the toggle reflects
   `aria-expanded`, Escape closes it and returns focus to the toggle, and an outside press closes it.
   On opening, and on a resize while open, it is aligned to the end of the button and moved toward
   the start only as far as needed to keep an 8 px margin inside the viewport; it is never wider than
@@ -109,8 +109,25 @@ in [`dashboard.md`](dashboard.md).
 ### Item details
 
 - The page starts with a Tabler breadcrumb (**All items** / category), the item name as the only
-  `h1`, and the **Edit** and **Delete** actions, with deletion keeping its confirmation. A populated
-  Transferred To value adds an informational `bg-azure-lt` badge under the name.
+  `h1`, and the action bar (`ItemActionBar.vue`). A populated Transferred To value adds an
+  informational `bg-azure-lt` badge under the name.
+- The action bar shows compact, icon-assisted labelled buttons: the primary **Edit**, **Transfer**
+  (only for an active item without an open loan; a lent item is returned from its **Loan** card), and
+  **QR Code**, then **More**. The **More** menu holds, in order: **Fill from URL** or **Refresh from
+  Source** (URL import capability; Refresh when the item has a Source URL), **Translate with AI** (AI
+  capability), **Duplicate**, **Save as template**, a divider, **Retire item** or **Restore to
+  inventory** (retired items), a divider, and the red **Delete item**, which keeps its confirmation.
+  Every entry keeps its former route or dialog; nothing is written until the opened form or dialog
+  is saved.
+- One action list in the component drives both the bar and the menu; each action is placed in the
+  bar, in the menu, or (Transfer) in the bar from `md` and in the menu below it, so no action is ever
+  offered twice. Below `md` the bar sits under the name as one row of **Edit**, **QR Code**, and
+  **More** that share the width, with buttons at least 44 px tall; below `360px` their icons are
+  hidden so the labels fit in every locale.
+- The menu shares `useDropdownMenu()` with the Items **Add item** menu: Tabler dropdown styles without
+  Bootstrap's script, `aria-expanded`, Escape that returns focus to **More**, an outside press that
+  closes it, and placement inside the viewport. Choosing a menu action that opens a dialog first
+  returns focus to **More**.
 - From `lg` upwards the content is two columns: the photo viewer on the left (`5/12`) and the
   information cards on the right (`7/12`). On phones the order is strictly: name, actions, photo,
   details, custom fields, storage, record information.

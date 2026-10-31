@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
-import { createCategory, createItem, unique } from './helpers.js';
+import { createCategory, createItem, openItemActions, unique } from './helpers.js';
 
 /*
   Translate Item with AI: the selected texts of the unsaved item form go out in one translation
@@ -75,6 +75,7 @@ test('from Item Details: chosen fields go out in one request, and only approved 
 
   await page.goto(`/items/${item.id}`);
   await page.mouse.move(600, 400);
+  await openItemActions(page);
   await page.getByRole('link', { name: 'Translate with AI' }).click();
   await expect(page).toHaveURL(`/items/${item.id}/edit?translate=item`);
   const dialog = page.getByRole('dialog', { name: 'Translate item with AI' });
@@ -282,6 +283,8 @@ test('without AI there is no Translate with AI action, and templates never offer
   await page.goto(`/items/${item.id}`);
   await page.mouse.move(600, 400);
   await expect(page.getByRole('link', { name: 'Edit' })).toBeVisible();
+  await openItemActions(page);
+  await expect(page.getByRole('link', { name: 'Duplicate' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Translate with AI' })).toHaveCount(0);
   // A direct address opens only the form.
   await page.goto(`/items/${item.id}/edit?translate=item`);

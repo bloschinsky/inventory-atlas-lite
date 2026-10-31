@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { createCategory, detail, unique } from './helpers.js';
+import { createCategory, detail, openItemActions, unique } from './helpers.js';
 
 const fields = [{ name: 'Brand', type: 'text' }, { name: 'Year', type: 'number' }, { name: 'Insured', type: 'boolean' }];
 
@@ -112,7 +112,8 @@ test('deletes an item and removes it from the list', async ({ page, request }) =
   await expect(page.getByRole('heading', { name: itemName })).toBeVisible();
 
   page.once('dialog', dialog => dialog.accept());
-  await page.getByRole('button', { name: 'Delete' }).click();
+  await openItemActions(page);
+  await page.getByRole('button', { name: 'Delete item' }).click();
 
   await expect(page).toHaveURL('/items');
   await page.getByPlaceholder('Search name, description, serial number, transferred to, specific location or text fields…').fill(itemName);

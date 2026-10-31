@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { createCategory, detail, unique } from './helpers.js';
+import { createCategory, detail, openItemActions, unique } from './helpers.js';
 
 const fields = [{ name: 'Size', type: 'text' }, { name: 'Max weight', type: 'number' }, { name: 'Sealed', type: 'boolean' }];
 
@@ -110,6 +110,7 @@ test('the Add item menu offers a blank item and a template, and saves an item as
   await expect(page.getByRole('heading', { name: itemName })).toBeVisible();
 
   // Save as template opens the editor prefilled from the item and creates nothing until saved.
+  await openItemActions(page);
   await page.getByRole('link', { name: 'Save as template' }).click();
   await expect(page).toHaveURL(/\/templates\/new\?fromItem=\d+$/);
   await expect(page.getByLabel('Template name *')).toHaveValue(itemName);
