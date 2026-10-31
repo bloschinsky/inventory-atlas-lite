@@ -48,7 +48,11 @@ failing test makes the command exit non-zero.
   preview editing, removal, and batch creation. `add-item-menu.spec.js` covers the Items page Add
   item entry points: the AI Add Item shortcut, the complete menu and its order, Escape, outside
   presses, focus return, disabled Batch Add without categories, and a menu inside the viewport with
-  untruncated English and Ukrainian labels from `320px` to `1440px`. `landing.spec.js` covers the public landing page,
+  untruncated English and Ukrainian labels from `320px` to `1440px`. `item-actions.spec.js` covers
+  the Item details action bar: the desktop buttons and the More menu order, the separated red Delete
+  item and its confirmation, routes and dialogs, Escape, keyboard, outside presses and taps, disabled
+  AI and URL import, Refresh from Source, lent and retired items, one row of Edit, QR Code, and More
+  with Transfer in the menu at `320px` to `390px`, and Ukrainian in dark mode. `landing.spec.js` covers the public landing page,
   which an extra web server builds for production and previews under a Pages-style base path; see
   [Public landing page](landing-page.md). The same server builds the public demo into that site, and
   `demo.spec.js` runs it there without any API server; see [Public demo](public-demo.md).

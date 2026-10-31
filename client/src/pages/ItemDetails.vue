@@ -3,10 +3,10 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { api } from '../api.js';
-import { capabilities } from '../capabilities.js';
 import { formatDate, formatDateTime, formatMoney } from '../i18n/index.js';
 import { placementText } from '../itemColumns.js';
 import AuditContentsDialog from '../components/AuditContentsDialog.vue';
+import ItemActionBar from '../components/ItemActionBar.vue';
 import ChecklistRunHistory from '../components/ChecklistRunHistory.vue';
 import ColorValue from '../components/ColorValue.vue';
 import ItemPhotoViewer from '../components/ItemPhotoViewer.vue';
@@ -141,83 +141,16 @@ onMounted(load);
             </span>
           </div>
         </div>
-        <div class="col-auto ms-auto d-flex flex-wrap gap-2">
-          <RouterLink
-            :to="`/items/${item.id}/edit`"
-            class="btn btn-primary"
-          >
-            {{ $t('common.edit') }}
-          </RouterLink>
-          <!-- Opens the edit form with the URL import over it; only the values chosen there and then saved change.
-               An item with a saved Source URL offers to read that page again instead; Fill from URL stays in the form. -->
-          <RouterLink
-            v-if="capabilities.urlImport"
-            :to="{ path: `/items/${item.id}/edit`, query: { import: item.source_url ? 'refresh' : 'url' } }"
-            class="btn"
-          >
-            {{ item.source_url ? $t('urlImport.refreshAction') : $t('urlImport.fillAction') }}
-          </RouterLink>
-          <!-- Opens the edit form with Translate Item over it; only translations applied there and then saved change. -->
-          <RouterLink
-            v-if="capabilities.ai.enabled"
-            :to="{ path: `/items/${item.id}/edit`, query: { translate: 'item' } }"
-            class="btn"
-          >
-            {{ $t('translateItem.action') }}
-          </RouterLink>
-          <!-- Opens the Add Item form prefilled from this item; the copy is created only when saved there. -->
-          <RouterLink
-            :to="{ path: '/items/new', query: { duplicate: item.id } }"
-            class="btn"
-          >
-            {{ $t('itemDetails.duplicate') }}
-          </RouterLink>
-          <!-- A retired item has left the inventory, so it cannot be lent. -->
-          <button
-            v-if="!item.open_transfer && !retired"
-            type="button"
-            class="btn"
-            @click="loanOpen = true"
-          >
-            {{ $t('transfer.action') }}
-          </button>
-          <button
-            type="button"
-            class="btn"
-            @click="qrOpen = true"
-          >
-            {{ $t('qr.title') }}
-          </button>
-          <!-- Opens the template editor prefilled from this item; nothing is saved until it is confirmed there. -->
-          <RouterLink
-            :to="{ path: '/templates/new', query: { fromItem: item.id } }"
-            class="btn"
-          >
-            {{ $t('templates.saveAsTemplate') }}
-          </RouterLink>
-          <button
-            v-if="retired"
-            type="button"
-            class="btn"
-            @click="notice = ''; restoreOpen = true"
-          >
-            {{ $t('lifecycle.restore.action') }}
-          </button>
-          <button
-            v-else
-            type="button"
-            class="btn"
-            @click="notice = ''; retireOpen = true"
-          >
-            {{ $t('lifecycle.retire.action') }}
-          </button>
-          <button
-            type="button"
-            class="btn btn-outline-danger"
-            @click="remove"
-          >
-            {{ $t('common.delete') }}
-          </button>
+        <!-- Below the heading on phones, so the name keeps the full width; beside it from the md breakpoint. -->
+        <div class="col-12 col-md-auto ms-md-auto">
+          <ItemActionBar
+            :item="item"
+            @transfer="loanOpen = true"
+            @qr="qrOpen = true"
+            @retire="notice = ''; retireOpen = true"
+            @restore="notice = ''; restoreOpen = true"
+            @delete="remove"
+          />
         </div>
       </div>
     </div>

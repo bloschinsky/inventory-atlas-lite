@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
 import qrcode from 'qrcode-generator';
-import { createCategory, createItem, unique } from './helpers.js';
+import { createCategory, createItem, openItemActions, unique } from './helpers.js';
 
 const photoWithoutCode = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures', 'sample-photo.png');
 
@@ -240,5 +240,6 @@ test('a retired item code still opens the item, marked Retired', async ({ page, 
   await scanImageFile(page, qrFile(`ial:item:v1:${item.uuid}`));
   await expect(page).toHaveURL(`/items/${item.uuid}`);
   await expect(page.getByRole('heading', { name: item.name })).toBeVisible();
+  await openItemActions(page);
   await expect(page.getByRole('button', { name: 'Restore to inventory' })).toBeVisible();
 });

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { createCategory, createItem, detail, unique } from './helpers.js';
+import { createCategory, createItem, detail, openItemActions, unique } from './helpers.js';
 
 const historyCard = page => page.getByRole('region', { name: 'History' });
 
@@ -106,6 +106,7 @@ test('an item on loan is returned before it is retired, and History shows the re
   // A container with something on loan inside it is not retired.
   await page.goto(`/items/${box.id}`);
   await page.mouse.move(600, 400);
+  await openItemActions(page);
   await page.getByRole('button', { name: 'Retire item' }).click();
   const boxDialog = page.getByRole('dialog', { name: `Retire ${boxName}` });
   await boxDialog.getByLabel('Reason').selectOption({ label: 'Sold' });
@@ -116,6 +117,7 @@ test('an item on loan is returned before it is retired, and History shows the re
   // The loaned item itself says why, and offers no confirmation until the loan is closed.
   await page.goto(`/items/${drill.id}`);
   await page.mouse.move(600, 400);
+  await openItemActions(page);
   await page.getByRole('button', { name: 'Retire item' }).click();
   const drillDialog = page.getByRole('dialog', { name: `Retire ${drillName}` });
   await expect(drillDialog.getByRole('alert')).toHaveText('This item is on loan to Volodia. Mark it as returned before retiring it.');
@@ -125,6 +127,7 @@ test('an item on loan is returned before it is retired, and History shows the re
   await page.getByRole('dialog').getByRole('button', { name: 'Mark as returned' }).click();
   await expect(page.getByRole('region', { name: 'Loan' })).toBeHidden();
 
+  await openItemActions(page);
   await page.getByRole('button', { name: 'Retire item' }).click();
   await drillDialog.getByLabel('Reason').selectOption({ label: 'Lost' });
   await drillDialog.getByRole('button', { name: 'Retire', exact: true }).click();
@@ -136,6 +139,7 @@ test('an item on loan is returned before it is retired, and History shows the re
   // A retired item is not lent.
   await expect(page.getByRole('button', { name: 'Transfer', exact: true })).toHaveCount(0);
 
+  await openItemActions(page);
   await page.getByRole('button', { name: 'Restore to inventory' }).click();
   const restore = page.getByRole('dialog', { name: `Restore ${drillName}` });
   await restore.getByRole('button', { name: 'Restore to inventory' }).click();

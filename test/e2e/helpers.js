@@ -23,6 +23,12 @@ export async function createCategory(request, name, fields = []) {
 
 export const createItem = (request, data) => post(request, '/api/items', data);
 
+// Opens the More menu of the Item details actions, where the less frequent actions live, and returns it.
+export async function openItemActions(page, name = 'More actions') {
+  await page.getByRole('button', { name }).click();
+  return page.locator('#item-actions-menu');
+}
+
 // The test API key never leaves the isolated test server: every AI call in the suite is intercepted.
 export const testApiKey = 'sk-test-suite-key-not-a-real-secret';
 

@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.70.2",
+    "date": "2026-10-31",
+    "changes": [
+      "The item page now has a compact action bar: Edit, Transfer, QR Code, and a More menu with Fill from URL or Refresh from Source, Translate with AI, Duplicate, Save as template, Retire or Restore, and Delete item last, in red and still confirmed.",
+      "On phones the item page shows Edit, QR Code, and More in one row with easy-to-tap buttons, and Transfer is in More, so the photo and details are no longer pushed down by rows of buttons."
+    ]
+  },
+  {
     "version": "0.70.1",
     "date": "2026-10-31",
     "changes": [

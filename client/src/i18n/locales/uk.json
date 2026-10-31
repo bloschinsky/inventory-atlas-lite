@@ -366,6 +366,9 @@
     "record": "Відомості про запис",
     "confirmDelete": "Видалити «{name}» разом із фото?",
     "duplicate": "Дублювати",
+    "delete": "Видалити предмет",
+    "more": "Більше",
+    "moreActions": "Більше дій",
     "lastVerified": "Остання перевірка",
     "neverVerified": "Ніколи"
   },

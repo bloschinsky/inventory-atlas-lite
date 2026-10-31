@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { createCategory, createItem, detail, unique } from './helpers.js';
+import { createCategory, createItem, detail, openItemActions, unique } from './helpers.js';
 
 const SEARCH = 'Search name, description, serial number, transferred to, specific location or text fields…';
 const LOCALE_KEY = 'inventory-atlas.locale';
@@ -34,6 +34,7 @@ test('retires an item with a reason, filters it out of the active list, and rest
 
   await page.goto(`/items/${lens.id}`);
   await page.mouse.move(600, 400);
+  await openItemActions(page);
   await page.getByRole('button', { name: 'Retire item' }).click();
   const dialog = page.getByRole('dialog', { name: `Retire ${lens.name}` });
   await expect(dialog.getByText('Nothing is deleted')).toBeVisible();
@@ -56,7 +57,10 @@ test('retires an item with a reason, filters it out of the active list, and rest
   // Nothing else about the item changed: New, the serial number, and its identity stay.
   await expect(detail(page, 'New')).toHaveText('New');
   await expect(detail(page, 'Serial Number')).toHaveText('LN-1');
+  await openItemActions(page);
   await expect(page.getByRole('button', { name: 'Restore to inventory' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Retire item' })).toHaveCount(0);
+  await page.keyboard.press('Escape');
 
   // The Active view is the default; All mixes both, Retired shows only retired items, with the badge.
   await openItems(page, token);
@@ -77,6 +81,7 @@ test('retires an item with a reason, filters it out of the active list, and rest
   // Restore never puts the item back into its former container on its own; here it goes into one deliberately.
   await page.goto(`/items/${lens.id}`);
   await page.mouse.move(600, 400);
+  await openItemActions(page);
   await page.getByRole('button', { name: 'Restore to inventory' }).click();
   const restore = page.getByRole('dialog', { name: `Restore ${lens.name}` });
   await expect(restore.getByRole('radio', { name: 'On its own, at a location' })).toBeChecked();
@@ -99,6 +104,7 @@ test('a container asks before retiring its contents and can retire the whole sub
 
   await page.goto(`/items/${bag.id}`);
   await page.mouse.move(600, 400);
+  await openItemActions(page);
   await page.getByRole('button', { name: 'Retire item' }).click();
   const dialog = page.getByRole('dialog', { name: `Retire ${bag.name}` });
   await expect(dialog.getByText('This container holds 2 active items.')).toBeVisible();
@@ -108,6 +114,7 @@ test('a container asks before retiring its contents and can retire the whole sub
   await expect(page.getByRole('status')).toContainText('Nothing was retired.');
   expect(await lifecycleOf(request, bag)).toBe('active');
 
+  await openItemActions(page);
   await page.getByRole('button', { name: 'Retire item' }).click();
   await dialog.getByText('Retire the container and all 2 items inside it', { exact: true }).click();
   await dialog.getByLabel('Reason').selectOption({ label: 'Stolen' });
@@ -226,11 +233,13 @@ test('the lifecycle is translated into Ukrainian', async ({ page, request }) => 
   await page.addInitScript(key => localStorage.setItem(key, 'uk'), LOCALE_KEY);
   await page.goto(`/items/${lamp.id}`);
   await page.mouse.move(600, 400);
+  await openItemActions(page, 'Більше дій');
   await page.getByRole('button', { name: 'Списати предмет' }).click();
   const dialog = page.getByRole('dialog', { name: `Списати «${lamp.name}»` });
   await dialog.getByLabel('Причина').selectOption({ label: 'Подаровано' });
   await dialog.getByRole('button', { name: 'Списати', exact: true }).click();
   await expect(page.getByRole('status')).toContainText(`«${lamp.name}» списано.`);
   await expect(detail(page, 'Статус')).toHaveText('Списаний');
+  await openItemActions(page, 'Більше дій');
   await expect(page.getByRole('button', { name: 'Повернути в інвентар' })).toBeVisible();
 });

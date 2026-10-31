@@ -366,6 +366,9 @@
     "record": "Record information",
     "confirmDelete": "Delete “{name}” and its photos?",
     "duplicate": "Duplicate",
+    "delete": "Delete item",
+    "more": "More",
+    "moreActions": "More actions",
     "lastVerified": "Last verified",
     "neverVerified": "Never"
   },

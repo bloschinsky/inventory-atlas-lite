@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { createCategory, createItem, detail, unique } from './helpers.js';
+import { createCategory, createItem, detail, openItemActions, unique } from './helpers.js';
 
 const STORAGE_KEY = 'inventory-atlas.locale';
 const heading = page => page.getByRole('heading', { level: 1 });
@@ -81,7 +81,8 @@ test('server errors arrive as codes and are shown in the active language', async
   // Linux Chromium can begin over the folded-hover sidebar, which overlays the wrapped item actions.
   await page.mouse.move(600, 400);
   page.once('dialog', dialog => dialog.accept());
-  await page.getByRole('button', { name: 'Видалити', exact: true }).click();
+  await openItemActions(page, 'Більше дій');
+  await page.getByRole('button', { name: 'Видалити предмет' }).click();
   await expect(page.getByRole('alert')).toHaveText('Цей предмет містить 3 предмети. Спершу перемістіть або видаліть їх.');
 
   await page.evaluate(key => localStorage.setItem(key, 'en'), STORAGE_KEY);

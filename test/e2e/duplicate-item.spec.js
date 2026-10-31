@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
-import { createCategory, createItem, detail, unique } from './helpers.js';
+import { createCategory, createItem, detail, openItemActions, unique } from './helpers.js';
 
 const fixture = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures/sample-photo.png');
 
@@ -24,6 +24,7 @@ test('Duplicate opens a prefilled Add Item form and saves a separate item', asyn
 
   await page.goto(`/items/${source.id}`);
   await page.mouse.move(600, 400);
+  await openItemActions(page);
   await page.getByRole('link', { name: 'Duplicate' }).click();
 
   // Nothing is created yet: the regular Add Item form opens with every value copied.
