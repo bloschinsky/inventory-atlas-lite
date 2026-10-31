@@ -24,7 +24,8 @@ prefilled; the item is created only when that form is saved. There are no built-
   `Prefilled from the template “…”`, and behaves exactly like a blank create: every value can be
   changed, photos can be added, and **Save item** creates the item through the normal item API.
 - On **Items**, **Add item** is a split button. The main part opens the blank form as before; the
-  menu offers **Blank item**, **From template…**, and **AI Add Item** while AI features are on.
+  menu offers **Blank item**, **From template…**, and the other entry points described in
+  [`application-ui.md`](application-ui.md#items-list).
   **From template…** opens a dialog listing the templates, and choosing one opens the same prefilled
   form. The dialog also links to **Manage templates**.
 - **Save as template** on the item page opens `/templates/new?fromItem=<id>`: the editor is prefilled

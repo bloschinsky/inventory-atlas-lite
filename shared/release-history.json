@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.70.1",
+    "date": "2026-10-31",
+    "changes": [
+      "The Add item menu on Items now lists every way to add an item: Blank item, From template, From URL, AI Add Item, and Batch Add from JSON, which moved there from its own header button. AI Add Item also stays a quick button next to Add item.",
+      "On phones the Add item menu always opens fully on the screen with readable, easy-to-tap entries, instead of being cut off at the left edge."
+    ]
+  },
+  {
     "version": "0.70.0",
     "date": "2026-10-22",
     "changes": [

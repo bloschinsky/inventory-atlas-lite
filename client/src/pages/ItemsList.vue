@@ -17,7 +17,7 @@ import BulkMoveDialog from '../components/BulkMoveDialog.vue';
 import ItemResults from '../components/ItemResults.vue';
 import PageHeader from '../components/PageHeader.vue';
 import TableColumnPicker from '../components/TableColumnPicker.vue';
-import { IconArrowDown, IconArrowUp, IconFolderSymlink, IconJson, IconPrinter, IconSparkles } from '@tabler/icons-vue';
+import { IconArrowDown, IconArrowUp, IconFolderSymlink, IconPrinter, IconSparkles } from '@tabler/icons-vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -31,6 +31,7 @@ const notice = ref('');
 const batchOpen = ref(false);
 const moveOpen = ref(false);
 const moveButton = ref(null);
+const addMenu = ref(null);
 const noticeBox = ref(null);
 /*
   The lifecycle view (Active, All, or Retired) is kept for the browser session, so it survives normal
@@ -119,6 +120,11 @@ async function moved({ selected_count: count, moved_count: movedCount, parent })
   await load();
   noticeBox.value?.focus();
 }
+// Cancelling returns focus to the menu that opened the dialog.
+function closeBatch() {
+  batchOpen.value = false;
+  nextTick(() => addMenu.value?.focus());
+}
 // The new items are shown by switching the list to their category; the list reloads through its watcher.
 function batchCreated({ items, category }) {
   batchOpen.value = false;
@@ -159,19 +165,11 @@ onMounted(async () => {
         />
         {{ $t('aiAddItem.title') }}
       </RouterLink>
-      <button
-        type="button"
-        class="btn btn-outline-primary"
-        :disabled="!categories.length"
-        @click="notice = ''; batchOpen = true"
-      >
-        <IconJson
-          :size="18"
-          aria-hidden="true"
-        />
-        {{ $t('items.batchAdd') }}
-      </button>
-      <AddItemMenu />
+      <AddItemMenu
+        ref="addMenu"
+        :batch-disabled="!categories.length"
+        @batch-add="notice = ''; batchOpen = true"
+      />
     </template>
   </PageHeader>
 
@@ -527,7 +525,7 @@ onMounted(async () => {
     v-if="batchOpen"
     :categories="categories"
     :initial-category-id="filters.categoryId"
-    @close="batchOpen = false"
+    @close="closeBatch"
     @created="batchCreated"
   />
 </template>

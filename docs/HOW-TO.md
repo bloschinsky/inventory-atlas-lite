@@ -352,10 +352,13 @@ unusable, the message explains why and your description stays in the modal for a
 Changing the category while filling in the form loads that category's fields.
 
 **Add item** is a split button: its main part opens the blank form described above, and the arrow
-next to it opens a menu with **Blank item** (the same blank form), **From template…** (see below),
-**From URL** (see
-[Fill an item from a product page URL](#fill-an-item-from-a-product-page-url)), and **AI Add Item**
-while AI features are on.
+next to it opens a menu with every way to start an item: **Blank item** (the same blank form),
+**From template…** (see below), **From URL** (see
+[Fill an item from a product page URL](#fill-an-item-from-a-product-page-url)), **AI Add Item**
+while AI features are on, and **Batch Add from JSON** (see
+[Add several items at once from JSON](#add-several-items-at-once-from-json)). **AI Add Item** is also
+a button of its own next to **Add item**, so it stays one press away. On a phone the menu always
+opens fully on the screen.
 
 ### Duplicate an item
 
@@ -493,7 +496,8 @@ audits, and deleting the container keeps its audits readable.
 
 ### Add several items at once from JSON
 
-1. Open **Items** and press **Batch Add from JSON** next to **Add item**.
+1. Open **Items**, press the arrow next to **Add item**, and choose **Batch Add from JSON**. It is
+   disabled until at least one category exists.
 2. Choose the **Category**. It starts at the category the list is filtered by, and every item of the
    batch goes into it.
 3. Press **Insert Template**. It writes a document with two blank items that lists every item
@@ -529,8 +533,8 @@ afterwards through each item's **Edit** form.
    `gpt-5.6-luna`. To analyse photos the model must accept image input; with a text-only model the
    photo option is hidden (when **Image input** says so) or the request is refused with *The
    selected model does not support image input.*, and you can still work from a description.
-2. Open **Items** and press **AI Add Item** next to **Add item**. The button appears only while AI
-   features are enabled.
+2. Open **Items** and press **AI Add Item** next to **Add item** (it is also in the **Add item**
+   menu). The button appears only while AI features are enabled.
 3. Supply a photo, a description, or both; at least one of them is required. **Item photo
    (optional)** accepts one JPEG, PNG, WebP, or GIF of at most 15 MB. **Item description (optional)**
    takes up to 2,000 characters: describe the item and add anything you already know, such as brand,
