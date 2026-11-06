@@ -1,0 +1,11 @@
+#!/bin/sh
+# Local account administration of a Proxmox LXC installation: the first administrator (init), a
+# recovery code (recover <username>), and the account list (users). It runs the application's
+# command line as the service account with the installation's DATA_DIR, so the security store keeps
+# its owner and permissions. Installed as /usr/local/sbin/inventory-atlas-auth; run it as root.
+set -eu
+
+[ "$(id -u)" -eq 0 ] || { echo "Run this as root inside the container." >&2; exit 1; }
+DATA_DIR=$(sed -n 's/^DATA_DIR=//p' /etc/inventory-atlas-lite.env 2>/dev/null | tail -n 1)
+cd /opt/inventory-atlas-lite/app
+exec runuser -u inventory-atlas -- env DATA_DIR="${DATA_DIR:-/var/lib/inventory-atlas-lite}" /usr/local/bin/node server/src/cli/auth.js "$@"

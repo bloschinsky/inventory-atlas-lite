@@ -45,7 +45,7 @@ test('the instance label belongs to the running server and survives restoring a 
   let server = await startServer(dataDir, { environment: { ATLAS_INSTANCE_LABEL: '  TEST\n', DROPBOX_APP_SECRET: secret } });
   try {
     const request = async (url, options) => {
-      const response = await fetch(`${server.base}${url}`, options);
+      const response = await server.fetch(`${server.base}${url}`, options);
       assert.ok(response.ok, `${options?.method || 'GET'} ${url} returned ${response.status}`);
       return response.json();
     };
@@ -55,7 +55,7 @@ test('the instance label belongs to the running server and survives restoring a 
 
     // A backup of a database named PROD, as if copied from the production instance.
     await request('/api/database/metadata', json('PUT', { name: 'PROD inventory' }));
-    const backup = Buffer.from(await (await fetch(`${server.base}/api/backup`)).arrayBuffer());
+    const backup = Buffer.from(await (await server.fetch(`${server.base}/api/backup`)).arrayBuffer());
     await request('/api/database/metadata', json('PUT', { name: 'Test inventory' }));
 
     const body = new FormData();

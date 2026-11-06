@@ -4,8 +4,11 @@ import { useI18n } from 'vue-i18n';
 import { IconDatabase } from '@tabler/icons-vue';
 import { activeDatabase } from '../activeDatabase.js';
 import { capabilities } from '../capabilities.js';
+import { can } from '../auth.js';
+import { PERMISSIONS } from '../../../shared/permissions.js';
 
 const { t } = useI18n();
+const canOpen = can(PERMISSIONS.settingsManage);
 // The name is user data: shown as text exactly as stored, never translated.
 const name = computed(() => activeDatabase.metadata?.name ?? '');
 const placeholder = computed(() => t(activeDatabase.status === 'error' ? 'databaseIndicator.unavailable' : 'databaseIndicator.loading'));
@@ -13,14 +16,15 @@ const placeholder = computed(() => t(activeDatabase.status === 'error' ? 'databa
 const tooltip = computed(() => [
   name.value || placeholder.value,
   capabilities.instanceLabel && t('databaseIndicator.instance', { label: capabilities.instanceLabel }),
-  t('databaseIndicator.open')
+  canOpen && t('databaseIndicator.open')
 ].filter(Boolean).join(' · '));
 </script>
 
 <template>
-  <!-- Opens the existing Settings → Database dialog over the current page. -->
-  <RouterLink
-    to="/settings/database"
+  <!-- Opens the existing Settings → Database dialog over the current page, for those who may change it. -->
+  <component
+    :is="canOpen ? 'RouterLink' : 'span'"
+    :to="canOpen ? '/settings/database' : undefined"
     class="app-database-indicator"
     :title="tooltip"
   >
@@ -47,5 +51,5 @@ const tooltip = computed(() => [
       <span class="visually-hidden">{{ $t('databaseIndicator.instanceLabel') }}</span>
       {{ capabilities.instanceLabel }}
     </span>
-  </RouterLink>
+  </component>
 </template>

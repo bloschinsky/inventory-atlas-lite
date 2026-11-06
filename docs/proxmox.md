@@ -28,6 +28,18 @@ Inventory Atlas Lite is ready:
 http://192.168.1.145:3000
 ```
 
+The application is locked until its first administrator exists. Print a one-time setup code from the
+host, open the URL, and enter the code with the administrator's name and password:
+
+```bash
+pct exec <CTID> -- /usr/local/sbin/inventory-atlas-auth init
+```
+
+Signing in from another computer needs HTTPS. Either put a TLS reverse proxy in front of the container
+and add `ATLAS_TRUST_PROXY=<proxy address>` to `/etc/inventory-atlas-lite.env`, or, on a trusted LAN
+only, add `ATLAS_ALLOW_HTTP=true` there; then run `systemctl restart inventory-atlas-lite`. See
+[Accounts, sign-in, and HTTPS](../README.md#accounts-sign-in-and-https).
+
 Prefer to read the script before running it:
 
 ```bash
@@ -116,6 +128,8 @@ checksum verification and prints a warning; do not use it for a production insta
 | `/var/lib/inventory-atlas-lite/pre-reset-backups` | Safety copies written before an inventory reset, never removed automatically |
 | `/var/lib/inventory-atlas-lite/cloud-backup-credentials.json` | Dropbox and Google Drive refresh tokens and app credentials for **Settings → Cloud Backup**, readable only by the service user |
 | `/var/lib/inventory-atlas-lite/cloud-backup.json` | Cloud backup schedule, retention, and recent results |
+| `/var/lib/inventory-atlas-lite/auth.sqlite` | Accounts, password hashes, sessions, API token hashes, and the security audit trail, readable only by the service user and never part of an inventory backup |
+| `/usr/local/sbin/inventory-atlas-auth` | The root-only account command: `init`, `recover <username>`, `users` |
 | `/var/lib/inventory-atlas-lite/update-status.json` | Progress of the last update, written by the updater |
 | `/var/lib/inventory-atlas-lite/update-requested` | The marker the application creates to ask for an update |
 | `/etc/inventory-atlas-lite.env` | `NODE_ENV`, `PORT`, `DATA_DIR`, and `DEPLOYMENT_TYPE` |
@@ -158,7 +172,14 @@ systemctl status inventory-atlas-lite
 systemctl restart inventory-atlas-lite
 journalctl -u inventory-atlas-lite -f
 inventory-atlas-lite-update
+inventory-atlas-auth users              # the accounts and their roles
+inventory-atlas-auth recover <username> # a one-time code that sets a new password
 ```
+
+`inventory-atlas-auth` runs the application's own command line as `inventory-atlas` with the
+installation's `DATA_DIR`, so the security store keeps its owner. It prints one-time codes, never
+passwords: the code is entered on the sign-in page (**Use a recovery code**) together with the new
+password. A recovery code also enables a disabled account and ends its other sessions.
 
 To run them from the Proxmox host instead, give the updater its full path. `pct exec` uses
 `PATH=/sbin:/bin:/usr/sbin:/usr/bin`, which does not include the `/usr/local/sbin` the updater is
@@ -169,6 +190,7 @@ an argument to `ssh`, because that is not a login shell either.
 pct exec <CTID> -- systemctl status inventory-atlas-lite
 pct exec <CTID> -- journalctl -u inventory-atlas-lite -n 50
 pct exec <CTID> -- /usr/local/sbin/inventory-atlas-lite-update
+pct exec <CTID> -- /usr/local/sbin/inventory-atlas-auth recover <username>
 ```
 
 The updater started from the application runs as its own unit, so its output is inspected there:
@@ -193,6 +215,21 @@ The same update can be started from the application: **About → Check for updat
 `<version>`**. It runs exactly this updater and is described in
 [`features/self-update.md`](features/self-update.md). Progress is shown in the dialog and the page
 reloads when the new version is healthy.
+
+**Updating to 0.71.0 or later from an earlier release** adds sign-in. The inventory, photos, settings,
+and backups are kept, and the application is locked right after the update until an administrator
+exists. That first update is still driven by the previous release's updater, which does not install
+`inventory-atlas-auth` yet, so create the administrator with the copy in the application directory:
+
+```bash
+pct exec <CTID> -- sh /opt/inventory-atlas-lite/app/deploy/inventory-atlas-auth init
+```
+
+The next update installs `/usr/local/sbin/inventory-atlas-auth`. If other devices reach the
+application over plain HTTP, add `ATLAS_ALLOW_HTTP=true` (trusted LAN only) or an HTTPS reverse proxy
+as described under [Install](#install) before you rely on signing in from them. Rolling back to a
+release before 0.71.0 removes sign-in again; `auth.sqlite` is left untouched and is used once you
+update again.
 
 An installation created before this feature existed registers the updater units during its next
 command-line update, but that run is still driven by the previous release's script. Run
@@ -233,8 +270,9 @@ first. Pre-reset copies are never pruned; delete the ones you no longer need you
 
 ## Security
 
-Inventory Atlas Lite has **no authentication**. Anyone who can reach the port can read and change the
-whole inventory.
+Every page and API request needs a signed-in account or a scoped API token, and only administrators
+can change settings, restore, reset, or update. Sign-in has no multi-factor authentication and is
+meant for a home network:
 
 - Do not forward a router port to the container.
 - Do not put it behind a public reverse proxy.
@@ -246,8 +284,8 @@ the marker file `/var/lib/inventory-atlas-lite/update-requested` in its own data
 systemd path unit turns into a start of the one predefined updater unit. No command, version, URL,
 repository, or argument can be passed from the browser into that privileged unit, only published
 stable releases of the official repository are installed, and their checksums are verified as
-before. Anyone who can reach the unauthenticated interface can start an update, which is one more
-reason to keep it off the public Internet.
+before. Only a signed-in administrator who confirmed their password within the last ten minutes can
+start an update.
 
 The installer does not change the Proxmox firewall, does not configure DNS, TLS, or a domain, and
 grants the container no extra features, device access, nesting, or privileged mode.

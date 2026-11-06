@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { byKey, createDemoFixture } from '../../client/src/demo/fixture.js';
 import en from '../../client/src/i18n/locales/en.json' with { type: 'json' };
 import uk from '../../client/src/i18n/locales/uk.json' with { type: 'json' };
-import { demoURL, landingURL } from './environment.js';
+import { adminStateFile, demoURL, landingURL } from './environment.js';
 
 /*
   The guided presentation of the public demo, on the built demo inside the landing build (see
@@ -851,9 +851,14 @@ for (const viewport of [{ width: 360, height: 800 }, { width: 430, height: 932 }
   });
 }
 
-test('the self-hosted application never shows the public tour', async ({ page }) => {
-  await page.goto('/dashboard');
-  await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Guided tour' })).toHaveCount(0);
-  await expect(page.getByRole('complementary', { name: 'Demo mode' })).toHaveCount(0);
+test.describe('self-hosted', () => {
+  // The real application needs a session; this test only reads its Dashboard.
+  test.use({ storageState: adminStateFile });
+
+  test('the self-hosted application never shows the public tour', async ({ page }) => {
+    await page.goto('/dashboard');
+    await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Guided tour' })).toHaveCount(0);
+    await expect(page.getByRole('complementary', { name: 'Demo mode' })).toHaveCount(0);
+  });
 });

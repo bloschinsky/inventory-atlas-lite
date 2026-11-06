@@ -3,9 +3,9 @@ import { httpError } from '../httpError.js';
 
 /*
   Starting an update is the one request in this API with a lasting effect on the machine, so it is a
-  POST that only the application's own pages may send. The API carries no cookies or credentials, so
-  the check is about where the request came from: a cross-site fetch is rejected outright, and a
-  cross-site form post, which cannot set a JSON content type, is rejected the same way.
+  POST that only the application's own pages may send. Beyond the administrator session, fresh
+  reauthentication, and CSRF token the authorization gate requires, a cross-site fetch is rejected
+  outright here, and a cross-site form post, which cannot set a JSON content type, the same way.
 */
 const sameOriginOnly = (req, res, next) => {
   const site = req.get('sec-fetch-site');

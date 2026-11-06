@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures.js';
 import { landingRelease, links, repositoryUrl } from '../../landing/site.js';
 import { socialImagePath, socialPages } from '../../landing/socialImages.js';
 import { baseURL, demoURL, landingURL } from './environment.js';

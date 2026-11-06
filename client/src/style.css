@@ -24,6 +24,13 @@ body.app-menu-open { overflow: hidden; }
    Long names are cut with an ellipsis; the link's tooltip carries the full name. */
 .app-database-bar { padding-top: .75rem; }
 .app-database-bar + .page-body { margin-top: .75rem; }
+/* The signed-in account beside the database indicator; a long name is cut, never wrapped. */
+.app-account-name { display: inline-block; max-width: 12rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+/* The password confirmation opens over Settings and About, so it stacks above both. */
+.app-reauth-backdrop { z-index: 1070; }
+.app-reauth-dialog { z-index: 1075; }
+/* The command a sign-in page names, in the code style of the guide. */
+.app-sign-in-command { white-space: pre-wrap; word-break: break-word; }
 .app-database-indicator { display: inline-flex; align-items: center; gap: .375rem; max-width: min(100%, 40rem); min-width: 0; min-height: 1.5rem; color: var(--tblr-secondary); font-size: .8125rem; line-height: 1.25; text-decoration: none; border-radius: var(--tblr-border-radius); vertical-align: top; }
 .app-database-indicator:hover { color: var(--tblr-primary); text-decoration: none; }
 .app-database-indicator:focus-visible { outline: 2px solid var(--tblr-primary); outline-offset: 2px; }

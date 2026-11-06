@@ -14,6 +14,8 @@ IAL_DATA_DIR=/var/lib/inventory-atlas-lite
 IAL_BACKUP_DIR=$IAL_DATA_DIR/backups
 IAL_ENV_FILE=/etc/inventory-atlas-lite.env
 IAL_UPDATE_COMMAND=/usr/local/sbin/inventory-atlas-lite-update
+# The root-only wrapper of the account command line (first administrator, recovery codes).
+IAL_AUTH_COMMAND=/usr/local/sbin/inventory-atlas-auth
 # The privileged updater unit and the marker the application creates to ask for it. The application
 # runs unprivileged and cannot start a unit; a systemd path unit watches for the marker instead.
 IAL_UPDATE_SERVICE=inventory-atlas-lite-update
@@ -250,6 +252,12 @@ ial_install_update_units() {
   systemctl daemon-reload
   systemctl enable "$IAL_UPDATE_SERVICE.path" >/dev/null
   systemctl is-active --quiet "$IAL_UPDATE_SERVICE.path" || systemctl start "$IAL_UPDATE_SERVICE.path"
+}
+
+# Installs the account command line wrapper: root runs it, and it runs the application's own
+# command as the service account, so the security store in DATA_DIR keeps its owner.
+ial_install_auth_command() {
+  install -m 0750 "$IAL_APP_DIR/deploy/inventory-atlas-auth" "$IAL_AUTH_COMMAND"
 }
 
 ial_wait_for_health() { # url [timeout-seconds] [expected-version]

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures.js';
 import { createCategory, detail, unique } from './helpers.js';
 
 test('batch add from JSON previews, edits, and creates a category batch', async ({ page, request }) => {

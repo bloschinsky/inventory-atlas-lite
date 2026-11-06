@@ -18,8 +18,9 @@ description, and your category/field schema to the AI provider you configure —
 local Ollama or LM Studio server, or another OpenAI-compatible endpoint — only when you ask for a
 draft. A hosted provider needs Internet access; a local model server on your network does not.
 
-**There is no authentication.** Anyone who can open the address can read and change the whole
-inventory, so keep it on a trusted LAN or behind a VPN.
+**Everyone signs in.** Each account is an **Administrator**, who can do everything, or a **Viewer /
+Read-only**, who can only browse; scripts use API tokens. Keep the application on a trusted LAN or
+behind a VPN. See [Sign in and out](#sign-in-and-out).
 
 **Try it before installing.** The [public demo](https://bloschinsky.github.io/inventory-atlas-lite/demo/)
 (also **Try Demo** on the product page) runs the same interface in your browser on an invented
@@ -35,7 +36,7 @@ thing and waits: its blue button says what happens next (*Group by Category*, *S
 on, **Pause** and **Resume** hold it. Close the tour at any time to explore on your own. On a phone
 the tour card is a slim strip at the bottom of the screen. Starting the tour again begins from the
 sample inventory. Download Backup, Restore, the Danger Zone,
-Settings → Cloud Backup and AI, and Check for updates need a real installation and say *Not
+Settings → Cloud Backup, AI, and Security & Access, and Check for updates need a real installation and say *Not
 available in the public demo* instead.
 
 The product page, the user guide, and the demo speak English and Ukrainian, and each language has
@@ -77,6 +78,8 @@ reload and a language change. A shared link to a section shows the guide's previ
   always in the top bar.
 - Reach the application over your LAN or a VPN such as WireGuard or Tailscale. Do not forward a
   router port to it.
+- Sign in with the account an administrator gave you. On a new installation, first create the
+  administrator with the setup code from the server; see [Sign in and out](#sign-in-and-out).
 - A fresh installation is empty: no categories and no items. The Dashboard and items page both
   guide you to add the first item. When an item-list search or category filter matches nothing, the
   items page says *No matching items* instead.
@@ -1120,7 +1123,8 @@ backup first when in doubt.
 
 **Settings** opens as a dialog over the page you are on, which stays as you left it underneath. It is
 split into sections: **Interface** under *General*, **Database** and **Cloud Backup** under *Data*,
-and **AI** under *Services*. On a computer the sections are listed on the left of the dialog and the
+**AI** under *Services*, and **Users**, **API Access**, and **Sessions** under *Security & Access*.
+Viewers see only **Interface** and **Sessions**. On a computer the sections are listed on the left of the dialog and the
 open one is highlighted; on a phone Settings fills the screen and you choose the section from the
 **Section** selector at the top. A long section scrolls inside the dialog.
 
@@ -1132,6 +1136,74 @@ sections, or goes elsewhere; choose **Cancel** to keep editing.
 Each section has its own address, such as `/settings/ai`, so it can be bookmarked or reloaded;
 `/settings` opens **Interface**. An address opened directly, after a reload, or on the return from a
 Dropbox or Google Drive sign-in shows Settings over the **Dashboard**, where closing it leaves you.
+
+### Sign in and out
+
+Every page needs an account. When you open the address you see **Sign in**: enter your **Username**
+and **Password**. Afterwards you land on the page you asked for, so a bookmarked item or the link of a
+scanned QR code still opens. Your account name sits at the top right of every page (on a phone, at the
+bottom of the **☰** menu); it shows your role and offers **Sessions & password** and **Sign out**.
+
+A new installation, and an existing one right after the update that added accounts, shows **Create the
+first administrator** instead. Someone with access to the server runs the setup command —
+`npm run auth -- init`, `docker exec <container> node server/src/cli/auth.js init`, or
+`inventory-atlas-auth init` inside the Proxmox container — which prints a one-time code valid for 30
+minutes. Enter the code, choose the administrator's name and a password of at least 12 characters, and
+press **Create administrator**. Without that code nobody can do this, so whoever opens the address first
+cannot take over the installation.
+
+Forgot your password? Choose **Forgot your password? Use a recovery code** on the sign-in page. Someone
+with access to the server runs the same command with `recover <username>`, which prints a one-time code
+for your account; enter your name, the code, and a new password twice. The account is enabled again if
+it was disabled, and its other sessions end.
+
+Signing in from another computer or phone needs HTTPS. If the page says *Signing in from another device
+needs HTTPS*, ask whoever runs the server to put it behind an HTTPS reverse proxy or, on a trusted home
+network, to set `ATLAS_ALLOW_HTTP=true` (see the README).
+
+### Add people and choose what they may do
+
+Administrators open **Settings → Security & Access → Users**. Under **Add user** enter a **Username**,
+choose the **Role**, enter the password twice, and press **Create user**; then tell the person their
+name and password.
+
+- **Administrator** can do everything, including settings, backups, restore, reset, updates, users,
+  and API tokens.
+- **Viewer / Read-only** opens the Dashboard, Items, the item pages with photos and history, Hierarchy,
+  Checklists with their past runs, and Scan QR, and can print QR labels. A viewer sees no Add, Edit,
+  Move, Transfer, Retire, Delete, or checklist buttons, no Templates, Categories & Fields, or Data /
+  Backup pages, and only **Interface** and **Sessions** in Settings. The server refuses those actions
+  for a viewer even when they are attempted some other way.
+
+Each other account has **Make viewer** or **Make administrator**, **Reset password**, and **Disable** or
+**Enable**. Changing the role, resetting the password, or disabling an account ends its sessions; a
+disabled account cannot sign in and its API tokens stop working. Your own row offers none of these, and
+the last active administrator can never be disabled or made a viewer.
+
+When you last entered your password more than ten minutes ago, creating or changing an account asks
+for it again in **Confirm your password**, and so do restore, reset, updates, and new API tokens.
+
+### Give a script access with an API token
+
+Administrators open **Settings → Security & Access → API Access**. Under **Create an API token** give
+the token a **Name**, such as the program that will use it, choose its **Access** — **Read-only**
+(preselected) or **Read and write items** — and its **Expiry**, and press **Create token**. Copy the
+token from the yellow box now: it is shown only this once. Press **Done, I saved it** when it is stored.
+
+The program sends the token in the header `Authorization: Bearer ial_…`, over HTTPS. A read-only token
+lists, searches, and opens items, photos, categories, and the hierarchy; a read-and-write token can
+also create, edit, move, retire, lend, and delete items and their photos. No token can change
+categories, templates, checklists, settings, backups, users, or tokens. The list shows each token's
+masked identifier (`ial_…`), access, status, last use, and expiry; **Revoke** stops it at once.
+
+### See your sessions and change your password
+
+**Settings → Security & Access → Sessions**, also **Sessions & password** in the account menu, lists the
+browsers signed in to your account with a rough browser and system name, the address, and when each
+signed in and was last active; **This browser** marks the one you are using. **Sign out** ends one
+session and **Sign out all other sessions** all but this one. Under **Change password** enter your
+current password and the new one twice: every other session ends, and this browser stays signed in.
+Sessions also end on their own after three days without use, and after 30 days at the latest.
 
 ### Change the interface language
 
@@ -1438,8 +1510,9 @@ backup, and keep the copies on a different machine than the server.
 
 ## 8. Limitations and security
 
-- **No authentication, no user accounts, no permissions.** Everyone who reaches the address has full
-  access.
+- **Two roles only.** Accounts are Administrators or Viewers / Read-only; there are no custom roles,
+  per-category permissions, teams, single sign-on, or multi-factor authentication. Failed sign-ins are
+  slowed down per address and name, in memory, so a restart clears that count.
 - Not intended for direct exposure to the Internet. Use a trusted LAN or a VPN; do not forward a
   router port and do not put it behind a public reverse proxy.
 - Photos: JPEG, PNG, WebP, GIF, up to 10 files of 15 MB each per upload.
@@ -1466,10 +1539,10 @@ backup, and keep the copies on a different machine than the server.
   restore of single items or categories, and no CSV import or any export.
 - **Batch Add from JSON** only creates new items, at most 100 per batch, in one existing category.
   It never creates categories or fields, updates existing items, or imports photos.
-- Anyone who reaches the unauthenticated interface can restore a backup or reset the inventory and
-  therefore replace or remove all current data. The typed confirmation and the single-use token only
-  guard against accidents, not against a person with access. Keep the application on a trusted LAN
-  or VPN.
+- Restoring a backup or resetting the inventory replaces or removes all current data. Only
+  administrators can do it, after confirming their password; the typed confirmation and the
+  single-use token guard against accidents. Accounts, sessions, and API tokens are never part of a
+  backup, and a restore or reset never changes them.
 - An inventory reset removes everything at once. There is no selective reset of single tables,
   categories, or items, and it never deletes settings or backups.
 - AI Add Fields sends your description, the category name, its field names, and the built-in
@@ -1517,10 +1590,9 @@ backup, and keep the copies on a different machine than the server.
   development installations can check for a newer release but must be updated where they are
   deployed. Only published stable releases are offered, always from the official repository, and the
   application never gains any other privilege on the machine.
-- Anyone who reaches the unauthenticated interface can start such an update. Keep the application on
-  a trusted LAN or VPN.
-- Cloud backup supports Dropbox and Google Drive, one schedule for one provider at a time. Anyone who
-  reaches the interface can connect or disconnect a provider and start a cloud backup. Backups are
+- Only administrators can start such an update, after confirming their password.
+- Cloud backup supports Dropbox and Google Drive, one schedule for one provider at a time. Only
+  administrators can connect or disconnect a provider and start a cloud backup. Backups are
   restored by downloading the file from the provider and using **Restore from backup**; there is no
   direct restore from the cloud.
 

@@ -74,6 +74,7 @@ export default defineConfig(async ({ command, mode }) => {
     },
     // Tabler ships ApexCharts as a UMD bundle; pre-bundling gives the development server its ES module form.
     optimizeDeps: { include: ['@tabler/core/dist/libs/apexcharts/dist/apexcharts.min.js'] },
-    server: { host: '0.0.0.0', proxy: demo ? {} : { '/api': `http://127.0.0.1:${apiPort}` } }
+    // The proxy keeps the browser's Host header, so the API's same-origin check sees the address the page was loaded from.
+    server: { host: '0.0.0.0', proxy: demo ? {} : { '/api': { target: `http://127.0.0.1:${apiPort}`, changeOrigin: false } } }
   };
 });

@@ -202,7 +202,7 @@ test('PATCH /api/fields/:id renames a field and answers refusals with the error 
   const server = await startServer(dataDir);
   try {
     const call = async (url, method, body) => {
-      const response = await fetch(`${server.base}${url}`, body === undefined ? { method } : {
+      const response = await server.fetch(`${server.base}${url}`, body === undefined ? { method } : {
         method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
       });
       return { status: response.status, body: response.status === 204 ? null : await response.json() };

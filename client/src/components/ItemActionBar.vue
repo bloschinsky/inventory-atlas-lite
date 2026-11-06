@@ -2,6 +2,8 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { capabilities } from '../capabilities.js';
+import { can } from '../auth.js';
+import { PERMISSIONS } from '../../../shared/permissions.js';
 import { useDropdownMenu } from '../useDropdownMenu.js';
 import {
   IconArchive, IconCopy, IconDots, IconLanguage, IconLink, IconPencil, IconQrcode, IconRefresh, IconRestore,
@@ -22,32 +24,35 @@ const { t } = useI18n();
 const actions = computed(() => {
   const { item } = props;
   const retired = item.lifecycle_status === 'retired';
+  // A viewer keeps only QR Code; every other action changes the inventory or uses server tools.
+  const { itemsWrite, inventoryManage, toolsUse } = PERMISSIONS;
+  const write = can(itemsWrite);
   return [
-    { key: 'edit', place: 'bar', icon: IconPencil, label: t('common.edit'), to: `/items/${item.id}/edit` },
+    write && { key: 'edit', place: 'bar', icon: IconPencil, label: t('common.edit'), to: `/items/${item.id}/edit` },
     // A retired item cannot be lent; a lent one is returned from its Loan card instead.
-    !retired && !item.open_transfer && { key: 'transfer', place: 'wide', group: 1, icon: IconUserShare, label: t('transfer.action'), event: 'transfer' },
+    write && !retired && !item.open_transfer && { key: 'transfer', place: 'wide', group: 1, icon: IconUserShare, label: t('transfer.action'), event: 'transfer' },
     { key: 'qr', place: 'bar', icon: IconQrcode, label: t('qr.title'), event: 'qr' },
     // Opens the edit form with the URL import over it; only the values chosen there and then saved change.
     // An item with a saved Source URL offers to read that page again instead; Fill from URL stays in the form.
-    capabilities.urlImport && {
+    write && can(toolsUse) && capabilities.urlImport && {
       key: 'url', place: 'menu', group: 1, icon: item.source_url ? IconRefresh : IconLink,
       label: t(item.source_url ? 'urlImport.refreshAction' : 'urlImport.fillAction'),
       to: { path: `/items/${item.id}/edit`, query: { import: item.source_url ? 'refresh' : 'url' } }
     },
     // Opens the edit form with Translate Item over it; only translations applied there and then saved change.
-    capabilities.ai.enabled && {
+    write && can(toolsUse) && capabilities.ai.enabled && {
       key: 'translate', place: 'menu', group: 1, icon: IconLanguage, label: t('translateItem.action'),
       to: { path: `/items/${item.id}/edit`, query: { translate: 'item' } }
     },
     // Opens the Add Item form prefilled from this item; the copy is created only when saved there.
-    { key: 'duplicate', place: 'menu', group: 1, icon: IconCopy, label: t('itemDetails.duplicate'), to: { path: '/items/new', query: { duplicate: item.id } } },
+    write && { key: 'duplicate', place: 'menu', group: 1, icon: IconCopy, label: t('itemDetails.duplicate'), to: { path: '/items/new', query: { duplicate: item.id } } },
     // Opens the template editor prefilled from this item; nothing is saved until it is confirmed there.
-    { key: 'template', place: 'menu', group: 1, icon: IconTemplate, label: t('templates.saveAsTemplate'), to: { path: '/templates/new', query: { fromItem: item.id } } },
-    retired
+    can(inventoryManage) && { key: 'template', place: 'menu', group: 1, icon: IconTemplate, label: t('templates.saveAsTemplate'), to: { path: '/templates/new', query: { fromItem: item.id } } },
+    write && (retired
       ? { key: 'restore', place: 'menu', group: 2, icon: IconRestore, label: t('lifecycle.restore.action'), event: 'restore' }
-      : { key: 'retire', place: 'menu', group: 2, icon: IconArchive, label: t('lifecycle.retire.action'), event: 'retire' },
+      : { key: 'retire', place: 'menu', group: 2, icon: IconArchive, label: t('lifecycle.retire.action'), event: 'retire' }),
     // Last and set apart, so deleting is never a single tap; the page still asks for confirmation.
-    { key: 'delete', place: 'menu', group: 3, icon: IconTrash, label: t('itemDetails.delete'), event: 'delete', danger: true }
+    write && { key: 'delete', place: 'menu', group: 3, icon: IconTrash, label: t('itemDetails.delete'), event: 'delete', danger: true }
   ].filter(Boolean);
 });
 const barActions = computed(() => actions.value.filter(action => action.place !== 'menu'));
@@ -98,6 +103,7 @@ function choose(action) {
       </button>
     </template>
     <div
+      v-if="menuActions.length"
       ref="root"
       class="dropdown"
       @keydown.esc="close"

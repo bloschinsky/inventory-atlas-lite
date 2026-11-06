@@ -4,6 +4,8 @@ import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { api } from '../api.js';
 import { capabilities } from '../capabilities.js';
+import { can } from '../auth.js';
+import { PERMISSIONS } from '../../../shared/permissions.js';
 import { CORE_ITEM_COLUMNS, DEFAULT_ITEM_SORT, ITEMS_VIEW_STORAGE_KEY, labelColumns } from '../itemColumns.js';
 import { labelSelection, printLabelsRoute, toggleLabelSelection } from '../labelSelection.js';
 import { CONDITION_GRADES_BEST_FIRST } from '../conditionGrades.js';
@@ -155,7 +157,7 @@ onMounted(async () => {
   >
     <template #actions>
       <RouterLink
-        v-if="capabilities.ai.enabled"
+        v-if="capabilities.ai.enabled && can(PERMISSIONS.toolsUse)"
         to="/items/ai"
         class="btn btn-outline-primary"
       >
@@ -166,6 +168,7 @@ onMounted(async () => {
         {{ $t('aiAddItem.title') }}
       </RouterLink>
       <AddItemMenu
+        v-if="can(PERMISSIONS.itemsWrite)"
         ref="addMenu"
         :batch-disabled="!categories.length"
         @batch-add="notice = ''; batchOpen = true"
@@ -373,6 +376,7 @@ onMounted(async () => {
       {{ $t('items.selectPage') }}
     </button>
     <button
+      v-if="can(PERMISSIONS.itemsWrite)"
       ref="moveButton"
       type="button"
       class="btn btn-sm ms-auto"
@@ -446,11 +450,11 @@ onMounted(async () => {
         {{ filtered ? $t('items.noMatchesText') : $t('items.emptyText') }}
       </p>
       <div
-        v-if="!filtered"
+        v-if="!filtered && can(PERMISSIONS.itemsWrite)"
         class="empty-action d-flex flex-wrap justify-content-center gap-2"
       >
         <RouterLink
-          v-if="capabilities.ai.enabled"
+          v-if="capabilities.ai.enabled && can(PERMISSIONS.toolsUse)"
           to="/items/ai"
           class="btn btn-outline-primary"
         >

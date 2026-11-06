@@ -502,7 +502,7 @@ test('100,000 events: measured footprint, indexed timeline pages, and a group mo
 
 test('the history API pages, validates, records loans, and travels in the backup', async () => {
   const dataDir = await mkdtemp(path.join(os.tmpdir(), 'inventory-history-api-'));
-  const { child, base } = await startServer(dataDir);
+  const { child, base, fetch } = await startServer(dataDir);
   const call = async (method, url, body) => {
     const response = await fetch(`${base}${url}`, body === undefined ? { method } : { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     return { status: response.status, body: response.status === 204 ? null : await response.json() };

@@ -246,7 +246,7 @@ test('batch import accepts an optional locationDetail and reviews it with the it
 });
 
 test('the HTTP API stores, inherits, and keeps the Specific location for older clients', async () => {
-  const { child, base } = await startServer(await mkdtemp(path.join(os.tmpdir(), 'inventory-location-detail-api-')));
+  const { child, base, fetch } = await startServer(await mkdtemp(path.join(os.tmpdir(), 'inventory-location-detail-api-')));
   const call = async (url, method = 'GET', body) => {
     const response = await fetch(`${base}${url}`, {
       method, headers: { 'Content-Type': 'application/json' }, body: body && JSON.stringify(body)

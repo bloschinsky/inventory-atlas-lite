@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures.js';
 import { createCategory, createItem, unique } from './helpers.js';
 
 const sections = [
@@ -97,7 +97,7 @@ test('the desktop dialog opens over the page, switches sections in place, and cl
   expect(box.width).toBeGreaterThanOrEqual(850);
   expect(box.width).toBeLessThanOrEqual(950);
   expect(box.height).toBeLessThanOrEqual(500);
-  await expect(localNav(page).getByRole('group')).toHaveText([/General\s*Interface/, /Data\s*Database\s*Cloud Backup/, /Services\s*AI/]);
+  await expect(localNav(page).getByRole('group')).toHaveText([/General\s*Interface/, /Data\s*Database\s*Cloud Backup/, /Services\s*AI/, /Security & Access\s*Users\s*API Access\s*Sessions/]);
   // Phones get the selector instead; on a desktop it stays out of the way.
   await expect(dialog(page).getByLabel('Section', { exact: true })).toBeHidden();
 
@@ -253,7 +253,7 @@ test('phones get a full-screen dialog with the section selector, opened from the
 
   const selector = dialog(page).getByLabel('Section', { exact: true });
   await expect(selector).toHaveValue('/settings/interface');
-  await expect(selector.locator('optgroup')).toHaveCount(3);
+  await expect(selector.locator('optgroup')).toHaveCount(4);
   const entries = await historyLength(page);
   await selector.selectOption({ label: 'AI' });
   await expect(page).toHaveURL('/settings/ai');

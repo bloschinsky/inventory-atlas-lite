@@ -238,7 +238,7 @@ test('expired previews, unknown categories, and inventories too large to send ar
 });
 
 test('the API refuses an enhancement without a preview of its own, and AI stays off by default', async () => {
-  const { child, base } = await startServer(await mkdtemp(path.join(os.tmpdir(), 'inventory-url-import-ai-api-')));
+  const { child, base, fetch } = await startServer(await mkdtemp(path.join(os.tmpdir(), 'inventory-url-import-ai-api-')));
   try {
     assert.equal((await (await fetch(`${base}/api/capabilities`)).json()).ai.enabled, false);
     const response = await fetch(`${base}/api/items/import-url/unknown/ai`, {

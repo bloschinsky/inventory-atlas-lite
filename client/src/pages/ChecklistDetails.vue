@@ -3,6 +3,8 @@ import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { api } from '../api.js';
+import { can } from '../auth.js';
+import { PERMISSIONS } from '../../../shared/permissions.js';
 import { modeKey } from '../checklists.js';
 import PageHeader from '../components/PageHeader.vue';
 import ItemLifecycleBadge from '../components/ItemLifecycleBadge.vue';
@@ -64,7 +66,10 @@ onMounted(load);
       :title="checklist.name"
       :subtitle="$t(modeKey(checklist.mode))"
     >
-      <template #actions>
+      <template
+        v-if="can(PERMISSIONS.inventoryManage)"
+        #actions
+      >
         <RouterLink
           v-if="openRun"
           :to="`/checklists/runs/${openRun.id}`"

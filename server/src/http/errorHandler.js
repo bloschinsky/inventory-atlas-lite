@@ -24,8 +24,9 @@ export const errorResponse = error => {
 };
 
 // The single place that turns an error into an API response: `{ error: { code, params } }`.
+// Refused credentials and permissions are routine and say nothing worth a stack trace; they are never logged with any secret.
 export const errorHandler = (error, _req, res, _next) => {
-  console.error(error);
+  if (!(error instanceof AppError && error.code.startsWith('AUTH_'))) console.error(error);
   const { status, body } = errorResponse(error);
   res.status(status).json({ error: body });
 };

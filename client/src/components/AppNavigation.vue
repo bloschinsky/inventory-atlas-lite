@@ -3,9 +3,11 @@ import { useRoute } from 'vue-router';
 import { IconInfoCircle } from '@tabler/icons-vue';
 import { openAbout } from '../about.js';
 import { isLinkActive, navigationLinks } from '../navigation.js';
+import { can } from '../auth.js';
 
 const emit = defineEmits(['navigate']);
 const route = useRoute();
+const links = navigationLinks.filter(link => !link.permission || can(link.permission));
 
 // About is an action, not a destination, but it belongs in the same list at every width.
 function showAbout() {
@@ -17,7 +19,7 @@ function showAbout() {
 <template>
   <ul class="navbar-nav">
     <li
-      v-for="link in navigationLinks"
+      v-for="link in links"
       :key="link.to"
       class="nav-item"
       :class="{ active: isLinkActive(link, route.path) }"

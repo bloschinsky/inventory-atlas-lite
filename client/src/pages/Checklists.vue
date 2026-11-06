@@ -3,6 +3,8 @@ import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { api } from '../api.js';
+import { can } from '../auth.js';
+import { PERMISSIONS } from '../../../shared/permissions.js';
 import { formatDateTime } from '../i18n/index.js';
 import { modeKey, stateBadge, stateKey } from '../checklists.js';
 import PageHeader from '../components/PageHeader.vue';
@@ -58,6 +60,7 @@ onMounted(load);
   >
     <template #actions>
       <RouterLink
+        v-if="can(PERMISSIONS.inventoryManage)"
         to="/checklists/new"
         class="btn btn-primary"
       >
@@ -169,30 +172,32 @@ onMounted(load);
           >
             {{ $t('checklists.open') }}
           </RouterLink>
-          <button
-            type="button"
-            class="btn btn-primary"
-            :disabled="starting === checklist.id"
-            :aria-label="$t('checklists.startNamed', { name: checklist.name })"
-            @click="start(checklist)"
-          >
-            {{ $t('checklists.start') }}
-          </button>
-          <RouterLink
-            :to="`/checklists/${checklist.id}/edit`"
-            class="btn"
-            :aria-label="$t('checklists.editNamed', { name: checklist.name })"
-          >
-            {{ $t('common.edit') }}
-          </RouterLink>
-          <button
-            type="button"
-            class="btn btn-outline-danger ms-auto"
-            :aria-label="$t('checklists.deleteNamed', { name: checklist.name })"
-            @click="remove(checklist)"
-          >
-            {{ $t('common.delete') }}
-          </button>
+          <template v-if="can(PERMISSIONS.inventoryManage)">
+            <button
+              type="button"
+              class="btn btn-primary"
+              :disabled="starting === checklist.id"
+              :aria-label="$t('checklists.startNamed', { name: checklist.name })"
+              @click="start(checklist)"
+            >
+              {{ $t('checklists.start') }}
+            </button>
+            <RouterLink
+              :to="`/checklists/${checklist.id}/edit`"
+              class="btn"
+              :aria-label="$t('checklists.editNamed', { name: checklist.name })"
+            >
+              {{ $t('common.edit') }}
+            </RouterLink>
+            <button
+              type="button"
+              class="btn btn-outline-danger ms-auto"
+              :aria-label="$t('checklists.deleteNamed', { name: checklist.name })"
+              @click="remove(checklist)"
+            >
+              {{ $t('common.delete') }}
+            </button>
+          </template>
         </div>
       </article>
     </div>

@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures.js';
 import { guideSourceUrl } from '../../landing/site.js';
 import { demoURL, landingURL } from './environment.js';
 
@@ -75,7 +75,7 @@ test('the guide loads under the Pages base path with its own metadata and the la
   ]);
   await expect(article.locator('.guide-number').first()).toHaveText('01');
   await expect(article.getByRole('heading', { level: 3, name: 'Browse the storage hierarchy' })).toBeAttached();
-  await expect(article.getByText('There is no authentication.')).toBeVisible();
+  await expect(article.getByText('Everyone signs in.')).toBeVisible();
 
   // Same typeface and dark title band as the product page.
   expect(await page.evaluate(() => getComputedStyle(document.body).fontFamily)).toMatch(/^"Geist Variable"/);

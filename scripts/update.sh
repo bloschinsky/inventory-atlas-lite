@@ -156,6 +156,7 @@ install -m 0750 "$IAL_APP_DIR/scripts/update.sh" "$IAL_UPDATE_COMMAND"
 ial_update_step reloading_units
 ial_ensure_env_value DEPLOYMENT_TYPE "$IAL_DEPLOYMENT_TYPE"
 ial_install_update_units
+ial_install_auth_command
 systemctl daemon-reload
 ial_update_status restarting "Restarting the application" starting_service
 systemctl start "$IAL_SERVICE"
@@ -192,3 +193,7 @@ ial_update_status success "Update completed"
 STATUS_REPORTED=1
 ial_log "Inventory Atlas Lite $(ial_app_version "$IAL_APP_DIR") is running and healthy."
 ial_log "Pre-update backup: $BACKUP_PATH"
+# An installation updated from a release without accounts stays locked until its first administrator exists.
+if curl -fsS --max-time 10 "${HEALTH_URL%/health}/auth/session" 2>/dev/null | grep -q '"setupRequired":true'; then
+  ial_warn "No administrator exists yet. Run '$IAL_AUTH_COMMAND init' and enter the printed code in the browser."
+fi

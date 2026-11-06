@@ -1,5 +1,7 @@
 <script setup>
 import { useI18n } from 'vue-i18n';
+import { can } from '../auth.js';
+import { PERMISSIONS } from '../../../shared/permissions.js';
 import { formatDateTime } from '../i18n/index.js';
 import { runTitle, stateBadge, stateKey } from '../checklists.js';
 
@@ -29,9 +31,13 @@ defineProps({
           :key="run.id"
         >
           <td>
-            <RouterLink :to="`/checklists/runs/${run.id}`">
+            <!-- Run pages change the run, so a viewer sees the title without the link. -->
+            <component
+              :is="can(PERMISSIONS.inventoryManage) ? 'RouterLink' : 'span'"
+              :to="can(PERMISSIONS.inventoryManage) ? `/checklists/runs/${run.id}` : undefined"
+            >
               {{ formatDateTime(run.started_at) }}
-            </RouterLink>
+            </component>
             <div
               v-if="showName"
               class="meta-text text-break"

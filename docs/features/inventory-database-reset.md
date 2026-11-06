@@ -99,9 +99,10 @@ check with a successful rollback, and a failed rollback each produce a distinct 
   `DATA_DIR` are never touched by a reset.
 - The Proxmox updater takes its own backup while the service is stopped, so it cannot overlap a reset
   running inside the application.
-- The application has no authentication. The confirmation, the checkbox, and the single-use token
-  protect against accidental activation only; anyone who can reach the interface can reset the
-  inventory. Keep it on a trusted LAN or VPN.
+- Prepare and apply need `maintenance:manage` (administrators only) and a password confirmed within
+  the last ten minutes. The confirmation, the checkbox, and the single-use token still protect against
+  accidental activation. A reset never touches `auth.sqlite`: accounts, sessions, and API tokens stay
+  (see [authentication-and-access.md](authentication-and-access.md)).
 
 ## Verification
 

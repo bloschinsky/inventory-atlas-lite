@@ -1,6 +1,6 @@
 {
   "name": "simple-personal-inventory",
-  "version": "0.70.2",
+  "version": "0.71.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -14,6 +14,7 @@
     "build": "vite build",
     "lint": "eslint . --max-warnings 0",
     "start": "node server/src/index.js --production",
+    "auth": "node server/src/cli/auth.js",
     "test": "node --test test/*.test.js",
     "test:e2e": "node test/e2e/run.js",
     "landing:dev": "vite --config landing/vite.config.js",
@@ -28,6 +29,7 @@
     "@tabler/core": "1.5.1",
     "@tabler/icons-vue": "3.46.0",
     "@vue-flow/core": "1.48.2",
+    "argon2": "^0.45.2",
     "better-sqlite3": "^12.2.0",
     "express": "^5.1.0",
     "jsqr": "^1.4.0",

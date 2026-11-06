@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import { mkdtemp } from 'node:fs/promises';
-import { createServer } from 'node:http';
+import http, { createServer } from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import Database from 'better-sqlite3';
@@ -489,7 +489,7 @@ const startServer = (dataDir, environment) => startServerProcess(dataDir, { envi
 test('the cloud backup API connects, backs up, keeps secrets on the server, and disconnects', async () => {
   const dataDir = await mkdtemp(path.join(process.env.DATA_DIR, 'api-'));
   // Only Dropbox is configured on this server.
-  const { child, base } = await startServer(dataDir, { GOOGLE_CLIENT_ID: '', GOOGLE_CLIENT_SECRET: '' });
+  const { child, base, fetch } = await startServer(dataDir, { GOOGLE_CLIENT_ID: '', GOOGLE_CLIENT_SECRET: '' });
   try {
     const overview = async () => (await fetch(`${base}/api/cloud-backup`)).json();
     let state = await overview();
@@ -517,9 +517,21 @@ test('the cloud backup API connects, backs up, keeps secrets on the server, and 
     assert.equal((await cleared.json()).providers[1].configured, false);
     assert.equal((await fetch(`${base}/api/cloud-backup/providers/dropbox/app`, { method: 'DELETE' })).status, 409);
 
-    // The callback follows the address the browser reports, such as the development proxy's.
-    const proxied = await fetch(`${base}/api/cloud-backup/providers/dropbox/connect`, { method: 'POST', headers: { Origin: 'http://proxy.test:5173' } });
-    assert.equal(new URL((await proxied.json()).authorizationUrl).searchParams.get('redirect_uri'), `http://proxy.test:5173${callbackPath}`);
+    // The callback follows the address the browser reports, such as the development proxy's. fetch()
+    // cannot set Host, so this request is sent the way the proxy forwards it: Host and Origin agree.
+    const proxied = await new Promise((resolve, reject) => {
+      const { cookie, csrfToken } = fetch.session;
+      const request = http.request(`${base}/api/cloud-backup/providers/dropbox/connect`, {
+        method: 'POST', headers: { Host: 'proxy.test:5173', Origin: 'http://proxy.test:5173', Cookie: cookie, 'X-CSRF-Token': csrfToken }
+      }, response => {
+        let body = '';
+        response.on('data', chunk => { body += chunk; });
+        response.on('end', () => resolve(JSON.parse(body)));
+      });
+      request.on('error', reject);
+      request.end();
+    });
+    assert.equal(new URL(proxied.authorizationUrl).searchParams.get('redirect_uri'), `http://proxy.test:5173${callbackPath}`);
 
     const start = await fetch(`${base}/api/cloud-backup/providers/dropbox/connect`, { method: 'POST' });
     const cookie = start.headers.get('set-cookie');

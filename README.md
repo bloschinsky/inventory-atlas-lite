@@ -11,7 +11,7 @@
 
 # Inventory Atlas Lite
 
-A deliberately small, self-hosted inventory app for physical items. It uses Vue 3, Express, and one SQLite database containing all inventory data and photos. No authentication is included, so access should be limited to a trusted LAN or VPN/Tailscale network. Normal use is local; the optional AI features contact the configured AI provider — OpenAI, OpenRouter, a local Ollama or LM Studio server, or another OpenAI-compatible endpoint — only when the user requests a draft.
+A deliberately small, self-hosted inventory app for physical items. It uses Vue 3, Express, and one SQLite database containing all inventory data and photos. Every page and API request needs a signed-in account (Administrator or read-only Viewer) or a scoped API token; keep it on a trusted LAN or VPN/Tailscale network and use HTTPS for access from other devices. Normal use is local; the optional AI features contact the configured AI provider — OpenAI, OpenRouter, a local Ollama or LM Studio server, or another OpenAI-compatible endpoint — only when the user requests a draft.
 
 ## Requirements
 
@@ -29,6 +29,10 @@ Installation also downloads the pinned 168 MB IS-Net model and verifies its SHA-
 used only for optional local background removal and requires no network access after installation.
 
 Open `http://localhost:5173`. The development server listens on the local network as well. Set `PORT` to move the API off port `3000`; the development proxy follows it.
+
+The first start shows **Create the first administrator**. In another terminal, run
+`npm run auth -- init`, then enter the printed setup code with a name and password of your choice.
+See [Accounts, sign-in, and HTTPS](#accounts-sign-in-and-https).
 
 ## Checks
 
@@ -110,6 +114,15 @@ docker run -d --name inventory-atlas-lite \
   ghcr.io/bloschinsky/inventory-atlas-lite:0.8.0
 ```
 
+Create the first administrator from the host, then open the address and enter the printed code:
+
+```bash
+docker exec inventory-atlas-lite node server/src/cli/auth.js init
+```
+
+Signing in from another computer needs HTTPS: put a TLS reverse proxy in front of the container and
+pass `-e ATLAS_TRUST_PROXY=<proxy address>`, or, on a trusted LAN only, `-e ATLAS_ALLOW_HTTP=true`.
+
 Open `http://SERVER_IP:3000`. Set both `-p HOST_PORT:CONTAINER_PORT` and `-e PORT=CONTAINER_PORT`
 when changing the container port. Use an explicit version for repeatable deployments; `latest`
 tracks the newest stable release. Upgrade by pulling the new tag and recreating the container with
@@ -151,6 +164,9 @@ The script prints the configuration for confirmation, installs the latest stable
 verifying its `SHA256SUMS`, and reports the URL of the running application. Defaults are 1 core,
 2048 MiB RAM, an 8 GiB disk, DHCP on `vmbr0`, and port `3000`.
 
+Then create the first administrator inside the container (`pct exec <CTID> -- inventory-atlas-auth init`)
+and enter the printed code in the browser.
+
 See [`docs/proxmox.md`](docs/proxmox.md) for the container settings you can override, the release and
 checksum details, where the code and the database are stored, and how to update, inspect, and back up
 the installation.
@@ -174,6 +190,70 @@ GitHub Release. A normal branch push, or a tag on a feature branch, cannot creat
 [`docs/features/github-release-pipeline.md`](docs/features/github-release-pipeline.md) for the
 artifact contract and release checks.
 
+## Accounts, sign-in, and HTTPS
+
+Inventory Atlas Lite has two roles: **Administrator** (everything) and **Viewer / Read-only**
+(browsing and searching the inventory, nothing else). The server checks every `/api` request against
+one authorization table; anything not explicitly public needs a session or an API token. The complete
+route matrix, the threat model, and the design decisions are in
+[`docs/features/authentication-and-access.md`](docs/features/authentication-and-access.md).
+
+**First administrator.** A fresh installation, and an existing one after updating to 0.71.0, is
+locked: only the health probe and the sign-in page answer. Nobody can claim it over the network. On the
+machine itself, run the setup command as the user that owns `DATA_DIR`; it prints a one-time code
+valid for 30 minutes, which you enter on the **Create the first administrator** page together with a
+name and a password (at least 12 characters):
+
+| Installation | Command |
+| --- | --- |
+| Working copy or manual run | `npm run auth -- init` (with the same `DATA_DIR` as the server) |
+| Docker | `docker exec <container> node server/src/cli/auth.js init` |
+| Proxmox LXC | `pct exec <CTID> -- inventory-atlas-auth init` (or `inventory-atlas-auth init` inside the container) |
+
+**Upgrading an existing installation.** Your inventory, photos, settings, and backups are kept.
+Right after the update, run the setup command above and create the administrator; until then the
+interface shows only the setup page. If other devices open the address over plain HTTP, set up HTTPS
+or `ATLAS_ALLOW_HTTP=true` first (below).
+
+**Lost password or disabled account.** `npm run auth -- recover <username>` (Docker:
+`docker exec <container> node server/src/cli/auth.js recover <username>`; Proxmox:
+`inventory-atlas-auth recover <username>`) prints a one-time recovery code. On the sign-in page choose
+**Use a recovery code** and set a new password; the account is enabled again and its other sessions
+end. `… users` lists the accounts. These commands only work on the machine: they read the security
+store directly and have no HTTP endpoint.
+
+**HTTPS and reverse proxies.** Session cookies are `HttpOnly` and `SameSite=Lax`, and `Secure`
+with the `__Host-` prefix over HTTPS. Credentials sent over plain HTTP are refused unless they come
+from the same machine (`localhost`, used by development) or `ATLAS_ALLOW_HTTP=true` is set — an
+explicit choice for a trusted LAN or VPN where passwords then travel unencrypted. Behind a TLS reverse
+proxy, set `ATLAS_TRUST_PROXY` to the proxy's address (`loopback` for a proxy on the same host, or IP
+addresses and CIDR ranges separated by commas); only then are its `X-Forwarded-Proto`,
+`X-Forwarded-For`, and `X-Forwarded-Host` headers believed. The proxy must pass the original `Host`
+header (or `X-Forwarded-Host`). `true` and hop counts are refused, so a client can never claim HTTPS
+or another address by sending those headers itself.
+
+**API tokens.** **Settings → Security & Access → API Access** creates named tokens for scripts:
+`inventory:read` (the default) or `items:write` (item changes as well), with an optional expiry. Send
+one as `Authorization: Bearer ial_…` over HTTPS. A token is shown once, stored only as a hash, can be
+revoked at once, and never reaches settings, backups, restore, reset, updates, accounts, or tokens.
+
+**The security store.** Accounts, password hashes (Argon2id), sessions, API token hashes, one-time
+codes, and a bounded security audit trail are kept in `auth.sqlite` under `DATA_DIR`, created with
+owner-only permissions. It is separate from `inventory.sqlite` on purpose: an inventory backup never
+contains it, and restoring or resetting the inventory never changes an account, a session, or a token.
+Each instance (`DATA_DIR`) has its own store, so a TEST and a PROD instance never share accounts.
+
+**Security store recovery.** To move an installation, stop the server and copy `auth.sqlite` (and any
+`auth.sqlite-wal`) together with the rest of `DATA_DIR`, keeping it readable by the service user only.
+If the store is damaged, the server refuses to start instead of starting without accounts: stop it,
+move `auth.sqlite*` aside, start it again, and run the setup command to create a new administrator
+(all old sessions and tokens are gone). Downgrading to a release before 0.71.0 ignores `auth.sqlite`
+and has no sign-in at all, so only do it on a network you trust.
+
+Optional timings: `AUTH_SESSION_IDLE_MS` (default three days without a request),
+`AUTH_SESSION_ABSOLUTE_MS` (default 30 days), and `AUTH_REAUTH_WINDOW_MS` (default ten minutes:
+restore, reset, updates, and account or token changes ask for the password again after that).
+
 ## Data and backups
 
 The database is created automatically at `data/inventory.sqlite`. It contains items, categories, fields, values, and original photo bytes. The **Data / Backup** page downloads a consistent SQLite snapshot using SQLite's backup API. Back up that downloaded file regularly.
@@ -182,8 +262,8 @@ The same page restores such a snapshot: the upload is validated on the server, t
 is copied to `pre-restore-backups/` under `DATA_DIR` first, and the active file is then replaced
 atomically. A failure during replacement rolls that safety copy back automatically. The ten most
 recent safety copies are kept; older ones are removed after a successful restore. Restoring replaces
-the whole inventory, so anyone who can reach the unauthenticated interface can destroy the current
-data — one more reason to keep the application on a trusted network only. Set
+the whole inventory, so only administrators can do it, after confirming their password. Restoring
+never changes accounts, sessions, or API tokens, which live in the separate `auth.sqlite`. Set
 `RESTORE_MAX_UPLOAD_MB` to change the maximum size of an uploaded backup; the default is `512`.
 See [`docs/features/database-backup-and-restore.md`](docs/features/database-backup-and-restore.md).
 
@@ -212,4 +292,6 @@ reverse proxy and `TZ` sets the schedule time zone. App credentials and refresh 
 `cloud-backup-credentials.json` under `DATA_DIR` with owner-only permissions and are never included in
 SQLite backups. See [`docs/features/cloud-backup.md`](docs/features/cloud-backup.md).
 
-Do not expose this application directly to the public Internet: the MVP intentionally has no authentication.
+Do not expose this application directly to the public Internet. Sign-in protects every request, but the
+application is built for a home network or VPN: it has no multi-factor authentication, no single sign-on,
+and its login throttling is kept in memory.

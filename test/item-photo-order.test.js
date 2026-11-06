@@ -221,7 +221,7 @@ test('PUT /api/items/:id/photos/order answers with the ordered photos and the er
   const server = await startServer(dataDir);
   try {
     const call = async (url, method, body) => {
-      const response = await fetch(`${server.base}${url}`, body === undefined ? { method } : {
+      const response = await server.fetch(`${server.base}${url}`, body === undefined ? { method } : {
         method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
       });
       return { status: response.status, body: response.status === 204 ? null : await response.json() };
@@ -230,7 +230,7 @@ test('PUT /api/items/:id/photos/order answers with the ordered photos and the er
     const item = (await call('/api/items', 'POST', { name: 'F3', category_id: category.id })).body;
     const form = new FormData();
     for (const name of ['one.png', 'two.png', 'three.png']) form.append('photos', new Blob([Buffer.from('8950', 'hex')], { type: 'image/png' }), name);
-    const uploaded = await (await fetch(`${server.base}/api/items/${item.id}/photos`, { method: 'POST', body: form })).json();
+    const uploaded = await (await server.fetch(`${server.base}/api/items/${item.id}/photos`, { method: 'POST', body: form })).json();
     assert.deepEqual(uploaded.map(photo => [photo.filename, photo.sort_order]), [['one.png', 0], ['two.png', 1], ['three.png', 2]]);
     const [one, two, three] = uploaded.map(photo => photo.id);
 

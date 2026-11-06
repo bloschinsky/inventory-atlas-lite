@@ -408,7 +408,7 @@ test('labels and deletion still work for retired items, and deleting stays a sep
 
 test('the HTTP API retires, filters, opens, and restores an item', async () => {
   const dataDir = await mkdtemp(path.join(os.tmpdir(), 'inventory-lifecycle-http-'));
-  const { child, base } = await startServer(dataDir);
+  const { child, base, fetch } = await startServer(dataDir);
   const call = async (url, method = 'GET', body) => {
     const response = await fetch(`${base}${url}`, {
       method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined

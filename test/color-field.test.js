@@ -279,7 +279,7 @@ test('a Color column sorts semantically on the server and filters by group, Cust
 
 test('the HTTP API creates a Color field, stores colors, and sorts and filters them', async () => {
   const dataDir = await mkdtemp(path.join(os.tmpdir(), 'inventory-color-http-'));
-  const { child, base } = await startServer(dataDir);
+  const { child, base, fetch } = await startServer(dataDir);
   const call = async (url, method = 'GET', body) => {
     const response = await fetch(`${base}${url}`, {
       method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined

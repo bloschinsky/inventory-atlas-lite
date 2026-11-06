@@ -1035,7 +1035,8 @@
     "groups": {
       "general": "General",
       "data": "Data",
-      "services": "Services"
+      "services": "Services",
+      "security": "Security & Access"
     },
     "interface": {
       "title": "Interface",
@@ -1566,6 +1567,134 @@
       "retired": "{n} retired item is not counted | {n} retired items are not counted"
     }
   },
+  "auth": {
+    "roles": {
+      "admin": "Administrator",
+      "viewer": "Viewer / Read-only"
+    },
+    "account": {
+      "menu": "Account: {name}",
+      "sessions": "Sessions & password"
+    },
+    "signOut": "Sign out",
+    "reauth": {
+      "title": "Confirm your password",
+      "help": "This action changes or replaces important data, so confirm your password first. You will not be asked again for a few minutes.",
+      "confirm": "Confirm"
+    },
+    "username": "Username",
+    "usernameHint": "3–64 characters: letters, digits, dots, dashes, or underscores.",
+    "password": "Password",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm password",
+    "passwordHint": "At least {min} characters. A long passphrase is easiest to remember.",
+    "passwordMismatch": "The passwords do not match.",
+    "setupCode": "Setup code",
+    "recoveryCode": "Recovery code",
+    "working": "Working…",
+    "useRecoveryCode": "Forgot your password? Use a recovery code",
+    "backToSignIn": "Back to sign in",
+    "login": {
+      "title": "Sign in",
+      "help": "Sign in to your inventory.",
+      "submit": "Sign in"
+    },
+    "setup": {
+      "title": "Create the first administrator",
+      "help": "No administrator exists yet. On the server (or in the container), run this command and enter the one-time setup code it prints:",
+      "submit": "Create administrator"
+    },
+    "recover": {
+      "title": "Use a recovery code",
+      "help": "Someone with access to the server prints a one-time recovery code for your account with this command:",
+      "submit": "Set password and sign in"
+    }
+  },
+  "security": {
+    "users": {
+      "title": "Users",
+      "help": "Each person signs in with an account of their own. Administrators can change everything; viewers can only browse the inventory.",
+      "role": "Role",
+      "status": "Status",
+      "created": "Created",
+      "you": "You",
+      "active": "Active",
+      "disabled": "Disabled",
+      "makeViewer": "Make viewer",
+      "makeAdmin": "Make administrator",
+      "makeViewerFor": "Make {name} a viewer",
+      "makeAdminFor": "Make {name} an administrator",
+      "resetPassword": "Reset password",
+      "resetPasswordFor": "Reset the password of {name}",
+      "disable": "Disable",
+      "enable": "Enable",
+      "disableFor": "Disable {name}",
+      "enableFor": "Enable {name}",
+      "resetTitle": "New password for {name}",
+      "resetHelp": "Tell the person their new password. All of their sessions end; their API tokens stay.",
+      "saveReset": "Set password",
+      "add": "Add user",
+      "create": "Create user",
+      "adminHint": "Full access, including settings, backups, users, and API tokens.",
+      "viewerHint": "Browses and searches the inventory. Cannot change anything.",
+      "createdNotice": "The account {name} was created.",
+      "roleChanged": "The role of {name} was changed. Their sessions ended.",
+      "enabledNotice": "The account {name} was enabled.",
+      "disabledNotice": "The account {name} was disabled. Its sessions and API tokens no longer work.",
+      "passwordResetNotice": "The password of {name} was reset."
+    },
+    "tokens": {
+      "title": "API Access",
+      "help": "API tokens let scripts and other programs use the inventory API with an Authorization: Bearer header over HTTPS. A token never manages settings, backups, users, or other tokens.",
+      "name": "Name",
+      "namePlaceholder": "For example: Home Assistant",
+      "access": "Access",
+      "accessRead": "Read-only",
+      "accessReadHelp": "Browse and search items, photos, categories, and the hierarchy.",
+      "accessWrite": "Read and write items",
+      "accessWriteHelp": "Also create, edit, move, retire, lend, and delete items and their photos.",
+      "expiry": "Expiry",
+      "expiresInDays": "In {count} day | In {count} days",
+      "noExpiry": "Never expires",
+      "expires": "Expires",
+      "lastUsed": "Last used",
+      "createdBy": "Created by {name}, {date}",
+      "status": {
+        "active": "Active",
+        "expired": "Expired",
+        "revoked": "Revoked"
+      },
+      "revoke": "Revoke",
+      "revokeFor": "Revoke {name}",
+      "confirmRevoke": "Revoke the token {name}? Programs that use it lose access at once.",
+      "add": "Create an API token",
+      "create": "Create token",
+      "createdTitle": "Token {name} created",
+      "createdHelp": "Copy the token now and keep it somewhere safe. It is shown only this once; the server keeps no readable copy.",
+      "value": "Token",
+      "copy": "Copy",
+      "copied": "Copied",
+      "copyFailed": "The browser did not allow copying. Select the token and copy it yourself.",
+      "done": "Done, I saved it",
+      "empty": "No API tokens yet."
+    },
+    "sessions": {
+      "title": "Sessions",
+      "help": "The browsers signed in as {name}. The browser and system names are only a hint taken from what the browser reports.",
+      "unknownClient": "Unknown browser",
+      "current": "This browser",
+      "details": "{address} · signed in {created} · last active {seen}",
+      "revoke": "Sign out",
+      "revoked": "The session was signed out.",
+      "revokeOthers": "Sign out all other sessions",
+      "othersRevoked": "All other sessions were signed out.",
+      "changePassword": "Change password",
+      "changePasswordHelp": "Changing the password signs this account out everywhere else; this browser stays signed in.",
+      "savePassword": "Change password",
+      "passwordChanged": "Your password was changed. Other sessions were signed out."
+    }
+  },
   "errors": {
     "AI_API_KEY_MISSING": "Add an {provider} API key in Settings to use AI features.",
     "AI_API_KEY_REQUIRED": "Enter the {provider} API key first.",
@@ -1913,7 +2042,34 @@
     "TRANSLATION_WARNING_PROTECTED_CHANGED": "AI changed data that must stay as written ({tokens}), so the translation was discarded.",
     "TRANSLATION_WARNING_UNTRANSLATABLE": "AI found nothing to translate: the text holds only names, codes, or numbers.",
     "TRANSLATION_WARNING_UNCHANGED": "The text is already in the target language.",
-    "TRANSLATION_WARNING_EXTRA": "AI returned {count} translation for a field that was not requested; it was ignored. | AI returned {count} translations for fields that were not requested; they were ignored."
+    "TRANSLATION_WARNING_EXTRA": "AI returned {count} translation for a field that was not requested; it was ignored. | AI returned {count} translations for fields that were not requested; they were ignored.",
+    "AUTH_REQUIRED": "Sign in to continue.",
+    "AUTH_SETUP_REQUIRED": "No administrator exists yet. Create one with a setup code from the server first.",
+    "AUTH_FORBIDDEN": "Your account is not allowed to do this.",
+    "AUTH_REAUTH_REQUIRED": "Confirm your password to continue.",
+    "AUTH_INVALID_CREDENTIALS": "The username or password is not correct, or the account is disabled.",
+    "AUTH_TOO_MANY_ATTEMPTS": "Too many attempts. Try again in {retryAfterSeconds} seconds.",
+    "AUTH_CURRENT_PASSWORD_INVALID": "The password is not correct.",
+    "AUTH_INVALID_SETUP_CODE": "The setup code is not valid. It works once and expires after 30 minutes; print a new one on the server.",
+    "AUTH_INVALID_RECOVERY_CODE": "The recovery code is not valid for this account. It works once and expires after 30 minutes.",
+    "AUTH_INVALID_USERNAME": "Use {min}–{max} characters: letters, digits, dots, dashes, or underscores, starting with a letter or digit.",
+    "AUTH_INVALID_PASSWORD": "The password must have {min} to {max} characters.",
+    "AUTH_INVALID_ROLE": "Choose Administrator or Viewer.",
+    "AUTH_USERNAME_TAKEN": "An account with this name already exists.",
+    "AUTH_USER_NOT_FOUND": "This account no longer exists.",
+    "AUTH_LAST_ADMIN": "The last active administrator cannot be disabled or made a viewer.",
+    "AUTH_SELF_LOCKOUT": "You cannot disable your own account or remove your own administrator role.",
+    "AUTH_SELF_RESET": "Change your own password in Sessions, with your current password.",
+    "AUTH_SESSION_NOT_FOUND": "This session has already ended.",
+    "AUTH_TOKEN_NOT_FOUND": "This API token no longer exists.",
+    "AUTH_INVALID_TOKEN_NAME": "Give the token a name of up to {max} characters.",
+    "AUTH_INVALID_TOKEN_SCOPES": "Choose the access of the token.",
+    "AUTH_INVALID_TOKEN_EXPIRY": "Choose when the token expires.",
+    "AUTH_AMBIGUOUS_CREDENTIALS": "The request carried both a session and an API token. Send only one.",
+    "AUTH_CROSS_SITE_REQUEST": "The request did not come from this application and was refused.",
+    "AUTH_CSRF_INVALID": "The page is out of date. Reload it and try again.",
+    "AUTH_HTTPS_REQUIRED": "Signing in from another device needs HTTPS. Put the server behind an HTTPS reverse proxy, or set ATLAS_ALLOW_HTTP=true on a trusted network (see the README).",
+    "AUTH_JSON_REQUIRED": "This request must be sent as JSON."
   },
   "notices": {
     "AI_CONNECTED": "Connected to {provider}. {count} model is available. | Connected to {provider}. {count} models are available.",

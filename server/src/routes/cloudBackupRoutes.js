@@ -23,6 +23,8 @@ const origin = req => {
 
 export const createCloudBackupRoutes = ({ cloudBackupService, cloudConnectionService }) => {
   const router = Router();
+  // The browser session that started each pending authorization; only that session may complete it.
+  const initiators = new Map();
 
   router.get('/api/cloud-backup', (_req, res) => res.json(cloudBackupService.overview()));
 
@@ -45,6 +47,8 @@ export const createCloudBackupRoutes = ({ cloudBackupService, cloudConnectionSer
   // Answers with the provider's authorization URL; the browser navigates there itself.
   router.post('/api/cloud-backup/providers/:provider/connect', (req, res) => {
     const { state, authorizationUrl } = cloudConnectionService.begin(req.params.provider, origin(req));
+    if (initiators.size > 100) initiators.clear();
+    initiators.set(state, req.principal?.sessionId ?? null);
     res.cookie(STATE_COOKIE, state, { httpOnly: true, sameSite: 'lax', secure: req.secure, path: COOKIE_PATH, maxAge: 10 * 60 * 1000 });
     res.json({ authorizationUrl });
   });
@@ -52,12 +56,18 @@ export const createCloudBackupRoutes = ({ cloudBackupService, cloudConnectionSer
   /*
     The provider sends the browser back here. Only the outcome travels on to Settings, never a
     message from the URL: an error text is kept on the server and shown from the status instead.
+    The authorization gate already requires an administrator's session; the state must also have been
+    issued to that same session, so a link from someone else's flow completes nothing.
   */
   router.get('/api/cloud-backup/oauth/callback', async (req, res) => {
     res.clearCookie(STATE_COOKIE, { path: COOKIE_PATH });
+    const initiator = initiators.get(String(req.query.state ?? ''));
+    initiators.delete(String(req.query.state ?? ''));
+    // A state from another session's flow counts as unverified, exactly like a missing state cookie.
+    const sameSession = Boolean(initiator) && initiator === req.principal?.sessionId;
     try {
       const result = await cloudConnectionService.complete({
-        state: req.query.state, cookieState: readCookie(req, STATE_COOKIE), code: req.query.code, error: req.query.error
+        state: req.query.state, cookieState: sameSession ? readCookie(req, STATE_COOKIE) : undefined, code: req.query.code, error: req.query.error
       });
       res.redirect(303, `/settings/cloud-backup?cloud=connected&provider=${encodeURIComponent(result.provider)}`);
     } catch {

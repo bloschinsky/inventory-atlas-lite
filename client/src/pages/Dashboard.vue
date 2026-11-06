@@ -1,4 +1,6 @@
 <script setup>
+import { can } from '../auth.js';
+import { PERMISSIONS } from '../../../shared/permissions.js';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
@@ -171,7 +173,10 @@ onBeforeUnmount(() => controller?.abort());
     :title="$t('dashboard.title')"
     :subtitle="$t('dashboard.subtitle')"
   >
-    <template #actions>
+    <template
+      v-if="can(PERMISSIONS.itemsWrite)"
+      #actions
+    >
       <RouterLink
         to="/items/new"
         class="btn btn-primary"

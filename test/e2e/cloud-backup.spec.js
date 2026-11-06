@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures.js';
 import { cloudStubURL } from './environment.js';
 import { detail } from './helpers.js';
 

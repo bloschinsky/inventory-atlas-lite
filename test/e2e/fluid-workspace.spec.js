@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures.js';
 import { createCategory, createItem, unique } from './helpers.js';
 
 // Normal Tabler gutters on both sides stay well inside this; a shell max-width would not.

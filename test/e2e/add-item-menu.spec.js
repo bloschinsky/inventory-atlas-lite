@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures.js';
 import { createCategory, unique } from './helpers.js';
 
 const LOCALE_STORAGE_KEY = 'inventory-atlas.locale';

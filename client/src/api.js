@@ -22,8 +22,25 @@ export class ApiError extends Error {
 let demo = null;
 const demoReady = __DEMO__ ? import('./demo/backend.js').then(async ({ startDemoBackend }) => { demo = await startDemoBackend(i18n.global.locale.value); }) : null;
 
+/*
+  The signed-in session as auth.js reports it. Every state-changing request carries the session's
+  anti-CSRF token; a lapsed session and a request that needs a fresh password confirmation are
+  handed back to auth.js, which owns the sign-in page and the confirmation dialog.
+*/
+const UNSAFE = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+const session = { csrfToken: () => null, signedOut: () => {}, reauthenticate: null };
+export const connectSession = hooks => Object.assign(session, hooks);
+
+const withCsrf = options => {
+  const token = session.csrfToken();
+  if (!token || !UNSAFE.has((options.method ?? 'GET').toUpperCase())) return options;
+  const headers = new Headers(options.headers);
+  headers.set('X-CSRF-Token', token);
+  return { ...options, headers };
+};
+
 const request = async (url, options) => {
-  if (!demoReady) return fetch(url, options);
+  if (!demoReady) return fetch(url, withCsrf(options));
   await demoReady;
   return demo.fetch(url, options);
 };
@@ -52,16 +69,26 @@ async function failure(response) {
   return new ApiError(error, response.status);
 }
 
+// Sends the request again once the password is confirmed, when the server asks for that first.
+async function send(url, options) {
+  let response = await request(url, options);
+  if (response.status === 403 && session.reauthenticate) {
+    const error = await failure(response.clone());
+    if (error.code === 'AUTH_REAUTH_REQUIRED' && await session.reauthenticate()) response = await request(url, options);
+  }
+  if (response.ok) return response;
+  const error = await failure(response);
+  if (error.code === 'AUTH_REQUIRED') session.signedOut();
+  throw error;
+}
+
 export async function api(url, options = {}) {
-  const response = await request(url, options);
-  if (!response.ok) throw await failure(response);
+  const response = await send(url, options);
   return response.status === 204 ? null : response.json();
 }
 
 export async function apiBlob(url, options = {}) {
-  const response = await request(url, options);
-  if (!response.ok) throw await failure(response);
-  return response.blob();
+  return (await send(url, options)).blob();
 }
 
 export const jsonOptions = (method, body) => ({

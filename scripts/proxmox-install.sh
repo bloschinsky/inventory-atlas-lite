@@ -267,11 +267,14 @@ http://$CT_IP:$PORT
 
   Container        $CTID ($CT_HOSTNAME)
   Version          $REF
+  First admin      pct exec $CTID -- $IAL_AUTH_COMMAND init   (then enter the code in the browser)
   Update           pct exec $CTID -- $IAL_UPDATE_COMMAND
   Service status   pct exec $CTID -- systemctl status $IAL_SERVICE
   Logs             pct exec $CTID -- journalctl -u $IAL_SERVICE -f
   Shell            pct enter $CTID
 
-The application has no authentication. Keep it on a trusted LAN or reach it through a VPN.
+Every page needs an account. Signing in from another device needs HTTPS (a TLS reverse proxy
+with ATLAS_TRUST_PROXY) or ATLAS_ALLOW_HTTP=true in /etc/inventory-atlas-lite.env on a trusted LAN.
+Keep the application on a trusted LAN or reach it through a VPN.
 
 DONE
