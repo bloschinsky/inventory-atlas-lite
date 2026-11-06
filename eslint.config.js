@@ -30,7 +30,7 @@ export default [
     }
   },
   {
-    files: ['server/**/*.{js,mjs}', 'scripts/**/*.mjs', 'landing/*.js', 'test/**/*.{js,mjs}', '*.config.js'],
+    files: ['server/**/*.{js,mjs}', 'mcp/**/*.{js,mjs}', 'scripts/**/*.mjs', 'landing/*.js', 'test/**/*.{js,mjs}', '*.config.js'],
     languageOptions: {
       globals: globals.node
     }

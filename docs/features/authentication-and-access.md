@@ -346,8 +346,9 @@ dots, dashes, or underscores.
 - Revoking is immediate and kept forever; an expired token is refused; a disabled owner's tokens stop.
 - The audit trail records token creation and revocation separately from people's sessions
   (`principal_type` `session` or `token`).
-- A future MCP adapter (Phase 2) is meant to call this API with a scoped token and handle its own
-  client consent at its external boundary; this release implements no OAuth server and no MCP.
+- The optional [read-only MCP adapter](mcp-read-only-adapter.md) (Phase 2.1) calls this API's GET
+  endpoints with a dedicated `inventory:read` token and adds no route of its own; client consent and
+  OAuth at its external boundary are Phase 2.2.
 
 ## Reverse proxies and HTTPS
 

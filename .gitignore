@@ -16,3 +16,6 @@ data/cloud-backup*.json*
 test-results/
 playwright-report/
 blob-report/
+
+# The MCP adapter token of mcp/compose.yaml
+mcp/secrets/

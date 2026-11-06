@@ -1,0 +1,60 @@
+# Inventory Atlas Lite with the optional read-only MCP adapter (docs/features/mcp-read-only-adapter.md).
+#
+#   docker compose -f mcp/compose.yaml up -d                 # Atlas only
+#   docker compose -f mcp/compose.yaml --profile mcp up -d   # Atlas and the adapter
+#
+# The adapter joins only `atlas-mcp-private`, an internal network: it has no route to the internet
+# and no port on the host, and it talks to Atlas by its service name. Before the `mcp` profile is
+# started, create an inventory:read API token in Settings -> API Access and save it, alone, in
+# mcp/secrets/atlas-mcp-token (ignored by Git). Never put the token in this file or in an environment
+# variable that `docker inspect` shows.
+
+services:
+  atlas:
+    image: ghcr.io/bloschinsky/inventory-atlas-lite:${ATLAS_VERSION:-latest}
+    restart: unless-stopped
+    # Published on the host's loopback only; put a TLS reverse proxy in front for other computers.
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - atlas-data:/data
+    environment:
+      DATA_DIR: /data
+      # The adapter reaches Atlas over plain HTTP on the private network, which Atlas refuses for
+      # credentials from a non-loopback address unless this opt-in is set.
+      ATLAS_ALLOW_HTTP: "true"
+    networks:
+      - default
+      - atlas-mcp-private
+
+  atlas-mcp:
+    profiles: ["mcp"]
+    build: .
+    image: inventory-atlas-mcp:local
+    restart: unless-stopped
+    depends_on:
+      - atlas
+    environment:
+      ATLAS_BASE_URL: http://atlas:3000
+      ATLAS_API_TOKEN_FILE: /run/secrets/atlas_mcp_token
+      # The Host names MCP clients on the private network use; required off loopback.
+      MCP_ALLOWED_HOSTS: atlas-mcp
+    secrets:
+      - atlas_mcp_token
+    networks:
+      - atlas-mcp-private
+    # No `ports:` on purpose. To try it from this machine only, an override file can add the default
+    # network (an internal network cannot publish ports) and a loopback-only port:
+    #   networks: [atlas-mcp-private, default]
+    #   ports: ["127.0.0.1:3100:3100"]
+
+networks:
+  atlas-mcp-private:
+    internal: true
+
+volumes:
+  atlas-data:
+
+secrets:
+  atlas_mcp_token:
+    file: ./secrets/atlas-mcp-token

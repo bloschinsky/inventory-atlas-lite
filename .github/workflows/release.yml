@@ -41,6 +41,9 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+      # The optional read-only MCP adapter is its own npm project in mcp/; its tests start a real Atlas.
+      - run: npm run mcp:install
+      - run: npm run mcp:test
 
   # The browser suite runs beside the validation, split by Playwright project: `app` shares one
   # database and runs one test at a time, while the guided `tour` plays on the in-browser demo, so its
@@ -137,6 +140,10 @@ jobs:
           docker rm --force inventory-atlas-smoke >/dev/null
           start_container
           node test/docker-smoke.mjs verify "$smoke_url" "${{ steps.version.outputs.version }}"
+      # The optional MCP adapter beside the same image: private network only, no host port, and it
+      # recovers when Atlas restarts. Its image is built for this test and never published.
+      - name: Verify the optional MCP adapter
+        run: node mcp/test/docker-smoke.mjs inventory-atlas-lite:smoke
       - name: Log in to GHCR
         uses: docker/login-action@v4
         with:

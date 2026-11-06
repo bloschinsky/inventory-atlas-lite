@@ -41,6 +41,7 @@ npm run lint
 npm test
 npm run build
 npm run test:e2e
+npm run mcp:test   # the optional MCP adapter, after npm run mcp:install
 ```
 
 `npm run test:e2e` runs the Playwright browser tests. Install the configured browser once before the first run:
@@ -254,6 +255,25 @@ and has no sign-in at all, so only do it on a network you trust.
 Optional timings: `AUTH_SESSION_IDLE_MS` (default three days without a request),
 `AUTH_SESSION_ABSOLUTE_MS` (default 30 days), and `AUTH_REAUTH_WINDOW_MS` (default ten minutes:
 restore, reset, updates, and account or token changes ask for the password again after that).
+
+## Optional read-only MCP adapter
+
+`mcp/` is a separate, optional service that lets a local Model Context Protocol client read the
+inventory through six read-only tools (search items, item details, categories and fields, item
+history, the Dashboard summary, and an item's current location). It speaks MCP over Streamable HTTP
+and reaches Atlas only through the REST API with a dedicated **Read-only** API token; it never opens
+the SQLite files, and Atlas runs exactly as before without it.
+
+```bash
+npm run mcp:install
+ATLAS_BASE_URL=http://127.0.0.1:3000 ATLAS_API_TOKEN=ial_… npm run mcp:start
+# atlas-mcp listening on http://127.0.0.1:3100/mcp
+```
+
+It listens on loopback only and has no client authentication yet, so keep it on the same machine or a
+private Docker network (`docker compose -f mcp/compose.yaml --profile mcp up -d --build`). A rejected
+token stops it at startup. Run its tests with `npm run mcp:test`. Configuration, the tools, Docker,
+threat boundaries, and limitations: [`docs/features/mcp-read-only-adapter.md`](docs/features/mcp-read-only-adapter.md).
 
 ## Data and backups
 
