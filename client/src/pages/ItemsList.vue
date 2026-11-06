@@ -447,7 +447,7 @@ onMounted(async () => {
           ? $t('lifecycle.filter.noRetired') : filtered ? $t('items.noMatches') : $t('items.emptyTitle') }}
       </p>
       <p class="empty-subtitle text-secondary">
-        {{ filtered ? $t('items.noMatchesText') : $t('items.emptyText') }}
+        {{ filtered ? $t('items.noMatchesText') : $t(can(PERMISSIONS.itemsWrite) ? 'items.emptyText' : 'items.emptyTextReadOnly') }}
       </p>
       <div
         v-if="!filtered && can(PERMISSIONS.itemsWrite)"

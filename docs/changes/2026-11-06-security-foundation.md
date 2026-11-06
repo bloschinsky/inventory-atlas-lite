@@ -59,14 +59,56 @@
   self-update, installer, settings center, AI, release pipeline, and Playwright feature documents, the
   feature index, and `AGENTS.md`.
 
+## Review fixes (PR #63)
+
+- **Proxmox pre-update backup (blocker).** `scripts/update.sh` no longer downloads `/api/backup`,
+  which now needs an administrator session. It runs `server/src/cli/backup.js` as the service account
+  on the installed code instead: SQLite's online backup on a read-only connection, checked with
+  `quick_check` and moved into place only when valid. The updater holds no credential, and the API
+  stays closed.
+  - `test/backup-cli.test.js` runs the command against a live authenticated server, checks its
+    failures, and checks how the updater calls it and that the backup comes before the code swap.
+  - The command also ran inside the built Linux image.
+- **Release Docker smoke test (blocker).** `test/docker-smoke.mjs` now creates the first
+  administrator with the code from `docker exec … auth.js init`, then uses the signed-in API with
+  cookie and CSRF.
+  - After the container is recreated, it checks that the account survived, that anonymous requests
+    are refused, and that the data reads back.
+  - `.github/workflows/release.yml` passes the code to the script. It sets `ATLAS_ALLOW_HTTP=true`
+    on the disposable container, because the runner reaches it over the Docker bridge.
+- A viewer no longer sees the photo **Delete** button: `ItemPhotoViewer.vue` gains an `editable`
+  prop, and the e2e viewer test checks it.
+- `npm run auth -- recover <username> --revoke-tokens` also revokes the account's API tokens.
+  Without the flag, the command says the tokens keep working.
+- `docs/features/authentication-and-access.md` now documents the read-only browsing decision for the
+  categories, templates, and checklist run pages.
+- Screenshot fixes:
+  - The one-time token box of API Access was laid out in a row, because a Tabler `.alert` is a flex
+    box; it is now one column.
+  - The Users table no longer scrolls sideways: the creation time sits under the name, and the
+    actions wrap.
+  - An empty Items list tells a viewer that an administrator adds items, instead of inviting them to
+    add one.
+- A flaky assertion in the token tests split the secret on `_`, which base64url can contain. The tests
+  now cut the secret at its fixed offset.
+
 ## Verification
 
 - `npm run lint`: passed.
-- `npm test`: 433 of 435 passed and 1 was skipped. The one failure, `the guide renders Markdown safely`
-  in `test/landing.test.js`, is a known Windows-only failure that also fails on a clean `master`.
+- `npm test`: 435 of 438 passed and 1 was skipped. Two tests failed:
+  - `the guide renders Markdown safely` in `test/landing.test.js`, a known Windows-only failure that
+    also fails on a clean `master`;
+  - an API-token assertion in `test/auth.test.js`, caused by the flaky secret extraction above. After
+    that fix, `test/auth.test.js` and `test/backup-cli.test.js` passed three runs in a row (10 of 10
+    each).
 - `npm run build`: passed.
-- `APP_VERSION=0.71.0 E2E_LANDING_PORT=4700 npm run test:e2e`: 311 passed (22.3 min, both projects).
-  The landing port is moved off a range Windows reserves on this machine.
+- `APP_VERSION=0.71.0 npm run test:e2e` (both projects): 311 passed (24.2 min). Docker Desktop reserves
+  the default ports on this machine, so the run moved them with `E2E_API_PORT=3900`,
+  `E2E_CLIENT_PORT=5611`, `E2E_CLOUD_STUB_PORT=3901`, and `E2E_LANDING_PORT=4700`.
+- The release Docker smoke test ran locally on the image built from this branch (Docker 29.7.2):
+  create, a container recreated on the same volume, then verify all passed. Inside the container
+  `auth.sqlite` has mode `0600` and belongs to `node`.
 - New tests: `test/auth-policy.test.js` (every route has exactly one policy entry, the public
   allowlist, matching, roles, and scopes), `test/auth.test.js` (7 API security scenarios over real
-  servers), and `test/e2e/auth.spec.js` (5 browser workflows).
+  servers), `test/backup-cli.test.js` (the updater's local backup), and `test/e2e/auth.spec.js`
+  (5 browser workflows).

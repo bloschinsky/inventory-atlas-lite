@@ -37,6 +37,10 @@ export class ApiTokenRepository {
     this.db.prepare('UPDATE api_tokens SET last_used_at = ? WHERE id = ?').run(now, id);
   }
 
+  revokeForOwner(ownerUserId, now) {
+    return this.db.prepare('UPDATE api_tokens SET revoked_at = ? WHERE owner_user_id = ? AND revoked_at IS NULL').run(now, ownerUserId).changes;
+  }
+
   revoke(id, now) {
     return this.db.prepare('UPDATE api_tokens SET revoked_at = ? WHERE id = ? AND revoked_at IS NULL').run(now, id).changes;
   }

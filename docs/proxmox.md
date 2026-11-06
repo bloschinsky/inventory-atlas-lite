@@ -173,7 +173,7 @@ systemctl restart inventory-atlas-lite
 journalctl -u inventory-atlas-lite -f
 inventory-atlas-lite-update
 inventory-atlas-auth users              # the accounts and their roles
-inventory-atlas-auth recover <username> # a one-time code that sets a new password
+inventory-atlas-auth recover <username> # a one-time code that sets a new password (--revoke-tokens: also revoke its API tokens)
 ```
 
 `inventory-atlas-auth` runs the application's own command line as `inventory-atlas` with the
@@ -238,7 +238,9 @@ registered; until then **About** reports that this installation cannot update it
 
 The updater resolves and downloads the requested release first, so an unavailable or invalid version
 fails before the running installation is touched. It then writes a consistent SQLite backup to
-`/var/lib/inventory-atlas-lite/backups`, stops the service only for the final code swap, and restarts
+`/var/lib/inventory-atlas-lite/backups` with the installed application's local backup command
+(`server/src/cli/backup.js`, run as `inventory-atlas`; the HTTP download needs an administrator
+session, and the updater holds none), stops the service only for the final code swap, and restarts
 it. If the new version does not pass its `/api/health` check within the timeout, the previous code is
 restored and restarted automatically, together with the database backup it took before the update,
 because a failed release may already have migrated the schema. The data directory and the

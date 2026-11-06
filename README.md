@@ -215,7 +215,8 @@ Right after the update, run the setup command above and create the administrator
 interface shows only the setup page. If other devices open the address over plain HTTP, set up HTTPS
 or `ATLAS_ALLOW_HTTP=true` first (below).
 
-**Lost password or disabled account.** `npm run auth -- recover <username>` (Docker:
+**Lost password or disabled account.** `npm run auth -- recover <username>` (add `--revoke-tokens`
+when the account may be compromised, to revoke its API tokens as well) (Docker:
 `docker exec <container> node server/src/cli/auth.js recover <username>`; Proxmox:
 `inventory-atlas-auth recover <username>`) prints a one-time recovery code. On the sign-in page choose
 **Use a recovery code** and set a new password; the account is enabled again and its other sessions

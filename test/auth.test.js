@@ -11,6 +11,8 @@ import { createSecurity } from '../server/src/auth/security.js';
 import { TEST_ADMIN, provisionUser, signIn, startServer, stopServer } from './serverProcess.js';
 
 const json = (method, body, headers = {}) => ({ method, headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify(body) });
+// The secret part of an API token: everything after 'ial_<16 hex>_' (base64url, which may contain '_').
+const secretOf = token => token.slice('ial_'.length + 17);
 const tempDir = prefix => mkdtemp(path.join(os.tmpdir(), `inventory-auth-${prefix}-`));
 const cli = (dataDir, ...args) => execFileSync(process.execPath, ['server/src/cli/auth.js', ...args], { env: { ...process.env, DATA_DIR: dataDir }, encoding: 'utf8' });
 const codeOf = output => output.match(/code(?: for [^:]+)?: ([A-Z0-9-]+)/)[1];
@@ -262,7 +264,7 @@ test('API tokens: scoped, shown once, stored hashed, revocable, expiring, and ne
 
       const listed = await (await admin(`${base}/api/security/tokens`)).text();
       assert.equal(listed.includes(read.token), false, 'the full token is never shown again');
-      assert.equal(listed.includes(read.token.split('_')[2]), false);
+      assert.equal(listed.includes(secretOf(read.token)), false);
 
       const bearer = (token, url, options = {}) => fetch(`${base}${url}`, { ...options, headers: { ...options.headers, Authorization: `Bearer ${token}` } });
       assert.equal((await bearer(read.token, '/api/items')).status, 200);
@@ -310,7 +312,7 @@ test('API tokens: scoped, shown once, stored hashed, revocable, expiring, and ne
       const text = ['users', 'sessions', 'api_tokens', 'audit_events'].flatMap(table => dump.prepare(`SELECT * FROM ${table}`).all())
         .map(row => JSON.stringify(row)).join('\n');
       dump.close();
-      for (const secret of [TEST_ADMIN.password, 'second-admin-password', write.token, write.token.split('_')[2], admin.session.cookie.split('=')[1].split('.')[1]]) {
+      for (const secret of [TEST_ADMIN.password, 'second-admin-password', write.token, secretOf(write.token), admin.session.cookie.split('=')[1].split('.')[1]]) {
         assert.equal(text.includes(secret), false);
       }
       assert.match(text, /\$argon2id\$v=19\$m=19456,t=2,p=1\$/);
@@ -397,7 +399,7 @@ test('recovery from the command line, inventory backup isolation, restarts, sepa
       // The inventory backup carries no account, session, or token.
       const backup = Buffer.from(await (await admin(`${base}/api/backup`)).arrayBuffer());
       const text = backup.toString('latin1');
-      for (const needle of ['argon2', 'api_tokens', 'password_hash', TEST_ADMIN.username, token.split('_')[2]]) assert.equal(text.includes(needle), false, needle);
+      for (const needle of ['argon2', 'api_tokens', 'password_hash', TEST_ADMIN.username, secretOf(token)]) assert.equal(text.includes(needle), false, needle);
       await admin(`${base}/api/security/users`, json('POST', { ...VIEWER, role: 'viewer' }));
       await admin(`${base}/api/security/tokens/${token.split('_')[1]}`, { method: 'DELETE' });
       token = (await (await admin(`${base}/api/security/tokens`, json('POST', { name: 'New', scopes: ['inventory:read'] }))).json()).token;
@@ -436,6 +438,12 @@ test('recovery from the command line, inventory backup isolation, restarts, sepa
         assert.equal((await fetch(`${otherBase}/api/items`, { headers: { Cookie: viewer.session.cookie } })).status, 401);
         assert.equal((await fetch(`${otherBase}/api/items`, { headers: { Authorization: `Bearer ${token}` } })).status, 401);
       });
+
+      // A recovery for a suspected leak can also revoke every API token of the account at once.
+      assert.match(cli(dataDir, 'recover', TEST_ADMIN.username), /API tokens keep working/);
+      assert.equal((await fetch(`${base}/api/items`, { headers: { Authorization: `Bearer ${token}` } })).status, 200);
+      assert.match(cli(dataDir, 'recover', TEST_ADMIN.username, '--revoke-tokens'), /All 1 active API tokens of this account were revoked/);
+      assert.equal((await fetch(`${base}/api/items`, { headers: { Authorization: `Bearer ${token}` } })).status, 401);
     });
 
     // A damaged security store stops the server instead of starting it without accounts.

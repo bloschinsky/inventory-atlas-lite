@@ -61,6 +61,14 @@ principal may not do:
   are browsing; starting or changing a run, container audits, templates, and the Data page are not.
   AI, Smart URL import, and background removal are never viewer-safe, even as previews, because they
   cost money or reach other servers. Settings shows a viewer **Interface** and **Sessions** only.
+- **Read-only views in this release.** The API lets a viewer read categories and their fields,
+  templates, and checklist run details, because they are inventory data. The interface deliberately
+  keeps the **Categories & Fields** and **Templates** pages and the checklist run page for
+  `inventory:manage`, because each is an editor whose read and write controls are not separated yet.
+  A viewer still sees categories and fields in the Items filters and on item pages, the templates do
+  not matter without the right to add items, and run history (titles, states, counts, times) stays
+  visible on Checklists and item pages, only without the link to the run page. Read-only versions of
+  those editors are possible later without any server change.
 - **API token scopes** (`shared/accounts.js` validates them): `inventory:read` (the default and always
   included) and `items:write` (adds `items:write`, nothing else). No scope reaches `inventory:manage`,
   `tools:use`, `settings:manage`, `maintenance:manage`, or `security:manage`, so there is no
@@ -266,7 +274,8 @@ rather than a hint about which routes exist.
   the first administrator**. There is no anonymous claim route and no default password.
 - `server/src/cli/auth.js` (`npm run auth -- <command>`) opens the store directly: `init` prints a
   one-time setup code (100 bits, unambiguous characters, valid 30 minutes, only its hash stored, a new
-  one replaces the last), `recover <username>` prints a recovery code for one account, and `users` lists
+  one replaces the last), `recover <username>` prints a recovery code for one account (`--revoke-tokens` also revokes every API token the account
+  created, for a suspected leak; without it the tokens keep working and the command says so), and `users` lists
   the accounts. `POST /api/auth/setup` with the code creates the administrator; the count check, the
   code check, and the insert are one transaction, so of two simultaneous claims exactly one succeeds.
   `POST /api/auth/recover` with a recovery code sets a new password, enables the account, and ends its
@@ -278,6 +287,19 @@ rather than a hint about which routes exist.
   the previous updater, so that update is followed by `sh /opt/inventory-atlas-lite/app/deploy/inventory-atlas-auth init`.
 - An existing installation keeps its inventory, photos, settings, and backups when it updates; it is
   locked until the administrator is created. There is no anonymous or legacy mode to fall back to.
+- **Privileged local paths without credentials.** The Proxmox updater takes its pre-update backup with
+  `server/src/cli/backup.js`, run as the service account: SQLite's online backup API (the primitive
+  of the download) on a read-only connection to `inventory.sqlite`, checked with `quick_check` and
+  renamed into place only when it is valid. `GET /api/backup` stays administrator-only, and the
+  updater is never given a session or a token. The command reads nothing it could not already read
+  as the owner of `DATA_DIR` and never opens `auth.sqlite`.
+- **Release smoke test.** `test/docker-smoke.mjs` runs on the built image in
+  `.github/workflows/release.yml`: `docker exec … auth.js init` prints the setup code, the script
+  creates the administrator through `POST /api/auth/setup` and stores data with the session cookie
+  and CSRF header, and after the container is recreated on the same volume it checks that no setup is
+  pending, signs in with the same account, refuses anonymous requests, and reads everything back. The
+  disposable container sets `ATLAS_ALLOW_HTTP=true`, because the runner reaches it over the Docker
+  bridge, which is not loopback inside the container.
 
 ## The security store
 
@@ -358,7 +380,7 @@ the state, and the session all match, otherwise it is treated as unverified
 - The router guard in `client/src/main.js` sends every page without a session to sign-in and redirects
   pages whose `meta.permission` the role lacks; navigation links and Settings sections with a
   `permission` are hidden. Viewers get read-only pages: no Add item, Move to…, Edit, Transfer, More
-  menu actions other than QR Code, loan return, audit, checklist start/edit/delete, run links, or
+  menu actions other than QR Code, photo Delete, loan return, audit, checklist start/edit/delete, run links, or
   Dashboard **Add item**; the database indicator is plain text; About offers no update panel.
 - `client/src/components/AccountMenu.vue` (desktop line and phone drawer) shows the name and role with
   **Sessions & password** and **Sign out**. `ReauthDialog.vue` is the password confirmation, stacked
@@ -383,6 +405,9 @@ the state, and the session all match, otherwise it is treated as unverified
   reauthentication, self-lockout, the last administrator, password reset and change with session
   rotation, session revocation; command-line recovery, backup isolation and restore, restarts, separate
   instances, and a damaged store.
+- `test/backup-cli.test.js`: the local backup command copies the live inventory of a running,
+  authenticated server (valid, without the security store), fails cleanly without an inventory, and
+  is what `scripts/update.sh` uses before the code swap instead of the HTTP download.
 - `test/serverProcess.js` provisions the test administrator in each test server's store and returns a
   signed-in `fetch`; `test/e2e/globalSetup.js` and `test/e2e/fixtures.js` do the same for Playwright.
 - `test/e2e/auth.spec.js`: deep-link sign-in and return, refused password, sign-out, the Ukrainian phone

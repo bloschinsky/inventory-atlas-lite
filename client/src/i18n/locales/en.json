@@ -272,6 +272,7 @@
     "noMatchesText": "Try a different search term or clear the category filter.",
     "emptyTitle": "No items yet",
     "emptyText": "No items found. Add your first item to get started.",
+    "emptyTextReadOnly": "No items found. An administrator adds them; you can browse them here once they exist.",
     "pagination": "Items pagination",
     "page": "Page {page} of {pages}",
     "selectPage": "Select all items on this page",
@@ -1617,7 +1618,6 @@
       "help": "Each person signs in with an account of their own. Administrators can change everything; viewers can only browse the inventory.",
       "role": "Role",
       "status": "Status",
-      "created": "Created",
       "you": "You",
       "active": "Active",
       "disabled": "Disabled",
@@ -1642,7 +1642,8 @@
       "roleChanged": "The role of {name} was changed. Their sessions ended.",
       "enabledNotice": "The account {name} was enabled.",
       "disabledNotice": "The account {name} was disabled. Its sessions and API tokens no longer work.",
-      "passwordResetNotice": "The password of {name} was reset."
+      "passwordResetNotice": "The password of {name} was reset.",
+      "createdOn": "Created {date}"
     },
     "tokens": {
       "title": "API Access",

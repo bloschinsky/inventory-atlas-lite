@@ -88,14 +88,16 @@ trap 'ial_warn "Update failed at line $LINENO."' ERR
 
 ial_update_status preparing "Preparing the update"
 
-# The application's backup endpoint uses SQLite's online backup API, so it stays consistent
-# while the service keeps writing in WAL mode.
+# The application's local backup command uses SQLite's online backup API, so the copy stays
+# consistent while the service keeps writing in WAL mode. It runs as the service account on the
+# installed code: the HTTP download needs an administrator's session, and the updater holds none.
 backup_database() {
   local target
   target="$IAL_BACKUP_DIR/inventory-$(date +%Y%m%d-%H%M%S).sqlite"
   ial_update_step backing_up_database
   install -d -o "$IAL_USER" -g "$IAL_USER" -m 0750 "$IAL_BACKUP_DIR"
-  if ! curl -fsS --max-time 300 -o "$target" "http://127.0.0.1:$PORT/api/backup"; then
+  if ! (cd "$IAL_APP_DIR" && runuser -u "$IAL_USER" -- env DATA_DIR="$IAL_DATA_DIR" \
+    timeout 300 /usr/local/bin/node server/src/cli/backup.js "$target"); then
     rm -f "$target"
     ial_die "Could not create a pre-update backup. The installation was not changed."
   fi

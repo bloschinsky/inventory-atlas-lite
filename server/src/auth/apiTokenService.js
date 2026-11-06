@@ -70,6 +70,14 @@ export class ApiTokenService {
     return this.publicToken(this.tokens.findById(id));
   }
 
+  // Command line only: revokes every token an account created, for an account that may be compromised.
+  revokeAllOf(userId) {
+    const now = this.clock();
+    const revoked = this.tokens.revokeForOwner(userId, now);
+    this.audit.record({ at: now, event: 'token.revoke-all', actorUserId: userId, target: String(userId) });
+    return revoked;
+  }
+
   // The principal of a bearer token, or null for anything malformed, unknown, revoked, or expired.
   resolve(bearer) {
     const value = String(bearer ?? '');

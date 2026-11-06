@@ -116,7 +116,6 @@ onMounted(() => run(async () => {}));
               <th>{{ $t('auth.username') }}</th>
               <th>{{ $t('security.users.role') }}</th>
               <th>{{ $t('security.users.status') }}</th>
-              <th>{{ $t('security.users.created') }}</th>
               <th><span class="visually-hidden">{{ $t('common.actions') }}</span></th>
             </tr>
           </thead>
@@ -131,6 +130,10 @@ onMounted(() => run(async () => {}));
                   v-if="isSelf(user)"
                   class="badge bg-blue-lt ms-1"
                 >{{ $t('security.users.you') }}</span>
+                <!-- The creation time sits under the name, so the table fits the Settings pane without scrolling. -->
+                <div class="text-secondary small">
+                  {{ $t('security.users.createdOn', { date: formatDateTime(user.createdAt) }) }}
+                </div>
               </td>
               <td>{{ roleLabel(user.role) }}</td>
               <td>
@@ -139,11 +142,10 @@ onMounted(() => run(async () => {}));
                   :class="user.disabled ? 'bg-secondary-lt' : 'bg-green-lt'"
                 >{{ $t(user.disabled ? 'security.users.disabled' : 'security.users.active') }}</span>
               </td>
-              <td>{{ formatDateTime(user.createdAt) }}</td>
               <td class="text-end">
                 <div
                   v-if="!isSelf(user)"
-                  class="btn-list flex-nowrap justify-content-end"
+                  class="btn-list justify-content-end"
                 >
                   <button
                     type="button"

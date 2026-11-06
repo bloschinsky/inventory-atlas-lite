@@ -176,6 +176,7 @@ onMounted(load);
       <div class="col-12 col-lg-5">
         <ItemPhotoViewer
           :photos="item.photos"
+          :editable="can(PERMISSIONS.itemsWrite)"
           @delete="removePhoto"
         />
       </div>

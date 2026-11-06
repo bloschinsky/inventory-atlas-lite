@@ -85,37 +85,40 @@ onMounted(load);
         class="alert alert-warning"
         role="status"
       >
-        <h3 class="alert-title">
-          {{ $t('security.tokens.createdTitle', { name: created.apiToken.name }) }}
-        </h3>
-        <p>{{ $t('security.tokens.createdHelp') }}</p>
-        <label
-          class="form-label"
-          for="token-created-value"
-        >{{ $t('security.tokens.value') }}</label>
-        <div class="input-group mb-2">
-          <input
-            id="token-created-value"
-            class="form-control font-monospace"
-            :value="created.token"
-            readonly
-            @focus="$event.target.select()"
-          >
+        <!-- Tabler alerts lay their children out in a row; one column keeps the token readable. -->
+        <div class="w-100">
+          <h3 class="alert-title">
+            {{ $t('security.tokens.createdTitle', { name: created.apiToken.name }) }}
+          </h3>
+          <p>{{ $t('security.tokens.createdHelp') }}</p>
+          <label
+            class="form-label"
+            for="token-created-value"
+          >{{ $t('security.tokens.value') }}</label>
+          <div class="input-group mb-2">
+            <input
+              id="token-created-value"
+              class="form-control font-monospace"
+              :value="created.token"
+              readonly
+              @focus="$event.target.select()"
+            >
+            <button
+              type="button"
+              class="btn"
+              @click="copy"
+            >
+              {{ copied ? $t('security.tokens.copied') : $t('security.tokens.copy') }}
+            </button>
+          </div>
           <button
             type="button"
-            class="btn"
-            @click="copy"
+            class="btn btn-sm"
+            @click="created = null"
           >
-            {{ copied ? $t('security.tokens.copied') : $t('security.tokens.copy') }}
+            {{ $t('security.tokens.done') }}
           </button>
         </div>
-        <button
-          type="button"
-          class="btn btn-sm"
-          @click="created = null"
-        >
-          {{ $t('security.tokens.done') }}
-        </button>
       </div>
       <div
         v-if="!tokens && !error"

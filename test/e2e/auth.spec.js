@@ -1,10 +1,13 @@
 import Database from 'better-sqlite3';
+import fs from 'node:fs';
 import path from 'node:path';
 import { expect, test } from './fixtures.js';
 import { dataDir, e2eAdmin } from './environment.js';
 import { createCategory, createItem, unique } from './helpers.js';
 
 const signedOut = { cookies: [], origins: [] };
+// The secret part of an API token: everything after 'ial_<16 hex>_' (base64url, which may contain '_').
+const secretOf = token => token.slice('ial_'.length + 17);
 const phone = { width: 390, height: 844 };
 let counter = 0;
 const accountName = prefix => `${prefix}-${Date.now().toString(36)}-${counter++}`;
@@ -79,6 +82,10 @@ test.describe('signed out', () => {
   test('a viewer browses read-only: no changing actions, no administration, and no way around it by address', async ({ page, request }) => {
     const category = await createCategory(request, unique('Viewer category'));
     const item = await createItem(request, { name: unique('Viewer item'), category_id: category.id });
+    const photo = await request.post(`/api/items/${item.id}/photos`, {
+      multipart: { photos: { name: 'viewer.jpg', mimeType: 'image/jpeg', buffer: fs.readFileSync('test/fixtures/sound-blaster-audigy-ls-on-bubble-wrap.jpg') } }
+    });
+    expect(photo.ok()).toBeTruthy();
     const viewer = await createViewer(request);
 
     await page.goto('/items');
@@ -98,6 +105,9 @@ test.describe('signed out', () => {
     await page.mouse.move(600, 400);
     await expect(page.getByRole('heading', { level: 1, name: item.name })).toBeVisible();
     await expect(page.getByRole('button', { name: 'QR Code' })).toBeVisible();
+    // The photo is shown, without a Delete the viewer could not use.
+    await expect(page.getByRole('img', { name: /viewer.jpg|Viewer item/ }).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Delete photo' })).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Edit' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'More actions' })).toHaveCount(0);
 
@@ -153,7 +163,7 @@ test('Security & Access: an administrator adds and disables a viewer, creates a 
   const tokenRow = dialog.getByRole('row', { name: new RegExp(tokenName) });
   await expect(tokenRow).toContainText('Read-only');
   await expect(tokenRow).toContainText('Active');
-  await expect(tokenRow).not.toContainText(token.split('_')[2]);
+  await expect(tokenRow).not.toContainText(secretOf(token));
 
   page.once('dialog', confirm => confirm.accept());
   await tokenRow.getByRole('button', { name: `Revoke ${tokenName}` }).click();
