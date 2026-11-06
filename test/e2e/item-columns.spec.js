@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures.js';
 import { createCategory, createItem, unique } from './helpers.js';
 
 const searchBox = page => page.getByPlaceholder('Search name, description, serial number, transferred to, specific location or text fields…');

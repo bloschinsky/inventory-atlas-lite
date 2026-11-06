@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures.js';
 import { createCategory, createItem, unique } from './helpers.js';
 
 // Every chart is an image whose accessible name starts with its kind and carries its values.

@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures.js';
 import { byKey, createDemoFixture, demoItemUuid, photoFiles } from '../../client/src/demo/fixture.js';
 import { demoURL, landingURL } from './environment.js';
 

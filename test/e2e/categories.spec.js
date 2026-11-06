@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures.js';
 import { createCategory, createItem, detail, setAiEnabled, unique } from './helpers.js';
 
 test.beforeEach(async ({ request }) => { await setAiEnabled(request, true); });

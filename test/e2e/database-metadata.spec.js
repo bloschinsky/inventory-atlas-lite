@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures.js';
 import { detail, unique } from './helpers.js';
 
 test('the database can be renamed in Settings and shows its identity', async ({ page, request }) => {

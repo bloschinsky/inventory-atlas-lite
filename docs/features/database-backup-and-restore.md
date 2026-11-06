@@ -115,8 +115,10 @@ few-second maintenance window.
   logged and never fails a restore or deletes user data, and the copy written by the running restore
   is never removed by it.
 - `DATA_DIR/restore-staging/` — staged uploads only; emptied at startup.
-- The application has no authentication, so anyone who can reach it over the network can replace the
-  whole inventory. It must stay on a trusted LAN or VPN and must not be exposed to the Internet.
+- Download, restore status, validation, and apply need `maintenance:manage` (administrators only);
+  validation and apply also need a password confirmed within the last ten minutes. The backup never
+  contains `auth.sqlite`, and a restore never changes accounts, sessions, or API tokens (see
+  [authentication-and-access.md](authentication-and-access.md)).
 
 ## Verification
 

@@ -79,6 +79,10 @@ import { createResetRoutes } from './routes/resetRoutes.js';
 import { createSystemRoutes } from './routes/systemRoutes.js';
 import { createUpdateRoutes } from './routes/updateRoutes.js';
 import { createUrlImportRoutes } from './routes/urlImportRoutes.js';
+import { createAuthRoutes } from './routes/authRoutes.js';
+import { createSecurityRoutes } from './routes/securityRoutes.js';
+import { createAuthGate, securityHeaders } from './http/authGate.js';
+import { createSecurity } from './auth/security.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -86,8 +90,10 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
   The composition root: every repository, service, and route table is created here and receives its
   dependencies explicitly. Nothing below this file reaches for a module-level singleton.
 */
-export function createApp({ production = false, instanceLabel = null } = {}) {
+export function createApp({ production = false, instanceLabel = null, trustProxy = false, allowHttp = false } = {}) {
   const appVersion = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version;
+
+  const security = createSecurity(dataDir);
 
   const categoryRepository = new CategoryRepository(db);
   const customFieldRepository = new CustomFieldRepository(db);
@@ -187,8 +193,17 @@ export function createApp({ production = false, instanceLabel = null } = {}) {
   const restoreUpload = createRestoreUpload({ staging, maxUploadBytes });
 
   const app = express();
+  app.disable('x-powered-by');
+  // Forwarded headers are believed only from the proxies ATLAS_TRUST_PROXY names (see authConfig.js).
+  app.set('trust proxy', trustProxy);
+  app.use(securityHeaders);
   app.use(express.json({ limit: '1mb' }));
+  // Every /api request passes the authentication and authorization boundary before any route table.
+  app.use(createAuthGate({ authService: security.authService, apiTokenService: security.apiTokenService, allowHttp }));
   app.use(maintenanceGuard(maintenance));
+
+  app.use(createAuthRoutes({ authService: security.authService }));
+  app.use(createSecurityRoutes({ userAdminService: security.userAdminService, apiTokenService: security.apiTokenService }));
 
   app.use(createAiRoutes({ aiSettingsService, aiProviderService, aiItemAnalysisService, aiTranslationService, imageUpload }));
   app.use(createCapabilityRoutes({ aiSettingsService, urlImport: true, instanceLabel }));
@@ -214,5 +229,5 @@ export function createApp({ production = false, instanceLabel = null } = {}) {
   }
   app.use(errorHandler);
 
-  return { app, staging, restoreService, resetService, updateService, cloudBackupScheduler, appVersion };
+  return { app, staging, restoreService, resetService, updateService, cloudBackupScheduler, appVersion, security };
 }

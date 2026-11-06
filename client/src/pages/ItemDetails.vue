@@ -3,6 +3,8 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { api } from '../api.js';
+import { can } from '../auth.js';
+import { PERMISSIONS } from '../../../shared/permissions.js';
 import { formatDate, formatDateTime, formatMoney } from '../i18n/index.js';
 import { placementText } from '../itemColumns.js';
 import AuditContentsDialog from '../components/AuditContentsDialog.vue';
@@ -174,6 +176,7 @@ onMounted(load);
       <div class="col-12 col-lg-5">
         <ItemPhotoViewer
           :photos="item.photos"
+          :editable="can(PERMISSIONS.itemsWrite)"
           @delete="removePhoto"
         />
       </div>
@@ -191,7 +194,10 @@ onMounted(load);
             >
               {{ $t('transfer.loan') }}
             </h2>
-            <div class="card-actions">
+            <div
+              v-if="can(PERMISSIONS.itemsWrite)"
+              class="card-actions"
+            >
               <button
                 type="button"
                 class="btn btn-sm btn-primary"
@@ -474,7 +480,7 @@ onMounted(load);
                 {{ $t('itemDetails.contents') }}
               </h3>
               <div
-                v-if="!retired"
+                v-if="!retired && can(PERMISSIONS.inventoryManage)"
                 class="card-actions"
               >
                 <button

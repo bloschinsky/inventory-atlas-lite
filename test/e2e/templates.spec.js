@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures.js';
 import { createCategory, detail, openItemActions, unique } from './helpers.js';
 
 const fields = [{ name: 'Size', type: 'text' }, { name: 'Max weight', type: 'number' }, { name: 'Sealed', type: 'boolean' }];

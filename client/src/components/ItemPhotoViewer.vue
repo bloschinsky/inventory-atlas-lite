@@ -3,7 +3,8 @@ import { computed, ref, useId, watch } from 'vue';
 import { photoUrl } from '../api.js';
 
 // The photos arrive in their persisted order, so the carousel opens on the first one, the cover.
-const props = defineProps({ photos: { type: Array, required: true } });
+// `editable` is false for a principal that may not change items: the viewer then offers no Delete.
+const props = defineProps({ photos: { type: Array, required: true }, editable: { type: Boolean, default: true } });
 defineEmits(['delete']);
 
 // More than one viewer could share a page, so the heading and the carousel need unique ids.
@@ -138,6 +139,7 @@ const cancelDrag = () => { dragStart = null; };
         >{{ index + 1 }} / {{ photos.length }}</span>
         <span class="meta-text text-truncate flex-grow-1">{{ current.filename }}</span>
         <button
+          v-if="editable"
           type="button"
           class="btn btn-sm btn-ghost-danger ms-auto"
           :aria-label="$t('photos.delete')"

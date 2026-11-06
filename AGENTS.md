@@ -4,7 +4,7 @@
 
 Inventory Atlas Lite is a small self-hosted application for tracking personal physical items. Users can create categories and custom fields, add items and photos, search and filter records, and download a backup of the entire SQLite database.
 
-This is an MVP without authentication, intended for use on a trusted local network or through VPN/Tailscale. During development, prioritize the fastest simple implementation that fully solves the current need and remains easy to understand. Follow KISS, DRY, and YAGNI: do not add abstractions, dependencies, configuration, or features for hypothetical future use.
+Every page and API request needs a signed-in account (Administrator or Viewer / Read-only) or a scoped API token; the application is still intended for use on a trusted local network or through VPN/Tailscale. During development, prioritize the fastest simple implementation that fully solves the current need and remains easy to understand. Follow KISS, DRY, and YAGNI: do not add abstractions, dependencies, configuration, or features for hypothetical future use.
 
 ## Language
 
@@ -26,7 +26,7 @@ This is an MVP without authentication, intended for use on a trusted local netwo
 - In development, Vite runs on `:5173` and proxies `/api` to Express on `PORT` (default `3000`).
 - In production, Express serves the built client from `dist/` and listens on `PORT` (default `3000`).
 
-The data flow is intentionally simple: a Vue page calls the helper in `client/src/api.js`, the Express backend validates the request, applies the logic it needs, reads or writes SQLite, and then returns JSON. Organize server code according to the backend rules below, and do not introduce additional layers without a concrete need.
+The data flow is intentionally simple: a Vue page calls the helper in `client/src/api.js`, the authorization gate admits or refuses the request, the Express backend validates it, applies the logic it needs, reads or writes SQLite, and then returns JSON. Organize server code according to the backend rules below, and do not introduce additional layers without a concrete need.
 
 ## Backend architecture and code organization
 
@@ -108,7 +108,16 @@ The project stays small and readable. Do not add:
   Database, and the restore and reset flows load, rename, and forget.
 - `client/src/components/ThemeToggle.vue` — light/dark control; `client/src/theme.js` holds the state.
 - `client/src/api.js` — shared `fetch` wrapper and helper for JSON requests, `photoUrl()` for stored
-  photos, and the only switch to the in-browser backend of the public demo build (`__DEMO__`).
+  photos, the anti-CSRF header of state-changing requests, the hand-off of `AUTH_REQUIRED` and
+  `AUTH_REAUTH_REQUIRED` to `auth.js`, and the only switch to the in-browser backend of the public demo
+  build (`__DEMO__`).
+- `client/src/auth.js` — the signed-in session (status, user, permissions, CSRF token kept in memory),
+  `can(permission)`, sign-in, setup, recovery, password change, sign-out, and the pending password
+  confirmation; the demo acts as one administrator without a server.
+- `client/src/pages/SignIn.vue` — `/login`, `/setup` (first administrator with the command-line
+  setup code), and `/recover` (recovery code), outside the application shell;
+  `client/src/components/AccountMenu.vue` is the account name, role, Sessions & password, and Sign out
+  of the desktop line and the phone drawer, and `ReauthDialog.vue` the password confirmation.
 - `client/src/demo/` — the public demo (`npm run demo:build`, `vite build --mode demo`, into
   `dist-landing/demo/`): `backend.js` dispatches API requests to the real route tables over
   `services.js` (the inventory repositories and services on an in-memory sql.js database adapted by
@@ -172,11 +181,12 @@ The project stays small and readable. Do not add:
 - `client/src/pages/DataBackup.vue` — SQLite backup download, restore, and the Danger Zone.
 - `client/src/pages/Settings.vue` — the Settings dialog, opened over the current page by every `/settings/*` address: the grouped section list on desktops, the full-screen dialog with the section selector on phones, and the active section; `client/src/settingsSections.js` lists the groups and sections (path, label, icon, component) used by the routes and both navigations.
 - `client/src/settingsOverlay.js` — the route-driven Settings dialog: the covered (background) page route, `usePageRoute()` for the page area, `closeSettings()`, and the unsaved-changes guard that Settings forms join with `useUnsavedChanges()`; `client/src/components/PageView.vue` renders the page area with that route and provides it to `useRoute()`, so the page under Settings stays as it was.
-- `client/src/components/settings/` — one component per Settings section: `InterfaceSettings.vue` (language), `DatabaseSettings.vue` (editable database name, Preferred Content Language, last update, folded technical details), `CloudBackupSettings.vue` (Dropbox/Google Drive connections, Backup now, the schedule, retention, and status) with `CloudAppCredentials.vue` (the masked app key/client ID and secret form of one provider), and `AiSettings.vue` (the AI form in Features, Connection, and Model cards).
+- `client/src/components/settings/` — one component per Settings section: `InterfaceSettings.vue` (language), `DatabaseSettings.vue` (editable database name, Preferred Content Language, last update, folded technical details), `CloudBackupSettings.vue` (Dropbox/Google Drive connections, Backup now, the schedule, retention, and status) with `CloudAppCredentials.vue` (the masked app key/client ID and secret form of one provider), `AiSettings.vue` (the AI form in Features, Connection, and Model cards), and Security & Access: `UsersSettings.vue` (accounts, roles, reset password, disable), `ApiAccessSettings.vue` (scoped tokens shown once, revoke), and `SessionsSettings.vue` (every person's own sessions and password).
 - `client/src/components/BulkReplaceValue.vue` — the Data page card that previews and applies the replacement of one exact field value on every matching item.
 - `client/src/components/ResetDatabaseDialog.vue` — impact review and confirmation of the inventory reset.
 - `client/src/style.css` — small set of application styles layered on Tabler, built only from
   Tabler custom properties so both color modes stay correct.
+- `shared/permissions.js` — the permission identifiers, the `admin` and `viewer` roles and their permissions, and the API token scopes; `shared/accounts.js` — username, password, role, and API token input rules.
 - `shared/fieldDefinitions.js` — application-level custom field-definition format and validation, imported by both the client and the server.
 - `shared/itemValidation.js` — canonical item input rules, applied by the server and reused by the batch item preview.
 - `shared/productImport.js` — Smart URL import: deterministic matching of product page attributes to a category's existing custom fields by name or alias, converted and validated for the field type; shared by the preview and the review dialog.
@@ -193,7 +203,11 @@ The project stays small and readable. Do not add:
 - `shared/semver.js` — semantic version parsing and comparison, used by the updater and the What's New dialog.
 - `shared/releaseHistory.js` and `shared/release-history.json` — the single release history read by Version History, What's New, and the release notes.
 - `shared/appError.js` — `AppError` (stable code, parameters, HTTP status) thrown by the shared rules and the server, and its `{ code, params }` body.
-- `server/src/index.js` — process entry point: port, production flag, and instance label, the HTTP listener, and shutdown.
+- `server/src/index.js` — process entry point: port, production flag, instance label, `ATLAS_TRUST_PROXY` and `ATLAS_ALLOW_HTTP`, the HTTP listener, the setup hint, and shutdown.
+- `server/src/dataDir.js` — the persistent data directory shared by the server and the command line.
+- `server/src/auth/` — authentication and authorization: `routePolicy.js` (the route-to-permission matrix of the whole API; every new route needs an entry, unmatched paths need `security:manage`), `authConfig.js` (store path, session and reauthentication timings, trusted proxies, the HTTP opt-in), `authDatabase.js` (`auth.sqlite` and its own migrations), the repositories of users and one-time codes, sessions, API tokens, and the audit trail, `authService.js` (sign-in, sessions, reauthentication, own password, setup and recovery codes), `userAdminService.js` (accounts, last-administrator and self-lockout rules), `apiTokenService.js` (scoped tokens), `loginThrottle.js`, `secrets.js`, `userAgent.js`, and `security.js` (builds them over one store for the server and the command line).
+- `server/src/cli/backup.js` — `node server/src/cli/backup.js <file>`: a checked online-backup copy of the inventory database, taken locally by the Proxmox updater instead of the administrator-only HTTP download.
+- `server/src/cli/auth.js` — `npm run auth -- init | recover <username> [--revoke-tokens] | users`: one-time setup and recovery codes printed on the machine, never over HTTP; `deploy/inventory-atlas-auth` runs it on a Proxmox installation.
 - `server/src/instanceLabel.js` — the optional `ATLAS_INSTANCE_LABEL` of the running deployment and its normalization; never stored in SQLite.
 - `server/src/app.js` — composition root: builds every repository, service, upload, and route table and assembles the Express app, including production static serving.
 - `server/src/routes/` — thin Express route tables; they parse the request, call one service, and shape the response.
@@ -204,10 +218,12 @@ The project stays small and readable. Do not add:
 - `server/src/restore/` — restore and reset configuration, staged-upload sessions, the SQLite file checks, and `databaseMaintenance.js`: the shared maintenance lock, safety backup, atomic swap, and rollback used by the restore and reset services.
 - `server/src/cloudBackup/` — cloud backup configuration, the owner-only JSON file store for its credentials and state, schedule rules, and the in-process scheduler timer.
 - `server/src/update/` — deployment capability, the updater's status file, and the privileged update trigger.
-- `server/src/http/` — transport middleware: uploads, the maintenance guard, and the central error handler that answers `{ error: { code, params } }`.
+- `server/src/http/` — transport middleware: `authGate.js` (security headers, the session cookie, and the authentication, origin, HTTPS, CSRF, and permission checks before every route table), uploads, the maintenance guard, and the central error handler that answers `{ error: { code, params } }`.
 - `server/src/db.js` — database path, SQLite connection, PRAGMAs, and the fresh-database initializer used by the reset; it re-exports the schema.
 - `server/src/schema.js` — the current table/index schema, its migrations (`applySchema()`), the database metadata row and its write triggers; free of the file system, so the public demo applies it too.
 - `test/e2e.test.js` — end-to-end acceptance test for the API, persistence, photos, and backups.
+- `test/backup-cli.test.js` — the local backup command against a running authenticated server, its failures, and the updater's use of it; `test/docker-smoke.mjs` — the release image smoke test, signed in through the setup code from `docker exec … auth.js init`.
+- `test/auth-policy.test.js` — the authorization matrix covers exactly the registered routes, the public allowlist, matching, roles, scopes, and fresh routes; `test/auth.test.js` — the security regression suite over real servers (locked setup, 401/403 on every route, sessions, CSRF, HTTPS and proxies, the viewer, tokens, administration guards, recovery, backup isolation, separate instances, a damaged store).
 - `test/services.test.js` — service-level regression tests that run without HTTP against a temporary database.
 - `test/custom-field-rename.test.js` — custom field rename: unchanged ids, types, categories, and item and template values, name validation and conflicts, column split and merge, Batch Add names, and the `PATCH /api/fields/:id` contract.
 - `test/item-photo-order.test.js` — persisted photo order and the cover photo: the schema and the version 7 migration, restore validation, ordered uploads, reorder validation and atomicity, deletion, the shared cover thumbnail, and the `PUT /api/items/:id/photos/order` contract.
@@ -220,7 +236,7 @@ The project stays small and readable. Do not add:
 - `test/location-detail.test.js` — the Specific location: the version 12 migration and restore of a version 11 backup, validation and the omitted-attribute rule, outermost-container inheritance, the list sort and search, history, retire and restore snapshots, templates, batch import, and the HTTP contract.
 - `test/ai-translation.test.js` — AI translation with a stubbed provider: the content languages, the payload and its separation, several fields per call, explicit and detected sources, targets outside the interface locales, Japanese and Chinese with English model names, protected identifiers and numbers, unchanged and untranslatable texts, missing, duplicate, malformed, extra, and too long entries, request bounds and the field allowlist, provider failures, zero writes, the Preferred Content Language with the version 13 migration, its persistence across a restart and a backup restore over HTTP, and the whole-item candidates, single request, and selective apply of Translate Item with AI.
 - `test/instance-label.test.js` — the instance label: normalization, the capabilities response, and a real server that keeps its label after restoring a database named PROD.
-- `test/serverProcess.js` — starts and stops the real server for the API tests on a free port chosen by the operating system (`PORT=0`), reading the bound port from its listening line.
+- `test/serverProcess.js` — starts and stops the real server for the API tests on a free port chosen by the operating system (`PORT=0`), reading the bound port from its listening line; it provisions the test administrator and returns a signed-in `fetch` that sends the session cookie and the anti-CSRF header.
 - `test/hierarchy.test.js` — the hierarchy endpoint (shape, inherited location, one statement), the Location and Category projection rules, per-grouping expansion, and the Graph layout.
 - `test/checklists.test.js` — checklist definitions, ordering, duplicates, runs, state changes, counts, completion, run history, snapshots over renamed and deleted items and deleted checklists, Last verified, container audits, and the version 3 and 4 migrations at the service level.
 - `test/bulk-replace.test.js` — Bulk Replace Value matching, scope, validation, atomicity, and location inheritance at the service level.
@@ -242,7 +258,7 @@ The project stays small and readable. Do not add:
 - `test/e2e/database-indicator.spec.js` — the active database indicator: every page beside the folded rail, keyboard activation of Settings → Database and the return to the covered page, rename and refused rename, long names and labels as text, restore with the instance label, the unavailable state, phones, Ukrainian, and the dark mode.
 - `test/e2e/color-field.spec.js` — creating a Color field, the picker (presets, arrow keys, Custom HEX, Clear), details, the Items column with sorting and filters, templates, both color modes, and phones.
 - `test/e2e/lifecycle.spec.js` — Retire and Restore from the item page, the Active / All / Retired views of Items and Hierarchy, the container contents choice, checklists with retired items, the Dashboard link, phones, and Ukrainian.
-- `test/e2e/` — Playwright browser tests, their fixtures, shared helpers, and the run launcher.
+- `test/e2e/` — Playwright browser tests, their fixtures, shared helpers, and the run launcher; `globalSetup.js` creates the e2e administrator and signs in once, and `fixtures.js` is the `test` every app spec imports (its `request` carries that session and its CSRF header); `auth.spec.js` covers sign-in, the viewer, Security & Access, and the password confirmation.
 - `playwright.config.js` — Playwright projects, isolated test ports, and the cloud provider stub, API, Vite, and landing and demo build/preview processes started for the suite.
 - `landing/` — the public landing page and user guide, a separate two-page Vue/Vite/Tabler build into
   `dist-landing/` (ignored by Git) published to GitHub Pages by `.github/workflows/pages.yml`:
@@ -358,11 +374,13 @@ are mandatory for all frontend work:
 - `item_photos` stores metadata and BLOB data in the same database. The API accepts up to 10 JPEG/PNG/WebP/GIF files of 15 MB each. `sort_order` (`0..n-1`, unique per item) is the persisted photo order, and the first photo is the cover: there is no cover flag. Every thumbnail query uses `coverPhotoIdSql()` from `server/src/repositories/itemPhotoRepository.js`.
 - Foreign keys are enabled. Related fields, values, and photos are deleted according to their `ON DELETE` rules; do not bypass those rules with manual operations.
 - `DATA_DIR` changes the persistent data directory. Tests must use a temporary directory instead of the working database in `data/`.
+- Accounts, sessions, API tokens, one-time codes, and the security audit trail live in `DATA_DIR/auth.sqlite`, never in the inventory database: inventory backup, restore, and reset must never read or change it, and it has its own `user_version` migrations in `server/src/auth/authDatabase.js`.
 
 ## Working on changes
 
 - Before editing, read the related Vue components, API routes, schema, and tests so the end-to-end contract remains intact.
 - Preserve the existing compact style and use installed dependencies. Add a dependency only when it clearly simplifies the implementation needed now.
+- Every new API route needs an entry in `server/src/auth/routePolicy.js` with an explicit permission (never derived from the HTTP verb) and a row in the matrix of `docs/features/authentication-and-access.md`; `test/auth-policy.test.js` fails otherwise. Hide what a role cannot use with `can()` and `meta.permission`, but never rely on that: the server decides.
 - Validate data on the server. Return API errors as `{ "error": { "code": "...", "params": {} } }` by throwing
   `httpError(status, code, params)` or the shared `AppError`; never send human-readable text from the server.
   Add every new code under `errors` (or `notices` for success messages) in both `en.json` and `uk.json`.

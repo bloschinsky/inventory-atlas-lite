@@ -680,7 +680,7 @@ test('version 11 adds items.source_url to an existing database and to a restored
 // ---------------------------------------------------------------------------------------------
 
 test('the API offers URL import, refuses local addresses, and never accepts an image address from the browser', async () => {
-  const { child, base } = await startServer(await mkdtemp(path.join(os.tmpdir(), 'inventory-url-import-api-')));
+  const { child, base, fetch } = await startServer(await mkdtemp(path.join(os.tmpdir(), 'inventory-url-import-api-')));
   try {
     assert.equal((await (await fetch(`${base}/api/capabilities`)).json()).urlImport, true);
     const post = url => fetch(`${base}/api/items/import-url/preview`, {

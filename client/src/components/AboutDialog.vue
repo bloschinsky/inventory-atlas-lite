@@ -7,6 +7,8 @@ import { aboutOpen, closeAbout, openVersionHistory, versionHistoryOpen } from '.
 import { appInfo } from '../build-info.js';
 import AboutUpdate from './AboutUpdate.vue';
 import { isSettingsRoute } from '../settingsOverlay.js';
+import { can, reauthPending } from '../auth.js';
+import { PERMISSIONS } from '../../../shared/permissions.js';
 
 const route = useRoute();
 const panel = ref(null);
@@ -15,11 +17,11 @@ let opener = null;
 
 // Version History opens on top of this dialog and owns the keyboard and the focus while it is up.
 function onKeydown(event) {
-  if (event.key === 'Escape' && !versionHistoryOpen.value) closeAbout();
+  if (event.key === 'Escape' && !versionHistoryOpen.value && !reauthPending.value) closeAbout();
 }
 // Keeps the focus inside the open dialog without a dedicated focus-trap dependency.
 function onFocusIn(event) {
-  if (versionHistoryOpen.value) return;
+  if (versionHistoryOpen.value || reauthPending.value) return;
   if (panel.value && !panel.value.contains(event.target)) closeButton.value?.focus();
 }
 function release() {
@@ -120,7 +122,8 @@ onBeforeUnmount(release);
               />
               {{ $t('versionHistory.title') }}
             </button>
-            <AboutUpdate />
+            <!-- Checking for and installing updates is maintenance, offered to administrators only. -->
+            <AboutUpdate v-if="can(PERMISSIONS.maintenanceManage)" />
           </div>
           <div class="modal-footer">
             <button

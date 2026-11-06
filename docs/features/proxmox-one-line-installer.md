@@ -68,8 +68,9 @@ backups.
 
 ## Notes and limitations
 
-- The application has no authentication. Do not expose the container directly to the Internet; use a
-  trusted LAN or VPN/Tailscale.
+- The installation is locked until `inventory-atlas-auth init` (installed by the installer as
+  `/usr/local/sbin/inventory-atlas-auth`) prints a setup code for the first administrator; see
+  [authentication-and-access.md](authentication-and-access.md). Do not expose the container directly to the Internet; use a trusted LAN or VPN/Tailscale.
 - No TLS, reverse proxy, DNS, or firewall/port-forward configuration is set up, and the Proxmox host
   configuration is not modified.
 - There is no uninstall command and no automatic container removal.

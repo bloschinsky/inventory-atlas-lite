@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures.js';
 
 test('the primary pages are reachable from the navigation bar', async ({ page }) => {
   await page.goto('/');

@@ -342,7 +342,7 @@ test('the Preferred Content Language is validated, stored canonically, cleared, 
 
 test('the HTTP API: a per-database preference survives a restart and a backup restore, and translation is read-only', async () => {
   const serverDir = await mkdtemp(path.join(os.tmpdir(), 'inventory-ai-translation-api-'));
-  let { child, base } = await startServer(serverDir);
+  let { child, base, fetch } = await startServer(serverDir);
   const call = async (url, method = 'GET', body) => {
     const response = await fetch(`${base}${url}`, body === undefined ? { method } : { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     return { status: response.status, body: await response.json() };
@@ -366,7 +366,7 @@ test('the HTTP API: a per-database preference survives a restart and a backup re
     assert.deepEqual((await call('/api/database/metadata')).body, before);
 
     await stopServer(child);
-    ({ child, base } = await startServer(serverDir));
+    ({ child, base, fetch } = await startServer(serverDir));
     assert.equal((await call('/api/database/metadata')).body.content_language, 'de', 'the preference survives a restart');
 
     // The preference lives in the database file, so a backup carries it and a restore brings it back.

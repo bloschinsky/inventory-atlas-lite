@@ -94,7 +94,10 @@ writes a final state, and without this its last running state would refuse every
 `GET /api/update/check` reads the releases of the one repository configured in the backend, ignores
 drafts, prereleases, and tags that are not comparable versions, and compares the newest remaining
 release with the running version using semantic versioning. The answer is cached for ten minutes, so
-opening About repeatedly costs one GitHub call. No authentication is used or required.
+opening About repeatedly costs one GitHub call. GitHub is called without credentials. The check, the
+status, and the update itself need `maintenance:manage` (administrators only; viewers see no update
+panel), and starting the update also needs a password confirmed within the last ten minutes (see
+[authentication-and-access.md](authentication-and-access.md)).
 
 GitHub being unreachable, rate limiting the check, answering with something unexpected, or
 publishing a version that cannot be compared are all reported as short messages with a `502` or

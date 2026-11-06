@@ -10,10 +10,13 @@ import { startServer as startServerProcess, stopServer } from './serverProcess.j
 
 // The address of the most recently started server; every start gets a fresh free port.
 let base;
+// Signed in as the test administrator of the most recently started server.
+let fetch = globalThis.fetch;
 
 async function startServer(dataDir, environment = {}) {
   const server = await startServerProcess(dataDir, { environment, args: ['--production'] });
   base = server.base;
+  fetch = server.fetch;
   return server.child;
 }
 

@@ -137,6 +137,7 @@ install_service() {
   install -m 0750 "$IAL_APP_DIR/scripts/update.sh" "$IAL_UPDATE_COMMAND"
   # The privileged updater and the watcher that lets the About dialog ask for it.
   ial_install_update_units
+  ial_install_auth_command
   systemctl daemon-reload
   systemctl enable "$IAL_SERVICE" >/dev/null
 }
@@ -174,3 +175,4 @@ if ! ial_wait_for_health "http://127.0.0.1:$PORT/api/health" 120 "$(ial_app_vers
 fi
 
 ial_log "Inventory Atlas Lite $(ial_app_version "$IAL_APP_DIR") is installed and healthy."
+ial_log "Create the first administrator: run '$IAL_AUTH_COMMAND init' in this container and enter the printed code in the browser."

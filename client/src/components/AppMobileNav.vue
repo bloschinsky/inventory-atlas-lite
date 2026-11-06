@@ -2,12 +2,14 @@
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { IconMenu2 } from '@tabler/icons-vue';
+import AccountMenu from './AccountMenu.vue';
 import ActiveDatabaseIndicator from './ActiveDatabaseIndicator.vue';
 import AppBrand from './AppBrand.vue';
 import AppNavigation from './AppNavigation.vue';
 import ThemeToggle from './ThemeToggle.vue';
 
 const route = useRoute();
+const demoMode = __DEMO__;
 const menuOpen = ref(false);
 const menuButton = ref(null);
 const closeButton = ref(null);
@@ -111,6 +113,13 @@ onBeforeUnmount(() => {
           <!-- About opens a dialog instead of a route, so the drawer cannot wait for a navigation. -->
           <AppNavigation @navigate="closeMenu(false)" />
         </nav>
+        <!-- The signed-in account, its sessions, and signing out; the demo has no accounts. -->
+        <div
+          v-if="!demoMode"
+          class="border-top mt-3 pt-3"
+        >
+          <AccountMenu menu-id="account-menu-mobile" />
+        </div>
       </div>
     </div>
   </template>

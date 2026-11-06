@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures.js';
 import { createCategory, createItem, detail, unique } from './helpers.js';
 
 test('stores an item inside another one and links both directions', async ({ page, request }) => {

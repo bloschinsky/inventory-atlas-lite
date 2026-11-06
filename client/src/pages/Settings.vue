@@ -4,7 +4,8 @@ import { useRoute, useRouter } from 'vue-router';
 import { IconSettings } from '@tabler/icons-vue';
 import { aboutOpen, versionHistoryOpen } from '../about.js';
 import { closeSettings } from '../settingsOverlay.js';
-import { settingsGroups, settingsPath } from '../settingsSections.js';
+import { settingsPath, visibleSettingsGroups } from '../settingsSections.js';
+import { reauthPending } from '../auth.js';
 import { whatsNewReleases } from '../whatsNew.js';
 
 defineOptions({ name: 'SettingsPage' });
@@ -18,9 +19,11 @@ let opener = null;
 // The matched route record ignores a trailing slash or a query, such as the cloud OAuth return.
 const currentPath = computed(() => route.matched.at(-1)?.path);
 const isCurrent = section => currentPath.value === settingsPath(section);
+// Only the sections this person may open; the routes refuse the others too.
+const settingsGroups = computed(visibleSettingsGroups);
 
-// About, Version History, and What's New can open above Settings; while one is up it owns the keyboard and the focus.
-const coveredByDialog = computed(() => aboutOpen.value || versionHistoryOpen.value || whatsNewReleases.value.length > 0);
+// About, Version History, What's New, and the password confirmation can open above Settings; while one is up it owns the keyboard and the focus.
+const coveredByDialog = computed(() => aboutOpen.value || versionHistoryOpen.value || whatsNewReleases.value.length > 0 || Boolean(reauthPending.value));
 
 const close = () => closeSettings(router);
 

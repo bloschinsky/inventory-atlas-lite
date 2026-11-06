@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures.js';
 import { createCategory, createItem, detail, unique } from './helpers.js';
 
 const phone = { width: 390, height: 844 };

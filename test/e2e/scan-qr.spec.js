@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures.js';
 import qrcode from 'qrcode-generator';
 import { createCategory, createItem, openItemActions, unique } from './helpers.js';
 

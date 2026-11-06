@@ -12,6 +12,14 @@ section is rendered, and the sections are grouped so new ones can be added witho
 | Data | Database | `/settings/database` |
 | Data | Cloud Backup | `/settings/cloud-backup` |
 | Services | AI | `/settings/ai` |
+| Security & Access | Users | `/settings/users` |
+| Security & Access | API Access | `/settings/api-access` |
+| Security & Access | Sessions | `/settings/sessions` |
+
+A section with a `permission` in `client/src/settingsSections.js` is listed, and reachable, only for a
+principal that has it: Database, Cloud Backup, and AI need `settings:manage`, Users and API Access
+`security:manage`, so a viewer sees **Interface** and **Sessions** only, and a section address it may
+not open redirects to **Interface**. See [authentication-and-access.md](authentication-and-access.md).
 
 The behaviour, validation, and persistence of every setting are unchanged; the dialog is built only
 from installed Tabler modal markup and the existing Vue Router, without a modal or state library.

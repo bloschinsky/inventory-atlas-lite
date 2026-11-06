@@ -168,8 +168,8 @@ test is skipped when the model has not been downloaded.
 - Photo analysis needs a vision-capable model; automatic detection only knows OpenAI's curated
   models and OpenRouter's metadata, so set **Image input** for other providers.
 - A hosted provider needs Internet access only when analysis is requested.
-- The application still has no authentication; protect the whole installation with a trusted LAN or
-  VPN, including Settings.
+- AI calls need the `tools:use` permission and the AI settings `settings:manage`, which only
+  administrators have; viewers and API tokens never reach them (see [authentication-and-access.md](authentication-and-access.md)).
 - IS-Net is a general foreground model with no idea which object was meant. It keeps whatever is
   salient, so a hand holding the item, or clutter of similar prominence, stays in the cutout.
   Transparent objects and low-contrast edges can still produce an imperfect result, and the original

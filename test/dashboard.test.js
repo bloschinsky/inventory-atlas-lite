@@ -15,12 +15,12 @@ test('dashboard aggregates, filters, normalizes, and truncates inventory data', 
   try {
     server = await startServer(dataDir);
     const get = async url => {
-      const response = await fetch(`${server.base}${url}`);
+      const response = await server.fetch(`${server.base}${url}`);
       assert.equal(response.status, 200, `${url} returned ${response.status}`);
       return response.json();
     };
     const send = async (url, options) => {
-      const response = await fetch(`${server.base}${url}`, options);
+      const response = await server.fetch(`${server.base}${url}`, options);
       assert.ok(response.ok, `${url} returned ${response.status}`);
       return response.json();
     };
@@ -69,7 +69,7 @@ test('dashboard aggregates, filters, normalizes, and truncates inventory data', 
     const form = new FormData();
     form.append('photos', new Blob([Buffer.from('8950', 'hex')], { type: 'image/png' }), 'one.png');
     form.append('photos', new Blob([Buffer.from('8951', 'hex')], { type: 'image/png' }), 'two.png');
-    const photoResponse = await fetch(`${server.base}/api/items/${container.id}/photos`, { method: 'POST', body: form });
+    const photoResponse = await server.fetch(`${server.base}/api/items/${container.id}/photos`, { method: 'POST', body: form });
     assert.equal(photoResponse.status, 201);
 
     const database = new Database(path.join(dataDir, 'inventory.sqlite'));
@@ -116,7 +116,7 @@ test('dashboard aggregates, filters, normalizes, and truncates inventory data', 
     assert.equal(validEmpty.categoryDistribution.find(row => row.categoryId === emptyCategory.id).selected, true);
 
     for (const [query, status] of [['categoryId=nope', 400], ['categoryId=1.5', 400], ['categoryId=999999', 404]]) {
-      assert.equal((await fetch(`${server.base}/api/dashboard?${query}`)).status, status);
+      assert.equal((await server.fetch(`${server.base}/api/dashboard?${query}`)).status, status);
     }
   } finally {
     if (server) await stopServer(server.child);
@@ -137,7 +137,7 @@ test('dashboard reports uncategorized rows in a compatible legacy database', asy
   let server;
   try {
     server = await startServer(dataDir);
-    const response = await fetch(`${server.base}/api/dashboard`);
+    const response = await server.fetch(`${server.base}/api/dashboard`);
     assert.equal(response.status, 200);
     const dashboard = await response.json();
     assert.equal(dashboard.categoryDistribution[0].label, 'Uncategorized');

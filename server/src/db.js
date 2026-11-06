@@ -1,14 +1,11 @@
 import Database from 'better-sqlite3';
-import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { dataDir } from './dataDir.js';
 import { applySchema } from './schema.js';
 
 export { CORE_SCHEMA, CURRENT_SCHEMA, DEFAULT_DATABASE_NAME, SCHEMA_VERSION, TRACKED_TABLES, applySchema } from './schema.js';
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-export const dataDir = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(root, 'data');
-fs.mkdirSync(dataDir, { recursive: true });
+export { dataDir };
 
 export const databasePath = path.join(dataDir, 'inventory.sqlite');
 

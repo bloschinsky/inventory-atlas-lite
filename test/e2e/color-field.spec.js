@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures.js';
 import { createCategory, createItem, detail, unique } from './helpers.js';
 
 // Every Color field of this spec has the same name, so the Items view merges them into one column.

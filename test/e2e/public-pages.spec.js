@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures.js';
 import sharp from 'sharp';
 import { createDemoFixture } from '../../client/src/demo/fixture.js';
 import { ogLocales, publicPagePath } from '../../landing/publicPages.js';

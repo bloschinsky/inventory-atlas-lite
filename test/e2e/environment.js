@@ -20,6 +20,12 @@ export const demoURL = `${landingURL}demo/`;
 process.env.E2E_DATA_DIR ||= fs.mkdtempSync(path.join(os.tmpdir(), 'inventory-atlas-e2e-'));
 export const dataDir = process.env.E2E_DATA_DIR;
 
+// The administrator the suite signs in as. Global setup creates the account in the test data
+// directory's security store, signs in once, and keeps the browser state and the anti-CSRF token here.
+export const e2eAdmin = Object.freeze({ username: 'e2e-admin', password: 'e2e-admin-password' });
+export const adminStateFile = path.join(dataDir, 'e2e-admin-state.json');
+export const adminSessionFile = path.join(dataDir, 'e2e-admin-session.json');
+
 // Windows can still hold the database file for a moment after the servers are killed.
 export const removeDataDir = () =>
   fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });

@@ -322,7 +322,9 @@ test('the guide presentation metadata names real sections, screenshots, diagrams
   for (const route of ['/dashboard', '/items', '/items/new', '/hierarchy', '/templates', '/checklists', '/categories', '/settings/interface']) {
     assert.ok(demo.routes.includes(route), `the demo has ${route}`);
   }
-  assert.deepEqual([...demo.unavailable].sort(), ['/data', '/items/ai', '/settings/ai', '/settings/cloud-backup']);
+  assert.deepEqual([...demo.unavailable].sort(), [
+    '/data', '/items/ai', '/settings/ai', '/settings/api-access', '/settings/cloud-backup', '/settings/sessions', '/settings/users'
+  ]);
   for (const id of [
     'download-a-backup', 'back-up-to-dropbox-or-google-drive', 'restore-a-backup', 'reset-the-inventory-database',
     'check-for-a-newer-version-and-update', 'let-ai-suggest-the-fields-for-a-category', 'create-an-item-from-a-photo-or-a-description-with-ai'

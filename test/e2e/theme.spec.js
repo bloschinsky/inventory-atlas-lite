@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures.js';
 
 const themeOf = page => page.locator('html').getAttribute('data-bs-theme');
 

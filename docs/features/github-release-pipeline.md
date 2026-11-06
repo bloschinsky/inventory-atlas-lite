@@ -78,7 +78,8 @@ so `latest` always names a stable version.
 - The pipeline does not create Electron, Windows, macOS, or mobile packages.
 - Publishing requires the repository's standard `GITHUB_TOKEN`; no registry password or personal
   access token is used.
-- The application still has no authentication and should remain on a trusted LAN or VPN.
+- The application requires sign-in for every API request (see [authentication-and-access.md](authentication-and-access.md)) and should still remain on a
+  trusted LAN or VPN.
 
 ## Verification
 

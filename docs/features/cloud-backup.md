@@ -186,8 +186,10 @@ serve it over HTTPS on a real host name, such as a Tailscale `https://<host>.<ta
 address. The connection keeps working afterwards from any address, because only the refresh token is
 needed. Setup steps are in the [quick how-to](../HOW-TO.md#back-up-to-dropbox-or-google-drive).
 
-The application still has no authentication: anyone who reaches it can connect, disconnect, or trigger
-a cloud backup. Keep it on a trusted LAN or VPN.
+Every cloud backup route needs `settings:manage`, so only administrators can connect, disconnect, or
+trigger a cloud backup. The OAuth callback also needs that administrator's session, and its state must
+have been issued to the same session; otherwise it counts as unverified and redirects to Settings (see
+[authentication-and-access.md](authentication-and-access.md)).
 
 ## Verification
 

@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures.js';
 import sharp from 'sharp';
 import { createCategory, detail, setAiEnabled, unique } from './helpers.js';
 

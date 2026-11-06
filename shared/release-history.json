@@ -1,5 +1,16 @@
 [
   {
+    "version": "0.71.0",
+    "date": "2026-11-06",
+    "changes": [
+      "Inventory Atlas Lite now has sign-in. Every person uses an account of their own: Administrators can do everything, Viewers can browse and search the inventory but change nothing. The server checks every request, so hidden buttons are never the only protection.",
+      "A new installation, and an existing one after this update, stays locked until its first administrator is created with a one-time setup code printed on the server by npm run auth -- init (also inside Docker and the Proxmox container). Your inventory, photos, and backups are kept as they are.",
+      "Settings → Security & Access lets administrators add viewers and other administrators, disable accounts, reset passwords, and create read-only or item-writing API tokens for scripts; each token is shown once and can be revoked at any time. Everyone can see and sign out their sessions and change their password there.",
+      "Restore, reset, updates, and account or token changes ask for your password again when you last entered it more than a few minutes ago. A forgotten password is reset with a recovery code printed on the server.",
+      "Accounts, sessions, and tokens live in their own file, auth.sqlite, next to the inventory. They are never part of an inventory backup, so restoring an older backup or resetting the inventory never brings back an old password or token. Signing in from another device needs HTTPS, or ATLAS_ALLOW_HTTP=true on a trusted network."
+    ]
+  },
+  {
     "version": "0.70.2",
     "date": "2026-10-31",
     "changes": [

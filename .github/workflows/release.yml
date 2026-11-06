@@ -115,8 +115,10 @@ jobs:
           }
           trap cleanup EXIT
           start_container() {
+            # The runner reaches the container through the Docker bridge, which is not loopback inside
+            # the container, so this disposable instance opts in to signing in over plain HTTP.
             docker run --detach --name inventory-atlas-smoke \
-              --publish 127.0.0.1::3000 --volume "$data_dir:/data" \
+              --publish 127.0.0.1::3000 --volume "$data_dir:/data" --env ATLAS_ALLOW_HTTP=true \
               inventory-atlas-lite:smoke >/dev/null
             host_port=$(docker port inventory-atlas-smoke 3000/tcp | sed 's/.*://')
             smoke_url="http://127.0.0.1:$host_port"
@@ -128,7 +130,10 @@ jobs:
             return 1
           }
           start_container
-          node test/docker-smoke.mjs create "$smoke_url" "${{ steps.version.outputs.version }}"
+          # The first administrator is created the documented way: a one-time code from the local command line.
+          setup_code=$(docker exec inventory-atlas-smoke node server/src/cli/auth.js init | sed -n 's/^Setup code: //p')
+          test -n "$setup_code"
+          SMOKE_SETUP_CODE="$setup_code" node test/docker-smoke.mjs create "$smoke_url" "${{ steps.version.outputs.version }}"
           docker rm --force inventory-atlas-smoke >/dev/null
           start_container
           node test/docker-smoke.mjs verify "$smoke_url" "${{ steps.version.outputs.version }}"

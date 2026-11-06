@@ -88,14 +88,16 @@ trap 'ial_warn "Update failed at line $LINENO."' ERR
 
 ial_update_status preparing "Preparing the update"
 
-# The application's backup endpoint uses SQLite's online backup API, so it stays consistent
-# while the service keeps writing in WAL mode.
+# The application's local backup command uses SQLite's online backup API, so the copy stays
+# consistent while the service keeps writing in WAL mode. It runs as the service account on the
+# installed code: the HTTP download needs an administrator's session, and the updater holds none.
 backup_database() {
   local target
   target="$IAL_BACKUP_DIR/inventory-$(date +%Y%m%d-%H%M%S).sqlite"
   ial_update_step backing_up_database
   install -d -o "$IAL_USER" -g "$IAL_USER" -m 0750 "$IAL_BACKUP_DIR"
-  if ! curl -fsS --max-time 300 -o "$target" "http://127.0.0.1:$PORT/api/backup"; then
+  if ! (cd "$IAL_APP_DIR" && runuser -u "$IAL_USER" -- env DATA_DIR="$IAL_DATA_DIR" \
+    timeout 300 /usr/local/bin/node server/src/cli/backup.js "$target"); then
     rm -f "$target"
     ial_die "Could not create a pre-update backup. The installation was not changed."
   fi
@@ -156,6 +158,7 @@ install -m 0750 "$IAL_APP_DIR/scripts/update.sh" "$IAL_UPDATE_COMMAND"
 ial_update_step reloading_units
 ial_ensure_env_value DEPLOYMENT_TYPE "$IAL_DEPLOYMENT_TYPE"
 ial_install_update_units
+ial_install_auth_command
 systemctl daemon-reload
 ial_update_status restarting "Restarting the application" starting_service
 systemctl start "$IAL_SERVICE"
@@ -192,3 +195,7 @@ ial_update_status success "Update completed"
 STATUS_REPORTED=1
 ial_log "Inventory Atlas Lite $(ial_app_version "$IAL_APP_DIR") is running and healthy."
 ial_log "Pre-update backup: $BACKUP_PATH"
+# An installation updated from a release without accounts stays locked until its first administrator exists.
+if curl -fsS --max-time 10 "${HEALTH_URL%/health}/auth/session" 2>/dev/null | grep -q '"setupRequired":true'; then
+  ial_warn "No administrator exists yet. Run '$IAL_AUTH_COMMAND init' and enter the printed code in the browser."
+fi

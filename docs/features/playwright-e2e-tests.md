@@ -35,6 +35,14 @@ failing test makes the command exit non-zero.
   failure. `test/e2e/environment.js` and `test/e2e/helpers.js` hold the shared setup.
 - Express runs with `DATA_DIR` pointing at a temporary directory, so the suite never reads or writes
   `data/inventory.sqlite`.
+- Every page needs a session, so `test/e2e/globalSetup.js` creates the `e2e-admin` account in that
+  directory's `auth.sqlite` and signs in once through the API; the `app` project starts every page with
+  that browser state, and `test/e2e/fixtures.js`, whose `test` every app spec imports, gives the
+  `request` fixture the same session and its `X-CSRF-Token` header for preparing data. The API server
+  runs with a 24-hour `AUTH_REAUTH_WINDOW_MS`, so restore, reset, and account changes need no password
+  confirmation mid-suite; `auth.spec.js` ages a session of its own to exercise the confirmation. Specs
+  that test signing in use an empty `storageState`. The Vite proxy keeps the browser's `Host` header
+  (`changeOrigin: false`), so the API's same-origin check sees the page's own address.
 - Specs cover the main workflows: `navigation.spec.js` (reaching every page and the folded desktop
   sidebar expanding on hover and on keyboard focus), `categories.spec.js`, `items.spec.js`
   (create, search, edit, delete, and the Transferred To badge and suggestions), `photos.spec.js`, `nesting.spec.js`, `suggestions.spec.js`,
