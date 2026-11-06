@@ -17,7 +17,9 @@ Every page and API request needs a signed-in account (Administrator or Viewer / 
 
 ## Stack and architecture
 
-- Node.js 20.19+ with a single root npm project using ES modules.
+- Node.js 20.19+ with a single root npm project using ES modules. The only exception is the optional
+  read-only MCP adapter in `mcp/`, a separate service with its own `package.json` and lockfile, so the
+  Atlas build, image, and demo never carry its dependencies.
 - Client: Vue 3 Composition API (`<script setup>`), Vue Router, Vite, and the Tabler design system
   (`@tabler/core`, which already contains Bootstrap 5) with `@tabler/icons-vue`. Bootstrap must never
   be installed or imported a second time.
@@ -259,6 +261,16 @@ The project stays small and readable. Do not add:
 - `test/e2e/color-field.spec.js` — creating a Color field, the picker (presets, arrow keys, Custom HEX, Clear), details, the Items column with sorting and filters, templates, both color modes, and phones.
 - `test/e2e/lifecycle.spec.js` — Retire and Restore from the item page, the Active / All / Retired views of Items and Hierarchy, the container contents choice, checklists with retired items, the Dashboard link, phones, and Ukrainian.
 - `test/e2e/` — Playwright browser tests, their fixtures, shared helpers, and the run launcher; `globalSetup.js` creates the e2e administrator and signs in once, and `fixtures.js` is the `test` every app spec imports (its `request` carries that session and its CSRF header); `auth.spec.js` covers sign-in, the viewer, Security & Access, and the password confirmation.
+- `mcp/` — the optional read-only MCP adapter (`docs/features/mcp-read-only-adapter.md`), its own npm
+  project (`npm run mcp:install`, `mcp:start`, `mcp:test`) that reaches Atlas only through the REST API
+  with an `inventory:read` token: `src/index.js` (process, startup token check), `src/config.js`
+  (strict environment), `src/atlasClient.js` (the GET-only Atlas client: deadline, cancellation, size
+  cap, concurrency, no redirects), `src/errors.js` (tool error kinds), `src/mapping.js` (bounded,
+  sanitized, versioned results and location derivation), `src/tools.js` (the six tools and their
+  schemas), `src/httpServer.js` (Streamable HTTP sessions, Host/Origin checks, health and readiness),
+  `src/logger.js` (redacted JSON logs); `Dockerfile` and `compose.yaml` (the `mcp` profile on an
+  internal network); `test/` (unit, SDK in-memory, real-Atlas integration over Streamable HTTP, and
+  `docker-smoke.mjs`).
 - `playwright.config.js` — Playwright projects, isolated test ports, and the cloud provider stub, API, Vite, and landing and demo build/preview processes started for the suite.
 - `landing/` — the public landing page and user guide, a separate two-page Vue/Vite/Tabler build into
   `dist-landing/` (ignored by Git) published to GitHub Pages by `.github/workflows/pages.yml`:
@@ -482,6 +494,10 @@ npm test
 npm run build
 npm run test:e2e
 ```
+
+After a change in `mcp/`, or in an Atlas read endpoint its tools use (items, item details and
+history, categories and fields, the Dashboard, capabilities), also run `npm run mcp:test` (once
+`npm run mcp:install`); it starts a real Atlas.
 
 `npm run test:e2e` also builds and checks the landing page. After a visible interface change, re-run
 `npm run landing:screenshots` when the landing screenshots no longer match the application.

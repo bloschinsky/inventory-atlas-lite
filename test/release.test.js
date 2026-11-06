@@ -36,6 +36,9 @@ test('release workflow gates both distributions and preserves the legacy asset c
   // The user-facing notes come from shared/release-history.json, and the tag is checked against it
   // in the validation job, so a release without an entry fails before anything is published.
   assert.match(workflow, /validate:[\s\S]*scripts\/release-notes\.mjs/);
+  // The optional MCP adapter is tested before anything is published, and its image only in a smoke test.
+  assert.match(workflow, /validate:[\s\S]*npm run mcp:install[\s\S]*npm run mcp:test[\s\S]*e2e:/);
+  assert.match(workflow, /docker:[\s\S]*node mcp\/test\/docker-smoke\.mjs inventory-atlas-lite:smoke[\s\S]*Log in to GHCR/);
   assert.match(workflow, /release-notes\.mjs "\$GITHUB_REF_NAME" > release-notes\.md[\s\S]*--notes-file release-notes\.md/);
   assert.doesNotMatch(workflow, /--generate-notes/);
 });

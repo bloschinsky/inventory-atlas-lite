@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.72.0",
+    "date": "2026-11-06",
+    "changes": [
+      "New, optional, and off by default: a read-only MCP adapter in the mcp/ folder lets an AI assistant or another Model Context Protocol client on the same machine read your inventory. It can search items, open an item with its custom fields, list categories and their fields, read an item's history, summarize the Dashboard, and tell where an item is now, including the containers around it.",
+      "The adapter is a separate service that talks to Inventory Atlas Lite only through its API with a Read-only token you create in Settings → Security & Access → API Access. It never opens the database, offers nothing that changes data, sends no photos, and stops at once when you revoke its token. Inventory Atlas Lite itself runs exactly as before without it.",
+      "It listens only on the machine itself, or on a private Docker network with the new mcp/compose.yaml profile, because it has no sign-in of its own yet. Setup, limits, and security notes are in docs/features/mcp-read-only-adapter.md."
+    ]
+  },
+  {
     "version": "0.71.0",
     "date": "2026-11-06",
     "changes": [

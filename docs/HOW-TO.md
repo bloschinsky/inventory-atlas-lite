@@ -1196,6 +1196,12 @@ also create, edit, move, retire, lend, and delete items and their photos. No tok
 categories, templates, checklists, settings, backups, users, or tokens. The list shows each token's
 masked identifier (`ial_…`), access, status, last use, and expiry; **Revoke** stops it at once.
 
+An AI assistant or another Model Context Protocol (MCP) client on the same machine or a private Docker
+network can read the inventory through the optional read-only MCP adapter. The server's administrator
+starts it separately with a **Read-only** token; it searches and opens items, categories, history,
+the Dashboard summary, and an item's location, but it changes nothing and sends no photos. Revoke its
+token and it loses access at once.
+
 ### See your sessions and change your password
 
 **Settings → Security & Access → Sessions**, also **Sessions & password** in the account menu, lists the
