@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.73.1",
+    "date": "2026-11-07",
+    "changes": [
+      "This release delivers the remote MCP access of 0.73.0, whose release stopped in an automated test before anything was published. Only that test was fixed; Inventory Atlas Lite and the MCP adapter are unchanged from 0.73.0."
+    ]
+  },
+  {
     "version": "0.73.0",
     "date": "2026-11-07",
     "changes": [
