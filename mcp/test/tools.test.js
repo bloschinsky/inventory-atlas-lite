@@ -209,6 +209,15 @@ test('an item or a history page full of long texts is shortened to the result bu
   }
 });
 
+test('a result that cannot fit the budget becomes a response_too_large tool error', async () => {
+  // No tool's mapped shape gets this large today, so the worst case is built at the result level.
+  const { toolResult, toolErrorResult } = await import('../src/tools.js');
+  const huge = { version: 1, rows: Array.from({ length: 2000 }, (_, index) => ({ id: index, text: 'y'.repeat(500) })) };
+  assert.throws(() => toolResult(huge), error => error instanceof ToolError && error.kind === 'response_too_large');
+  const answer = toolErrorResult(new ToolError('response_too_large'));
+  assert.deepEqual([answer.isError, answer.structuredContent.error.kind], [true, 'response_too_large']);
+});
+
 test('a cancelled call aborts the Atlas request it is waiting for', async () => {
   let aborted = false;
   const atlas = fakeAtlas({ dashboard: ({ signal }) => new Promise((_resolve, reject) => {

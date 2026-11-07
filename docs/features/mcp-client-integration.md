@@ -31,9 +31,10 @@ claim that it fails.
 | **Claude** voice mode | **Not documented** in the connector documentation read for this phase; whether voice conversations call connector tools is unknown here. | — |
 | **Claude Code** | Connectors added in claude.ai are available when signed in with the Claude account; it can also add the URL itself and uses a loopback redirect, which the adapter accepts on any port. | [Get started with connectors](https://claude.com/docs/connectors/getting-started), [Authentication — Callback URLs](https://claude.com/docs/connectors/building/authentication) |
 | **ChatGPT** Business, Enterprise, Edu (web) | **Yes, where the workspace allows it**: **Plugins → + → Add custom MCP server**; on Business only admins and owners create them, on Enterprise/Edu admins can grant it by role. | [OpenAI Help Center: Connecting custom MCP servers in ChatGPT](https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt) (read through search results; the page refuses automated fetching), [Connect and test your plugin](https://developers.openai.com/apps-sdk/deploy/connect-chatgpt), [Add custom MCP server](https://developers.openai.com/api/docs/guides/custom-mcp-server) |
-| **ChatGPT** Plus, Pro | **Not claimed.** OpenAI announced a Developer mode beta with MCP connectors for Plus and Pro on the web in September 2025, but the current help article found for this phase names Business and Enterprise/Edu only. Check whether your own account offers **Add custom MCP server**; do not assume it. | [OpenAI Developers on X, September 2025](https://x.com/OpenAIDevs/status/1965807401745207708), help article above |
+| **ChatGPT** Pro (web) | **Limited:** the help article says Pro can connect custom MCP servers with **read and fetch** access only; full MCP is for Business and Enterprise/Edu. Whether that mode lists and calls this adapter's six tools has not been tested. | help article above |
+| **ChatGPT** Plus | **Not claimed.** OpenAI announced a Developer mode beta with MCP connectors for Plus and Pro in September 2025, but the current help article does not name Plus. Check whether your own account offers **Add custom MCP server**; do not assume it. | [OpenAI Developers on X, September 2025](https://x.com/OpenAIDevs/status/1965807401745207708), help article above |
 | **ChatGPT** Free | **No** custom MCP servers in any source read. | as above |
-| **ChatGPT** mobile apps, voice | **Not documented** for custom MCP servers; OpenAI's guide says "Use ChatGPT on the web." | [Add custom MCP server](https://developers.openai.com/api/docs/guides/custom-mcp-server) |
+| **ChatGPT** mobile apps, voice | **No:** custom MCP connections are web-only per the help article. | help article above, [Add custom MCP server](https://developers.openai.com/api/docs/guides/custom-mcp-server) |
 | **MCP Inspector**, official SDK clients | Protocol baseline independent of vendor plans. The official TypeScript SDK client is what the automated suite uses. | [MCP Inspector](https://modelcontextprotocol.io/docs/tools/inspector) |
 
 A published, reviewed **Claude directory listing** or **ChatGPT plugin/app** is out of scope: this is
@@ -80,7 +81,10 @@ field, while every text value is cut to a shorter length (1,000, then 500, … c
 64) until it fits, and the result carries `text_shortened: true`. A shortened value ends with `…`, so
 it is never mistaken for a missing one, and the `get_item` description still tells the model which
 fields exist. Ordinary results are far smaller: on the synthetic inventory the largest text was a
-25-row search page of about 9,000 characters.
+25-row search page of about 9,000 characters. If a result still exceeded the budget with every text at
+64 code points (no tool's mapped shape gets near that today), the call fails as `response_too_large`
+instead of returning more. The budget counts the JSON; the text block adds a fixed prefix of about 120
+characters to its copy.
 
 ## Acceptance suite
 
@@ -217,8 +221,9 @@ and anything from a real inventory. Unknown stays unknown.
 | Claude voice mode | owner's plan | — | — | — | Not tested; tool use in voice is not documented | — |
 | Claude Code | owner's plan | DCR, loopback redirect | — | — | Not tested | — |
 | ChatGPT web, Business / Enterprise / Edu | workspace | — | — | — | Not tested; available per OpenAI's help article | — |
-| ChatGPT web, Plus / Pro | — | — | — | — | Not tested; availability not confirmed (see above) | — |
-| ChatGPT mobile, voice | — | — | — | — | Not tested; not documented for custom MCP servers | — |
+| ChatGPT web, Pro | — | — | — | — | Not tested; read/fetch-only mode per OpenAI | — |
+| ChatGPT web, Plus | — | — | — | — | Not tested; availability not confirmed (see above) | — |
+| ChatGPT mobile, voice | — | — | — | — | Not available: custom MCP connections are web-only | — |
 
 For a manual Claude check, follow the [playbook](mcp-operator-playbook.md#connect-claude) and ask, with
 the connector on: "Which categories do I have?", "Find items named <a word from your inventory>",
@@ -246,8 +251,8 @@ code, PKCE, refresh rotation, revocation per client, all six tools on realistic 
 bounded results within Claude's documented limit, Ukrainian and English data as stored, and secret-free
 results and logs.
 
-Unsupported or unverified: Claude voice mode and ChatGPT mobile/voice (not documented); ChatGPT Plus/Pro
-(not confirmed); Client ID Metadata Documents (deferred — Claude falls back to DCR, and each fresh
+Unsupported or unverified: Claude voice mode (not documented); ChatGPT mobile and voice (web-only);
+ChatGPT Pro (read/fetch-only mode, not tested with this adapter) and Plus (not confirmed); Client ID Metadata Documents (deferred — Claude falls back to DCR, and each fresh
 connection registers a new client, visible in `cli.js clients`); real-vendor screenshots and
 transcripts (pending the owner's account).
 
@@ -285,7 +290,8 @@ location or container*, with:
   `cli.js` helpers, and the SDK OAuth client shared with `remote.test.js`.
 - `mcp/test/scenario-transcripts.mjs` — prints the sample interactions.
 - `mcp/test/mapping.test.js`, `tools.test.js` — the result budget: results within it unchanged,
-  larger ones shortened by code points with every record and field kept and `text_shortened: true`.
+  larger ones shortened by code points with every record and field kept and `text_shortened: true`,
+  and one that cannot fit refused as `response_too_large`.
 
 ## Limitations
 

@@ -87,9 +87,11 @@ loopback address on your computer, which the adapter accepts.
 ## Connect ChatGPT (where your plan allows it)
 
 As of 2026-11-07 OpenAI documents custom MCP servers for **Business** and **Enterprise/Edu**
-workspaces on the **web**; on Business only admins and owners add them. For Plus and Pro it is not
-confirmed: if your account shows the option, it works the same way; if it does not, there is no
-supported workaround. Free plans and the mobile apps are not documented.
+workspaces on the **web**; on Business only admins and owners add them. **Pro** can connect custom MCP
+servers with read and fetch access only; whether that mode uses this adapter's tools has not been
+tested. For **Plus** it is not confirmed: if your account shows the option, try it; if it does not,
+there is no supported workaround. Free plans have no custom MCP servers, and custom MCP connections
+are web-only, so the mobile apps cannot use them.
 
 1. Open **Plugins**, press **+**, then **Add custom MCP server**.
 2. Name and description; **Connection:** the URL `https://mcp.example.com/mcp`; **Authentication:**

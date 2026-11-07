@@ -42,6 +42,18 @@ realistic conversations, with operator documentation. No tool and no write acces
   `mcp-remote-oauth.md`, `mcp-read-only-adapter.md`, the features index, and the MCP paragraphs of
   `docs/HOW-TO.md` and `docs/HOW-TO.uk.md`.
 
+## Review fixes (PR #74)
+
+The review approved the change with non-blocking notes; two were fixed before merging:
+
+- **ChatGPT availability** — the help article says Pro can connect custom MCP servers with read and
+  fetch access only (full MCP is for Business and Enterprise/Edu) and that custom MCP connections are
+  web-only. The support matrix, QA matrix, readiness review, and both playbooks now say so; Plus stays
+  "not confirmed", and the Pro mode is marked as not tested with this adapter.
+- **Result budget guarantee** — `fitResult()` used to return its last attempt even if it still
+  exceeded 50,000 characters. It now refuses such a result with `response_too_large`, and a tool call
+  logs `ok` only after the result fits. Tests cover the refusal in `mapping.test.js` and `tools.test.js`.
+
 ## Not done here (pending the owner)
 
 - A manual connection of a real Claude connector, and ChatGPT where a plan allows it, needs a deployed
@@ -55,7 +67,7 @@ realistic conversations, with operator documentation. No tool and no write acces
 - `npm test` — 438 tests, 435 passed, 2 failed: the two guide tests of `test/landing.test.js` that also
   fail on a clean `master` checkout on this Windows machine (confirmed with `git stash`), not related.
 - `npm run build` — passed.
-- `npm run mcp:test` — 82 passed, including the 20 new acceptance tests.
+- `npm run mcp:test` — 84 passed, including the 20 new acceptance tests (82 before the review fixes).
 - `npm run test:e2e` (with `APP_VERSION=0.73.2` and the port overrides `E2E_API_PORT=3800
   E2E_CLOUD_STUB_PORT=3801 E2E_LANDING_PORT=4200` for this machine's reserved port ranges) — 311 passed (22.7 min).
   No browser-facing behaviour of Atlas changed; the adapter's consent page is covered by the MCP suites.

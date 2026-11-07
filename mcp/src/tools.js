@@ -153,9 +153,10 @@ export function registerTools(server, { atlas, logger }) {
     server.registerTool(name, { ...definition, annotations: { title: definition.title, ...READ_ONLY } }, async (input, extra) => {
       const started = Date.now();
       try {
-        const result = await HANDLERS[name](atlas, input, extra.signal);
+        // Fitting the result to the size budget can still refuse it, so the outcome is logged after.
+        const answer = toolResult(await HANDLERS[name](atlas, input, extra.signal));
         logger.info('tool call', { tool: name, request_id: extra.requestId, session: extra.sessionId, outcome: 'ok', duration_ms: Date.now() - started });
-        return toolResult(result);
+        return answer;
       } catch (error) {
         const known = error instanceof ToolError;
         logger[known ? 'warn' : 'error']('tool call', {
