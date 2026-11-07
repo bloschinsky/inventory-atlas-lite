@@ -184,7 +184,8 @@ test('the authorization request is checked before any consent is shown', async (
   assert.equal(page.response.headers.get('x-frame-options'), 'DENY');
   assert.match(page.cookie, /^atlas_mcp_consent=/);
   assert.match(page.response.headers.get('set-cookie'), /HttpOnly; SameSite=Strict/);
-  for (const text of ['Synthetic main client', 'client.example.com', 'inventory:read', 'Synthetic &lt;b&gt;inventory&lt;/b&gt;', client.client_id]) {
+  for (const text of ['Synthetic main client', 'client.example.com', 'inventory:read', 'Synthetic &lt;b&gt;inventory&lt;/b&gt;', client.client_id,
+    'are sent to the provider of this client']) {
     assert.ok(page.html.includes(text), `the consent page shows ${text}`);
   }
 });

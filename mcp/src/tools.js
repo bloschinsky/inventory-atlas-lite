@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { ToolError } from './errors.js';
-import { categoryList, categoryWithFields, historyResult, inventorySummary, itemDetails, itemLocation, LIMITS, searchResult } from './mapping.js';
+import { categoryList, categoryWithFields, fitResult, historyResult, inventorySummary, itemDetails, itemLocation, LIMITS, searchResult } from './mapping.js';
 
 /*
   The six read-only tools of the adapter. Each one validates its input strictly (unknown keys are
@@ -91,7 +91,10 @@ export const TOOL_DEFINITIONS = {
 
 const textOf = result => `Inventory Atlas data. ${UNTRUSTED}\n${JSON.stringify(result)}`;
 
-export const toolResult = result => ({ content: [{ type: 'text', text: textOf(result) }], structuredContent: result });
+export const toolResult = mapped => {
+  const result = fitResult(mapped);
+  return { content: [{ type: 'text', text: textOf(result) }], structuredContent: result };
+};
 
 export const toolErrorResult = error => {
   const body = (error instanceof ToolError ? error : new ToolError('upstream_error')).toJSON();

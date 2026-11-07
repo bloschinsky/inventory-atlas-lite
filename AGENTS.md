@@ -11,8 +11,10 @@ Every page and API request needs a signed-in account (Administrator or Viewer / 
 - Use English throughout the project.
 - Write all documentation, code comments, commit messages, identifiers, user-facing copy, test descriptions, and configuration notes in English.
   The only exceptions are the Ukrainian translations: the interface in `client/src/i18n/locales/uk.json`, the landing page in
-  `landing/src/locales/uk.json`, the `uk` texts of the public demo inventory in `client/src/demo/fixture.js`, and the
-  Ukrainian user guide in `docs/HOW-TO.uk.md`.
+  `landing/src/locales/uk.json`, the `uk` texts of the public demo inventory in `client/src/demo/fixture.js`, the
+  Ukrainian user guide in `docs/HOW-TO.uk.md`, and the Ukrainian MCP operator playbook in
+  `docs/features/mcp-operator-playbook.uk.md` (keep it in step with `mcp-operator-playbook.md`). The Ukrainian
+  names, categories, and places of the synthetic test inventory in `mcp/test/scenarioFixture.js` are test data.
 - When editing existing text, keep terminology consistent with the surrounding English content.
 
 ## Stack and architecture
@@ -262,14 +264,17 @@ The project stays small and readable. Do not add:
 - `test/e2e/color-field.spec.js` — creating a Color field, the picker (presets, arrow keys, Custom HEX, Clear), details, the Items column with sorting and filters, templates, both color modes, and phones.
 - `test/e2e/lifecycle.spec.js` — Retire and Restore from the item page, the Active / All / Retired views of Items and Hierarchy, the container contents choice, checklists with retired items, the Dashboard link, phones, and Ukrainian.
 - `test/e2e/` — Playwright browser tests, their fixtures, shared helpers, and the run launcher; `globalSetup.js` creates the e2e administrator and signs in once, and `fixtures.js` is the `test` every app spec imports (its `request` carries that session and its CSRF header); `auth.spec.js` covers sign-in, the viewer, Security & Access, and the password confirmation.
-- `mcp/` — the optional read-only MCP adapter (`docs/features/mcp-read-only-adapter.md`, and its
-  opt-in remote access with OAuth, `docs/features/mcp-remote-oauth.md`), its own npm project
+- `mcp/` — the optional read-only MCP adapter (`docs/features/mcp-read-only-adapter.md`, its
+  opt-in remote access with OAuth, `docs/features/mcp-remote-oauth.md`, and client integration,
+  acceptance, and readiness, `docs/features/mcp-client-integration.md`, with the operator playbook
+  `mcp-operator-playbook.md` / `.uk.md`), its own npm project
   (`npm run mcp:install`, `mcp:start`, `mcp:test`) that reaches Atlas only through the REST API with
   an `inventory:read` token: `src/index.js` (process, startup check that the token is exactly
   `inventory:read` through `GET /api/auth/token`), `src/config.js` (strict environment, including
   `MCP_PUBLIC_URL`), `src/atlasClient.js` (the GET-only Atlas client: one deadline covering the queue,
   cancellation, size cap, concurrency, no redirects), `src/errors.js` (tool error kinds),
-  `src/mapping.js` (bounded, sanitized, versioned results and location derivation), `src/tools.js`
+  `src/mapping.js` (bounded, sanitized, versioned results, the 50,000-character result budget
+  `fitResult()`, and location derivation), `src/tools.js`
   (the six tools and their schemas), `src/httpServer.js` (Streamable HTTP sessions reserved before the
   handshake, Host/Origin checks, health and readiness, and the OAuth routes and bearer guard),
   `src/oauthProvider.js` (the OAuth policy behind the SDK's `mcpAuthRouter`: one scope, one resource,
@@ -280,7 +285,10 @@ The project stays small and readable. Do not add:
   and `compose.remote.yaml` for an existing Atlas, the `Caddyfile` that publishes only the MCP and
   OAuth paths, `remote.env.example`, and the `atlas-mcp.service` systemd unit for a Proxmox LXC);
   `test/` (unit, SDK in-memory, OAuth in process, real-Atlas integration over Streamable HTTP and
-  over an HTTPS proxy with the SDK's OAuth client, `docker-smoke.mjs`, and
+  over an HTTPS proxy with the SDK's OAuth client, `acceptance.test.js` — the client acceptance suite of
+  ten conversation scenarios, resilience, sizes, and secret leaks on the synthetic inventory of
+  `scenarioFixture.js`, over the TLS proxy and SDK OAuth client of `remoteHarness.js` —,
+  `scenario-transcripts.mjs` (sample interactions), `docker-smoke.mjs`, and
   `docker-remote-smoke.mjs`; `fixtures/tls/` is a test-only certificate).
 - `playwright.config.js` — Playwright projects, isolated test ports, and the cloud provider stub, API, Vite, and landing and demo build/preview processes started for the suite.
 - `landing/` — the public landing page and user guide, a separate two-page Vue/Vite/Tabler build into
