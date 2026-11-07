@@ -5,6 +5,7 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { ToolError } from '../src/errors.js';
 import { createMcpServer } from '../src/httpServer.js';
 import { createLogger } from '../src/logger.js';
+import { MAX_RESULT_CHARS } from '../src/mapping.js';
 import { CONDITION_FILTERS, HISTORY_TYPES, LIFECYCLE_FILTERS, MAX_PAGE_SIZE, SORT_KEYS } from '../src/tools.js';
 import { CONDITION_GRADES } from '../../shared/conditionGrades.js';
 import { LIFECYCLE_FILTERS as ATLAS_LIFECYCLE_FILTERS } from '../../shared/itemLifecycle.js';
@@ -181,6 +182,40 @@ test('a large Atlas answer is still bounded in the tool result', async () => {
   } finally {
     await close();
   }
+});
+
+test('an item or a history page full of long texts is shortened to the result budget, never emptied', async () => {
+  const long = index => `${index}:${'Довгий текст '.repeat(300)}`;
+  const fields = Array.from({ length: 100 }, (_, index) => ({ id: index + 1, name: `Notes ${index}`, type: 'text', value: long(index) }));
+  const events = Array.from({ length: 50 }, (_, index) => ({ id: 1000 - index, type: 'location_changed', occurred_at: '2026-01-01T00:00:00Z',
+    from: long(index), to: long(index + 1), from_detail: long(index), to_detail: long(index) }));
+  const atlas = fakeAtlas({ 'items/1': { id: 1, uuid: UUID, name: 'Archive box', description: long('d'), fields }, 'items/1/history': { events, next_cursor: 951 } });
+  const { client, close } = await connect(atlas);
+  try {
+    for (const [name, args] of [['get_item', { item: 1 }], ['get_item_history', { item: 1, limit: 50 }]]) {
+      const result = await client.callTool({ name, arguments: args });
+      assert.ok(JSON.stringify(result.structuredContent).length <= MAX_RESULT_CHARS, `${name} stays within the budget`);
+      assert.ok(result.content[0].text.length < MAX_RESULT_CHARS + 200, `${name} text is ${result.content[0].text.length} characters`);
+      assert.equal(result.structuredContent.text_shortened, true);
+    }
+    const item = (await client.callTool({ name: 'get_item', arguments: { item: 1 } })).structuredContent;
+    assert.equal(item.custom_fields.length, 100, 'no field is dropped');
+    assert.ok(item.custom_fields.every((field, index) => field.value.startsWith(`${index}:`) && field.value.endsWith('…')), 'a shortened value is visibly cut, never null');
+    assert.equal(item.uuid, UUID);
+    const history = (await client.callTool({ name: 'get_item_history', arguments: { item: 1, limit: 50 } })).structuredContent;
+    assert.deepEqual([history.events.length, history.next_cursor], [50, '951']);
+  } finally {
+    await close();
+  }
+});
+
+test('a result that cannot fit the budget becomes a response_too_large tool error', async () => {
+  // No tool's mapped shape gets this large today, so the worst case is built at the result level.
+  const { toolResult, toolErrorResult } = await import('../src/tools.js');
+  const huge = { version: 1, rows: Array.from({ length: 2000 }, (_, index) => ({ id: index, text: 'y'.repeat(500) })) };
+  assert.throws(() => toolResult(huge), error => error instanceof ToolError && error.kind === 'response_too_large');
+  const answer = toolErrorResult(new ToolError('response_too_large'));
+  assert.deepEqual([answer.isError, answer.structuredContent.error.kind], [true, 'response_too_large']);
 });
 
 test('a cancelled call aborts the Atlas request it is waiting for', async () => {

@@ -1212,6 +1212,14 @@ minutes. **Deny** refuses. The administrator can list the connected assistants a
 of them on that server (`node src/cli.js clients`, `node src/cli.js revoke <client_id>`) without
 affecting the others.
 
+In Claude, add it under **Customize → Connectors → Add custom connector** with the address
+`https://mcp.example.com/mcp` (your adapter's own name), choose **Register automatically** if Claude
+asks how to identify itself, and turn the connector on in a chat under **+ → Connectors**. A connector
+added on the web also works in the Claude mobile app. ChatGPT offers **Plugins → Add custom MCP server**
+only on some plans. Before you allow an assistant, know that the records it reads (never photos) are
+sent to its provider and handled under that provider's terms. The operator playbook in
+`docs/features/mcp-operator-playbook.md` walks through setup, checks, and troubleshooting.
+
 ### See your sessions and change your password
 
 **Settings → Security & Access → Sessions**, also **Sessions & password** in the account menu, lists the

@@ -246,7 +246,8 @@ address is **not** an external ingress: cloud clients such as Claude cannot reac
 
 ### 3. Connect and approve a client
 
-1. In the client (for example a Claude custom connector), add the server URL
+1. In the client (for example a Claude custom connector, with **Register automatically** as its
+   OAuth client; see the [operator playbook](mcp-operator-playbook.md#connect-claude)), add the server URL
    `https://mcp.example.com/mcp`. It discovers the authorization server, registers, and opens the
    consent page in your browser.
 2. On the adapter's host print a code: `docker compose -f mcp/deploy/compose.remote.yaml exec
@@ -348,5 +349,6 @@ the same scope; the enrollment code proves a shell on the host, not a specific A
   host-side code rather than an Atlas account.
 - The OAuth store and MCP sessions belong to one process; there is no shared store for several
   replicas. Sessions end when the adapter restarts (tokens survive).
-- Real Claude and ChatGPT connectors, onboarding, and their client limitations are verified in Phase
-  2.3 (#67); here the protocol is exercised with the official SDK client.
+- Client compatibility, the conversation scenarios, and the platform support matrix are in
+  [mcp-client-integration.md](mcp-client-integration.md) (Phase 2.3, #67); the operator's steps for
+  Claude and ChatGPT are in the [operator playbook](mcp-operator-playbook.md).

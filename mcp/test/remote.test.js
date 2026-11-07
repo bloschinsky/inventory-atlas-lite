@@ -1,18 +1,14 @@
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
-import http from 'node:http';
-import https from 'node:https';
 import os from 'node:os';
 import path from 'node:path';
-import tls from 'node:tls';
 import { after, before, test } from 'node:test';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { UnauthorizedError } from '@modelcontextprotocol/sdk/client/auth.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import { freePort, json, MCP_DIR, REPO_DIR, startMcp, waitFor } from './helpers.js';
+import { freePort, json, REPO_DIR, startMcp, waitFor } from './helpers.js';
 import { consentPage, decide, initialize, pkce, REDIRECT_URI } from './oauthFlow.js';
+import { approveInBrowser, cli as cliIn, enroll as enrollIn, HarnessProvider, startProxy, stopProxy } from './remoteHarness.js';
 
 /*
   Remote access end to end: a real Atlas with a synthetic inventory, the adapter as its own process
@@ -24,14 +20,6 @@ import { consentPage, decide, initialize, pkce, REDIRECT_URI } from './oauthFlow
 */
 process.chdir(REPO_DIR);
 const { startServer, stopServer } = await import('../../test/serverProcess.js');
-
-// A self-signed certificate for localhost that exists only for these tests.
-const CERT = readFileSync(new URL('./fixtures/tls/localhost.crt', import.meta.url), 'utf8');
-const KEY = readFileSync(new URL('./fixtures/tls/localhost.key', import.meta.url), 'utf8');
-tls.setDefaultCACertificates([...tls.getCACertificates('default'), CERT]);
-
-// The paths a reverse proxy may publish (see mcp/deploy/Caddyfile); everything else is 404 at the edge.
-const PUBLISHED = /^\/(mcp|authorize|consent|token|register|revoke|\.well-known\/(oauth-protected-resource(\/mcp)?|oauth-authorization-server))(\?|$)/;
 
 let dataDir;
 let stateDir;
@@ -47,47 +35,8 @@ const request = async (url, options) => {
   return response.status === 204 ? null : response.json();
 };
 
-function startProxy(port, upstreamPort) {
-  const server = https.createServer({ key: KEY, cert: CERT }, (req, res) => {
-    if (!PUBLISHED.test(req.url)) {
-      res.writeHead(404).end();
-      return;
-    }
-    const upstream = http.request({
-      host: '127.0.0.1', port: upstreamPort, method: req.method, path: req.url,
-      headers: { ...req.headers, 'x-forwarded-for': req.socket.remoteAddress, 'x-forwarded-proto': 'https' }
-    }, answer => {
-      res.writeHead(answer.statusCode, answer.headers);
-      answer.pipe(res);
-    });
-    upstream.on('error', () => res.writeHead(502).end());
-    req.pipe(upstream);
-  });
-  return new Promise(resolve => server.listen(port, '127.0.0.1', () => resolve(server)));
-}
-
-const enroll = () => execFileSync(process.execPath, ['--disable-warning=ExperimentalWarning', 'src/cli.js', 'enroll'], {
-  cwd: MCP_DIR, env: { PATH: process.env.PATH, SystemRoot: process.env.SystemRoot, MCP_STATE_DIR: stateDir }, encoding: 'utf8'
-}).match(/^Enrollment code: (\S+)$/m)[1];
-const cli = (...args) => execFileSync(process.execPath, ['--disable-warning=ExperimentalWarning', 'src/cli.js', ...args], {
-  cwd: MCP_DIR, env: { PATH: process.env.PATH, SystemRoot: process.env.SystemRoot, MCP_STATE_DIR: stateDir }, encoding: 'utf8'
-});
-
-// The OAuth client side of the official SDK, with this test as the browser.
-class HarnessProvider {
-  constructor() { this.saved = {}; }
-  get redirectUrl() { return REDIRECT_URI; }
-  get clientMetadata() {
-    return { client_name: 'SDK harness', redirect_uris: [REDIRECT_URI], grant_types: ['authorization_code', 'refresh_token'], response_types: ['code'], token_endpoint_auth_method: 'none' };
-  }
-  clientInformation() { return this.saved.client; }
-  saveClientInformation(client) { this.saved.client = client; }
-  tokens() { return this.saved.tokens; }
-  saveTokens(tokens) { this.saved.tokens = tokens; }
-  redirectToAuthorization(url) { this.authorizationUrl = url; }
-  saveCodeVerifier(verifier) { this.saved.verifier = verifier; }
-  codeVerifier() { return this.saved.verifier; }
-}
+const enroll = () => enrollIn(stateDir);
+const cli = (...args) => cliIn(stateDir, ...args);
 
 const startAdapter = token => startMcp({
   ATLAS_BASE_URL: atlas.base, ATLAS_API_TOKEN: token, MCP_PUBLIC_URL: publicUrl, MCP_STATE_DIR: stateDir, MCP_TRUST_PROXY: 'loopback'
@@ -114,8 +63,7 @@ before(async () => {
 
 after(async () => {
   await mcp?.stop();
-  proxy?.closeAllConnections();
-  await new Promise(resolve => (proxy ? proxy.close(resolve) : resolve()));
+  await stopProxy(proxy);
   if (atlas) await stopServer(atlas.child);
   await rm(dataDir, { recursive: true, force: true });
   await rm(stateDir, { recursive: true, force: true });
@@ -134,15 +82,8 @@ test('an official MCP client authorizes over HTTPS through the proxy and reads A
   assert.equal(authorization.searchParams.get('resource'), `${publicUrl}/mcp`, 'the client asks for a token bound to this resource');
 
   // The owner approves in the browser with a code printed on the host.
-  const page = await fetch(authorization, { redirect: 'manual' });
-  const html = await page.text();
-  assert.equal(page.status, 200);
+  const { page, code } = await approveInBrowser(authorization, publicUrl, enroll());
   assert.match(page.headers.get('set-cookie'), /^__Host-atlas_mcp_consent=[^;]+; Path=\/; HttpOnly; SameSite=Strict; Max-Age=600; Secure/);
-  const approved = await decide(publicUrl, {
-    request: html.match(/name="request" value="([^"]+)"/)[1], cookie: page.headers.get('set-cookie').split(';')[0]
-  }, { code: enroll() });
-  assert.equal(approved.status, 303);
-  const code = new URL(approved.headers.get('location')).searchParams.get('code');
 
   const transport = new StreamableHTTPClientTransport(endpoint, { authProvider: provider });
   await transport.finishAuth(code);

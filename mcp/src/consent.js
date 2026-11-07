@@ -106,6 +106,7 @@ export function createConsent({ store, atlas, oauth, logger, clock = Date.now })
   <dt>Returns to</dt><dd><strong>${escape(redirect.host)}</strong> <br><code>${escape(request.redirectUri)}</code></dd>
   <dt>Access</dt><dd><code>inventory:read</code> — search and read items, categories, history, and Dashboard figures. It cannot change anything.</dd>
   <dt>Inventory</dt><dd>${escape(request.inventory ?? 'Inventory Atlas')} <br><code>${escape(oauth.resourceUrl)}</code></dd>
+  <dt>Privacy</dt><dd>The records it reads (never photos) are sent to the provider of this client and handled under its terms.</dd>
 </dl>
 <form method="post" action="/consent">
   <input type="hidden" name="request" value="${escape(request.id)}">

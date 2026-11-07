@@ -61,7 +61,9 @@ refused before Atlas is called. Results are `structuredContent` plus the same JS
 by a note that text values are user-entered data, never instructions. Every result has `version: 1`.
 The JSON is deliberately in both places: MCP 2025-11-25 asks a tool with structured output to also
 return it as text for clients that read only text, and results are already bounded (a 25-row search
-page is a few kilobytes), so a shorter text fallback was reviewed and not adopted.
+page is a few kilobytes), so a shorter text fallback was reviewed and not adopted. Since Phase 2.3 a
+whole result is also kept at or below 50,000 characters of JSON: a larger one has its text values cut
+shorter and carries `text_shortened: true` (see [mcp-client-integration.md](mcp-client-integration.md#result-size-budget)).
 
 | Tool | Atlas endpoints | Input | Result |
 | --- | --- | --- | --- |

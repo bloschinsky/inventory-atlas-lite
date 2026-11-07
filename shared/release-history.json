@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.73.2",
+    "date": "2026-11-07",
+    "changes": [
+      "The optional MCP adapter now keeps every answer within 50,000 characters, well below what Claude's apps accept from a tool. An item with very long texts in many custom fields, or a page of history with long locations, could exceed that before; now its texts are shortened, every record and field is kept, and the answer says text_shortened.",
+      "The adapter's consent page now says that the records an assistant reads, never photos, are sent to that assistant's provider.",
+      "New documentation for connecting an assistant: an operator playbook in English and Ukrainian (docs/features/mcp-operator-playbook.md) with the Claude and ChatGPT steps, checks, troubleshooting of 401 and token errors, rotation, and rollback, and a dated overview of which Claude and ChatGPT plans and apps support a self-hosted MCP server (docs/features/mcp-client-integration.md)."
+    ]
+  },
+  {
     "version": "0.73.1",
     "date": "2026-11-07",
     "changes": [

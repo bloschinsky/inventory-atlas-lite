@@ -1,3 +1,5 @@
+import { ToolError } from './errors.js';
+
 /*
   Pure mapping from Atlas REST responses to the adapter's own, versioned result shapes. Field names
   here are the tool contract (snake_case, stable); Atlas's response shapes can change without
@@ -24,6 +26,43 @@ export const LIMITS = Object.freeze({
   locationChain: 20,
   distribution: 20
 });
+
+/*
+  The largest serialized result a tool returns. Claude's hosted apps accept tool results of about
+  150,000 characters, and a result travels twice (as structured content and as the same JSON in a text
+  block), so one result stays well below half of that whatever the inventory holds.
+*/
+export const MAX_RESULT_CHARS = 50000;
+// The shortest a text value is cut to when a result has to shrink; ids and UUIDs are never longer.
+const MIN_TEXT_CHARS = 64;
+
+const shortenStrings = (value, max) => {
+  if (typeof value === 'string') {
+    const points = [...value];
+    return points.length > max ? `${points.slice(0, max - 1).join('')}…` : value;
+  }
+  if (Array.isArray(value)) return value.map(entry => shortenStrings(entry, max));
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, shortenStrings(entry, max)]));
+  return value;
+};
+
+/*
+  Keeps a result within MAX_RESULT_CHARS without dropping a record or a field: while it is too large,
+  every text value is cut to a shorter length (halved each time, never below MIN_TEXT_CHARS) and the
+  result says so with `text_shortened: true`. A shortened value ends with "…", so it can never be
+  mistaken for a missing one. The limits per value and per list already keep ordinary results small;
+  this only changes items with very long texts in many fields, or pages full of them. Should even the
+  shortest texts not fit (a shape no tool produces today), the call fails as `response_too_large`
+  rather than return more than the budget.
+*/
+export function fitResult(result) {
+  if (JSON.stringify(result).length <= MAX_RESULT_CHARS) return result;
+  for (let max = LIMITS.longText / 2; max >= MIN_TEXT_CHARS; max = Math.floor(max / 2)) {
+    const shortened = { ...shortenStrings(result, max), text_shortened: true };
+    if (JSON.stringify(shortened).length <= MAX_RESULT_CHARS) return shortened;
+  }
+  throw new ToolError('response_too_large', { detail: 'The answer stays larger than the adapter returns even with every text shortened.' });
+}
 
 // C0/C1 controls except tab and newline, and the Unicode bidirectional embedding/override/isolate marks.
 // eslint-disable-next-line no-control-regex

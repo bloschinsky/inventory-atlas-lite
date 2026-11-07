@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { cleanText, compactItem, customFieldValue, historyResult, inventorySummary, itemDetails, itemLocation, LIMITS, searchResult } from '../src/mapping.js';
+import { cleanText, compactItem, customFieldValue, fitResult, historyResult, inventorySummary, itemDetails, itemLocation, LIMITS, MAX_RESULT_CHARS, searchResult } from '../src/mapping.js';
 
 const UUID_A = '11111111-1111-4111-8111-111111111111';
 const UUID_B = '22222222-2222-4222-8222-222222222222';
@@ -19,6 +19,22 @@ test('long text is cut by code points with an ellipsis', () => {
   assert.equal([...cut].length, 10);
   assert.ok(cut.endsWith('…'));
   assert.ok(!/[\uD800-\uDBFF]…$/.test(cut), 'no lone surrogate before the ellipsis');
+});
+
+test('a result within the budget is returned as it is; a larger one is shortened by code points', () => {
+  const small = { version: 1, name: 'Tripod' };
+  assert.equal(fitResult(small), small);
+  const large = { version: 1, id: 7, uuid: UUID_A, ok: true, rows: Array.from({ length: 40 }, () => ({ text: '😀'.repeat(2000), none: null })) };
+  const fitted = fitResult(large);
+  assert.ok(JSON.stringify(fitted).length <= MAX_RESULT_CHARS);
+  assert.deepEqual([fitted.version, fitted.id, fitted.uuid, fitted.ok, fitted.text_shortened, fitted.rows.length, fitted.rows[0].none], [1, 7, UUID_A, true, true, 40, null]);
+  assert.ok(fitted.rows[0].text.endsWith('…') && !/[\uD800-\uDBFF]…$/.test(fitted.rows[0].text));
+  assert.equal(large.rows[0].text.length, 4000, 'the input is not changed');
+});
+
+test('a result that stays too large with the shortest texts is refused, never returned over the budget', () => {
+  const pathological = { version: 1, rows: Array.from({ length: 2000 }, (_, index) => ({ id: index, text: 'x'.repeat(500) })) };
+  assert.throws(() => fitResult(pathological), error => error.kind === 'response_too_large' && !error.message.includes('xxx'));
 });
 
 test('instructions inside inventory text stay plain data', () => {
