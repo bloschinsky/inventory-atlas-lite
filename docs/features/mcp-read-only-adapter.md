@@ -35,7 +35,7 @@ HTTPS with OAuth is Phase 2.2; client setup guides are Phase 2.3; any mutation t
 
 | File | Responsibility |
 | --- | --- |
-| `mcp/src/index.js` | Process entry: configuration, startup token check, listener, shutdown. |
+| `mcp/src/index.js` | Process entry: configuration, startup token check, listener (a port that cannot be bound stops the process, exit code 4), shutdown. |
 | `mcp/src/config.js` | Strict environment parsing; any invalid value stops the process (exit code 2). |
 | `mcp/src/atlasClient.js` | GET-only Atlas client: bearer token, deadline, cancellation, size cap, concurrency and queue limits, no redirects or retries. |
 | `mcp/src/errors.js` | `ToolError` kinds with fixed, non-sensitive messages, and the mapping of Atlas statuses. |
@@ -154,6 +154,11 @@ authentication in this phase, so it must stay on loopback or a private container
 - At startup the adapter reads `/api/capabilities` with its token. A token Atlas rejects stops the
   process (exit code 3) without a fallback to anonymous requests; an unreachable Atlas only delays
   readiness, and the adapter starts serving when Atlas comes up.
+- The adapter announces `atlas-mcp listening on …/mcp` only once its port is bound. A port it cannot
+  bind (taken, reserved by the system, or an address the machine does not have) stops it with one
+  `cannot listen` log line carrying the error code, host, and port, and exit code 4. On Windows,
+  Hyper-V or Docker Desktop can reserve ranges that include the default 3100
+  (`netsh interface ipv4 show excludedportrange protocol=tcp`); choose another `MCP_PORT` then.
 - `GET /healthz` answers `{ "status": "ok" }` while the process runs. `GET /readyz` answers `200 {
   "status": "ready" }` or `503 { "status": "not_ready", "reason": "<kind>" }` from the same read,
   cached for five seconds; neither reveals the token, the upstream address, or inventory data.
@@ -233,6 +238,9 @@ or results.
 - `mcp/test/httpServer.test.js` — the HTTP endpoint in process: a client that disconnects mid-call
   aborts the Atlas request, the session cap, closing a session, health without Atlas, and readiness
   reporting only an error kind, cached.
+- `mcp/test/process.test.js` — the adapter as its own process without Atlas: a port that is already
+  taken stops it with a `cannot listen` line, exit code 4, and no stack trace, and a free port is
+  announced only once bound.
 - `mcp/test/integration.test.js` — a real Atlas with a synthetic Ukrainian/English inventory and the
   adapter as its own process, over the official client and Streamable HTTP: all six tools, pagination,
   empty results, 404, hostile and long text, repeated and concurrent calls, cancellation, `403` for

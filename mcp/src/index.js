@@ -1,3 +1,4 @@
+import http from 'node:http';
 import { AtlasClient } from './atlasClient.js';
 import { ConfigError, readConfig } from './config.js';
 import { createHttpApp, createReadiness } from './httpServer.js';
@@ -28,15 +29,19 @@ if (!startup.ready && ['auth_rejected', 'forbidden'].includes(startup.reason)) {
 if (!startup.ready) logger.warn('Atlas is not reachable yet; tools answer upstream_unavailable until it is.', { reason: startup.reason });
 
 const { app, close } = createHttpApp({ config, atlas, logger });
-const listener = app.listen(config.listen.port, config.listen.host, () => {
+// The server is created here rather than through app.listen: Express 5 also hands a listen error to
+// the listening callback, which would then read the address of a server that never bound.
+const listener = http.createServer(app);
+listener.once('listening', () => {
   const { port } = listener.address();
   const host = config.listen.host.includes(':') ? `[${config.listen.host}]` : config.listen.host;
   logger.info(`atlas-mcp listening on http://${host}:${port}/mcp`, { ready: startup.ready });
 });
 listener.on('error', error => {
-  logger.error('cannot listen', { code: error.code });
-  process.exit(1);
+  logger.error('cannot listen', { code: error.code, host: config.listen.host, port: config.listen.port });
+  process.exit(4);
 });
+listener.listen(config.listen.port, config.listen.host);
 // The body of a request must arrive promptly; a stalled client cannot hold a socket for long.
 listener.requestTimeout = 30000;
 listener.headersTimeout = 15000;

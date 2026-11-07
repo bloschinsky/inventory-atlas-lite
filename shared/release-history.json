@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.72.1",
+    "date": "2026-11-07",
+    "changes": [
+      "The optional MCP adapter now stops with a clear \"cannot listen\" message naming the port when that port is already taken or reserved by the system, instead of crashing with a technical error. Choose another port with MCP_PORT in that case."
+    ]
+  },
+  {
     "version": "0.72.0",
     "date": "2026-11-06",
     "changes": [
