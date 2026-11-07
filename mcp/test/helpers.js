@@ -21,7 +21,7 @@ export async function freePort() {
   listens, or rejects with the exit code when it stops first (a rejected token, a bad setting).
 */
 export function startMcp(environment) {
-  const child = spawn(process.execPath, ['src/index.js'], {
+  const child = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', 'src/index.js'], {
     cwd: MCP_DIR, env: { PATH: process.env.PATH, SystemRoot: process.env.SystemRoot, MCP_PORT: '0', ...environment }, stdio: ['ignore', 'ignore', 'pipe']
   });
   const logs = [];

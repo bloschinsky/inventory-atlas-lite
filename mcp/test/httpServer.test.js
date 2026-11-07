@@ -9,7 +9,7 @@ const HEADERS = { 'content-type': 'application/json', accept: 'application/json,
 const rpc = (id, method, params = {}) => JSON.stringify({ jsonrpc: '2.0', id, method, params });
 
 async function serve(atlas) {
-  const { app, close, sessions } = createHttpApp({ config, atlas, logger: createLogger('error', () => {}) });
+  const { app, close, sessions, pendingSessions } = createHttpApp({ config, atlas, logger: createLogger('error', () => {}) });
   const listener = await new Promise(resolve => { const server = app.listen(0, '127.0.0.1', () => resolve(server)); });
   const base = `http://127.0.0.1:${listener.address().port}`;
   const stop = async () => {
@@ -17,7 +17,7 @@ async function serve(atlas) {
     listener.closeAllConnections();
     await new Promise(resolve => listener.close(resolve));
   };
-  return { base, sessions, stop };
+  return { base, sessions, pendingSessions, stop };
 }
 
 // Opens a session the way a client does: initialize, then the initialized notification.
@@ -69,6 +69,56 @@ test('open sessions are capped and a closed session is gone', async () => {
     assert.ok((await open(server.base)).id, 'the freed slot can be used again');
   } finally {
     await server.stop();
+  }
+});
+
+test('simultaneous handshakes never open more sessions than the cap, and a failed one frees its place', async () => {
+  const server = await serve({ get: async () => ({}) });
+  try {
+    // Twelve initialize requests at once against a cap of two: the place is reserved before the
+    // asynchronous handshake, so no more than two can win.
+    const results = await Promise.all(Array.from({ length: 12 }, () => open(server.base)));
+    assert.deepEqual(results.map(result => result.status).sort(), [200, 200, ...Array(10).fill(503)]);
+    assert.equal(server.sessions.size, 2);
+    assert.equal(server.pendingSessions(), 0);
+
+    // A handshake the transport refuses (no event-stream in Accept) releases its reservation.
+    await fetch(`${server.base}/mcp`, { method: 'DELETE', headers: results.find(result => result.id).headers });
+    const refused = await fetch(`${server.base}/mcp`, { method: 'POST', headers: { ...HEADERS, accept: 'application/json' },
+      body: rpc(1, 'initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'test', version: '1' } }) });
+    await refused.text();
+    assert.equal(refused.status, 406);
+    assert.deepEqual([server.sessions.size, server.pendingSessions()], [1, 0]);
+    assert.equal((await open(server.base)).status, 200, 'the freed place can be used');
+  } finally {
+    await server.stop();
+  }
+});
+
+test('readiness refuses an Atlas token that can do more than read', async () => {
+  const description = { id: 'x', scopes: ['inventory:read', 'items:write'], permissions: ['inventory:read', 'items:write'] };
+  const paths = [];
+  const server = await serve({ get: async segments => { paths.push(segments.join('/')); return description; } });
+  try {
+    const ready = await fetch(`${server.base}/readyz`);
+    assert.equal(ready.status, 503);
+    assert.deepEqual(await ready.json(), { status: 'not_ready', reason: 'token_overprivileged' });
+    assert.deepEqual(paths, ['auth/token'], 'the token is described, never probed with a write');
+  } finally {
+    await server.stop();
+  }
+  // A write scope that the owner's role cuts down to reading is still refused: its scopes say more.
+  const reduced = await serve({ get: async () => ({ scopes: ['inventory:read', 'items:write'], permissions: ['inventory:read'] }) });
+  try {
+    assert.equal((await (await fetch(`${reduced.base}/readyz`)).json()).reason, 'token_overprivileged');
+  } finally {
+    await reduced.stop();
+  }
+  const exact = await serve({ get: async () => ({ scopes: ['inventory:read'], permissions: ['inventory:read'] }) });
+  try {
+    assert.deepEqual(await (await fetch(`${exact.base}/readyz`)).json(), { status: 'ready' });
+  } finally {
+    await exact.stop();
   }
 });
 

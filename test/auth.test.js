@@ -268,6 +268,13 @@ test('API tokens: scoped, shown once, stored hashed, revocable, expiring, and ne
 
       const bearer = (token, url, options = {}) => fetch(`${base}${url}`, { ...options, headers: { ...options.headers, Authorization: `Bearer ${token}` } });
       assert.equal((await bearer(read.token, '/api/items')).status, 200);
+      // A token can read its own effective access, never its secret; a browser session cannot use this.
+      const described = await (await bearer(read.token, '/api/auth/token')).text();
+      assert.deepEqual(JSON.parse(described), { id: read.apiToken.id, scopes: ['inventory:read'], permissions: ['inventory:read'], expiresAt: read.apiToken.expiresAt });
+      assert.equal(described.includes(secretOf(read.token)), false);
+      assert.deepEqual((await (await bearer(write.token, '/api/auth/token')).json()).permissions, ['inventory:read', 'items:write']);
+      assert.equal((await admin(`${base}/api/auth/token`)).status, 403);
+      assert.equal((await bearer('not-a-token', '/api/auth/token')).status, 401);
       assert.equal((await bearer(read.token, '/api/items', json('POST', { name: 'No', category_id: category.id }))).status, 403);
       const made = await bearer(write.token, '/api/items', json('POST', { name: 'Robot item', category_id: category.id }));
       assert.equal(made.status, 201, 'a write token needs no CSRF header');

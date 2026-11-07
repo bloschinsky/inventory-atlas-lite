@@ -144,6 +144,10 @@ jobs:
       # recovers when Atlas restarts. Its image is built for this test and never published.
       - name: Verify the optional MCP adapter
         run: node mcp/test/docker-smoke.mjs inventory-atlas-lite:smoke
+      # Remote MCP access with the shipped mcp/deploy/compose.remote.yaml: Caddy (internal CA) in front
+      # of the adapter in OAuth mode, a client completing OAuth over HTTPS, and Atlas kept private.
+      - name: Verify remote MCP access
+        run: node mcp/test/docker-remote-smoke.mjs inventory-atlas-lite:smoke
       - name: Log in to GHCR
         uses: docker/login-action@v4
         with:

@@ -92,6 +92,7 @@ export class ApiTokenService {
     const allowed = permissionsOfRole(owner.role);
     return {
       type: 'token', tokenId: token.id, userId: owner.id, username: owner.username, role: null,
+      scopes: [...token.scopes], expiresAt: token.expiresAt ?? null,
       permissions: permissionsOfScopes(token.scopes).filter(permission => allowed.includes(permission))
     };
   }

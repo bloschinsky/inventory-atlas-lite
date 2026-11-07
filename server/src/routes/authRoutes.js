@@ -46,7 +46,17 @@ export const createAuthRoutes = ({ authService }) => {
   router.post('/api/auth/reauthenticate', async (req, res) => res.json(await authService.reauthenticate(req.principal, req.body ?? {}, meta(req))));
   router.post('/api/auth/password', (req, res) => startSession(req, res, () => authService.changePassword(req.principal, req.body ?? {}, meta(req))));
 
-  router.get('/api/auth/sessions', (req, res) => res.json(authService.listSessions(req.principal)));
+  /*
+    The calling token's own description: its id, scopes, and effective permissions (the scopes limited
+    by its owner's role), never its secret. A service such as the MCP adapter reads it at startup and
+    refuses to run with more access than it needs, without probing with a write.
+  */
+  router.get('/api/auth/token', (req, res) => {
+    const { tokenId, scopes, permissions, expiresAt } = req.principal;
+    res.json({ id: tokenId, scopes, permissions, expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null });
+  });
+
+  router.get('/api/auth/sessions',(req, res) => res.json(authService.listSessions(req.principal)));
   router.post('/api/auth/sessions/revoke-others', (req, res) => res.json(authService.revokeOtherSessions(req.principal, meta(req))));
   router.delete('/api/auth/sessions/:id', (req, res) => {
     const { current } = authService.revokeSession(req.principal, req.params.id, meta(req));

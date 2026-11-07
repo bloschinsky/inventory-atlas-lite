@@ -60,3 +60,34 @@ test('limits are integers inside their ranges', () => {
   }
   assert.equal(readConfig({ ...base, ATLAS_TIMEOUT_MS: '2500' }).atlas.timeoutMs, 2500);
 });
+
+test('remote access needs an HTTPS origin and a state directory, and turns OAuth on', () => {
+  assert.equal(readConfig(base).oauth, null, 'without MCP_PUBLIC_URL the adapter stays private and has no OAuth');
+  const remote = readConfig({ ...base, MCP_PUBLIC_URL: 'https://mcp.example.com', MCP_STATE_DIR: '/var/lib/atlas-mcp', MCP_HOST: '0.0.0.0' });
+  assert.deepEqual({ ...remote.oauth }, {
+    issuerUrl: 'https://mcp.example.com', resourceUrl: 'https://mcp.example.com/mcp', stateDir: '/var/lib/atlas-mcp',
+    accessTokenSeconds: 3600, refreshTokenSeconds: 30 * 86400
+  });
+  assert.ok(remote.listen.allowedHosts.includes('mcp.example.com'), 'the public host is an accepted Host header');
+  assert.equal(remote.trustProxy, false, 'no proxy is trusted unless named');
+
+  const state = { MCP_STATE_DIR: '/var/lib/atlas-mcp' };
+  assert.throws(() => readConfig({ ...base, ...state, MCP_PUBLIC_URL: 'http://mcp.example.com' }), /must use https/);
+  assert.throws(() => readConfig({ ...base, ...state, MCP_PUBLIC_URL: 'https://mcp.example.com/mcp' }), /origin only/);
+  assert.throws(() => readConfig({ ...base, ...state, MCP_PUBLIC_URL: 'https://user:pw@mcp.example.com' }), /origin only/);
+  assert.throws(() => readConfig({ ...base, ...state, MCP_PUBLIC_URL: 'https://mcp.example.com/?x=1' }), /origin only/);
+  assert.throws(() => readConfig({ ...base, ...state, MCP_PUBLIC_URL: 'not a url' }), /not a valid URL/);
+  assert.throws(() => readConfig({ ...base, MCP_PUBLIC_URL: 'https://mcp.example.com' }), /MCP_STATE_DIR is required/);
+  // Plain HTTP only for a test on the same machine.
+  assert.equal(readConfig({ ...base, ...state, MCP_PUBLIC_URL: 'http://localhost:8443' }).oauth.resourceUrl, 'http://localhost:8443/mcp');
+  assert.equal(readConfig({ ...base, ...state, MCP_PUBLIC_URL: 'https://mcp.example.com', MCP_ACCESS_TOKEN_SECONDS: '600' }).oauth.accessTokenSeconds, 600);
+  assert.throws(() => readConfig({ ...base, ...state, MCP_PUBLIC_URL: 'https://mcp.example.com', MCP_ACCESS_TOKEN_SECONDS: '60' }), /MCP_ACCESS_TOKEN_SECONDS/);
+  assert.throws(() => readConfig({ ...base, ...state, MCP_PUBLIC_URL: 'https://mcp.example.com', MCP_REFRESH_TOKEN_DAYS: '365' }), /MCP_REFRESH_TOKEN_DAYS/);
+});
+
+test('only named reverse proxies are trusted for forwarded client addresses', () => {
+  assert.deepEqual([...readConfig({ ...base, MCP_TRUST_PROXY: 'loopback, 172.30.0.0/24,::1' }).trustProxy], ['loopback', '172.30.0.0/24', '::1']);
+  for (const value of ['true', '*', '10.0.0.0/33', '10.0.0.0/8/1', 'proxy.example.com']) {
+    assert.throws(() => readConfig({ ...base, MCP_TRUST_PROXY: value }), /MCP_TRUST_PROXY/, value);
+  }
+});

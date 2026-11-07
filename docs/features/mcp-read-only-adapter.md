@@ -15,14 +15,18 @@ Local MCP client / protocol test
   Atlas Express API → auth gate → existing services → inventory.sqlite
 ```
 
-Phase 2.1 is deliberately small: no OAuth, no public endpoint, no write tools, and no AI calls. Public
-HTTPS with OAuth is Phase 2.2; client setup guides are Phase 2.3; any mutation tool is Phase 3.
+Phase 2.1 is deliberately small: no OAuth, no public endpoint, no write tools, and no AI calls. Remote
+access over HTTPS with OAuth (Phase 2.2) is switched on by `MCP_PUBLIC_URL` and described in
+[mcp-remote-oauth.md](mcp-remote-oauth.md); without it everything below stays exactly as described.
+Client setup guides are Phase 2.3; any mutation tool is Phase 3.
 
 ## Isolation
 
 - The adapter never opens `inventory.sqlite` or `auth.sqlite`, never shares Atlas's data volume, and
   never uses a browser session. Every read goes through Atlas's auth gate and route policy, which stay
-  the final authority. Atlas core is unchanged: every tool maps onto an existing read endpoint.
+  the final authority. Every tool maps onto an existing read endpoint; the one Atlas addition is
+  `GET /api/auth/token`, which describes the calling token so the adapter can refuse an
+  overprivileged one.
 - `mcp/src/atlasClient.js` is the only network code. It has a `get()` method and nothing else: no
   method parameter, no caller-supplied URL. Path parts are encoded one by one, and redirects are
   refused so the token cannot travel elsewhere.
@@ -35,17 +39,18 @@ HTTPS with OAuth is Phase 2.2; client setup guides are Phase 2.3; any mutation t
 
 | File | Responsibility |
 | --- | --- |
-| `mcp/src/index.js` | Process entry: configuration, startup token check, listener (a port that cannot be bound stops the process, exit code 4), shutdown. |
+| `mcp/src/index.js` | Process entry: configuration, startup token check (exit code 3 for a rejected or overprivileged token), the OAuth store when remote access is on, listener (a port that cannot be bound stops the process, exit code 4), shutdown. |
 | `mcp/src/config.js` | Strict environment parsing; any invalid value stops the process (exit code 2). |
-| `mcp/src/atlasClient.js` | GET-only Atlas client: bearer token, deadline, cancellation, size cap, concurrency and queue limits, no redirects or retries. |
+| `mcp/src/atlasClient.js` | GET-only Atlas client: bearer token, one deadline that also covers the wait for a slot, cancellation, size cap, concurrency and queue limits, no redirects or retries. |
 | `mcp/src/errors.js` | `ToolError` kinds with fixed, non-sensitive messages, and the mapping of Atlas statuses. |
 | `mcp/src/mapping.js` | Pure mapping of Atlas responses to versioned, bounded result shapes, text sanitizing, and location derivation. |
 | `mcp/src/tools.js` | The six tool definitions (zod schemas, descriptions, read-only annotations), their handlers, and registration on any `McpServer`. |
-| `mcp/src/httpServer.js` | Streamable HTTP endpoint with sessions, Host/Origin checks, `/healthz`, `/readyz`. |
+| `mcp/src/httpServer.js` | Streamable HTTP endpoint with sessions (reserved before the handshake, so the cap holds under concurrency), Host/Origin checks, `/healthz`, `/readyz` (the token description), and, with `MCP_PUBLIC_URL`, the OAuth routes and bearer guard. |
+| `mcp/src/oauthProvider.js`, `consent.js`, `authStore.js`, `cli.js` | Remote access only: the OAuth policy behind the SDK's handlers, the consent page, the SQLite OAuth store, and the owner's `enroll`/`clients`/`revoke` commands ([mcp-remote-oauth.md](mcp-remote-oauth.md)). |
 | `mcp/src/logger.js` | JSON log lines with secret redaction. |
 
-The transport, the Atlas client, the mapping, and the tool registration are independent, so Phase 2.2
-can mount `registerTools()` behind an OAuth-protected transport without changing the tools.
+The transport, the Atlas client, the mapping, and the tool registration are independent; Phase 2.2
+mounts the same `registerTools()` behind its OAuth guard without changing the tools.
 
 ## Tools
 
@@ -54,6 +59,9 @@ All tools carry `readOnlyHint: true`, `destructiveHint: false`, `idempotentHint:
 named by its numeric id or its UUID; anything else (paths, signs, decimals, malformed UUIDs) is
 refused before Atlas is called. Results are `structuredContent` plus the same JSON as text, prefixed
 by a note that text values are user-entered data, never instructions. Every result has `version: 1`.
+The JSON is deliberately in both places: MCP 2025-11-25 asks a tool with structured output to also
+return it as text for clients that read only text, and results are already bounded (a 25-row search
+page is a few kilobytes), so a shorter text fallback was reviewed and not adopted.
 
 | Tool | Atlas endpoints | Input | Result |
 | --- | --- | --- | --- |
@@ -117,11 +125,11 @@ SDK as tool errors.
 | `MCP_HOST` | `127.0.0.1` | Listening address. Anything but loopback needs `MCP_ALLOWED_HOSTS`. |
 | `MCP_PORT` | `3100` | Listening port. |
 | `MCP_ALLOWED_HOSTS` | — | Extra accepted `Host` names, comma-separated (always accepted: `127.0.0.1`, `localhost`, `[::1]`). |
-| `ATLAS_TIMEOUT_MS` | `10000` | One deadline per Atlas request, connection and answer together (500–60000). |
+| `ATLAS_TIMEOUT_MS` | `10000` | One deadline per Atlas request: waiting for a slot, connection, and answer together (500–60000). |
 | `ATLAS_MAX_RESPONSE_BYTES` | `2097152` | Largest Atlas answer read (64 KiB–20 MiB); larger answers are cut off as `response_too_large`. |
 | `ATLAS_MAX_CONCURRENCY` | `4` | Atlas requests at once (1–32). |
 | `ATLAS_MAX_QUEUE` | `32` | Requests that may wait for a slot (0–1000); beyond it a call is `rate_limited`. |
-| `MCP_MAX_SESSIONS` | `32` | Open MCP sessions (1–1000); a new one beyond it gets `503`. |
+| `MCP_MAX_SESSIONS` | `32` | Open MCP sessions, handshakes in progress included (1–1000); a new one beyond it gets `503`. |
 | `MCP_SESSION_IDLE_SECONDS` | `900` | Idle sessions are closed after this time (30–86400). |
 | `MCP_LOG_LEVEL` | `info` | `error`, `warn`, `info`, or `debug`. |
 
@@ -134,8 +142,10 @@ SDK as tool errors.
 3. Rotate by creating a new token, updating the secret, restarting the adapter, then revoking the old
    token. Revoking takes effect at once: every call answers `auth_rejected`.
 
-A **Read and write items** token would work against Atlas, but the adapter offers no write tool; use
-the read-only scope so Atlas itself refuses writes (`403`) whatever happens in the adapter.
+Only a **Read-only** token is accepted: at startup the adapter asks Atlas to describe its token
+(`GET /api/auth/token`) and stops (exit code 3, `token_overprivileged`) when its scopes or effective
+permissions are anything but `inventory:read`, so Atlas itself refuses writes (`403`) whatever
+happens in the adapter. It never tests this by trying a write.
 
 ## Running locally
 
@@ -146,14 +156,15 @@ ATLAS_BASE_URL=http://127.0.0.1:3000 ATLAS_API_TOKEN=ial_… npm run mcp:start
 ```
 
 Point a local MCP client, or the MCP Inspector (`npx @modelcontextprotocol/inspector`, transport
-*Streamable HTTP*, URL `http://127.0.0.1:3100/mcp`), at that address. The endpoint has no client
-authentication in this phase, so it must stay on loopback or a private container network.
+*Streamable HTTP*, URL `http://127.0.0.1:3100/mcp`), at that address. Without `MCP_PUBLIC_URL` the
+endpoint has no client authentication, so it must stay on loopback or a private container network.
 
 ### Lifecycle
 
-- At startup the adapter reads `/api/capabilities` with its token. A token Atlas rejects stops the
-  process (exit code 3) without a fallback to anonymous requests; an unreachable Atlas only delays
-  readiness, and the adapter starts serving when Atlas comes up.
+- At startup the adapter reads `/api/auth/token` with its token. A token Atlas rejects, one that can
+  do more than read, or an Atlas too old to describe it stops the process (exit code 3) without a
+  fallback to anonymous requests; an unreachable Atlas only delays readiness, and the adapter starts
+  serving when Atlas comes up.
 - The adapter announces `atlas-mcp listening on …/mcp` only once its port is bound. A port it cannot
   bind (taken, reserved by the system, or an address the machine does not have) stops it with one
   `cannot listen` log line carrying the error code, host, and port, and exit code 4. On Windows,
@@ -162,6 +173,10 @@ authentication in this phase, so it must stay on loopback or a private container
 - `GET /healthz` answers `{ "status": "ok" }` while the process runs. `GET /readyz` answers `200 {
   "status": "ready" }` or `503 { "status": "not_ready", "reason": "<kind>" }` from the same read,
   cached for five seconds; neither reveals the token, the upstream address, or inventory data.
+- New sessions reserve their place before the asynchronous handshake, so simultaneous `initialize`
+  requests never exceed `MCP_MAX_SESSIONS`; a failed or abandoned handshake frees it.
+- A queued Atlas request waits on its own deadline: when slots stay busy it fails as
+  `upstream_unavailable` and leaves the queue, never holding a slot or waiting without bound.
 - Sessions are in memory (`Mcp-Session-Id`); a restart of the adapter ends them and clients
   initialize again. An Atlas restart does not end them: calls fail as `upstream_unavailable` meanwhile
   and work again in the same session.
@@ -173,7 +188,12 @@ authentication in this phase, so it must stay on loopback or a private container
 
 `mcp/Dockerfile` builds a small image (`node:22-bookworm-slim`, production dependencies, non-root
 `node` user, health check on `/healthz`) from `mcp/` alone; it is not published by the release
-workflow in this phase. `mcp/compose.yaml` runs Atlas and, under the `mcp` profile, the adapter:
+workflow in this phase. `mcp/compose.yaml` is a **disposable reference and test stack**: it starts a
+new, empty Atlas with its own `atlas-data` volume and, under the `mcp` profile, the adapter. It does
+not connect to an Atlas you already run (such as a Proxmox LXC installation); for that use
+`mcp/deploy/compose.private.yaml` (the adapter alone, published on `127.0.0.1:3100`, with
+`ATLAS_BASE_URL` pointing at your Atlas) or, for remote clients, `mcp/deploy/compose.remote.yaml`
+([mcp-remote-oauth.md](mcp-remote-oauth.md#operator-guide)).
 
 ```bash
 docker compose -f mcp/compose.yaml --profile mcp up -d --build
@@ -182,7 +202,9 @@ docker compose -f mcp/compose.yaml --profile mcp up -d --build
 The adapter joins only `atlas-mcp-private`, an `internal: true` network: no host port, no route to the
 internet, Atlas reachable as `http://atlas:3000`, and its token mounted as a Compose secret. Atlas sets
 `ATLAS_ALLOW_HTTP=true` because the adapter reaches it over plain HTTP from a non-loopback container
-address; Atlas's own port is published on the host's loopback only. To try the adapter from the same
+address; that opt-in is safe there only because the network is internal and has no other members, and
+it never makes plain HTTP acceptable for an Atlas reachable from a LAN or the Internet. Atlas's own
+port is published on the host's loopback only. To try the adapter from the same
 machine, an override file may add the default network and `127.0.0.1:3100:3100` — never a public
 binding.
 
@@ -206,20 +228,19 @@ or results.
 
 ## Limitations
 
-- No client authentication or TLS on the MCP endpoint (Phase 2.2 adds OAuth and public HTTPS).
+- Without `MCP_PUBLIC_URL`, no client authentication or TLS on the MCP endpoint; remote access with
+  OAuth and HTTPS is [Phase 2.2](mcp-remote-oauth.md).
 - Plain text search only; no semantic or vector search.
 - `get_item_location` reads one item per container level (at most 20 levels).
 - Photos are counted, never returned; there is no resource or prompt API.
 - Sessions live in memory of one process; there is no shared session store.
 - Atlas's response language for derived labels (`Other`, `Unknown`) is English.
 
-## Notes for Phase 2.2
+## Phase 2.2
 
-- Mount `registerTools()` per authenticated principal behind an OAuth-protected Streamable HTTP
-  transport; replace the loopback-only rule with authenticated access and keep the Host/Origin checks.
-- Keep the single service token toward Atlas, or move to per-user tokens; Atlas's route policy stays
-  authoritative either way.
-- Publish the adapter image from the release workflow once it has a public deployment story.
+Remote access is implemented in [mcp-remote-oauth.md](mcp-remote-oauth.md): the same tools behind an
+OAuth 2.1 guard, one restricted service token toward Atlas, and Atlas's route policy still
+authoritative. The adapter image is still built locally and not published by the release workflow.
 
 ## Tests
 
@@ -229,15 +250,17 @@ or results.
   typed custom fields, compact rows, bounded details, own/inherited/unknown location, history, summary.
 - `mcp/test/atlasClient.test.js` — against a local stub: GET only with the bearer token and encoded
   paths, every status mapped without body text, unreachable and slow upstream, non-JSON, refused
-  redirects, declared and streamed size caps, the concurrency cap, the bounded queue, and cancellation
-  while waiting and in flight.
+  redirects, declared and streamed size caps, the concurrency cap, the bounded queue, cancellation
+  while waiting and in flight, and queued requests timing out on their own deadline without leaking a
+  slot.
 - `mcp/test/tools.test.js` — over the SDK's in-memory transport: enum parity with Atlas, exactly six
   read-only tools with strict schemas, malformed inputs and an invented write tool refused with no
   Atlas call, argument mapping, the container walk with a cycle, not found, normalized errors, logs
   without inventory text, a huge answer bounded, and cancellation.
 - `mcp/test/httpServer.test.js` — the HTTP endpoint in process: a client that disconnects mid-call
-  aborts the Atlas request, the session cap, closing a session, health without Atlas, and readiness
-  reporting only an error kind, cached.
+  aborts the Atlas request, the session cap, twelve simultaneous handshakes against a cap of two, a
+  refused handshake freeing its place, closing a session, health without Atlas, readiness reporting
+  only an error kind, cached, and readiness refusing an overprivileged token.
 - `mcp/test/process.test.js` — the adapter as its own process without Atlas: a port that is already
   taken stops it with a `cannot listen` line, exit code 4, and no stack trace, and a free port is
   announced only once bound.
@@ -252,5 +275,6 @@ or results.
   network, the token neither in the environment nor in the log. The release workflow runs it on the
   release image.
 
-Run them with `npm run mcp:install` once, then `npm run mcp:test`; the release workflow runs both in
+The OAuth and remote tests are listed in [mcp-remote-oauth.md](mcp-remote-oauth.md#tests). Run them
+with `npm run mcp:install` once, then `npm run mcp:test`; the release workflow runs both in
 its validation job.

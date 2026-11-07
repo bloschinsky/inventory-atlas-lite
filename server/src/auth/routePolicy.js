@@ -9,6 +9,7 @@ import { PERMISSIONS as P } from '../../../shared/permissions.js';
   access:
     'public'   - answered without credentials (the documented allowlist)
     'session'  - any signed-in person, never an API token (their own account and sessions)
+    'token'    - any API token, never a browser session (the calling token's own description)
     permission - one of shared/permissions.js
   options:
     fresh      - the password must have been confirmed within the reauthentication window
@@ -39,6 +40,8 @@ export const ROUTE_POLICY = [
   ['GET', '/api/auth/sessions', 'session'],
   ['POST', '/api/auth/sessions/revoke-others', 'session'],
   ['DELETE', '/api/auth/sessions/:id', 'session'],
+  // The calling API token's own effective permissions, so a service can refuse an overprivileged token.
+  ['GET', '/api/auth/token', 'token'],
   // Security & Access administration.
   ['GET', '/api/security/users', A],
   ['POST', '/api/security/users', A, { fresh: true }],

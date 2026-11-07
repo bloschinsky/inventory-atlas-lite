@@ -5,7 +5,8 @@
 */
 const LEVELS = { error: 0, warn: 1, info: 2, debug: 3 };
 
-const SECRET_PATTERNS = [/ial_[0-9a-f]{16}_[A-Za-z0-9_-]+/g, /(bearer\s+)[^\s"']+/gi];
+// Atlas API tokens, the adapter's own OAuth access and refresh tokens, and Bearer values.
+const SECRET_PATTERNS = [/ial_[0-9a-f]{16}_[A-Za-z0-9_-]+/g, /amcp_(?:at|rt)_[A-Za-z0-9_-]+/g, /(bearer\s+)[^\s"']+/gi];
 
 export const redact = value => {
   if (typeof value === 'string') return SECRET_PATTERNS.reduce((text, pattern) => text.replace(pattern, (_m, prefix) => `${typeof prefix === 'string' ? prefix : ''}[redacted]`), value);

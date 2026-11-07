@@ -19,7 +19,8 @@ Every page and API request needs a signed-in account (Administrator or Viewer / 
 
 - Node.js 20.19+ with a single root npm project using ES modules. The only exception is the optional
   read-only MCP adapter in `mcp/`, a separate service with its own `package.json` and lockfile, so the
-  Atlas build, image, and demo never carry its dependencies.
+  Atlas build, image, and demo never carry its dependencies; its remote OAuth mode needs Node.js 22.13+
+  for `node:sqlite`.
 - Client: Vue 3 Composition API (`<script setup>`), Vue Router, Vite, and the Tabler design system
   (`@tabler/core`, which already contains Bootstrap 5) with `@tabler/icons-vue`. Bootstrap must never
   be installed or imported a second time.
@@ -261,16 +262,26 @@ The project stays small and readable. Do not add:
 - `test/e2e/color-field.spec.js` — creating a Color field, the picker (presets, arrow keys, Custom HEX, Clear), details, the Items column with sorting and filters, templates, both color modes, and phones.
 - `test/e2e/lifecycle.spec.js` — Retire and Restore from the item page, the Active / All / Retired views of Items and Hierarchy, the container contents choice, checklists with retired items, the Dashboard link, phones, and Ukrainian.
 - `test/e2e/` — Playwright browser tests, their fixtures, shared helpers, and the run launcher; `globalSetup.js` creates the e2e administrator and signs in once, and `fixtures.js` is the `test` every app spec imports (its `request` carries that session and its CSRF header); `auth.spec.js` covers sign-in, the viewer, Security & Access, and the password confirmation.
-- `mcp/` — the optional read-only MCP adapter (`docs/features/mcp-read-only-adapter.md`), its own npm
-  project (`npm run mcp:install`, `mcp:start`, `mcp:test`) that reaches Atlas only through the REST API
-  with an `inventory:read` token: `src/index.js` (process, startup token check), `src/config.js`
-  (strict environment), `src/atlasClient.js` (the GET-only Atlas client: deadline, cancellation, size
-  cap, concurrency, no redirects), `src/errors.js` (tool error kinds), `src/mapping.js` (bounded,
-  sanitized, versioned results and location derivation), `src/tools.js` (the six tools and their
-  schemas), `src/httpServer.js` (Streamable HTTP sessions, Host/Origin checks, health and readiness),
-  `src/logger.js` (redacted JSON logs); `Dockerfile` and `compose.yaml` (the `mcp` profile on an
-  internal network); `test/` (unit, SDK in-memory, real-Atlas integration over Streamable HTTP, and
-  `docker-smoke.mjs`).
+- `mcp/` — the optional read-only MCP adapter (`docs/features/mcp-read-only-adapter.md`, and its
+  opt-in remote access with OAuth, `docs/features/mcp-remote-oauth.md`), its own npm project
+  (`npm run mcp:install`, `mcp:start`, `mcp:test`) that reaches Atlas only through the REST API with
+  an `inventory:read` token: `src/index.js` (process, startup check that the token is exactly
+  `inventory:read` through `GET /api/auth/token`), `src/config.js` (strict environment, including
+  `MCP_PUBLIC_URL`), `src/atlasClient.js` (the GET-only Atlas client: one deadline covering the queue,
+  cancellation, size cap, concurrency, no redirects), `src/errors.js` (tool error kinds),
+  `src/mapping.js` (bounded, sanitized, versioned results and location derivation), `src/tools.js`
+  (the six tools and their schemas), `src/httpServer.js` (Streamable HTTP sessions reserved before the
+  handshake, Host/Origin checks, health and readiness, and the OAuth routes and bearer guard),
+  `src/oauthProvider.js` (the OAuth policy behind the SDK's `mcpAuthRouter`: one scope, one resource,
+  constrained registration, codes, rotating tokens), `src/consent.js` (the owner's consent page and
+  decision), `src/authStore.js` (the `node:sqlite` OAuth store in `MCP_STATE_DIR`, hashes only),
+  `src/cli.js` (`enroll`, `clients`, `revoke`), `src/logger.js` (redacted JSON logs); `Dockerfile`
+  and `compose.yaml` (a disposable test stack with its own Atlas); `deploy/` (`compose.private.yaml`
+  and `compose.remote.yaml` for an existing Atlas, the `Caddyfile` that publishes only the MCP and
+  OAuth paths, `remote.env.example`, and the `atlas-mcp.service` systemd unit for a Proxmox LXC);
+  `test/` (unit, SDK in-memory, OAuth in process, real-Atlas integration over Streamable HTTP and
+  over an HTTPS proxy with the SDK's OAuth client, `docker-smoke.mjs`, and
+  `docker-remote-smoke.mjs`; `fixtures/tls/` is a test-only certificate).
 - `playwright.config.js` — Playwright projects, isolated test ports, and the cloud provider stub, API, Vite, and landing and demo build/preview processes started for the suite.
 - `landing/` — the public landing page and user guide, a separate two-page Vue/Vite/Tabler build into
   `dist-landing/` (ignored by Git) published to GitHub Pages by `.github/workflows/pages.yml`:

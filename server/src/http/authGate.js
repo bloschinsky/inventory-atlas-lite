@@ -101,6 +101,7 @@ export function createAuthGate({ authService, apiTokenService, allowHttp = false
     if (rule.access === 'public') return next();
     if (!principal) return refuse(httpError(401, authService.setupRequired() ? 'AUTH_SETUP_REQUIRED' : 'AUTH_REQUIRED'));
     if (rule.access === 'session') return principal.type === 'session' ? next() : refuse(httpError(403, 'AUTH_FORBIDDEN'));
+    if (rule.access === 'token') return principal.type === 'token' ? next() : refuse(httpError(403, 'AUTH_FORBIDDEN'));
     if (!principal.permissions.includes(rule.access)) return refuse(httpError(403, 'AUTH_FORBIDDEN'));
     if (rule.fresh && !authService.isFresh(principal)) return refuse(httpError(403, 'AUTH_REAUTH_REQUIRED'));
     next();

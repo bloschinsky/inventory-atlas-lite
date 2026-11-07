@@ -1,5 +1,15 @@
 [
   {
+    "version": "0.73.0",
+    "date": "2026-11-07",
+    "changes": [
+      "New and opt-in: the read-only MCP adapter can now be reached from the Internet over HTTPS, so an assistant that runs in the cloud, such as a Claude connector, can read your inventory. Inventory Atlas Lite itself stays private: only the adapter's MCP and sign-in addresses are published, behind a reverse proxy such as Caddy.",
+      "Remote access always requires OAuth sign-in. An assistant registers, then asks for your permission on a page of the adapter that names it and the read-only access it wants; you allow it with a one-time enrollment code printed on the adapter's server (node src/cli.js enroll). You can list connected assistants and disconnect any one of them without affecting the others.",
+      "The adapter now refuses to start with an API token that can do more than read, checked through a new endpoint that describes the calling token without trying a write. Simultaneous connections can no longer exceed the session limit, and a request waiting for Atlas gives up on time.",
+      "mcp/deploy/ has a Docker Compose stack with Caddy for remote access, a Compose file for an Atlas you already run, and a systemd unit for a separate Proxmox container. mcp/compose.yaml is now clearly marked as a test stack that starts its own empty Atlas. Setup, the threat model, and incident response are in docs/features/mcp-remote-oauth.md."
+    ]
+  },
+  {
     "version": "0.72.1",
     "date": "2026-11-07",
     "changes": [

@@ -99,7 +99,8 @@ route table:
    token, else `403 AUTH_CSRF_INVALID`. The token is an HMAC of the session secret, given to the page
    by `GET /api/auth/session` and the sign-in answers, and kept only in memory by `client/src/auth.js`.
 7. **Decision.** Public routes pass. No principal is `401 AUTH_REQUIRED` (`AUTH_SETUP_REQUIRED` while
-   no account exists). `session` routes refuse tokens. A missing permission is `403 AUTH_FORBIDDEN`.
+   no account exists). `session` routes refuse tokens, and `token` routes refuse sessions. A missing
+   permission is `403 AUTH_FORBIDDEN`.
    A `fresh` route needs a password confirmation within `AUTH_REAUTH_WINDOW_MS` (ten minutes), else
    `403 AUTH_REAUTH_REQUIRED`, which the browser answers with the **Confirm your password** dialog and
    then repeats the request.
@@ -132,6 +133,7 @@ has no entry or an entry names no route. "own" means the person's own account or
 | GET | `/api/auth/sessions` | session | own | own | — | The signed-in person's own account; never a token. |
 | POST | `/api/auth/sessions/revoke-others` | session | own | own | — | The signed-in person's own account; never a token. |
 | DELETE | `/api/auth/sessions/:id` | session | own | own | — | The signed-in person's own account; never a token. |
+| GET | `/api/auth/token` | token | — | — | own | The calling token's id, scopes, effective permissions, and expiry; never its secret, never a session. The MCP adapter refuses to run with more than `inventory:read`. |
 | GET | `/api/security/users` | `security:manage` | yes | — | — | Accounts and credentials. |
 | POST | `/api/security/users` | `security:manage` | yes | — | — | Accounts and credentials. Fresh password confirmation. |
 | PATCH | `/api/security/users/:id` | `security:manage` | yes | — | — | Accounts and credentials. Fresh password confirmation. |

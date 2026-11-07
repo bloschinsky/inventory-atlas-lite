@@ -1,0 +1,85 @@
+# Remote MCP access over HTTPS with OAuth, beside an Atlas you already run
+# (docs/features/mcp-remote-oauth.md). Opt-in: nothing here starts unless you run this file.
+#
+#   cp mcp/deploy/remote.env.example mcp/deploy/.env    # then set MCP_DOMAIN and ATLAS_BASE_URL
+#   # save a Read-only (inventory:read) Atlas token, alone, in mcp/secrets/atlas-mcp-token
+#   docker compose -f mcp/deploy/compose.remote.yaml up -d --build
+#   docker compose -f mcp/deploy/compose.remote.yaml exec atlas-mcp node src/cli.js enroll
+#
+# Topology:
+#   Internet ──443──▶ caddy ──mcp-edge (internal)──▶ atlas-mcp ──atlas-upstream──▶ your Atlas (ATLAS_BASE_URL)
+#
+# - Only Caddy publishes ports, and it forwards only the MCP and OAuth paths (see Caddyfile).
+# - The adapter has no host port, no Atlas data volume, no Docker socket, a read-only root file
+#   system, and only its OAuth state volume. Restrict what `atlas-upstream` can reach with a firewall
+#   so the adapter can open Atlas's REST port and nothing else.
+# - This file does NOT start an Atlas. Your Atlas keeps its own data; use HTTPS for ATLAS_BASE_URL
+#   whenever Atlas is on another machine (see the guide for ATLAS_ALLOW_HTTP).
+
+services:
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"     # ACME HTTP challenge and the redirect to HTTPS
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      MCP_DOMAIN: ${MCP_DOMAIN:?Set MCP_DOMAIN in mcp/deploy/.env, for example mcp.example.com}
+      MCP_UPSTREAM: atlas-mcp:3100
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - default
+      - mcp-edge
+    depends_on:
+      - atlas-mcp
+
+  atlas-mcp:
+    build: ..
+    image: inventory-atlas-mcp:local
+    restart: unless-stopped
+    environment:
+      ATLAS_BASE_URL: ${ATLAS_BASE_URL:?Set ATLAS_BASE_URL in mcp/deploy/.env to your Atlas, for example https://atlas.home.example}
+      ATLAS_API_TOKEN_FILE: /run/secrets/atlas_mcp_token
+      MCP_PUBLIC_URL: https://${MCP_DOMAIN}
+      MCP_STATE_DIR: /var/lib/atlas-mcp
+      # Only Caddy, on the fixed edge subnet below, may name the client address for the rate limits.
+      MCP_TRUST_PROXY: 172.31.250.0/29
+    secrets:
+      - atlas_mcp_token
+    volumes:
+      - atlas-mcp-state:/var/lib/atlas-mcp
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - mcp-edge
+      - atlas-upstream
+
+networks:
+  # Caddy ↔ adapter only; no route outside.
+  mcp-edge:
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.31.250.0/29
+  # The adapter's way to Atlas. If Atlas runs in Docker on this host, you can instead join its network:
+  #   atlas-upstream: { external: true, name: <your Atlas compose project>_default }
+  atlas-upstream: {}
+
+volumes:
+  caddy-data:
+  caddy-config:
+  # Registered clients, grants, and token hashes. Back it up with the host, never with Atlas.
+  atlas-mcp-state:
+
+secrets:
+  atlas_mcp_token:
+    file: ../secrets/atlas-mcp-token

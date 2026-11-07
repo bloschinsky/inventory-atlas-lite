@@ -1200,7 +1200,17 @@ An AI assistant or another Model Context Protocol (MCP) client on the same machi
 network can read the inventory through the optional read-only MCP adapter. The server's administrator
 starts it separately with a **Read-only** token; it searches and opens items, categories, history,
 the Dashboard summary, and an item's location, but it changes nothing and sends no photos. Revoke its
-token and it loses access at once.
+token and it loses access at once. The adapter refuses to start with a token that can do more than
+read, so always give it a **Read-only** one.
+
+The administrator can also make the adapter reachable from the Internet over HTTPS, for an assistant
+that runs in the cloud, such as a Claude connector. Atlas itself stays private. The assistant then asks
+for your permission on a page of the adapter that names the assistant, the address it returns to,
+and the read-only access it wants. Allow it only after you have printed a one-time **enrollment code**
+on the adapter's server (`node src/cli.js enroll`) and typed it there; the code works once, for ten
+minutes. **Deny** refuses. The administrator can list the connected assistants and disconnect any one
+of them on that server (`node src/cli.js clients`, `node src/cli.js revoke <client_id>`) without
+affecting the others.
 
 ### See your sessions and change your password
 

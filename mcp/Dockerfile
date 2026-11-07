@@ -23,9 +23,12 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 COPY src ./src
+# The OAuth store of remote access (MCP_STATE_DIR); a named volume mounted here inherits this owner.
+RUN mkdir -p /var/lib/atlas-mcp && chown node:node /var/lib/atlas-mcp && chmod 700 /var/lib/atlas-mcp
 
 USER node
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:' + process.env.MCP_PORT + '/healthz').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))"
 
-CMD ["node", "src/index.js"]
+# node:sqlite (the OAuth store) is still marked experimental in Node.js 22; its warning is not an error.
+CMD ["node", "--disable-warning=ExperimentalWarning", "src/index.js"]
