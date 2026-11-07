@@ -57,5 +57,5 @@ over HTTPS without publishing Atlas. Details: `docs/features/mcp-remote-oauth.md
   client), the session race, readiness, queue deadline, and configuration tests.
 - `APP_VERSION=0.73.0 npm run test:e2e` — 310 passed, 1 failed: `condition-grading.spec.js` "the info button beside Condition opens the grading help…", unrelated to this change, which passed when the spec was rerun alone (3/3). Run with `E2E_API_PORT=3800
   E2E_CLOUD_STUB_PORT=3801 E2E_LANDING_PORT=4200`, because Windows reserves the default ports here).
-- `node mcp/test/docker-remote-smoke.mjs <atlas-image>` — not run locally (Docker Desktop was not running); the release workflow runs it, and it should be run once before tagging.
+- `node mcp/test/docker-remote-smoke.mjs inventory-atlas-lite:smoke` (Docker 29.7.2, Compose 5.5.1) — passed: OAuth over HTTPS through Caddy, Atlas and the adapter unreachable from the public side, the adapter without host ports, extra mounts, socket, or token, and the grant surviving a restart. `node mcp/test/docker-smoke.mjs inventory-atlas-lite:smoke` (Phase 2.1) — passed against the same image.
 - Proxmox LXC: documented manual check in the feature document; not performed in this change.

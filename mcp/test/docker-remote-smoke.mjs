@@ -27,11 +27,12 @@ const project = `atlas-mcp-remote-smoke-${process.pid}`;
 const atlasName = `${project}-atlas`;
 const domain = 'mcp.example.test';
 const work = mkdtempSync(path.join(os.tmpdir(), 'atlas-mcp-remote-smoke-'));
-const docker = (args, options = {}) => execFileSync('docker', args, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'inherit'], ...options }).trim();
-const quiet = args => { try { docker(args, { stdio: ['ignore', 'ignore', 'ignore'] }); } catch { /* already gone */ } };
+// The stack's required variables are set for every docker call, cleanup included.
 const env = { ...process.env, MCP_DOMAIN: domain, ATLAS_BASE_URL: 'http://atlas:3000' };
+const docker = (args, options = {}) => (execFileSync('docker', args, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'inherit'], env, ...options }) ?? '').trim();
+const quiet = args => { try { docker(args, { stdio: ['ignore', 'ignore', 'ignore'] }); } catch { /* already gone */ } };
 const override = path.join(work, 'compose.smoke.yaml');
-const compose = (args, options = {}) => docker(['compose', '--project-name', project, '--file', path.join(deployDir, 'compose.remote.yaml'), '--file', override, ...args], { env, ...options });
+const compose = (args, options = {}) => docker(['compose', '--project-name', project, '--file', path.join(deployDir, 'compose.remote.yaml'), '--file', override, ...args], options);
 const json = (method, body) => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 
 async function waitFor(check, message) {
@@ -133,6 +134,11 @@ try {
   const logs = execFileSync('docker', ['logs', container], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
   for (const secret of [token, first.token, enrollmentCode, 'Docker remote smoke item']) assert.ok(!logs.includes(secret), 'the log holds no secret or inventory text');
   console.log('MCP remote (OAuth, HTTPS, Compose) smoke test passed.');
+} catch (error) {
+  // The stack's own logs explain most failures; they hold synthetic data only.
+  quiet(['ps', '--all', '--filter', `name=${project}`]);
+  try { process.stderr.write(compose(['logs', '--no-color', '--tail', '60'], { stdio: ['ignore', 'pipe', 'pipe'] })); } catch { /* the stack is gone */ }
+  throw error;
 } finally {
   cleanup();
 }
