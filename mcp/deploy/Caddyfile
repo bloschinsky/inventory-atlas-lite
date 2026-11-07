@@ -1,0 +1,33 @@
+# TLS edge for remote MCP access (docs/features/mcp-remote-oauth.md). It publishes only the MCP
+# endpoint and the OAuth paths a client needs; everything else, including anything that looks like
+# Atlas (/api, the web interface), /healthz, and /readyz, is answered 404 here and never reaches the
+# adapter. Caddy obtains and renews a public certificate for MCP_DOMAIN automatically.
+#
+#   MCP_DOMAIN    the public host name, for example mcp.example.com (DNS must point here)
+#   MCP_UPSTREAM  where the adapter listens: atlas-mcp:3100 in Docker, 127.0.0.1:3100 in an LXC
+
+{$MCP_DOMAIN} {
+	@mcp path /mcp /authorize /consent /token /register /revoke /.well-known/oauth-protected-resource /.well-known/oauth-protected-resource/mcp /.well-known/oauth-authorization-server
+
+	handle @mcp {
+		# Caddy keeps the original Host header (the adapter checks it) and sets X-Forwarded-For.
+		reverse_proxy {$MCP_UPSTREAM:atlas-mcp:3100} {
+			# Streamable HTTP answers can be event streams: pass them on without buffering.
+			flush_interval -1
+		}
+	}
+
+	handle {
+		respond 404
+	}
+
+	request_body {
+		max_size 256KB
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		-Server
+	}
+}

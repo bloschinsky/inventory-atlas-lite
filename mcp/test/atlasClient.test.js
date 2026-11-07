@@ -137,3 +137,44 @@ test('concurrency is capped, the queue is bounded, and cancellation is honored',
     await atlas.close();
   }
 });
+
+test('the deadline covers the wait for a slot: queued requests time out, leave the queue, and leak no slot', async () => {
+  const atlas = await stub();
+  try {
+    const pending = [];
+    atlas.handler = (_req, res) => pending.push(res);
+    const atlasClient = client(atlas.base, { timeoutMs: 400, maxConcurrency: 1, maxQueue: 3 });
+    const started = Date.now();
+    // One request holds the only slot until its own deadline; three more wait behind it.
+    const calls = Array.from({ length: 4 }, () => atlasClient.get(['items']).then(() => 'ok', error => error.kind));
+    while (pending.length < 1) await new Promise(resolve => setImmediate(resolve));
+    assert.equal(atlasClient.waiting.length, 3);
+    const outcomes = await Promise.all(calls);
+    assert.deepEqual(outcomes, Array(4).fill('upstream_unavailable'));
+    // Every waiter gave up on its own deadline, not one deadline after another.
+    assert.ok(Date.now() - started < 1200, `the queue was not drained one deadline at a time (${Date.now() - started} ms)`);
+    assert.equal(atlas.requests.length, 1, 'a waiter whose time ran out never reaches Atlas');
+    assert.deepEqual([atlasClient.active, atlasClient.waiting.length], [0, 0]);
+
+    // The client is not stuck: the next request gets a slot at once.
+    atlas.handler = json(200, []);
+    assert.deepEqual(await atlasClient.get(['items']), []);
+    assert.deepEqual([atlasClient.active, atlasClient.waiting.length], [0, 0]);
+
+    // A cancelled waiter beside a slot that frees at the same moment loses nothing either.
+    atlas.handler = (_req, res) => pending.push(res);
+    pending.length = 0;
+    const holder = atlasClient.get(['items']);
+    const cancel = new AbortController();
+    const waiter = atlasClient.get(['items'], undefined, { signal: cancel.signal });
+    while (pending.length < 1) await new Promise(resolve => setImmediate(resolve));
+    cancel.abort();
+    pending[0].writeHead(200, { 'content-type': 'application/json' });
+    pending[0].end('[]');
+    await rejectsKind(waiter, 'cancelled');
+    assert.deepEqual(await holder, []);
+    assert.deepEqual([atlasClient.active, atlasClient.waiting.length], [0, 0]);
+  } finally {
+    await atlas.close();
+  }
+});

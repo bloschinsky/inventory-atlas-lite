@@ -5,10 +5,10 @@ import { ToolError, fromAtlasResponse } from './errors.js';
   bearer token. There is deliberately no method parameter, so no tool can send a write, and the path
   is always built here from validated parts, so no caller can name an arbitrary URL.
 
-  Every request has one deadline (connection and answer together), follows the caller's
-  cancellation, is never redirected (the token must not travel to another address), and reads at
-  most `maxResponseBytes`. At most `maxConcurrency` requests run at once and `maxQueue` wait; beyond
-  that the call is refused as busy rather than queued without bound. Nothing is retried.
+  Every request has one deadline (waiting for a slot, connection, and answer together), follows the
+  caller's cancellation, is never redirected (the token must not travel to another address), and
+  reads at most `maxResponseBytes`. At most `maxConcurrency` requests run at once and `maxQueue` wait;
+  beyond that the call is refused as busy rather than queued without bound. Nothing is retried.
 */
 export class AtlasClient {
   constructor({ baseUrl, token, timeoutMs, maxResponseBytes, maxConcurrency, maxQueue }, { fetch: fetchImpl = fetch } = {}) {
@@ -19,6 +19,11 @@ export class AtlasClient {
     this.waiting = [];
   }
 
+  /*
+    Waits for a request slot. `signal` already carries the request's deadline, so a request that
+    waits too long gives up in the queue as well; an aborted waiter removes itself, and a slot is only
+    ever handed to a waiter that is still in the queue, so none is lost and `active` never drifts.
+  */
   async acquire(signal) {
     if (this.active < this.maxConcurrency) {
       this.active += 1;
@@ -26,13 +31,13 @@ export class AtlasClient {
     }
     if (this.waiting.length >= this.maxQueue) throw new ToolError('rate_limited', { detail: 'Too many Atlas requests are already waiting.' });
     await new Promise((resolve, reject) => {
-      const entry = { resolve, reject };
       const onAbort = () => {
-        this.waiting.splice(this.waiting.indexOf(entry), 1);
-        reject(new ToolError('cancelled'));
+        const index = this.waiting.indexOf(entry);
+        if (index !== -1) this.waiting.splice(index, 1);
+        reject(new Error('aborted'));
       };
-      entry.resolve = () => { signal?.removeEventListener('abort', onAbort); resolve(); };
-      signal?.addEventListener('abort', onAbort, { once: true });
+      const entry = () => { signal.removeEventListener('abort', onAbort); resolve(); };
+      signal.addEventListener('abort', onAbort, { once: true });
       this.waiting.push(entry);
     });
   }
@@ -40,7 +45,7 @@ export class AtlasClient {
   release() {
     const next = this.waiting.shift();
     // The slot passes straight to the next waiting request.
-    if (next) next.resolve();
+    if (next) next();
     else this.active -= 1;
   }
 
@@ -53,19 +58,25 @@ export class AtlasClient {
     return url;
   }
 
+  // The deadline starts here, before the queue: waiting for a slot counts against the same time.
   async get(segments, query, { signal } = {}) {
     if (signal?.aborted) throw new ToolError('cancelled');
-    await this.acquire(signal);
+    const deadline = AbortSignal.timeout(this.timeoutMs);
+    const combined = signal ? AbortSignal.any([signal, deadline]) : deadline;
     try {
-      return await this.send(this.url(segments, query), signal);
+      await this.acquire(combined);
+    } catch (error) {
+      if (error instanceof ToolError) throw error;
+      throw this.abortError(signal, deadline) ?? new ToolError('upstream_unavailable');
+    }
+    try {
+      return await this.send(this.url(segments, query), signal, deadline, combined);
     } finally {
       this.release();
     }
   }
 
-  async send(url, signal) {
-    const deadline = AbortSignal.timeout(this.timeoutMs);
-    const combined = signal ? AbortSignal.any([signal, deadline]) : deadline;
+  async send(url, signal, deadline, combined) {
     let response;
     try {
       response = await this.fetchImpl(url, {

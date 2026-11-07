@@ -1,0 +1,48 @@
+# systemd unit for remote MCP access in a dedicated Proxmox LXC (docs/features/mcp-remote-oauth.md).
+# The adapter listens on loopback only; Caddy in the same container terminates TLS in front of it.
+#
+#   /opt/atlas-mcp                  the mcp/ directory with `npm ci --omit=dev`
+#   /etc/atlas-mcp/atlas-mcp.env    ATLAS_BASE_URL, MCP_PUBLIC_URL (root:atlas-mcp, 0640)
+#   /etc/atlas-mcp/atlas-token      the inventory:read Atlas token alone (root:atlas-mcp, 0640)
+#   /var/lib/atlas-mcp              the OAuth store, created by systemd (atlas-mcp, 0700)
+
+[Unit]
+Description=Inventory Atlas Lite read-only MCP adapter (remote, OAuth)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=atlas-mcp
+Group=atlas-mcp
+WorkingDirectory=/opt/atlas-mcp
+EnvironmentFile=/etc/atlas-mcp/atlas-mcp.env
+Environment=NODE_ENV=production
+Environment=MCP_HOST=127.0.0.1
+Environment=MCP_PORT=3100
+Environment=MCP_TRUST_PROXY=loopback
+Environment=MCP_STATE_DIR=/var/lib/atlas-mcp
+Environment=ATLAS_API_TOKEN_FILE=/etc/atlas-mcp/atlas-token
+ExecStart=/usr/bin/node --disable-warning=ExperimentalWarning src/index.js
+Restart=on-failure
+RestartSec=5
+# A bad setting (2) or a rejected or overprivileged Atlas token (3) needs the operator, not a retry.
+RestartPreventExitStatus=2 3
+StateDirectory=atlas-mcp
+StateDirectoryMode=0700
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictSUIDSGID=yes
+LockPersonality=yes
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target

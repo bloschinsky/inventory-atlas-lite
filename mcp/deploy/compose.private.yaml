@@ -1,0 +1,36 @@
+# The read-only MCP adapter for an Atlas you ALREADY run (for example the Proxmox LXC installation),
+# private only: no OAuth, no TLS, no public port (docs/features/mcp-read-only-adapter.md).
+#
+#   ATLAS_BASE_URL=https://atlas.home.example docker compose -f mcp/deploy/compose.private.yaml up -d --build
+#
+# The adapter's port is published on this machine's loopback only, for an MCP client on the same
+# machine. It has no client authentication: never publish it on a LAN or public address. For remote
+# clients use compose.remote.yaml, which adds OAuth and HTTPS.
+#
+# ATLAS_BASE_URL points at your Atlas; nothing here creates or touches Atlas data. If Atlas answers
+# only over plain HTTP from another machine, it refuses the token (AUTH_HTTPS_REQUIRED) unless that
+# Atlas sets ATLAS_ALLOW_HTTP=true — acceptable only on a private network you control, never for an
+# Atlas reachable from the Internet. Prefer HTTPS.
+
+services:
+  atlas-mcp:
+    build: ..
+    image: inventory-atlas-mcp:local
+    restart: unless-stopped
+    environment:
+      ATLAS_BASE_URL: ${ATLAS_BASE_URL:?Set ATLAS_BASE_URL to your Atlas, for example https://atlas.home.example}
+      ATLAS_API_TOKEN_FILE: /run/secrets/atlas_mcp_token
+      MCP_ALLOWED_HOSTS: localhost
+    secrets:
+      - atlas_mcp_token
+    ports:
+      - "127.0.0.1:3100:3100"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+secrets:
+  atlas_mcp_token:
+    file: ../secrets/atlas-mcp-token

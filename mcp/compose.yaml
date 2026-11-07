@@ -1,5 +1,10 @@
 # Inventory Atlas Lite with the optional read-only MCP adapter (docs/features/mcp-read-only-adapter.md).
 #
+# !! A DISPOSABLE REFERENCE / TEST STACK. It starts a NEW, EMPTY Atlas with its own `atlas-data` volume.
+# !! It does not connect to the Atlas you already run (a Proxmox LXC installation, another container).
+# !! For an existing Atlas use mcp/deploy/compose.private.yaml (private) or mcp/deploy/compose.remote.yaml
+# !! (remote clients over HTTPS with OAuth).
+#
 #   docker compose -f mcp/compose.yaml up -d                 # Atlas only
 #   docker compose -f mcp/compose.yaml --profile mcp up -d   # Atlas and the adapter
 #
@@ -20,8 +25,10 @@ services:
       - atlas-data:/data
     environment:
       DATA_DIR: /data
-      # The adapter reaches Atlas over plain HTTP on the private network, which Atlas refuses for
-      # credentials from a non-loopback address unless this opt-in is set.
+      # The adapter reaches Atlas over plain HTTP on the internal container network, which Atlas refuses
+      # for credentials from a non-loopback address unless this opt-in is set. It is safe only because
+      # that network has no other members and no route outside; it never makes plain HTTP acceptable
+      # for an Atlas reachable from a LAN or the Internet.
       ATLAS_ALLOW_HTTP: "true"
     networks:
       - default

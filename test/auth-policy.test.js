@@ -25,7 +25,7 @@ test('every registered route has exactly one authorization entry, and every entr
 test('only the documented allowlist is public, and nothing is decided by the HTTP verb', () => {
   const publicRoutes = ROUTE_POLICY.filter(rule => rule.access === 'public').map(rule => `${rule.method} ${rule.path}`);
   assert.deepEqual(publicRoutes.sort(), ['GET /api/auth/session', 'GET /api/health', 'POST /api/auth/login', 'POST /api/auth/recover', 'POST /api/auth/setup']);
-  const access = new Set([...Object.values(PERMISSIONS), 'public', 'session']);
+  const access = new Set([...Object.values(PERMISSIONS), 'public', 'session', 'token']);
   for (const rule of ROUTE_POLICY) assert.ok(access.has(rule.access), `${rule.method} ${rule.path} has a known access level`);
   // A GET can be sensitive and a POST can be read-only.
   assert.equal(matchRoute('GET', '/api/backup').access, PERMISSIONS.maintenanceManage);

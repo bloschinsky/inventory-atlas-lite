@@ -270,10 +270,19 @@ ATLAS_BASE_URL=http://127.0.0.1:3000 ATLAS_API_TOKEN=ial_… npm run mcp:start
 # atlas-mcp listening on http://127.0.0.1:3100/mcp
 ```
 
-It listens on loopback only and has no client authentication yet, so keep it on the same machine or a
-private Docker network (`docker compose -f mcp/compose.yaml --profile mcp up -d --build`). A rejected
-token stops it at startup. Run its tests with `npm run mcp:test`. Configuration, the tools, Docker,
-threat boundaries, and limitations: [`docs/features/mcp-read-only-adapter.md`](docs/features/mcp-read-only-adapter.md).
+By default it listens on loopback only and has no client authentication, so keep it on the same
+machine or a private Docker network. `mcp/compose.yaml` is a disposable test stack that starts its own
+empty Atlas; for an Atlas you already run use `mcp/deploy/compose.private.yaml`. A rejected token, or
+one that can do more than read, stops it at startup. Run its tests with `npm run mcp:test`.
+Configuration, the tools, Docker, threat boundaries, and limitations:
+[`docs/features/mcp-read-only-adapter.md`](docs/features/mcp-read-only-adapter.md).
+
+For remote clients such as a Claude connector, `MCP_PUBLIC_URL=https://mcp.example.com` turns on
+OAuth 2.1 (PKCE, client registration, owner consent with a one-time code from
+`node src/cli.js enroll`, refresh token rotation, revocation) behind a TLS reverse proxy that
+publishes only the MCP paths; Atlas stays private. `mcp/deploy/` has the Compose stack with Caddy, the
+Caddyfile, and a systemd unit for a Proxmox LXC; setup, threat model, and incident response:
+[`docs/features/mcp-remote-oauth.md`](docs/features/mcp-remote-oauth.md).
 
 ## Data and backups
 
