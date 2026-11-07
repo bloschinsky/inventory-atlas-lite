@@ -76,8 +76,9 @@ function readListen(env, oauth) {
 }
 
 /*
-  Remote access (Phase 2.2) is switched on by MCP_PUBLIC_URL and only together with OAuth: there is
-  no setting that publishes the endpoint without authorization. The URL is the issuer and, with
+  Remote access (Phase 2.2) is switched on by MCP_PUBLIC_URL and only together with OAuth. Without it
+  the adapter has no client authentication and must stay on loopback or a private container network
+  (readListen); Host checks are not authentication. The URL is the issuer and, with
   /mcp, the protected resource every token is bound to; it must be HTTPS, except on a loopback host
   for a test on the same machine.
 */

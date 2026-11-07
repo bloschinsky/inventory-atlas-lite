@@ -25,6 +25,8 @@ export const REQUIRED_PERMISSIONS = Object.freeze(['inventory:read']);
 
 // Requests per minute and client address on /mcp, before and after authorization.
 const MCP_RATE_LIMIT = 300;
+// Authorization requests per 15 minutes and client address.
+export const AUTHORIZE_RATE_LIMIT = 30;
 
 const rpcError = (res, status, code, message) => res.status(status).json({ jsonrpc: '2.0', error: { code, message }, id: null });
 
@@ -80,15 +82,18 @@ function mountOAuth(app, { config, atlas, logger, authStore, clock }) {
     scopesSupported: [...SCOPES_SUPPORTED],
     resourceName: 'Inventory Atlas Lite (read-only)',
     // Approved confidential clients keep their secret until the client is revoked.
-    clientRegistrationOptions: { clientSecretExpirySeconds: 0 }
+    clientRegistrationOptions: { clientSecretExpirySeconds: 0 },
+    // Starting an authorization shows a page: 30 per 15 minutes and address (the SDK default is 100).
+    authorizationOptions: { rateLimit: { windowMs: 15 * 60 * 1000, max: AUTHORIZE_RATE_LIMIT } }
   }));
   app.use('/.well-known/oauth-protected-resource', metadataHandler({
     resource: resourceUrl.href, authorization_servers: [new URL(oauth.issuerUrl).href], scopes_supported: [...SCOPES_SUPPORTED],
     resource_name: 'Inventory Atlas Lite (read-only)'
   }));
-  return requireBearerAuth({
+  const guard = requireBearerAuth({
     verifier: provider, requiredScopes: [SCOPE], expectedResource: resourceUrl, resourceMetadataUrl: getOAuthProtectedResourceMetadataUrl(resourceUrl)
   });
+  return { guard, consent };
 }
 
 /*
@@ -136,9 +141,10 @@ export function createHttpApp({ config, atlas, logger, clock = Date.now, authSto
   });
 
   let guard = (_req, _res, next) => next();
+  let consent = null;
   if (config.oauth) {
     if (!authStore) throw new Error('OAuth needs its store.');
-    guard = mountOAuth(app, { config, atlas, logger, authStore, clock });
+    ({ guard, consent } = mountOAuth(app, { config, atlas, logger, authStore, clock }));
     app.use('/mcp', rateLimit({ windowMs: 60 * 1000, limit: MCP_RATE_LIMIT, standardHeaders: true, legacyHeaders: false,
       handler: (_req, res) => rpcError(res, 429, -32000, 'Too many requests.') }));
   }
@@ -249,5 +255,5 @@ export function createHttpApp({ config, atlas, logger, clock = Date.now, authSto
     clearInterval(sweep);
     await Promise.all([...sessions.keys()].map(id => closeSession(id, 'shutdown')));
   };
-  return { app, sessions, close, pendingSessions: () => opening };
+  return { app, sessions, close, pendingSessions: () => opening, consent };
 }

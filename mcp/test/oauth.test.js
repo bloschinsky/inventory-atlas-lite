@@ -2,10 +2,11 @@ import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { after, before, test } from 'node:test';
-import { AuthStore } from '../src/authStore.js';
+import { after, before, beforeEach, test } from 'node:test';
+import { AuthStore, MAX_UNAPPROVED_CLIENTS } from '../src/authStore.js';
+import { MAX_PENDING, MAX_PENDING_PER_CLIENT } from '../src/consent.js';
 import { readConfig } from '../src/config.js';
-import { createHttpApp } from '../src/httpServer.js';
+import { AUTHORIZE_RATE_LIMIT, createHttpApp } from '../src/httpServer.js';
 import { createLogger } from '../src/logger.js';
 import { freePort } from './helpers.js';
 import {
@@ -16,7 +17,11 @@ import {
   The adapter's OAuth 2.1 authorization server and protected resource in process, with a stand-in
   Atlas and a controllable clock: discovery, registration rules, consent and its CSRF defences,
   PKCE, code and refresh token replay, expiry, revocation by the client and by the owner, scopes and
-  resources, session ownership, and that no Atlas or arbitrary bearer value is ever accepted.
+  resources, session ownership, that no Atlas or arbitrary bearer value is ever accepted, and that
+  anonymous registrations and authorization requests cannot lock the owner out.
+
+  The server trusts the loopback "proxy", and every request names a synthetic client address from
+  the documentation range 198.51.100.0/24, so each test has its own per-address rate limits.
 */
 const TOKEN = `ial_${'a'.repeat(16)}_${'B'.repeat(43)}`;
 let now = Date.now();
@@ -29,23 +34,38 @@ let logs;
 const atlasCalls = [];
 // Registered once: registration is rate limited per address (20 an hour), as it is in production.
 const clients = {};
+let consent;
+// While set, Atlas's database metadata answers only when this promise resolves (a slow Atlas).
+let metadataGate = null;
+
+let source = 0;
+const nextSource = () => { source += 1; return `198.51.100.${source}`; };
+let address = nextSource();
+const realFetch = globalThis.fetch;
+globalThis.fetch = (url, init = {}) => realFetch(url, { ...init, headers: { 'x-forwarded-for': address, ...init.headers } });
+beforeEach(() => { address = nextSource(); });
 
 before(async () => {
   stateDir = await mkdtemp(path.join(os.tmpdir(), 'atlas-mcp-oauth-'));
   const port = await freePort();
   base = `http://127.0.0.1:${port}`;
-  const config = readConfig({ ATLAS_BASE_URL: 'http://127.0.0.1:9', ATLAS_API_TOKEN: TOKEN, MCP_PUBLIC_URL: base, MCP_STATE_DIR: stateDir, MCP_PORT: String(port) });
+  const config = readConfig({ ATLAS_BASE_URL: 'http://127.0.0.1:9', ATLAS_API_TOKEN: TOKEN, MCP_PUBLIC_URL: base, MCP_STATE_DIR: stateDir, MCP_PORT: String(port), MCP_TRUST_PROXY: 'loopback' });
   store = new AuthStore(stateDir, { clock });
   logs = [];
   const atlas = {
     get: async segments => {
       atlasCalls.push(segments.join('/'));
-      if (segments.join('/') === 'database/metadata') return { name: 'Synthetic <b>inventory</b>' };
+      if (segments.join('/') === 'database/metadata') {
+        if (metadataGate) await metadataGate;
+        return { name: 'Synthetic <b>inventory</b>' };
+      }
       if (segments[0] === 'items') return { items: [], pagination: { page: 1, pages: 1, total: 0, pageSize: 10 } };
       return {};
     }
   };
-  const { app, close } = createHttpApp({ config, atlas, logger: createLogger('debug', line => logs.push(line)), clock, authStore: store });
+  const http = createHttpApp({ config, atlas, logger: createLogger('debug', line => logs.push(line)), clock, authStore: store });
+  const { app, close } = http;
+  consent = http.consent;
   const listener = await new Promise(resolve => { const instance = app.listen(port, '127.0.0.1', () => resolve(instance)); });
   server = { close, listener };
   for (const name of ['main', 'other', 'third', 'revoked']) clients[name] = await registered(base, { client_name: `Synthetic ${name} client` });
@@ -348,6 +368,87 @@ test('the store keeps only hashes of tokens and codes', async () => {
     store.db.prepare('SELECT * FROM tokens').all(), store.db.prepare('SELECT * FROM authorization_codes').all(), store.db.prepare('SELECT * FROM enrollment_codes').all()
   ]);
   for (const value of [tokens.access_token, tokens.refresh_token, code]) assert.ok(!dump.includes(value));
+});
+
+test('anonymous registrations cannot lock the owner out of onboarding a new client', async () => {
+  const approved = await authorize(base, enrollment(), { client: clients.third });
+  // A flood from many synthetic addresses, well past the waiting-client capacity.
+  const flood = MAX_UNAPPROVED_CLIENTS + 40;
+  const statuses = [];
+  for (let i = 0; i < flood; i += 10) {
+    address = nextSource();
+    statuses.push(...await Promise.all(Array.from({ length: 10 }, (_, j) => register(base, { client_name: `Flood ${i + j}` }).then(response => response.status))));
+  }
+  assert.ok(statuses.every(status => status === 201), 'registration is never refused for capacity');
+  assert.ok(store.waitingClients() <= MAX_UNAPPROVED_CLIENTS, `storage stays bounded (${store.waitingClients()})`);
+
+  // The owner onboards a new client at once, without waiting or touching the service.
+  address = nextSource();
+  const fresh = await authorize(base, enrollment());
+  assert.equal((await initialize(base, fresh.tokens.access_token)).status, 200);
+  assert.equal((await initialize(base, approved.tokens.access_token)).status, 200, 'approved clients are never evicted');
+  assert.ok(store.getClient(clients.main.client_id), 'nor are earlier approved ones');
+
+  // Waiting clients expire within half an hour, and the owner can clear them at once.
+  now += 31 * 60 * 1000;
+  address = nextSource();
+  await registered(base, { client_name: 'After the flood' });
+  assert.equal(store.waitingClients(), 1, 'the flood expired');
+  assert.equal(store.removeWaitingClients(), 1);
+  assert.equal(store.waitingClients(), 0);
+  assert.ok(store.getClient(fresh.client.client_id), 'cleanup keeps approved clients');
+});
+
+test('simultaneous authorization requests stay within the pending capacity, share one Atlas read, and recover', async () => {
+  // Earlier tests' pages are long expired on this clock; register a few unapproved clients.
+  now += 11 * 60 * 1000;
+  const waiting = [];
+  for (let i = 0; i < 12; i += 1) {
+    if (i % 6 === 0) address = nextSource();
+    waiting.push(await registered(base, { client_name: `Waiting ${i}` }));
+  }
+  let release;
+  metadataGate = new Promise(resolve => { release = resolve; });
+  const before = atlasCalls.filter(call => call === 'database/metadata').length;
+  const { challenge } = pkce();
+
+  // 120 GET /authorize at once from 12 addresses (10 each) while Atlas is slow.
+  const requests = [];
+  for (let i = 0; i < 120; i += 1) {
+    if (i % 10 === 0) address = nextSource();
+    requests.push(consentPage(base, waiting[i % waiting.length], { challenge, state: `s${i}` }).then(page => page.response.status));
+  }
+  // Every request that got a place is now waiting for Atlas; the places are already counted.
+  const deadline = Date.now() + 5000;
+  while (consent.reserving() + consent.pending.size < MAX_PENDING && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 10));
+  assert.ok(consent.pending.size + consent.reserving() <= MAX_PENDING, 'reservations never exceed the capacity');
+  release();
+  metadataGate = null;
+  const statuses = await Promise.all(requests);
+  const counts = statuses.reduce((all, status) => ({ ...all, [status]: (all[status] ?? 0) + 1 }), {});
+  // Every answer is a page or a predictable 503; a newer request of a client replaces its oldest.
+  assert.ok(Object.keys(counts).every(status => ['200', '503'].includes(status)), JSON.stringify(counts));
+  assert.ok(counts[503] > 0, `the capacity refused some (${JSON.stringify(counts)})`);
+  assert.ok(consent.pending.size <= MAX_PENDING);
+  assert.equal(consent.reserving(), 0, 'no reservation leaks');
+  for (const client of waiting) {
+    assert.ok([...consent.pending.values()].filter(request => request.clientId === client.client_id).length <= MAX_PENDING_PER_CLIENT);
+  }
+  assert.equal(atlasCalls.filter(call => call === 'database/metadata').length - before, 1, 'one Atlas read for all of them');
+
+  // Full now: refused predictably; ten minutes later everything has expired and pages work again.
+  address = nextSource();
+  if (consent.pending.size >= MAX_PENDING) assert.equal((await consentPage(base, clients.other, { challenge })).response.status, 503);
+  now += 11 * 60 * 1000;
+  const recovered = await consentPage(base, clients.other, { challenge });
+  assert.equal(recovered.response.status, 200);
+  assert.equal(consent.pending.size, 1, 'expired requests were swept');
+
+  // A single address is limited on /authorize itself.
+  address = nextSource();
+  let limited;
+  for (let i = 0; i <= AUTHORIZE_RATE_LIMIT && limited !== 429; i += 1) limited = (await consentPage(base, clients.other, { challenge })).response.status;
+  assert.equal(limited, 429);
 });
 
 test('registration is rate limited per client address', async () => {

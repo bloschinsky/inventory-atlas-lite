@@ -1,4 +1,4 @@
-import { InvalidClientMetadataError, InvalidGrantError, InvalidScopeError, InvalidTargetError, InvalidTokenError, TooManyRequestsError }
+import { InvalidClientMetadataError, InvalidGrantError, InvalidScopeError, InvalidTargetError, InvalidTokenError }
   from '@modelcontextprotocol/sdk/server/auth/errors.js';
 import { cleanText } from './mapping.js';
 
@@ -10,7 +10,8 @@ import { cleanText } from './mapping.js';
   - exactly one scope exists, `inventory:read`; an unknown scope is refused, none means that one;
   - exactly one resource exists, this server's /mcp URL; a token for anything else is never issued;
   - a client registers itself (RFC 7591) but cannot do anything until the owner approves it on the
-    consent page with a one-time code from the host (see consent.js);
+    consent page with a one-time code from the host (see consent.js); waiting registrations expire
+    and the oldest are evicted, so anonymous registrations cannot lock the owner out (authStore.js);
   - tokens are opaque random values stored as hashes, so there is no signing key to protect or rotate
     and every token can be revoked at once; access tokens are short-lived, refresh tokens rotate and a
     reused one revokes its grant.
@@ -100,7 +101,7 @@ export class AtlasOAuthProvider {
       token_endpoint_auth_method: client.token_endpoint_auth_method === 'none' ? 'none' : 'client_secret_post',
       ...(client.client_secret ? { client_secret: client.client_secret, client_secret_expires_at: client.client_secret_expires_at ?? 0 } : {})
     };
-    if (!this.store.registerClient(stored)) throw new TooManyRequestsError('Too many clients are waiting for approval; try again later.');
+    this.store.registerClient(stored);
     this.logger.info('oauth client registered', { client_id: stored.client_id, client_name: name, public_client: !stored.client_secret });
     return stored;
   }

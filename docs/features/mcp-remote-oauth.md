@@ -2,9 +2,16 @@
 
 The optional read-only MCP adapter (`mcp/`, [Phase 2.1](mcp-read-only-adapter.md)) can be reached by
 remote MCP clients over HTTPS. Setting `MCP_PUBLIC_URL` turns on a standards-based **OAuth 2.1**
-authorization server and protected resource inside the adapter; there is no setting that publishes
-the endpoint without it. Atlas's REST API and web interface stay private, the tools stay read-only,
-and the adapter still reaches Atlas only with its own `inventory:read` API token.
+authorization server and protected resource inside the adapter, and the shipped remote recipe
+(`mcp/deploy/compose.remote.yaml`, the Caddyfile, the LXC unit) always sets it. Atlas's REST API and
+web interface stay private, the tools stay read-only, and the adapter still reaches Atlas only with
+its own `inventory:read` API token.
+
+> **Never publish the Phase 2.1 listener.** Without `MCP_PUBLIC_URL` the adapter has no client
+> authentication. It can still listen on a non-loopback address (`MCP_HOST=0.0.0.0` with
+> `MCP_ALLOWED_HOSTS`) for a private container network, and that mode must never be reachable from a
+> LAN you do not control or the Internet: its Host and Origin checks guard against DNS rebinding, they
+> are not authentication.
 
 ```text
 External MCP client (untrusted cloud)
@@ -23,10 +30,14 @@ The two credentials never meet: an OAuth token is checked only by the adapter an
 Atlas (no token passthrough), and the Atlas token is never sent to a client, written into metadata,
 URLs, or logs, or derived from anything a client sends.
 
-Specification and SDK: MCP **2025-11-25** (authorization and Streamable HTTP transport) through the
-pinned `@modelcontextprotocol/sdk` **1.32.2**, whose server negotiates protocol versions up to
-2025-11-25. Remote access needs **Node.js 22.13+** (the OAuth store uses `node:sqlite`); the private
-Phase 2.1 mode still runs on Node.js 20.19+.
+Specification and SDK: the adapter deliberately implements MCP **2025-11-25** (authorization and
+Streamable HTTP transport) through the pinned `@modelcontextprotocol/sdk` **1.32.2** (the 1.x line),
+whose server negotiates protocol versions up to 2025-11-25. Newer specification revisions and the SDK's
+2.x line are not adopted here; moving to them is a separate change with its own interoperability
+tests. Compatibility with current Claude and ChatGPT connectors is checked in Phase 2.3 (#67), and the
+pinned level should be reviewed whenever a connector stops negotiating 2025-11-25 or the 1.x line stops
+receiving security fixes. Remote access needs **Node.js 22.13+** (the OAuth store uses `node:sqlite`);
+the private Phase 2.1 mode still runs on Node.js 20.19+.
 
 ## Security decision record
 
@@ -69,7 +80,12 @@ connectors use it, constrained: 1–5 redirect URIs, HTTPS or loopback HTTP only
 credentials, or other schemes), only the `authorization_code`/`refresh_token` grants and the `code`
 response type, only the `inventory:read` scope. URLs a client offers (`logo_uri`, `jwks_uri`,
 `client_uri`, …) are dropped, never fetched. A registered client can do nothing until the owner
-approves it; unapproved clients are removed after 24 hours and at most 20 may wait. **Client ID
+approves it. Because registration is anonymous, waiting clients can never lock the owner out: they
+expire after 30 minutes, and once 200 are waiting a new registration **evicts the oldest waiting
+one** instead of being refused. A flood therefore only churns other waiting registrations; to push out
+a legitimate one, an attacker would have to register 200 clients in the minutes before the owner
+approves it, past the per-address registration limit. Approved and revoked clients are never evicted,
+and `node src/cli.js prune` clears every waiting client at once. **Client ID
 Metadata Documents are not supported** (deferred): they require fetching a client-chosen URL during
 authorization, which reopens SSRF on a public endpoint; clients fall back to DCR when the metadata
 does not advertise them. `client_id_metadata_document_supported` is absent from the metadata.
@@ -103,7 +119,7 @@ refused before anything else (DNS rebinding).
 | `GET /.well-known/oauth-protected-resource/mcp` (and without `/mcp`) | yes | RFC 9728 metadata: `resource`, `authorization_servers`, `scopes_supported`. |
 | `GET /.well-known/oauth-authorization-server` | yes | RFC 8414 metadata: `code` only, `S256` only, `authorization_code` and `refresh_token`, `none`/`client_secret_post`. |
 | `POST /register` | yes | Dynamic Client Registration with the limits above; 20 per hour and address. |
-| `GET /authorize` | yes | Validates client, redirect URI, scope, resource, and PKCE, then shows the consent page. |
+| `GET /authorize` | yes | Validates client, redirect URI, scope, resource, and PKCE, then shows the consent page; 30 per 15 minutes and address. |
 | `POST /consent` | yes | The owner's decision (below); 30 per 15 minutes and address. |
 | `POST /token` | yes | Code exchange (PKCE verified by the SDK) and refresh; 50 per 15 minutes and address. |
 | `POST /revoke` | yes | RFC 7009; revoking either token of a pair ends its grant. |
@@ -127,8 +143,14 @@ The decision is accepted only with that request id, the same browser's cookie, a
 `MCP_PUBLIC_URL`, and — to approve — a valid enrollment code. Five wrong codes end the request with
 `access_denied`; **Deny** redirects `access_denied` with the client's `state`. Approval redirects to
 the registered URI with a single-use authorization code (60 seconds, bound to the client, redirect
-URI, PKCE challenge, scope, and resource) and marks the client approved. Pending requests live in
-memory for ten minutes, at most 50.
+URI, PKCE challenge, scope, and resource) and marks the client approved.
+
+Pending requests live in memory for ten minutes, at most 50. A request reserves its place before the
+page is prepared, so simultaneous requests can never exceed the limit; beyond it the page answers
+`503` until requests are decided or expire. One client holds at most three open requests (a newer one
+replaces its oldest), so a single registration cannot fill the table. The inventory name on the page
+comes from one shared Atlas read cached for a minute, so anonymous page views never multiply into
+Atlas traffic.
 
 ### Tokens
 
@@ -234,7 +256,8 @@ address is **not** an external ingress: cloud clients such as Claude cannot reac
    **Allow read access**. The client receives its tokens and lists the six tools.
 
 `node src/cli.js clients` lists each client with its status (`waiting`, `approved`, `revoked`),
-redirect URIs, active grants, and last use. Expired grants: the client asks again and shows the
+redirect URIs, active grants, and last use; `node src/cli.js prune` removes every client still
+waiting for approval (approved ones are untouched). Expired grants: the client asks again and shows the
 consent page; nothing else needs to be done.
 
 ### 4. Revoke and rotate
@@ -258,7 +281,8 @@ consent page; nothing else needs to be done.
 | Stolen refresh token | Rotation; reuse of a spent token revokes the grant for both parties. |
 | Intercepted authorization code / replay | PKCE S256 required; single use, 60 seconds, bound to client and redirect URI; a replay revokes the grant; at most three token requests per code. |
 | CSRF / clickjacking on consent | Per-request `__Host-` `SameSite=Strict` cookie, exact `Origin` check, `frame-ancestors 'none'`, `X-Frame-Options: DENY`. |
-| Malicious client registration / consent phishing | Registration grants nothing; approval needs a code from the host; the page shows the client name, id, and return host; unapproved clients expire; registrations are rate limited and capped. |
+| Malicious client registration / consent phishing | Registration grants nothing; approval needs a code from the host; the page shows the client name, id, and return host; registrations are rate limited, waiting clients expire in 30 minutes, and a full table evicts the oldest waiting client rather than refusing new ones. |
+| Exhausting onboarding capacity | Waiting clients and pending consent requests are bounded and expire; registration evicts instead of refusing; consent places are reserved before any await, one client holds at most three, and the inventory name is one cached Atlas read; `cli.js prune` clears waiting clients. |
 | Malicious redirect | Exact match against registered URIs (loopback port relaxation only, RFC 8252); HTTPS or loopback HTTP only; an unregistered URI is never redirected to. |
 | SSRF through discovery or client metadata | The adapter fetches no client-supplied URL (no CIMD, no logo/JWKS fetch); its only outbound request is the fixed `ATLAS_BASE_URL`. |
 | Token passthrough / confused deputy | OAuth tokens never reach Atlas; the Atlas token never leaves the adapter; audience (resource) checked on every token. |
@@ -295,7 +319,11 @@ the same scope; the enrollment code proves a shell on the host, not a specific A
   token endpoint (wrong verifier, redirect URI, resource, and client; burned codes; code replay
   revoking the grant; expiry), tokens (Atlas tokens, forged and refresh tokens as bearers, session
   ownership), refresh rotation and reuse, expiry and reconnect, revocation by the client and by the
-  owner, hashed storage, and the registration rate limit.
+  owner, hashed storage, the registration rate limit, a registration flood of 240 clients from 24
+  synthetic addresses after which the owner still onboards a new client at once (approved clients
+  kept, waiting ones expiring and pruned), and 120 simultaneous `/authorize` requests from 12
+  addresses against a slow Atlas (reservations never above 50, at most three per client, one Atlas
+  read, predictable `503`, recovery after expiry, no leaked reservation, the per-address limit).
 - `mcp/test/remote.test.js` — a real Atlas, the adapter process in OAuth mode, and an HTTPS reverse
   proxy that publishes only the Caddyfile's paths: the **official MCP SDK client** discovers,
   registers, is approved with a code from `cli.js enroll`, and reads; `cli.js clients` and `revoke`;

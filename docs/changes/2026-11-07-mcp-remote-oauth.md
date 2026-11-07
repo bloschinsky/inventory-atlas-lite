@@ -45,6 +45,27 @@ over HTTPS without publishing Atlas. Details: `docs/features/mcp-remote-oauth.md
 - **Deferred:** Client ID Metadata Documents (would require fetching client-chosen URLs on a public
   endpoint; clients fall back to DCR). Real Claude/ChatGPT connectors and onboarding are #67.
 
+## Review fixes (PR #72)
+
+The security review found two blocking availability weaknesses on the public OAuth entry points; both
+were confirmed in the code and fixed:
+
+- **Anonymous registrations could fill the 20 global waiting-client slots for 24 hours.** Waiting
+  clients now expire after 30 minutes, the capacity is 200, and a full table evicts the oldest waiting
+  client instead of refusing the registration; approved and revoked clients are never evicted.
+  `node src/cli.js prune` clears waiting clients at once.
+- **The consent cap was checked before an await and every page read Atlas.** `show()` now reserves its
+  place before the await and releases it whatever happens (also when the browser left), a client keeps
+  at most three open requests (applied at insertion), the inventory name is one shared Atlas read
+  cached for a minute, and `GET /authorize` has an explicit 30 per 15 minutes per address limit.
+- Non-blocking notes: the documentation no longer claims the endpoint cannot be exposed without
+  OAuth; it warns never to publish the unauthenticated Phase 2.1 listener, and it states the pinned
+  MCP 2025-11-25 / SDK 1.32.2 level and when it is reviewed (#67).
+- Regression tests in `mcp/test/oauth.test.js`: a flood of 240 registrations from 24 synthetic
+  addresses after which the owner onboards a new client immediately, and 120 simultaneous
+  `/authorize` requests from 12 addresses against a slow Atlas (bounded reservations, one Atlas read,
+  predictable `503`, recovery, the per-address limit).
+
 ## Verification
 
 - `npm run lint` — passed.

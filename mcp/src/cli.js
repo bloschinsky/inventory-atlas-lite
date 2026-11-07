@@ -6,6 +6,7 @@ import { AuthStore } from './authStore.js';
     node src/cli.js enroll                 print a one-time enrollment code for the consent page
     node src/cli.js clients                list registered OAuth clients
     node src/cli.js revoke <client_id>     revoke one client and every token it holds
+    node src/cli.js prune                  remove every client still waiting for approval
 
   They work on the same OAuth store as the running server (MCP_STATE_DIR) and take effect at once.
   Codes are printed here only, never served over HTTP; possession of this shell is the owner's proof.
@@ -19,7 +20,7 @@ const fail = (text, code = 2) => {
   process.exit(code);
 };
 
-if (!['enroll', 'clients', 'revoke'].includes(command)) fail('Usage: node src/cli.js enroll | clients | revoke <client_id>');
+if (!['enroll', 'clients', 'revoke', 'prune'].includes(command)) fail('Usage: node src/cli.js enroll | clients | revoke <client_id> | prune');
 if (!stateDir) fail('MCP_STATE_DIR is not set; use the same value as the running adapter.');
 
 const store = new AuthStore(stateDir);
@@ -36,6 +37,8 @@ try {
       const status = client.revokedAt ? 'revoked' : client.approvedAt ? 'approved' : 'waiting';
       out([client.clientId, status, client.name, client.redirectUris.join(' '), `grants=${client.activeGrants}`, `last_used=${iso(client.lastUsedAt)}`].join('\t'));
     }
+  } else if (command === 'prune') {
+    out(`Removed ${store.removeWaitingClients()} client(s) waiting for approval; approved clients are untouched.`);
   } else {
     if (!argument) fail('Name the client_id to revoke (see `clients`).');
     if (!store.revokeClient(argument)) fail('No active client has this id.', 1);

@@ -19,9 +19,18 @@ const SCHEMA_VERSION = 1;
 
 export const ENROLLMENT_CODE_TTL_MS = 10 * 60 * 1000;
 export const AUTHORIZATION_CODE_TTL_MS = 60 * 1000;
-// A registered client that is never approved is removed after a day.
-export const UNAPPROVED_CLIENT_TTL_MS = 24 * 60 * 60 * 1000;
-export const MAX_UNAPPROVED_CLIENTS = 20;
+/*
+  Registration is anonymous (RFC 7591), so registered-but-unapproved clients must never be able to
+  lock the owner out. They live 30 minutes (a real client goes to the consent page at once), and when
+  MAX_UNAPPROVED_CLIENTS are waiting a new registration evicts the oldest waiting one instead of being
+  refused. Flooding therefore only churns other waiting registrations, and to push out a legitimate one
+  an attacker would have to register that many clients in the minutes before the owner approves it,
+  past the per-address registration limit. Approved and revoked clients are never evicted.
+*/
+export const UNAPPROVED_CLIENT_TTL_MS = 30 * 60 * 1000;
+export const MAX_UNAPPROVED_CLIENTS = 200;
+// Expired authorization codes and used enrollment codes are kept this long for replay detection.
+const SPENT_RECORD_TTL_MS = 24 * 60 * 60 * 1000;
 
 const hash = value => createHash('sha256').update(String(value)).digest('hex');
 const secret = prefix => `${prefix}${randomBytes(32).toString('base64url')}`;
@@ -126,7 +135,7 @@ export class AuthStore {
     const now = this.clock();
     this.transaction(() => {
       // A new code replaces every unused one, so only the latest printed code works.
-      this.db.prepare('DELETE FROM enrollment_codes WHERE used_at IS NULL OR expires_at < ?').run(now - UNAPPROVED_CLIENT_TTL_MS);
+      this.db.prepare('DELETE FROM enrollment_codes WHERE used_at IS NULL OR expires_at < ?').run(now - SPENT_RECORD_TTL_MS);
       this.db.prepare('INSERT INTO enrollment_codes (code_hash, created_at, expires_at) VALUES (?, ?, ?)')
         .run(hash(normalizeEnrollmentCode(code)), now, now + ENROLLMENT_CODE_TTL_MS);
     });
@@ -142,13 +151,17 @@ export class AuthStore {
       .run(now, clientId, hash(normalized), now).changes === 1;
   }
 
-  // Clients registered through Dynamic Client Registration.
+  // Clients registered through Dynamic Client Registration; always accepted, evicting the oldest waiting ones when full.
   registerClient(info) {
     const now = this.clock();
     return this.transaction(() => {
       this.pruneClients();
       const { count } = this.db.prepare('SELECT COUNT(*) AS count FROM clients WHERE approved_at IS NULL AND revoked_at IS NULL').get();
-      if (count >= MAX_UNAPPROVED_CLIENTS) return null;
+      if (count >= MAX_UNAPPROVED_CLIENTS) {
+        this.db.prepare(`DELETE FROM clients WHERE client_id IN (
+          SELECT client_id FROM clients WHERE approved_at IS NULL AND revoked_at IS NULL ORDER BY created_at, rowid LIMIT ?
+        )`).run(count - MAX_UNAPPROVED_CLIENTS + 1);
+      }
       const { client_secret: clientSecret, ...rest } = info;
       this.db.prepare('INSERT INTO clients (client_id, client_secret, info, client_name, created_at) VALUES (?, ?, ?, ?, ?)')
         .run(info.client_id, clientSecret ?? null, JSON.stringify(rest), info.client_name, now);
@@ -158,8 +171,8 @@ export class AuthStore {
 
   pruneClients() {
     const now = this.clock();
-    this.db.prepare('DELETE FROM clients WHERE approved_at IS NULL AND created_at < ?').run(now - UNAPPROVED_CLIENT_TTL_MS);
-    this.db.prepare('DELETE FROM authorization_codes WHERE expires_at < ?').run(now - UNAPPROVED_CLIENT_TTL_MS);
+    this.db.prepare('DELETE FROM clients WHERE approved_at IS NULL AND revoked_at IS NULL AND created_at < ?').run(now - UNAPPROVED_CLIENT_TTL_MS);
+    this.db.prepare('DELETE FROM authorization_codes WHERE expires_at < ?').run(now - SPENT_RECORD_TTL_MS);
     this.db.prepare('DELETE FROM tokens WHERE expires_at < ?').run(now);
   }
 
@@ -172,6 +185,15 @@ export class AuthStore {
     const row = this.clientRow(clientId);
     if (!row || row.revoked_at) return undefined;
     return { ...JSON.parse(row.info), ...(row.client_secret ? { client_secret: row.client_secret } : {}) };
+  }
+
+  // The owner's cleanup (`cli.js prune`): every client still waiting for approval is removed at once.
+  removeWaitingClients() {
+    return this.db.prepare('DELETE FROM clients WHERE approved_at IS NULL AND revoked_at IS NULL').run().changes;
+  }
+
+  waitingClients() {
+    return this.db.prepare('SELECT COUNT(*) AS count FROM clients WHERE approved_at IS NULL AND revoked_at IS NULL').get().count;
   }
 
   approveClient(clientId) {

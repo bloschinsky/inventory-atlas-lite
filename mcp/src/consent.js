@@ -17,8 +17,12 @@ import { cleanText } from './mapping.js';
   for ten minutes.
 */
 const PENDING_TTL_MS = 10 * 60 * 1000;
-const MAX_PENDING = 50;
+export const MAX_PENDING = 50;
+// One client keeps at most this many open requests; a new one replaces its oldest.
+export const MAX_PENDING_PER_CLIENT = 3;
 const MAX_CODE_TRIES = 5;
+// The inventory name shown on the page is read from Atlas at most once a minute, whatever the traffic.
+const NAME_CACHE_MS = 60 * 1000;
 
 const hash = value => createHash('sha256').update(value).digest('hex');
 const sameHash = (a, b) => a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
@@ -76,14 +80,22 @@ export function createConsent({ store, atlas, oauth, logger, clock = Date.now })
     for (const [id, request] of pending) if (request.expiresAt <= clock()) pending.delete(id);
   };
 
-  // The inventory's name as Atlas reports it, shown so the owner knows which inventory is shared.
-  const inventoryName = async () => {
-    try {
-      return cleanText((await atlas.get(['database', 'metadata']))?.name, 100);
-    } catch {
-      return null;
-    }
+  /*
+    The inventory's name as Atlas reports it, shown so the owner knows which inventory is shared.
+    Anonymous page views must not turn into Atlas traffic: one read is shared by every request that
+    arrives while it runs, and its answer (or failure) is reused for a minute.
+  */
+  let nameCache = null;
+  const inventoryName = () => {
+    if (nameCache && (nameCache.pending || clock() - nameCache.at < NAME_CACHE_MS)) return nameCache.value;
+    const value = atlas.get(['database', 'metadata'])
+      .then(metadata => cleanText(metadata?.name, 100), () => null)
+      .finally(() => { nameCache = { value, at: clock(), pending: false }; });
+    nameCache = { value, at: clock(), pending: true };
+    return value;
   };
+  // Places taken by requests whose page is still being prepared; they count against MAX_PENDING.
+  let reserving = 0;
 
   function render(res, request, client, { error = null, status = 200 } = {}) {
     const redirect = new URL(request.redirectUri);
@@ -108,15 +120,34 @@ export function createConsent({ store, atlas, oauth, logger, clock = Date.now })
 </form>`);
   }
 
+  /*
+    The place is reserved before the only await, so simultaneous requests can never hold more than
+    MAX_PENDING between them, and it is released whatever happens. One client cannot fill the table:
+    its oldest open request gives way to its newest.
+  */
   async function show(client, params, res) {
     sweep();
-    if (pending.size >= MAX_PENDING) return message(res, 503, 'Try again later', 'Too many authorization requests are waiting. Try again in a few minutes.');
+    if (pending.size + reserving >= MAX_PENDING) {
+      logger.warn('oauth consent refused: too many open authorization requests', { client_id: client.client_id });
+      return message(res, 503, 'Try again later', 'Too many authorization requests are waiting. Try again in a few minutes.');
+    }
+    reserving += 1;
+    let inventory;
+    try {
+      inventory = await inventoryName();
+    } finally {
+      reserving -= 1;
+    }
+    // A browser that left while the page was prepared gets nothing, and nothing is kept for it.
+    if (res.destroyed || res.writableEnded) return;
+    // Applied where the request is added, after the await, so a burst cannot exceed it either.
+    const own = [...pending.values()].filter(request => request.clientId === client.client_id).sort((a, b) => a.expiresAt - b.expiresAt);
+    for (const stale of own.slice(0, Math.max(0, own.length - MAX_PENDING_PER_CLIENT + 1))) pending.delete(stale.id);
     const id = randomBytes(24).toString('base64url');
     const browser = randomBytes(24).toString('base64url');
     const request = {
       id, clientId: client.client_id, redirectUri: params.redirectUri, state: params.state, scopes: params.scopes,
-      codeChallenge: params.codeChallenge, browserHash: hash(browser), expiresAt: clock() + PENDING_TTL_MS, tries: 0,
-      inventory: await inventoryName()
+      codeChallenge: params.codeChallenge, browserHash: hash(browser), expiresAt: clock() + PENDING_TTL_MS, tries: 0, inventory
     };
     pending.set(id, request);
     res.set('set-cookie', `${cookieName}=${browser}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${PENDING_TTL_MS / 1000}${secure ? '; Secure' : ''}`);
@@ -173,5 +204,5 @@ export function createConsent({ store, atlas, oauth, logger, clock = Date.now })
       back(res, request, { code });
     });
 
-  return { show, router, pending };
+  return { show, router, pending, reserving: () => reserving };
 }
