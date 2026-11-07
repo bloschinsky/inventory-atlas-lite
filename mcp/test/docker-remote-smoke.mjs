@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -99,6 +99,9 @@ try {
     quiet(['compose', '--project-name', project, '--file', path.join(deployDir, 'compose.remote.yaml'), '--file', override, 'cp', 'caddy:/data/caddy/pki/authorities/local/root.crt', rootCa]);
     return existsSync(rootCa);
   }, 'Caddy\'s internal CA');
+  // `docker cp` keeps Caddy's 0600 mode, owned by this machine's user; the client container reads the
+  // bind-mounted file as its own `node` user, a different uid on Linux (Docker Desktop ignores modes).
+  chmodSync(rootCa, 0o644);
 
   const enrollmentCode = compose(['exec', '-T', 'atlas-mcp', 'node', '--disable-warning=ExperimentalWarning', 'src/cli.js', 'enroll']).match(/^Enrollment code: (\S+)$/m)[1];
   const clientScript = readFileSync(new URL('./docker-remote-smoke-client.mjs', import.meta.url), 'utf8');
