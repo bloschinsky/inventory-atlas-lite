@@ -172,7 +172,7 @@ test('every tool answers over Streamable HTTP with a read-only token', async () 
     }
 
     const log = mcp.logs.join('\n');
-    assert.ok(!log.includes(token) && !log.includes(token.split('_')[2]), 'the token never appears in the log');
+    assert.ok(!log.includes(token) && !log.includes(token.split('_').slice(2).join('_')), 'the token never appears in the log');
     for (const text of ['Зеніт', 'Olena', 'Hall closet', 'Ignore all previous']) assert.ok(!log.includes(text), `the log holds no "${text}"`);
     assert.match(log, /"tool":"search_items".*"outcome":"ok"/);
   } finally {

@@ -108,7 +108,7 @@ test('an official MCP client authorizes over HTTPS through the proxy and reads A
   assert.equal((await initialize(publicUrl, provider.saved.tokens.access_token)).status, 401);
 
   const log = mcp.logs.join('\n');
-  for (const secret of [readToken, readToken.split('_')[2], provider.saved.tokens.access_token, provider.saved.tokens.refresh_token]) {
+  for (const secret of [readToken, readToken.split('_').slice(2).join('_'), provider.saved.tokens.access_token, provider.saved.tokens.refresh_token]) {
     assert.ok(!log.includes(secret), 'no Atlas or OAuth token in the log');
   }
   assert.ok(!log.includes('Synthetic tripod') && !log.includes('Hall closet'), 'no inventory text in the log');
@@ -138,7 +138,7 @@ test('an Atlas token that can write stops the adapter, and a revoked one fails c
   const refused = startAdapter(write);
   await assert.rejects(refused.ready, error => error.code === 3);
   assert.match(refused.logs.join('\n'), /"reason":"token_overprivileged"/);
-  assert.ok(!refused.logs.join('\n').includes(write.split('_')[2]));
+  assert.ok(!refused.logs.join('\n').includes(write.split('_').slice(2).join('_')));
 
   const { token, apiToken } = await request('/api/security/tokens', json('POST', { name: 'MCP soon revoked', scopes: ['inventory:read'] }));
   const adapter = startAdapter(token);
