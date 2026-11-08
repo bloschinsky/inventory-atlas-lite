@@ -24,6 +24,7 @@ const { ItemHistoryService, detectChanges } = await import('../server/src/servic
 const { ItemLifecycleService } = await import('../server/src/services/itemLifecycleService.js');
 const { ItemService } = await import('../server/src/services/itemService.js');
 const { ItemTransferService } = await import('../server/src/services/itemTransferService.js');
+const { validateStagedDatabase } = await import('../server/src/restore/databaseFile.js');
 
 const NOW = '2026-10-09T12:00:00.000Z';
 
@@ -70,11 +71,12 @@ const summary = event => [event.type, event.from ?? event.from_item?.name ?? nul
 
 test('saving unchanged values, unrelated edits, and formatting-only location changes record nothing', () => {
   const { add, edit, count } = build();
-  const box = add('Box', null, { location: 'Garage', transferred_to: 'Anna' });
+  const box = add('Box', null, { location: 'Garage', transferred_to: 'Anna', condition_grade: 'good', is_new: true });
   add('Camera', box);
 
   edit(box);
-  edit(box, { name: 'Box 01', description: 'Blue lid', condition_grade: 'good', is_new: true });
+  edit(box, { name: 'Box 01', description: 'Blue lid', condition_grade: 'good', is_new: true, condition_notes: 'Scratched lid' });
+  edit(box, { condition_notes: 'Scratched lid, cracked corner' });
   edit(box, { location: '  garage ', transferred_to: 'ANNA ' });
   assert.equal(count('item_events'), 0);
   assert.equal(count('item_operations'), 0);
@@ -136,6 +138,91 @@ test('a container and location change of one save are two events of one operatio
   // The film moved with the camera; its own container did not change.
   assert.deepEqual(events(film).map(summary), [['location_changed', 'Garage', 'Attic']]);
   assert.equal(events(film)[0].via_item.name, 'Camera');
+});
+
+test('New/Used changes are recorded in both directions with stable values; creating an item records nothing', () => {
+  const { add, edit, events, count, db } = build();
+  const camera = add('Camera', null, { is_new: true, condition_grade: 'excellent' });
+  assert.equal(count('item_events'), 0, 'an item\'s initial state is not a transition');
+
+  edit(camera, { is_new: false });
+  edit(camera, { is_new: true });
+  assert.deepEqual(events(camera).map(summary), [['new_status_changed', 'used', 'new'], ['new_status_changed', 'new', 'used']]);
+  assert.deepEqual(events(camera, { type: 'condition_usage' }).map(event => event.operation_type), ['item_update', 'item_update']);
+  assert.deepEqual(db.prepare('SELECT from_value, to_value FROM item_events ORDER BY id').all(),
+    [{ from_value: 'new', to_value: 'used' }, { from_value: 'used', to_value: 'new' }]);
+  // Used + Excellent is valid: neither value is ever inferred from the other.
+  assert.equal(db.prepare('SELECT condition_grade FROM items WHERE id = ?').get(camera.id).condition_grade, 'excellent');
+});
+
+test('Condition grade changes are recorded up, down, from Not set, and back to Not set', () => {
+  const { add, edit, events, db } = build();
+  const lens = add('Lens');
+  const grades = [null, 'fair', 'excellent', 'good', 'poor', 'broken', 'fair', null];
+  for (const grade of grades.slice(1)) edit(lens, { condition_grade: grade });
+
+  const recorded = events(lens, { type: 'condition_usage' }).reverse();
+  assert.deepEqual(recorded.map(event => [event.type, event.from, event.to]),
+    grades.slice(1).map((grade, index) => ['condition_changed', grades[index], grade]));
+  // Not set is a real NULL, never the string "null".
+  assert.equal(recorded[0].from, null);
+  assert.equal(db.prepare("SELECT COUNT(*) AS count FROM item_events WHERE from_value = 'null' OR to_value = 'null'").get().count, 0);
+  assert.equal(new Set(recorded.map(event => event.operation_id)).size, recorded.length, 'one operation per save');
+});
+
+test('one save that changes New/Used, Condition, and placement is one operation with every event', () => {
+  const { add, edit, events } = build();
+  const shelf = add('Shelf', null, { location: 'Garage' });
+  const camera = add('Camera', null, { location: 'Desk', is_new: true });
+
+  edit(camera, { is_new: false, condition_grade: 'good' });
+  const both = events(camera);
+  assert.deepEqual(both.map(summary).sort(), [['condition_changed', null, 'good'], ['new_status_changed', 'new', 'used']]);
+  assert.equal(new Set(both.map(event => event.operation_id)).size, 1);
+
+  edit(camera, { parent_item_id: shelf.id, condition_grade: 'fair', transferred_to: 'Anna' });
+  const latest = events(camera).filter(event => event.operation_id !== both[0].operation_id);
+  assert.deepEqual(latest.map(event => event.type).sort(), ['condition_changed', 'container_changed', 'location_changed', 'recipient_changed']);
+  assert.equal(new Set(latest.map(event => event.operation_id)).size, 1);
+  assert.deepEqual(events(camera, { type: 'location' }).map(event => event.type).sort(), ['container_changed', 'location_changed']);
+});
+
+test('a container\'s New/Used or Condition change records nothing for its contents', () => {
+  const { add, edit, events } = build();
+  const box = add('Box', null, { location: 'Garage', is_new: true, condition_grade: 'good' });
+  const camera = add('Camera', box, { is_new: true, condition_grade: 'good' });
+  const film = add('Film', camera);
+
+  edit(box, { is_new: false, condition_grade: 'poor' });
+  assert.deepEqual(events(box).map(event => event.type).sort(), ['condition_changed', 'new_status_changed']);
+  assert.deepEqual(events(camera), []);
+  assert.deepEqual(events(film), []);
+
+  // A move of the container together with a condition change: the contents move, nothing more.
+  edit(box, { location: 'Attic', condition_grade: 'fair' });
+  assert.deepEqual(events(camera).map(summary), [['location_changed', 'Garage', 'Attic']]);
+  assert.deepEqual(events(film).map(summary), [['location_changed', 'Garage', 'Attic']]);
+});
+
+test('a failed New/Used or Condition write leaves neither the item change nor its events', () => {
+  const { add, edit, row, count, itemHistoryRepository } = build();
+  const camera = add('Camera', null, { is_new: true, condition_grade: 'excellent' });
+  const before = row(camera);
+
+  const insertEvents = itemHistoryRepository.insertEvents;
+  itemHistoryRepository.insertEvents = () => { throw new Error('disk full'); };
+  assert.throws(() => edit(camera, { is_new: false, condition_grade: 'good' }), /disk full/);
+  itemHistoryRepository.insertEvents = insertEvents;
+  assert.deepEqual(row(camera), before);
+  assert.deepEqual([count('item_events'), count('item_operations')], [0, 0]);
+
+  // A refused event (here the database CHECK) rolls the item edit back too.
+  itemHistoryRepository.insertEvents = (operationId, events) => insertEvents.call(itemHistoryRepository, operationId,
+    events.map(event => ({ ...event, event_type: 'unknown' })));
+  assert.throws(() => edit(camera, { condition_grade: 'fair' }), /CHECK/);
+  itemHistoryRepository.insertEvents = insertEvents;
+  assert.deepEqual(row(camera), before);
+  assert.deepEqual([count('item_events'), count('item_operations')], [0, 0]);
 });
 
 test('an inherited item records its saved location only once it becomes effective', () => {
@@ -404,6 +491,7 @@ test('history pages are newest first, stable across equal timestamps, and filter
   assert.deepEqual(events(camera, { type: 'transfer' }).map(event => event.type), ['transferred']);
   assert.equal(events(camera, { type: 'location' }).length, 45);
   assert.deepEqual(events(camera, { type: 'lifecycle' }), []);
+  assert.deepEqual(events(camera, { type: 'condition_usage' }), []);
   assert.equal(itemService.activity(camera.id).events.length, 20, 'the default page size');
   assert.equal(itemService.activity(camera.id, { limit: 500 }).events.length, 46);
 
@@ -469,6 +557,108 @@ test('a version 8 database gains the history tables without any fabricated event
 });
 
 /*
+  A version 13 database as that release wrote it: item_events with the event type CHECK of its seven
+  types, filled with real location, container, recipient, loan, and lifecycle history.
+*/
+const VERSION_13_EVENT_CHECK = "CHECK(event_type IN ('location_changed', 'container_changed', 'recipient_changed', 'transferred', " +
+  "'returned', 'retired', 'restored'))";
+const version13Database = db => {
+  const context = build({ db });
+  const { add, edit, transfers, lifecycle, clock } = context;
+  const box = add('Box', null, { location: 'Garage', is_new: true, condition_grade: 'good' });
+  const camera = add('Camera', box, { is_new: true });
+  const lamp = add('Lamp', null, { location: 'Desk' });
+  edit(box, { location: 'Attic' });
+  edit(camera, { parent_item_id: null, location: 'Shelf', transferred_to: 'Anna' });
+  clock.now = '2026-10-09T13:00:00.000Z';
+  const loan = transfers.start(lamp.id, { recipient: 'Olena' });
+  transfers.markReturned(lamp.id, loan.id, {});
+  lifecycle.change(lamp.id, { status: 'retired', reason: 'sold', retired_at: clock.now });
+  lifecycle.change(lamp.id, { status: 'active', location: 'Desk' });
+  // Undo version 14 exactly as SQLite would have kept the older table.
+  db.pragma('foreign_keys = OFF');
+  const sql = db.prepare("SELECT sql FROM sqlite_master WHERE name = 'item_events'").get().sql;
+  db.exec(`
+    ${sql.replace(/CHECK\(event_type IN \([^)]*\)\)/, VERSION_13_EVENT_CHECK).replace('CREATE TABLE item_events', 'CREATE TABLE item_events_old')};
+    INSERT INTO item_events_old SELECT * FROM item_events;
+    DROP TABLE item_events;
+    ALTER TABLE item_events_old RENAME TO item_events;
+    CREATE INDEX idx_item_events_item ON item_events(item_id, occurred_at DESC, id DESC);
+    CREATE INDEX idx_item_events_operation ON item_events(operation_id);
+  `);
+  db.pragma('foreign_keys = ON');
+  db.pragma('user_version = 13');
+  return { ...context, box, camera, lamp };
+};
+
+test('version 14 rebuilds the event CHECK of a version 13 database without changing any history', () => {
+  const db = new Database(':memory:');
+  const { camera, lamp, edit, events, itemService, count } = version13Database(db);
+  assert.throws(() => db.prepare("INSERT INTO item_events (operation_id, item_id, event_type, occurred_at) VALUES (1, 1, 'condition_changed', 'x')")
+    .run(), /CHECK/);
+  const dump = () => ({
+    events: db.prepare('SELECT * FROM item_events ORDER BY id').all(),
+    operations: db.prepare('SELECT * FROM item_operations ORDER BY id').all(),
+    transfers: db.prepare('SELECT * FROM item_transfers ORDER BY id').all(),
+    sequence: db.prepare("SELECT seq FROM sqlite_sequence WHERE name = 'item_events'").get()
+  });
+  const before = dump();
+  const lastUpdated = db.prepare('SELECT last_updated_at FROM database_metadata').get();
+  assert.ok(before.events.length >= 7);
+
+  applySchema(db);
+  assert.equal(Number(db.pragma('user_version', { simple: true })), SCHEMA_VERSION);
+  assert.equal(Number(db.pragma('foreign_keys', { simple: true })), 1);
+  assert.deepEqual(dump(), before, 'every event, operation, loan, and the id counter are kept');
+  assert.deepEqual(db.prepare('SELECT last_updated_at FROM database_metadata').get(), lastUpdated, 'the migration is not an inventory edit');
+  assert.deepEqual(db.pragma('foreign_key_check'), []);
+  assert.equal(db.pragma('integrity_check', { simple: true }), 'ok');
+  assert.deepEqual(db.prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'item_events' ORDER BY name").all()
+    .map(row => row.name), ['idx_item_events_item', 'idx_item_events_operation']);
+  assert.equal(db.prepare("SELECT COUNT(*) AS count FROM sqlite_master WHERE type = 'trigger' AND tbl_name = 'item_events'").get().count, 3);
+  assert.deepEqual(db.prepare('PRAGMA foreign_key_list(item_events)').all().map(key => [key.table, key.on_delete]).sort(),
+    [['item_operations', 'CASCADE'], ['items', 'CASCADE']]);
+  // Nothing was fabricated for the items' current New/Used and Condition values.
+  assert.equal(db.prepare("SELECT COUNT(*) AS count FROM item_events WHERE event_type IN ('new_status_changed', 'condition_changed')").get().count, 0);
+  // The old timelines read exactly as before, with their filters and pages.
+  assert.deepEqual(events(lamp).map(event => event.type), ['restored', 'retired', 'returned', 'transferred']);
+  assert.deepEqual(events(camera, { type: 'transfer' }).map(event => event.type), ['recipient_changed']);
+  const firstPage = itemService.activity(lamp.id, { limit: 2 });
+  assert.deepEqual(itemService.activity(lamp.id, { limit: 2, cursor: firstPage.next_cursor }).events.map(event => event.type), ['returned', 'transferred']);
+
+  // Repeat-safe, and the new events can be written from now on with fresh ids.
+  applySchema(db);
+  assert.deepEqual(dump(), before);
+  edit(camera, { is_new: false });
+  assert.deepEqual(events(camera, { type: 'condition_usage' }).map(summary), [['new_status_changed', 'new', 'used']]);
+  assert.ok(events(camera)[0].id > before.events.at(-1).id);
+  // Deleting an item still removes its own events and operations through the rebuilt foreign keys.
+  itemService.remove(lamp.id);
+  assert.equal(db.prepare('SELECT COUNT(*) AS count FROM item_events WHERE item_id = ?').get(lamp.id).count, 0);
+  assert.ok(count('item_events') > 0);
+});
+
+test('a version 13 backup with history is accepted and migrated by restore validation', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'inventory-history-v13-'));
+  try {
+    const file = path.join(directory, 'backup.sqlite');
+    const db = new Database(file);
+    version13Database(db);
+    const events = db.prepare('SELECT * FROM item_events ORDER BY id').all();
+    db.close();
+    const summary = validateStagedDatabase(file);
+    assert.equal(summary.migratedFrom, 13);
+    assert.equal(summary.schemaVersion, SCHEMA_VERSION);
+    const migrated = new Database(file, { readonly: true });
+    assert.deepEqual(migrated.prepare('SELECT * FROM item_events ORDER BY id').all(), events);
+    assert.match(migrated.prepare("SELECT sql FROM sqlite_master WHERE name = 'item_events'").get().sql, /'condition_changed'/);
+    migrated.close();
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+/*
   Capacity: 100,000 events over 10,000 items in a file database, as a heavily used inventory might
   collect over years. The thresholds are functional: the item timeline must be answered from its
   index, a page must come back far below interactive limits even on a slow CI machine, and a box move
@@ -520,6 +710,16 @@ test('the history API pages, validates, records loans, and travels in the backup
     assert.deepEqual(history.body.events.map(event => [event.type, event.from, event.to, event.via_item.name]), [['location_changed', 'Garage', 'Attic', 'Box']]);
     assert.equal(history.body.next_cursor, null);
     assert.equal((await call('GET', `/api/items/${camera.id}/history?type=nope`)).body.error.code, 'INVALID_HISTORY_FILTER');
+
+    // New/Used and Condition changes of one save: two events of one operation under their own filter.
+    await call('PUT', `/api/items/${box.uuid}`, { name: 'Box', category_id: box.category_id, location: 'Attic', is_new: true, condition_grade: 'fair' });
+    const usage = await call('GET', `/api/items/${box.id}/history?type=condition_usage`);
+    assert.equal(usage.status, 200);
+    assert.deepEqual(usage.body.events.map(event => [event.type, event.from, event.to]).sort(),
+      [['condition_changed', null, 'fair'], ['new_status_changed', 'used', 'new']]);
+    assert.equal(new Set(usage.body.events.map(event => event.operation_id)).size, 1);
+    assert.deepEqual((await call('GET', `/api/items/${box.id}/history?type=location`)).body.events.map(event => event.type), ['location_changed']);
+    assert.deepEqual((await call('GET', `/api/items/${camera.id}/history?type=condition_usage`)).body.events, []);
     assert.equal((await call('GET', `/api/items/${camera.id}/history?cursor=x`)).status, 400);
     assert.equal((await call('GET', '/api/items/999/history')).status, 404);
 
@@ -538,7 +738,7 @@ test('the history API pages, validates, records loans, and travels in the backup
     fs.writeFileSync(copy, backup);
     const restored = new Database(copy, { readonly: true });
     assert.deepEqual(restored.prepare('SELECT event_type FROM item_events ORDER BY id').all().map(row => row.event_type),
-      ['location_changed', 'location_changed', 'transferred', 'returned']);
+      ['location_changed', 'location_changed', 'new_status_changed', 'condition_changed', 'transferred', 'returned']);
     restored.close();
   } finally {
     await stopServer(child);

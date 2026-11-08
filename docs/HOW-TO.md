@@ -944,10 +944,11 @@ loan: retire the item instead.
 ### See the history of an item
 
 The item page has a **History** card with the five most recent changes; **View full history** opens
-all of them, newest first, with **All**, **Locations**, **Transfers**, and **Lifecycle** filters and
-**Load more**.
-History is recorded by the server when a change is saved, from the moment History was installed;
-nothing earlier is invented.
+all of them, newest first, with **All**, **Locations**, **Transfers**, **Lifecycle**, and
+**Condition & Usage** filters and **Load more**.
+History is recorded by the server when a change is saved, from the moment each kind of change began to
+be tracked: New/Used and Condition changes only from version 0.74.0 on. Nothing earlier is invented,
+and adding an item is not a change.
 
 - **Location changed** — the location or specific location you see for the item changed, from → to;
   both are shown, joined by a dot. This includes moves
@@ -961,10 +962,16 @@ nothing earlier is invented.
 - **Retired: …** and **Restored to inventory** — the reason, the last location, and the container the
   item was taken out of, or the location and container it came back to. Items retired or restored
   with their container say *Retired together with …* or *Restored together with …*.
+- **Usage status changed** and **Condition changed** — the **New** switch or the **Condition** grade
+  of this item changed, shown with their badges: *New → Used*, *Excellent → Good*, *Not set → Fair*.
+  Both directions are recorded, also a grade that is corrected upwards or cleared. The two are
+  independent, and changing a container's values adds nothing to the items inside it.
 
-Changes saved together, such as a new container and the location it brings, are one entry. **Bulk
+Changes saved together, such as a new container and the location it brings, or New/Used and the
+Condition grade, are one entry. **Bulk
 move** and **Bulk replace** entries come from **Move to…** and **Replace a field value on many items**
-(Location and Transferred To only). Other edits — name, Condition, photos, fields — are not History.
+(Location and Transferred To only). Other edits — name, Condition Notes, photos, fields — are not
+History.
 Entries keep the names and locations as they were, so they stay readable after renames; a container
 deleted since then is marked *(deleted)*. Deleting an item permanently deletes its own history.
 

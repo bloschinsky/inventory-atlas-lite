@@ -13,7 +13,7 @@ import { categoryList, categoryWithFields, fitResult, historyResult, inventorySu
 // server/src/services/itemHistoryService.js by mcp/test/tools.test.js; the image ships without them.
 export const CONDITION_FILTERS = ['broken', 'poor', 'fair', 'good', 'excellent', 'unset'];
 export const LIFECYCLE_FILTERS = ['active', 'all', 'retired'];
-export const HISTORY_TYPES = ['all', 'location', 'transfer', 'lifecycle'];
+export const HISTORY_TYPES = ['all', 'location', 'transfer', 'lifecycle', 'condition_usage'];
 // Atlas's sortable core columns that make sense to a conversation, under their Atlas keys.
 export const SORT_KEYS = ['name', 'category', 'condition', 'location', 'created', 'updated'];
 
@@ -65,7 +65,8 @@ export const TOOL_DEFINITIONS = {
   },
   get_item_history: {
     title: 'Get item history',
-    description: 'Read one page of an item\'s recorded activity history (moves, container changes, loans and returns, retire and restore), ' +
+    description: 'Read one page of an item\'s recorded activity history (moves, container changes, loans and returns, retire and restore, ' +
+      'New/Used changes with from/to new or used, and Condition grade changes with from/to a grade or null for not set), ' +
       `newest first. Pass next_cursor back as cursor for the following page; only recorded events exist. ${UNTRUSTED}`,
     inputSchema: z.object({
       item: itemId,

@@ -1,12 +1,17 @@
 import { httpError } from '../httpError.js';
 
-// The timeline filters and the event types each one shows. Lifecycle events appear under All.
+// The timeline filters and the event types each one shows. Every event type appears under All.
 export const HISTORY_FILTERS = {
-  all: ['location_changed', 'container_changed', 'recipient_changed', 'transferred', 'returned', 'retired', 'restored'],
+  all: ['location_changed', 'container_changed', 'recipient_changed', 'transferred', 'returned', 'retired', 'restored',
+    'new_status_changed', 'condition_changed'],
   location: ['location_changed', 'container_changed'],
   transfer: ['recipient_changed', 'transferred', 'returned'],
-  lifecycle: ['retired', 'restored']
+  lifecycle: ['retired', 'restored'],
+  condition_usage: ['new_status_changed', 'condition_changed']
 };
+
+// The New flag as a stable, language-neutral history value.
+const usage = isNew => (Number(isNew) === 1 ? 'new' : 'used');
 
 export const HISTORY_PAGE_SIZE = 20;
 export const MAX_HISTORY_PAGE_SIZE = 50;
@@ -41,7 +46,10 @@ const byItem = rows => {
   came from, and a recipient change only when its Transferred To did. One location change carries both
   values, so editing the Location and the Specific location together is one move, and a saved value
   hidden behind an inherited one is never reported as a move. An item below a changed one names that
-  item as the one it moved with. Nothing is recorded for an item whose visible state stayed the same.
+  item as the one it moved with. The New flag (`new` / `used`) and the Condition grade (a grade key,
+  or null when unset) belong to the item alone: each records an event only when the item's own value
+  changed, never for its contents and never inferred from the other. Nothing is recorded for an item
+  whose visible state stayed the same.
 */
 export function detectChanges(beforeRows, afterRows) {
   const before = byItem(beforeRows);
@@ -67,6 +75,15 @@ export function detectChanges(beforeRows, afterRows) {
       events.push({
         item_id: id, event_type: 'recipient_changed',
         from_value: present(previous.transferred_to), to_value: present(after.transferred_to)
+      });
+    }
+    if (usage(previous.is_new) !== usage(after.is_new)) {
+      events.push({ item_id: id, event_type: 'new_status_changed', from_value: usage(previous.is_new), to_value: usage(after.is_new) });
+    }
+    if ((previous.condition_grade ?? null) !== (after.condition_grade ?? null)) {
+      events.push({
+        item_id: id, event_type: 'condition_changed',
+        from_value: previous.condition_grade ?? null, to_value: after.condition_grade ?? null
       });
     }
   }

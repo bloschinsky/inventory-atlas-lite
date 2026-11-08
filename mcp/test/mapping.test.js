@@ -121,6 +121,16 @@ test('history keeps Atlas events and its cursor', () => {
   assert.equal(historyResult({ events: [], next_cursor: null }).next_cursor, null);
 });
 
+test('history keeps New/Used and Condition transitions as stable keys, with Not set as null', () => {
+  const result = historyResult({ events: [
+    { id: 9, type: 'new_status_changed', operation_type: 'item_update', occurred_at: '2026-01-02T00:00:00.000Z', from: 'new', to: 'used' },
+    { id: 8, type: 'condition_changed', operation_type: 'item_update', occurred_at: '2026-01-02T00:00:00.000Z', from: null, to: 'good' }
+  ], next_cursor: null });
+  assert.deepEqual(result.events.map(event => [event.type, event.from, event.to]),
+    [['new_status_changed', 'new', 'used'], ['condition_changed', null, 'good']]);
+  assert.equal(result.events[1].loan, null);
+});
+
 test('the summary passes Atlas figures through and drops empty days', () => {
   const summary = inventorySummary({
     scope: { categoryId: null, categoryName: null }, totalItems: 3, retiredItems: 1, addedLast30Days: 2,

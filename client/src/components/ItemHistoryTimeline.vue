@@ -1,10 +1,14 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { IconArchive, IconArrowBackUp, IconBox, IconMapPin, IconRestore, IconUserEdit, IconUserShare } from '@tabler/icons-vue';
+import {
+  IconArchive, IconArrowBackUp, IconBox, IconHeartbeat, IconMapPin, IconRestore, IconSparkles, IconUserEdit, IconUserShare
+} from '@tabler/icons-vue';
 import { api } from '../api.js';
 import { formatDate, formatDateTime } from '../i18n/index.js';
 import { placementText } from '../itemColumns.js';
+import ConditionGradeBadge from './ConditionGradeBadge.vue';
+import ItemNewStatusBadge from './ItemNewStatusBadge.vue';
 
 /*
   The activity timeline of one item, newest first. `preview` shows only the most recent changes;
@@ -18,7 +22,7 @@ const props = defineProps({
 });
 
 const { t } = useI18n();
-const FILTERS = ['all', 'location', 'transfer', 'lifecycle'];
+const FILTERS = ['all', 'location', 'transfer', 'lifecycle', 'condition_usage'];
 const PREVIEW_SIZE = 5;
 const PAGE_SIZE = 20;
 const ICONS = {
@@ -28,8 +32,13 @@ const ICONS = {
   transferred: { icon: IconUserShare, color: 'bg-orange-lt' },
   returned: { icon: IconArrowBackUp, color: 'bg-green-lt' },
   retired: { icon: IconArchive, color: 'bg-secondary-lt' },
-  restored: { icon: IconRestore, color: 'bg-teal-lt' }
+  restored: { icon: IconRestore, color: 'bg-teal-lt' },
+  new_status_changed: { icon: IconSparkles, color: 'bg-lime-lt' },
+  condition_changed: { icon: IconHeartbeat, color: 'bg-purple-lt' }
 };
+
+// New/Used and Condition changes show the same badges as the item itself, with their text.
+const BADGE_CHANGES = ['new_status_changed', 'condition_changed'];
 
 const filter = ref('all');
 const events = ref([]);
@@ -97,9 +106,10 @@ defineExpose({ reload: () => load() });
 
 <template>
   <div>
+    <!-- Separate buttons that wrap, so five filters never overflow a phone screen. -->
     <div
       v-if="!preview"
-      class="btn-group mb-3"
+      class="d-flex flex-wrap gap-2 mb-3"
       role="group"
       :aria-label="$t('history.filter')"
     >
@@ -189,6 +199,21 @@ defineExpose({ reload: () => load() });
                 class="mb-1 text-break"
               >
                 {{ change(event)[0] }} → {{ change(event)[1] }}
+              </p>
+              <p
+                v-else-if="BADGE_CHANGES.includes(event.type)"
+                class="mb-1 d-flex flex-wrap align-items-center gap-1"
+              >
+                <template v-if="event.type === 'new_status_changed'">
+                  <ItemNewStatusBadge :is-new="event.from === 'new'" />
+                  →
+                  <ItemNewStatusBadge :is-new="event.to === 'new'" />
+                </template>
+                <template v-else>
+                  <ConditionGradeBadge :grade="event.from" />
+                  →
+                  <ConditionGradeBadge :grade="event.to" />
+                </template>
               </p>
               <p
                 v-else-if="event.type === 'container_changed'"
