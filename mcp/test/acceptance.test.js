@@ -373,11 +373,11 @@ test('resilience: a disabled owner of the Atlas token stops every tool call with
     await client.close();
     await adapter.stop();
   }
-  assert.ok(!adapter.logs.join('\n').includes(token.split('_')[2]));
+  assert.ok(!adapter.logs.join('\n').includes(token.split('_').slice(2).join('_')));
 });
 
 test('no secret in any tool result or log line; measurements', async t => {
-  const secrets = [readToken, readToken.split('_')[2], TEST_ADMIN.password, 'mcp-token-owner-password', session.provider.saved.tokens.access_token,
+  const secrets = [readToken, readToken.split('_').slice(2).join('_'), TEST_ADMIN.password, 'mcp-token-owner-password', session.provider.saved.tokens.access_token,
     session.provider.saved.tokens.refresh_token, dataDir, stateDir, atlas.base];
   const results = seenTexts.join('\n');
   for (const secret of secrets) assert.ok(!results.includes(secret), 'no token, password, path, or Atlas address in a tool result');

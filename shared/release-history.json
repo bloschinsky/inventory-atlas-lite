@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.74.1",
+    "date": "2026-11-08",
+    "changes": [
+      "This release delivers the Condition and New/Used history of 0.74.0, whose release stopped in an automated test before anything was published. Only that test was fixed; Inventory Atlas Lite and the MCP adapter are unchanged from 0.74.0."
+    ]
+  },
+  {
     "version": "0.74.0",
     "date": "2026-11-08",
     "changes": [
