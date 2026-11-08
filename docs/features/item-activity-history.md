@@ -3,8 +3,9 @@
 ## Summary
 
 Every item tells its chronological story: where it moved, which containers held it, to whom it was
-lent and when it came back, every change of its Transferred To note, and when it was retired from
-the inventory or restored to it ([Item lifecycle](item-lifecycle.md)). The current state stays in
+lent and when it came back, every change of its Transferred To note, when it was retired from
+the inventory or restored to it ([Item lifecycle](item-lifecycle.md)), and every change of its
+[New/Used status](item-new-flag.md) and [Condition grade](condition-grading.md). The current state stays in
 the existing `items` columns; history is a compact, append-only log of meaningful confirmed changes,
 written by the server in the same SQLite transaction as the change itself. It is not event
 sourcing: nothing is ever rebuilt from the log.
@@ -13,9 +14,13 @@ sourcing: nothing is ever rebuilt from the log.
 
 - **Item details** has a **History** card with the five newest entries and **View full history**,
   which opens `/items/:id/history`: a Tabler timeline, newest first, with **All | Locations |
-  Transfers | Lifecycle** filters, **Load more** (20 per page), loading, empty, and error states, and a closing
-  note that changes from before History existed are not shown. Both work on phones (no horizontal
-  scrolling) and in English and Ukrainian.
+  Transfers | Lifecycle | Condition & Usage** filters (separate buttons that wrap on narrow screens),
+  **Load more** (20 per page), loading, empty, and error states, and a closing note that changes from
+  before they were tracked are not shown. Both work on phones (no horizontal scrolling) and in
+  English and Ukrainian.
+- **Usage status changed** and **Condition changed** show the transition with the same badges as the
+  item itself (*New → Used*, *Excellent → Good*, *Not set → Fair*); the badge text carries the
+  meaning on its own, in both color modes.
 - Events of one action share an operation and appear as one entry (for example a new container and
   the location it brings). An entry shows the time, a type icon, the label, from → to values, and
   for inherited moves *Moved together with …* linking to the container that moved. Bulk actions are
@@ -47,6 +52,8 @@ before and after `mutate()` inside one transaction and records only real differe
 | `transferred` / `returned` | Transfer / Mark as returned | recipient and `transfer_id` |
 | `retired` | Retire item, for the item and everything retired with it | `to_value` the reason key, `from_value`/`from_detail` the last effective location and specific location, `from_item_*` the container the item itself left; contents get `via_item_*` |
 | `restored` | Restore to inventory, for the item and its contents | `to_value`/`to_detail` the effective location and specific location it came back to, `to_item_*` its new container; contents get `via_item_*` |
+| `new_status_changed` | the item's own `is_new` changed (schema version 14) | `from_value`/`to_value` the stable keys `new` or `used` |
+| `condition_changed` | the item's own `condition_grade` changed, in either direction (schema version 14) | `from_value`/`to_value` a grade key (`excellent`, `good`, `fair`, `poor`, `broken`) or `NULL` for Not set |
 
 - Free-text locations and recipients are compared trimmed and case-insensitively (the same rule the
   Hierarchy groups by); blank is no value. Snapshots keep the exact text.
@@ -56,9 +63,17 @@ before and after `mutate()` inside one transaction and records only real differe
   effective location records only the moved item's container change.
 - Editing the own saved location of an item that shows an inherited one is not recorded; it is
   recorded when it becomes effective, for example when the item is taken out.
-- Saving unchanged values, unrelated edits (name, Condition, photos, fields), repeated requests,
+- Saving unchanged values, unrelated edits (name, Condition Notes, photos, fields), repeated requests,
   and bulk-move roots already in the destination record nothing; an operation without events is
   never written.
+- New/Used and the Condition grade are independent and belong to the item alone: each is compared
+  only with the item's own previous value, never inferred from the other (Used + Excellent is
+  valid), and a container's change records nothing for its contents. Grade changes are recorded up,
+  down, and to or from Not set; they are edits, not a claim that the item wore out. Condition Notes
+  edits are not recorded. Whatever produced the draft (manual edit, AI Add Item, Smart URL import,
+  Refresh from Source), the change is recorded when `PUT /api/items/:id` saves it, dated by the
+  server's clock. One save that also moves the item or changes Transferred To records every event
+  in the same `item_update` operation.
 - Write paths: `ItemService.update()` (`item_update`), `ItemService.bulkMove()` (`bulk_move`,
   after `selectionRoots()`), `BulkReplaceService.apply()` for Location and Transferred To
   (`bulk_replace`), `ItemTransferService` (`transfer`, `return`), and `ItemLifecycleService`
@@ -66,8 +81,10 @@ before and after `mutate()` inside one transaction and records only real differe
 - A retirement or restoration is one lifecycle event per item of the subtree, never extra location or
   container events for the detachment it implies; the event carries that context. A retirement is
   dated with its Retired on moment, like a loan with its start; a restoration when it happens. The
-  reason is stored as its stable key and translated when shown. Creating an item records
-  nothing, and nothing is fabricated for existing items on migration.
+  reason is stored as its stable key and translated when shown. Creating an item (also from a
+  template, a duplicate, or a batch import) records nothing, and nothing is fabricated for existing
+  items on migration: New/Used and Condition changes are logged only from the release with schema
+  version 14 on.
 - An item reached from several changed items (a bulk replacement matching a box and its contents)
   names the highest one above it as the item it moved with.
 
@@ -105,6 +122,13 @@ start, due date, end, and notes in one row; the `transferred`/`returned` events 
   to_item_name, via_item_id, via_item_name, transfer_id, from_detail, to_detail)`; the two detail columns
   were added in schema version 12 and are `NULL` on older events. Referenced items are plain ids with name
   snapshots, not foreign keys, so deleting a container never touches or blocks other items' history.
+  `event_type` has a `CHECK` built from `ITEM_EVENT_TYPES` in `server/src/schema.js`. SQLite cannot
+  change a `CHECK` in place, so version 14 rebuilds an older `item_events` from its own definition with
+  only that `CHECK` replaced (the same rebuild version 10 uses for `custom_fields`): every row keeps its
+  id, operation, item, values, and timestamps, the `AUTOINCREMENT` counter is carried over, and the
+  indexes and `last_updated_at` triggers are created again; the rebuild runs with foreign keys off, in
+  the migration's transaction, and does not advance `last_updated_at`. A table that already has the
+  current `CHECK` is left alone, so the migration is repeat-safe.
 - `item_transfers(id, item_id → items ON DELETE CASCADE, recipient, transferred_at,
   expected_return_on, returned_at, note, return_note, created_at)`.
 - Indexes: `idx_item_events_item(item_id, occurred_at DESC, id DESC)`,
@@ -120,13 +144,16 @@ start, due date, end, and notes in one row; the `transferred`/`returned` events 
 
 ## API
 
-- `GET /api/items/:id/history?type=all|location|transfer|lifecycle&limit=1..50&cursor=<event id>` →
+- `GET /api/items/:id/history?type=all|location|transfer|lifecycle|condition_usage&limit=1..50&cursor=<event id>` →
   `{ events, next_cursor }`, ordered by `occurred_at DESC, id DESC` with keyset pagination (default
   20). The cursor is the last event id of the previous page and must belong to the item. Codes:
   `INVALID_HISTORY_FILTER`, `INVALID_HISTORY_CURSOR`, `ITEM_NOT_FOUND`.
 - An event: `id`, `operation_id`, `operation_type`, `type`, `occurred_at`, `from`, `to`, `from_item`,
   `to_item`, `via_item` (`{ id, name, exists }` or `null`), and `transfer` (the loan row or `null`).
   Types are stable keys; the browser translates them, so events read the same in every language.
+  `condition_usage` shows `new_status_changed` and `condition_changed`; `all` shows every type, and the
+  other filters are unchanged. An unset grade travels as JSON `null`, never the string `"null"`. The
+  read-only MCP adapter's `get_item_history` accepts the same filter.
 - `POST /api/items/:id/transfers` `{ recipient, transferred_at?, expected_return_on?, note? }` → 201
   and the loan; `POST /api/items/:id/transfers/:transferId/return` `{ returned_at?, note? }` → the
   closed loan.
@@ -164,12 +191,19 @@ the 1,000,000-event run is opt-in: `node scripts/history-benchmark.mjs` (or `--e
   in a 40-level tree, rollback on a failing insert or mutation, bulk replace, recipient changes,
   loan lifecycle and validation, pagination with timestamp ties and filters, renames and deletions,
   retire and restore of a subtree with their context, the open-loan rule in both directions, the
-  v8 → v9 migration without fabricated events, the 100,000-event capacity test, and the HTTP
-  contract including the backup.
+  v8 → v9 migration without fabricated events, New → Used and back, every grade up, down, from and
+  to Not set, notes-only edits, both values and a move in one operation, a container's change that
+  leaves its contents alone, rollback of the item edit with its events, the v13 → v14 rebuild of
+  `item_events` (every row, the id counter, indexes, triggers, foreign keys, old filters and pages,
+  repeat-safe) and a v13 backup through restore validation, the 100,000-event capacity test, and the
+  HTTP contract including `type=condition_usage` and the backup.
 - `test/demo.test.js` — the curated demo history in every language. `test/reset.test.js`,
   `test/restore.test.js` — the new tables in resets, safety backups, and migrated restores.
 - `test/e2e/item-history.spec.js` — a box move seen in the history of the camera inside it, taking
   the camera out with the required location choice, lending to Volodia → return → lending to Olena
   with the full-history filters, retiring and restoring an item with its History and the loan rule,
-  and the timeline on a phone in Ukrainian. `test/e2e/nesting.spec.js`
+  the timeline on a phone in Ukrainian, a New → Used and Excellent → Good save shown as one entry
+  with its badges and the **Condition & Usage** filter, Load more joining one save across the page
+  boundary, and the transitions in Ukrainian in dark mode on a 360 px phone with wrapping filters.
+  `mcp/test/` checks the `condition_usage` filter and the mapped events. `test/e2e/nesting.spec.js`
   makes the explicit choice when it takes an item out.

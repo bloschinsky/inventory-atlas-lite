@@ -23,11 +23,12 @@ import { FIELD_TYPES } from '../../shared/fieldDefinitions.js';
   version 11 added items.source_url, the optional product page an item was described from; version 12
   added the optional Specific location: items.location_detail with its retirement snapshot,
   item_templates.location_detail, and the from_detail/to_detail of item_events; version 13 added
-  database_metadata.content_language, the Preferred Content Language of the inventory.
+  database_metadata.content_language, the Preferred Content Language of the inventory; version 14 allowed
+  the new_status_changed and condition_changed types in item_events.event_type.
   user_version stays the source of truth: database_metadata.schema_version mirrors it and is written
   in the same transaction, so the two never disagree.
 */
-export const SCHEMA_VERSION = 13;
+export const SCHEMA_VERSION = 14;
 
 export const DEFAULT_DATABASE_NAME = 'Inventory Atlas';
 
@@ -42,11 +43,13 @@ export const TRACKED_TABLES = ['categories', 'custom_fields', 'items', 'item_fie
 
 // The kinds of user action that group history events, and the kinds of event one item can record.
 export const ITEM_OPERATION_TYPES = ['item_update', 'bulk_move', 'bulk_replace', 'transfer', 'return', 'retire', 'restore'];
-export const ITEM_EVENT_TYPES = ['location_changed', 'container_changed', 'recipient_changed', 'transferred', 'returned', 'retired', 'restored'];
+export const ITEM_EVENT_TYPES = ['location_changed', 'container_changed', 'recipient_changed', 'transferred', 'returned', 'retired', 'restored',
+  'new_status_changed', 'condition_changed'];
 const quotedList = values => values.map(value => `'${value}'`).join(', ');
 
 // The custom field types a row may have; FIELD_TYPES is the one list of them.
 const FIELD_TYPE_CHECK = `CHECK(type IN (${quotedList(FIELD_TYPES.map(type => type.value))}))`;
+const EVENT_TYPE_CHECK = `CHECK(event_type IN (${quotedList(ITEM_EVENT_TYPES)}))`;
 
 // Only a fixed grade key, or NULL for an unset Condition, can be stored, whatever writes the row.
 const CONDITION_GRADE_CHECK = `CHECK (condition_grade IN (${quotedList(CONDITION_GRADES)}))`;
@@ -145,41 +148,51 @@ const ensureMetadata = connection => {
   `).run({ uuid: crypto.randomUUID(), name: DEFAULT_DATABASE_NAME, version: SCHEMA_VERSION });
 };
 
-// The type CHECK of custom_fields as any release wrote it, whatever its spacing.
-const TYPE_CHECK_PATTERN = /CHECK\s*\(\s*type\s+IN\s*\([^)]*\)\s*\)/i;
+// A column's `IN (...)` CHECK as any release wrote it, whatever its spacing.
+const inCheckPattern = column => new RegExp(`CHECK\\s*\\(\\s*${column}\\s+IN\\s*\\([^)]*\\)\\s*\\)`, 'i');
 
 /*
-  The definition of custom_fields when its type CHECK predates the current FIELD_TYPES, otherwise
-  null. A database whose table never had a type CHECK already accepts every type and is left alone.
+  The tables whose list CHECK grew in a later version: custom_fields.type (version 10, the color type)
+  and item_events.event_type (version 14, the New/Used and Condition events).
 */
-const outdatedCustomFieldsSql = connection => {
-  const table = connection.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'custom_fields'").get();
-  return table && TYPE_CHECK_PATTERN.test(table.sql) && !table.sql.includes(FIELD_TYPE_CHECK) ? table.sql : null;
-};
+const CHECK_REBUILDS = [
+  { table: 'custom_fields', pattern: inCheckPattern('type'), check: FIELD_TYPE_CHECK },
+  { table: 'item_events', pattern: inCheckPattern('event_type'), check: EVENT_TYPE_CHECK }
+];
 
 /*
-  Version 10: SQLite cannot change a CHECK in place, so custom_fields is rebuilt from its own
-  definition with only the type CHECK replaced; its columns, their order, and every other constraint
-  stay exactly as they were. Every row keeps its id, so item and template values and their links stay
-  as they are, and the AUTOINCREMENT counter is carried over, so the id of a deleted field (whose
-  template values are kept on purpose) is never handed to a new field. Foreign keys are off while this
-  runs (see applySchema), otherwise dropping the old table would cascade into item_field_values. The
-  touch triggers go with the old table and are recreated with the others.
+  The tables whose list CHECK predates the current list, with their definitions. A table that does
+  not exist yet is created with the current CHECK, and one that never had the CHECK already accepts
+  every value; both are left alone.
 */
-const rebuildCustomFields = (connection, sql) => {
+const outdatedChecks = connection => CHECK_REBUILDS.flatMap(rebuild => {
+  const table = connection.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?").get(rebuild.table);
+  return table && rebuild.pattern.test(table.sql) && !table.sql.includes(rebuild.check) ? [{ ...rebuild, sql: table.sql }] : [];
+});
+
+/*
+  SQLite cannot change a CHECK in place, so the table is rebuilt from its own definition with only
+  that CHECK replaced; its columns, their order, and every other constraint stay exactly as they were.
+  Every row keeps its id, so the links to it stay as they are, and the AUTOINCREMENT counter is
+  carried over, so the id of a deleted row (a deleted field's template values are kept on purpose) is
+  never handed out again. Foreign keys are off while this runs (see applySchema), otherwise dropping
+  the old custom_fields would cascade into item_field_values. The touch triggers and the indexes go
+  with the old table; migrate() creates them again afterwards.
+*/
+const rebuildTable = (connection, { table, pattern, check, sql }) => {
   const autoincrement = /AUTOINCREMENT/i.test(sql);
-  const sequence = autoincrement ? connection.prepare("SELECT seq FROM sqlite_sequence WHERE name = 'custom_fields'").get() : null;
-  const definition = sql.replace(TYPE_CHECK_PATTERN, FIELD_TYPE_CHECK).replace(/^CREATE TABLE[^(]*\(/i, 'CREATE TABLE custom_fields_rebuilt (');
+  const sequence = autoincrement ? connection.prepare('SELECT seq FROM sqlite_sequence WHERE name = ?').get(table) : null;
+  const definition = sql.replace(pattern, check).replace(/^CREATE TABLE[^(]*\(/i, `CREATE TABLE ${table}_rebuilt (`);
   connection.exec(`
     ${definition};
-    INSERT INTO custom_fields_rebuilt SELECT * FROM custom_fields;
-    DROP TABLE custom_fields;
-    ALTER TABLE custom_fields_rebuilt RENAME TO custom_fields;
+    INSERT INTO ${table}_rebuilt SELECT * FROM ${table};
+    DROP TABLE ${table};
+    ALTER TABLE ${table}_rebuilt RENAME TO ${table};
   `);
   if (!autoincrement) return;
-  connection.exec("DELETE FROM sqlite_sequence WHERE name IN ('custom_fields', 'custom_fields_rebuilt')");
-  connection.prepare("INSERT INTO sqlite_sequence (name, seq) SELECT 'custom_fields', MAX(?, COALESCE(MAX(id), 0)) FROM custom_fields")
-    .run(sequence?.seq ?? 0);
+  connection.prepare('DELETE FROM sqlite_sequence WHERE name IN (?, ?)').run(table, `${table}_rebuilt`);
+  connection.prepare(`INSERT INTO sqlite_sequence (name, seq) SELECT ?, MAX(?, COALESCE(MAX(id), 0)) FROM ${table}`)
+    .run(table, sequence?.seq ?? 0);
 };
 
 /*
@@ -190,17 +203,17 @@ const rebuildCustomFields = (connection, sql) => {
   and restored afterwards; the rebuild keeps every id, so no relationship can break.
 */
 export const applySchema = connection => {
-  const rebuild = outdatedCustomFieldsSql(connection);
-  const foreignKeys = Number(connection.pragma('foreign_keys', { simple: true })) === 1;
-  if (rebuild && foreignKeys) connection.pragma('foreign_keys = OFF');
+  const rebuilds = outdatedChecks(connection);
+  const pause = rebuilds.length > 0 && Number(connection.pragma('foreign_keys', { simple: true })) === 1;
+  if (pause) connection.pragma('foreign_keys = OFF');
   try {
-    migrate(connection, rebuild);
+    migrate(connection, rebuilds);
   } finally {
-    if (rebuild && foreignKeys) connection.pragma('foreign_keys = ON');
+    if (pause) connection.pragma('foreign_keys = ON');
   }
 };
 
-const migrate = (connection, rebuild) => connection.transaction(() => {
+const migrate = (connection, rebuilds) => connection.transaction(() => {
   connection.exec(`
     CREATE TABLE IF NOT EXISTS categories (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -364,7 +377,7 @@ const migrate = (connection, rebuild) => connection.transaction(() => {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       operation_id INTEGER NOT NULL REFERENCES item_operations(id) ON DELETE CASCADE,
       item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
-      event_type TEXT NOT NULL CHECK(event_type IN (${quotedList(ITEM_EVENT_TYPES)})),
+      event_type TEXT NOT NULL ${EVENT_TYPE_CHECK},
       occurred_at TEXT NOT NULL,
       from_value TEXT,
       to_value TEXT,
@@ -390,8 +403,6 @@ const migrate = (connection, rebuild) => connection.transaction(() => {
       return_note TEXT,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
-    CREATE INDEX IF NOT EXISTS idx_item_events_item ON item_events(item_id, occurred_at DESC, id DESC);
-    CREATE INDEX IF NOT EXISTS idx_item_events_operation ON item_events(operation_id);
     CREATE INDEX IF NOT EXISTS idx_item_transfers_item ON item_transfers(item_id, transferred_at);
     -- At most one open loan per item, whatever writes the row.
     CREATE UNIQUE INDEX IF NOT EXISTS idx_item_transfers_open ON item_transfers(item_id) WHERE returned_at IS NULL;
@@ -407,7 +418,12 @@ const migrate = (connection, rebuild) => connection.transaction(() => {
     CREATE INDEX IF NOT EXISTS idx_checklist_run_items_linked ON checklist_run_items(item_id);
   `);
 
-  if (rebuild) rebuildCustomFields(connection, rebuild);
+  for (const rebuild of rebuilds) rebuildTable(connection, rebuild);
+  // Created after the rebuilds, which drop the indexes of the table they replace.
+  connection.exec(`
+    CREATE INDEX IF NOT EXISTS idx_item_events_item ON item_events(item_id, occurred_at DESC, id DESC);
+    CREATE INDEX IF NOT EXISTS idx_item_events_operation ON item_events(operation_id);
+  `);
   // Additive migrations keep existing inventories usable without rebuilding their database.
   const itemColumns = new Set(connection.prepare('PRAGMA table_info(items)').all().map(column => column.name));
   const missingItemColumns = [

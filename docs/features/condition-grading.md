@@ -65,6 +65,11 @@ text of Tabler's `-lt` badges falls below that for yellow and orange).
   an unset grade.
 - **Bulk Replace Value** offers **Condition Notes** for exact text replacement. The structured grade is
   not offered, so arbitrary text can never be written to it.
+- **History**: every saved change of an item's own grade, up, down, or to and from Not set, is a
+  *Condition changed* event with the grade keys (or `null`) as from → to, shown with the grade badges
+  and under the **Condition & Usage** filter; see [Item activity history](item-activity-history.md).
+  Condition Notes edits are not recorded, a container's grade change records nothing for its
+  contents, and changes are logged only from schema version 14 on.
 
 ## Migration
 

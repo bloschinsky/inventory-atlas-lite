@@ -46,7 +46,9 @@ async function seed() {
   }));
   // A move into the pouch, recorded in the camera's history.
   await request(`/api/items/${camera.id}`, json('PUT', { name: camera.name, category_id: category.id, location: 'Desk', condition_grade: 'good', field_values: { [brand.id]: 'Zenit', [year.id]: '1982' }, parent_item_id: pouch.id }));
-  const tripod = await request('/api/items', json('POST', { name: 'Tripod', category_id: category.id }));
+  const tripod = await request('/api/items', json('POST', { name: 'Tripod', category_id: category.id, is_new: true }));
+  // Put to use and graded in one save: a New/Used and a Condition change of one operation.
+  await request(`/api/items/${tripod.id}`, json('PUT', { name: 'Tripod', category_id: category.id, is_new: false, condition_grade: 'fair' }));
   await request(`/api/items/${tripod.id}/transfers`, json('POST', { recipient: 'Olena' }));
   const hostile = await request('/api/items', json('POST', { name: HOSTILE, category_id: category.id, description: `${HOSTILE}\n`.repeat(200) }));
   const old = await request('/api/items', json('POST', { name: 'Old flash', category_id: category.id, location: 'Attic' }));
@@ -132,6 +134,10 @@ test('every tool answers over Streamable HTTP with a read-only token', async () 
       assert.equal((await call(client, 'get_item_history', { item: fixture.camera.id, cursor: '999999' })).error.kind, 'invalid_input');
       const loans = await call(client, 'get_item_history', { item: fixture.tripod.uuid, type: 'transfer' });
       assert.equal(loans.events[0].type, 'transferred');
+      const usage = await call(client, 'get_item_history', { item: fixture.tripod.id, type: 'condition_usage' });
+      assert.deepEqual(usage.events.map(event => [event.type, event.from, event.to]).sort(),
+        [['condition_changed', null, 'fair'], ['new_status_changed', 'new', 'used']]);
+      assert.deepEqual(usage.events.map(event => event.operation_type), ['item_update', 'item_update']);
       assert.equal((await call(client, 'get_item_history', { item: fixture.bag.id })).events.length, 0);
 
       const summary = await call(client, 'get_inventory_summary');

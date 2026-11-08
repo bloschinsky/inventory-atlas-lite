@@ -30,6 +30,11 @@ Condition: Poor      Condition: Excellent
 - **AI Add Item** may return `is_new`, but only an explicit `true` makes the draft new. The model is
   told to set it only when the user says the item is new or unused, or readable labeling or context
   states it, and never because of a box, clean packaging, a pristine look, or no visible wear.
+- **History**: every saved change of an item's own flag is a *Usage status changed* event stored as
+  `new` → `used` or `used` → `new`, shown with the New/Used badges and under the **Condition & Usage**
+  filter; see [Item activity history](item-activity-history.md). Creating an item records nothing, a
+  container's change records nothing for its contents, and changes are logged only from schema
+  version 14 on.
 
 Condition is never parsed to set the flag: old free-text values such as `New`, `Like new`, or
 `Used once` stay exactly as they were (since schema version 7 as Condition Notes), and no lifecycle

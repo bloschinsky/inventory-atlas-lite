@@ -14,9 +14,9 @@ export class ItemHistoryRepository {
 
   /*
     What history compares before and after a change: every item at or below the given ones, with its
-    direct container, its recipient, and the top-level container (`root`) that provides its effective
-    location and Specific location. `top_id` is the given item the row was reached from and `depth` how far below it the row
-    is; overlapping ids reach an item more than once, and the caller keeps its nearest top. UNION and
+    direct container, its recipient, its own New flag and Condition grade, and the top-level container
+    (`root`) that provides its effective location and Specific location. `top_id` is the given item
+    the row was reached from and `depth` how far below it the row is; overlapping ids reach an item more than once, and the caller keeps its nearest top. UNION and
     the depth guards end every walk even over a damaged row that forms a cycle.
   */
   snapshot(ids) {
@@ -37,7 +37,7 @@ export class ItemHistoryRepository {
           UNION SELECT i.id, tree.root_id, tree.top_id, tree.depth + 1 FROM items i JOIN tree ON i.parent_item_id = tree.id
           WHERE tree.depth < 100
         )
-      SELECT tree.id, tree.top_id, top.name AS top_name, tree.depth, i.transferred_to,
+      SELECT tree.id, tree.top_id, top.name AS top_name, tree.depth, i.transferred_to, i.is_new, i.condition_grade,
         i.parent_item_id, parent.name AS parent_name, root.location, root.location_detail
       FROM tree JOIN items i ON i.id = tree.id
       JOIN items top ON top.id = tree.top_id

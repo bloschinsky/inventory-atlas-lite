@@ -424,12 +424,13 @@
       "all": "All",
       "location": "Locations",
       "transfer": "Transfers",
-      "lifecycle": "Lifecycle"
+      "lifecycle": "Lifecycle",
+      "condition_usage": "Condition & Usage"
     },
     "loading": "Loading history…",
     "empty": "No changes recorded yet.",
     "emptyFiltered": "No changes of this kind recorded yet.",
-    "trackingNote": "History records moves, container changes, transfers, retirements, and restorations from the moment they happen. Changes made before History was installed are not shown.",
+    "trackingNote": "History records moves, container changes, transfers, retirements, restorations, and New/Used and Condition changes from the moment each began to be tracked. Earlier changes are not shown.",
     "loadMore": "Load more",
     "noLocation": "No location",
     "topLevel": "Top level",
@@ -449,7 +450,9 @@
       "transferred": "Lent to {name}",
       "returned": "Returned from {name}",
       "retired": "Retired: {reason}",
-      "restored": "Restored to inventory"
+      "restored": "Restored to inventory",
+      "new_status_changed": "Usage status changed",
+      "condition_changed": "Condition changed"
     },
     "operations": {
       "bulk_move": "Bulk move",

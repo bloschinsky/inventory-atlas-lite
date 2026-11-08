@@ -335,9 +335,9 @@ test('the Preferred Content Language is validated, stored canonically, cleared, 
   old.exec("UPDATE database_metadata SET name = 'Garage'; ALTER TABLE database_metadata DROP COLUMN content_language;");
   old.pragma('user_version = 12');
   applySchema(old);
-  assert.equal(Number(old.pragma('user_version', { simple: true })), 13);
+  assert.equal(Number(old.pragma('user_version', { simple: true })), 14);
   assert.deepEqual(old.prepare('SELECT name, content_language, schema_version FROM database_metadata').get(),
-    { name: 'Garage', content_language: null, schema_version: 13 });
+    { name: 'Garage', content_language: null, schema_version: 14 });
 });
 
 test('the HTTP API: a per-database preference survives a restart and a backup restore, and translation is read-only', async () => {

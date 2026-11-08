@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.74.0",
+    "date": "2026-11-08",
+    "changes": [
+      "Item History now records when an item's New/Used status or Condition grade changes, for example New → Used or Excellent → Good, including a grade that is corrected upwards, first assigned, or cleared. The changes are shown with the same badges as the item and have their own Condition & Usage filter.",
+      "Changes saved together, such as New/Used and the grade, or a new grade and a move, stay one History entry. Condition Notes edits are not recorded, a container's change adds nothing to the items inside it, and logging starts with this version: nothing is invented for earlier changes.",
+      "The History filters now wrap on narrow phone screens, and the optional MCP adapter's get_item_history accepts the new condition_usage filter."
+    ]
+  },
+  {
     "version": "0.73.2",
     "date": "2026-11-07",
     "changes": [
