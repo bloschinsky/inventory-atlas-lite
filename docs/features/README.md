@@ -70,6 +70,7 @@ Related documentation:
 - [`../HOW-TO.md`](../HOW-TO.md) — quick user guide for the current application, and
   [`../HOW-TO.uk.md`](../HOW-TO.uk.md), its Ukrainian translation; both are published as the
   [public user guide](public-user-guide.md).
-- [`../issues/`](../issues/) — active task specifications for work that is not finished yet.
+- [GitHub Issues](https://github.com/bloschinsky/inventory-atlas-lite/issues) — the task
+  specifications for work that is not finished yet, summarized in the [roadmap](../ROADMAP.md).
 - [`../changes/`](../changes/) — dated records of completed repository changes.
 - [`../proxmox.md`](../proxmox.md) — installing and maintaining the application on Proxmox VE.
