@@ -13,11 +13,27 @@ sourcing: nothing is ever rebuilt from the log.
 ## User-visible behaviour
 
 - **Item details** has a **History** card with the five newest entries and **View full history**,
-  which opens `/items/:id/history`: a Tabler timeline, newest first, with **All | Locations |
+  which opens `/items/:id/history` as an **Item History** dialog over the same Item details page
+  (see *Full history dialog* below): a Tabler timeline, newest first, with **All | Locations |
   Transfers | Lifecycle | Condition & Usage** filters (separate buttons that wrap on narrow screens),
   **Load more** (20 per page), loading, empty, and error states, and a closing note that changes from
   before they were tracked are not shown. Both work on phones (no horizontal scrolling) and in
   English and Ukrainian.
+- **Full history dialog** (`ItemHistoryDialog.vue`): `/items/:id/history` is a child route of
+  `/items/:id`, so Item details stays mounted underneath with its data, dialogs' state, and scroll
+  position, and renders the dialog through its own `RouterView` with the item it already loaded (no
+  second item request; the timeline is the same `ItemHistoryTimeline.vue`). A directly loaded or
+  reloaded address therefore shows the item page behind the dialog. The dialog is Tabler modal markup
+  without Bootstrap JavaScript, teleported to `body`: about 54rem wide on desktops,
+  `modal-fullscreen-md-down` on phones, with the **Item History** title, the item name, **Close
+  history**, and a body that scrolls on its own. While it is open the shell's page is `inert` and
+  `aria-hidden`, the body scroll is locked, Tab wraps inside the dialog, and the focus starts on Close.
+  Close, Escape, and a backdrop click go Back when the previous history entry is the item (so Forward
+  reopens the dialog) and otherwise replace the address with `/items/:id`, so Back never reopens a
+  directly loaded dialog; the focus returns to **View full history** without scrolling. A link to
+  another item in the timeline opens that item without the dialog. The shell's own dialogs (About,
+  What's New, the password confirmation) open above it, and a Settings address over it hides it until
+  Settings closes. The public demo uses the same routes in its hash history.
 - **Usage status changed** and **Condition changed** show the transition with the same badges as the
   item itself (*New → Used*, *Excellent → Good*, *Not set → Fair*); the badge text carries the
   meaning on its own, in both color modes.
@@ -204,6 +220,10 @@ the 1,000,000-event run is opt-in: `node scripts/history-benchmark.mjs` (or `--e
   with the full-history filters, retiring and restoring an item with its History and the loan rule,
   the timeline on a phone in Ukrainian, a New → Used and Excellent → Good save shown as one entry
   with its badges and the **Condition & Usage** filter, Load more joining one save across the page
-  boundary, and the transitions in Ukrainian in dark mode on a 360 px phone with wrapping filters.
+  boundary, the transitions in Ukrainian in dark mode on a 360 px phone with wrapping filters, and the
+  full history dialog: in-app open with the preserved page scroll and locked background, inert page,
+  focus on Close and the Tab trap, Escape, Forward and Back, Close and the backdrop, a direct load and
+  reload replaced by the item on Close, a link to another item, and the full-screen phone dialog with
+  its own scroll.
   `mcp/test/` checks the `condition_usage` filter and the mapped events. `test/e2e/nesting.spec.js`
   makes the explicit choice when it takes an item out.

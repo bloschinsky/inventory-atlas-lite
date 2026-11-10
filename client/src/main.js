@@ -11,7 +11,7 @@ import SignIn from './pages/SignIn.vue';
 import ItemsList from './pages/ItemsList.vue';
 import ItemDetails from './pages/ItemDetails.vue';
 import ItemForm from './pages/ItemForm.vue';
-import ItemHistory from './pages/ItemHistory.vue';
+import ItemHistoryDialog from './components/ItemHistoryDialog.vue';
 import Hierarchy from './pages/Hierarchy.vue';
 import Categories from './pages/Categories.vue';
 import DataBackup from './pages/DataBackup.vue';
@@ -47,9 +47,9 @@ const router = createRouter({
     { path: '/items', component: ItemsList },
     { path: '/items/ai', component: AIAddItem, meta: needs(toolsUse) },
     { path: '/items/new', component: ItemForm, meta: needs(itemsWrite) },
-    { path: '/items/:id', component: ItemDetails },
+    // The full history is a dialog over the item's page, which stays mounted while it opens and closes.
+    { path: '/items/:id', component: ItemDetails, children: [{ path: 'history', component: ItemHistoryDialog }] },
     { path: '/items/:id/edit', component: ItemForm, meta: needs(itemsWrite) },
-    { path: '/items/:id/history', component: ItemHistory },
     { path: '/hierarchy', component: Hierarchy },
     { path: '/templates', component: Templates, meta: needs(inventoryManage) },
     { path: '/templates/new', component: TemplateForm, meta: needs(inventoryManage) },

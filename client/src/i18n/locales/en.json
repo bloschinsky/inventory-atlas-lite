@@ -420,7 +420,8 @@
   "history": {
     "title": "History",
     "viewAll": "View full history",
-    "backToItem": "Back to item",
+    "dialogTitle": "Item History",
+    "close": "Close history",
     "filter": "Show",
     "filters": {
       "all": "All",

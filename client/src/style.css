@@ -286,6 +286,11 @@ body.modal-open { overflow: hidden; }
 .app-settings-modal { z-index: 1045; }
 .app-settings-backdrop { z-index: 1040; }
 .app-settings-dialog { --tblr-modal-width: 57.5rem; }
+/* The full Item History uses the same layer, so the shell's own dialogs still open above it. */
+.app-item-history-modal { z-index: 1045; }
+.app-item-history-backdrop { z-index: 1040; }
+.app-item-history-dialog { --tblr-modal-width: 54rem; }
+.app-item-history-dialog .modal-body { overscroll-behavior: contain; padding-bottom: calc(var(--tblr-modal-padding) + env(safe-area-inset-bottom)); }
 .app-settings-dialog .modal-content { height: 100%; }
 .app-settings-nav { flex: 0 0 14rem; overflow-y: auto; padding: 1rem; border-right: var(--tblr-border-width) solid var(--tblr-border-color); }
 .app-settings-pane { flex: 1 1 auto; min-width: 0; overflow-y: auto; overscroll-behavior: contain; padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom)); }

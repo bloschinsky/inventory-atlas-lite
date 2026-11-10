@@ -420,7 +420,8 @@
   "history": {
     "title": "Історія",
     "viewAll": "Уся історія",
-    "backToItem": "Назад до предмета",
+    "dialogTitle": "Історія предмета",
+    "close": "Закрити історію",
     "filter": "Показати",
     "filters": {
       "all": "Усе",
