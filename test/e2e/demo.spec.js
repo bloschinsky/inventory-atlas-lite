@@ -245,3 +245,35 @@ test.describe('in every language', () => {
     await expect(page).toHaveURL(`${demoURL}#/items`);
   });
 });
+
+test('the full history dialog follows the demo hash routes, and Settings opened over it hands it back', async ({ page }) => {
+  const drill = uuidOf('cordless-drill');
+  await open(page, `#/items/${drill}`);
+  await expect(page.getByRole('heading', { name: 'Cordless drill', level: 1 })).toBeVisible();
+  await page.getByRole('region', { name: 'History' }).getByRole('link', { name: 'View full history' }).click();
+  const history = page.getByRole('dialog', { name: 'Item History' });
+  await expect(history).toBeVisible();
+  await expect(page).toHaveURL(`${demoURL}#/items/${drill}/history`);
+  await page.keyboard.press('Escape');
+  await expect(history).toBeHidden();
+  await expect(page).toHaveURL(`${demoURL}#/items/${drill}`);
+  await page.goForward();
+  await expect(history).toBeVisible();
+
+  // A Settings address typed over the dialog hides it; closing Settings shows it again, still locked.
+  await page.evaluate(() => { window.location.hash = '#/settings/interface'; });
+  const settings = page.getByRole('dialog', { name: 'Settings' });
+  await expect(settings).toBeVisible();
+  await expect(history).toBeHidden();
+  await settings.getByRole('button', { name: 'Close settings' }).click();
+  await expect(settings).toBeHidden();
+  await expect(history).toBeVisible();
+  await expect(page).toHaveURL(`${demoURL}#/items/${drill}/history`);
+  await expect(page.locator('body')).toHaveClass(/modal-open/);
+  await expect(history.getByRole('button', { name: 'Close history' })).toBeFocused();
+
+  await history.getByRole('button', { name: 'Close history' }).click();
+  await expect(history).toBeHidden();
+  await expect(page).toHaveURL(`${demoURL}#/items/${drill}`);
+  await expect(page.locator('body')).not.toHaveClass(/modal-open/);
+});

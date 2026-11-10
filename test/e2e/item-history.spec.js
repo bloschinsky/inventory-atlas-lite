@@ -352,6 +352,56 @@ test('View full history opens a dialog over the item page that Back, Forward, Es
   await expect(page.locator('body')).not.toHaveClass(/modal-open/);
 });
 
+test('an item opened by its UUID, as a QR scan does, keeps that address and its page under the history dialog', async ({ page, request }) => {
+  const category = await createCategory(request, unique('UUID'));
+  const name = unique('Scanner');
+  const scanner = await createItem(request, { name, category_id: category.id, location: 'Desk', description: 'A long description. '.repeat(120) });
+  const moved = await request.put(`/api/items/${scanner.id}`, { data: { name, category_id: category.id, location: 'Shelf' } });
+  expect(moved.ok()).toBeTruthy();
+  expect(scanner.uuid).toMatch(/^[0-9a-f-]{36}$/);
+  // Requests for the item itself and its audits, never its history pages.
+  const itemReads = [];
+  page.on('request', req => {
+    const path = new URL(req.url()).pathname;
+    if (/^\/api\/items\/[^/]+(\/audits)?$/.test(path)) itemReads.push(path);
+  });
+
+  await page.setViewportSize({ width: 1280, height: 500 });
+  await page.goto(`/items/${scanner.uuid}`);
+  await page.mouse.move(600, 400);
+  await expect(page.getByRole('heading', { name, level: 1 })).toBeVisible();
+  const link = historyCard(page).getByRole('link', { name: 'View full history' });
+  await link.scrollIntoViewIfNeeded();
+  const scrolled = await page.evaluate(() => window.scrollY);
+  expect(scrolled).toBeGreaterThan(0);
+  const readsBefore = itemReads.length;
+
+  await link.click();
+  const dialog = page.getByRole('dialog', { name: 'Item History' });
+  await expect(dialog.getByText('Desk → Shelf')).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`/items/${scanner.uuid}/history$`));
+  // The same page stays underneath: nothing about the item is loaded again.
+  expect(itemReads.length).toBe(readsBefore);
+
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect(page).toHaveURL(new RegExp(`/items/${scanner.uuid}$`));
+  expect(await page.evaluate(() => window.scrollY)).toBe(scrolled);
+  await page.goForward();
+  await expect(dialog).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`/items/${scanner.uuid}/history$`));
+  await dialog.getByRole('button', { name: 'Close history' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page).toHaveURL(new RegExp(`/items/${scanner.uuid}$`));
+  expect(itemReads.length).toBe(readsBefore);
+
+  // A directly loaded UUID history address closes to the same UUID address.
+  await page.goto(`/items/${scanner.uuid}/history`);
+  await dialog.getByRole('button', { name: 'Close history' }).click();
+  await expect(page).toHaveURL(new RegExp(`/items/${scanner.uuid}$`));
+  await expect(page.getByRole('heading', { name, level: 1 })).toBeVisible();
+});
+
 test('a directly loaded or refreshed history address shows the dialog over its item, and Close replaces it', async ({ page, request }) => {
   const category = await createCategory(request, unique('Direct'));
   const name = unique('Tripod');

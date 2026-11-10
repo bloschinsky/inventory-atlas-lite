@@ -22,7 +22,9 @@ sourcing: nothing is ever rebuilt from the log.
 - **Full history dialog** (`ItemHistoryDialog.vue`): `/items/:id/history` is a child route of
   `/items/:id`, so Item details stays mounted underneath with its data, dialogs' state, and scroll
   position, and renders the dialog through its own `RouterView` with the item it already loaded (no
-  second item request; the timeline is the same `ItemHistoryTimeline.vue`). A directly loaded or
+  second item request; the timeline is the same `ItemHistoryTimeline.vue`). The link and the return
+  address keep the item's address as it was opened, by id or by the UUID a QR scan and the demo use,
+  so opening and closing never changes the page's `:id` or reloads it. A directly loaded or
   reloaded address therefore shows the item page behind the dialog. The dialog is Tabler modal markup
   without Bootstrap JavaScript, teleported to `body`: about 54rem wide on desktops,
   `modal-fullscreen-md-down` on phones, with the **Item History** title, the item name, **Close
@@ -223,7 +225,9 @@ the 1,000,000-event run is opt-in: `node scripts/history-benchmark.mjs` (or `--e
   boundary, the transitions in Ukrainian in dark mode on a 360 px phone with wrapping filters, and the
   full history dialog: in-app open with the preserved page scroll and locked background, inert page,
   focus on Close and the Tab trap, Escape, Forward and Back, Close and the backdrop, a direct load and
-  reload replaced by the item on Close, a link to another item, and the full-screen phone dialog with
-  its own scroll.
+  reload replaced by the item on Close, a link to another item, an item opened by its UUID (no item
+  request when the dialog opens, the UUID address kept by Escape, Forward, Close, and a direct load),
+  and the full-screen phone dialog with its own scroll. `test/e2e/demo.spec.js` opens the dialog in
+  the demo's hash routes and a Settings address over it, which hides the dialog until Settings closes.
   `mcp/test/` checks the `condition_usage` filter and the mapped events. `test/e2e/nesting.spec.js`
   makes the explicit choice when it takes an item out.

@@ -22,6 +22,11 @@ timeline now opens as a dialog over the same Item details page. The address is s
   History** / **Історія предмета** title, the item name as its description, **Close history** /
   **Закрити історію**, and a scrolling body. That body holds the existing `ItemHistoryTimeline.vue`
   with its filters, grouped entries, Load more, and loading, empty, and error states.
+- **Item address:** the **View full history** link and the dialog's return path are built from the
+  route's `:id`, not from `item.id`, so an item opened by its UUID (a QR scan, the demo) keeps that
+  address. This came from review: building them from `item.id` changed `:id` from the UUID to the
+  number, reloaded Item details, and turned Close into a replace. Close goes Back when the previous
+  entry resolves to the same item path, even with a query.
 - **Navigation:** Close, Escape, and a backdrop click call `router.back()` when the previous history
   entry is the item, so Forward reopens the dialog. In every other case they replace the address with
   `/items/:id`, so Back never reopens a directly loaded dialog. A timeline link to another item opens
@@ -48,12 +53,14 @@ timeline now opens as a dialog over the same Item details page. The address is s
   - The full-screen 390 px phone dialog scrolls on its own, while the page neither scrolls nor
     overflows.
 
+  A fourth test, added after review, opens an item by its UUID. Opening the dialog sends no item
+  request, and Escape, Forward, Close, and a direct load all keep the UUID address with its scroll.
+  `test/e2e/demo.spec.js` covers the demo's hash routes, Escape and Forward, and a Settings address
+  over the dialog: it hides the dialog, and closing Settings shows it again, locked and focused.
   The existing tests now expect the dialog headings in English and Ukrainian.
 - `npm run lint`: passed. `npm run build`: passed.
 - `npm test`: 442 of 445 passed (1 skipped). The 2 failures are the known Windows-only guide tests in
-  `test/landing.test.js` that also fail on a clean `master`, because `core.autocrlf` checks the guides
-  out with CRLF. The guide parity checks pass.
-- `APP_VERSION=0.74.3 npm run test:e2e` (with `E2E_*_PORT` overrides for reserved Windows ports):
-  318 of 319 passed. The one failure, `settings-navigation.spec.js` › unsaved changes are kept unless
-  discarding them is confirmed (a prompt count on `/items`, no item page involved), passed when rerun
-  together with `item-history.spec.js` (17 of 17), which also covers the final dialog code.
+  `test/landing.test.js`: `core.autocrlf` checks the guides out with CRLF. With the committed LF guide
+  files, as the Ubuntu CI checks them out, `node --test test/landing.test.js` passes 20 of 20.
+- `APP_VERSION=0.74.3 npm run test:e2e` (with `E2E_*_PORT` overrides for reserved Windows ports),
+  rerun on the final code after the review fixes: 321 passed.

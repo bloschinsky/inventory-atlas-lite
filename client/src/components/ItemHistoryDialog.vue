@@ -7,7 +7,7 @@ export const itemHistoryOpen = ref(false);
 
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { aboutOpen, versionHistoryOpen } from '../about.js';
 import { reauthPending } from '../auth.js';
 import { isSettingsRoute } from '../settingsOverlay.js';
@@ -19,11 +19,13 @@ import ItemHistoryTimeline from './ItemHistoryTimeline.vue';
   its child route and passes the item it already loaded. The page underneath keeps its state and
   scroll; a directly loaded address shows the same page behind the dialog.
 */
-const props = defineProps({ item: { type: Object, required: true } });
+defineProps({ item: { type: Object, required: true } });
+const route = useRoute();
 const router = useRouter();
 const panel = ref(null);
 const closeButton = ref(null);
-const itemPath = computed(() => `/items/${props.item.id}`);
+// The item's address as it was opened, by id or by the UUID of a scanned QR code.
+const itemPath = computed(() => `/items/${encodeURIComponent(route.params.id)}`);
 
 // Settings (only reachable by its address) and the shell's own dialogs can open above this one; then they own the keyboard and the focus.
 const coveredBySettings = computed(() => isSettingsRoute(router.currentRoute.value));
@@ -34,7 +36,8 @@ const covered = computed(() => coveredBySettings.value || aboutOpen.value || ver
   a directly loaded address is replaced by the item, so Back never shows the dialog again.
 */
 function close() {
-  if (router.options.history.state.back === itemPath.value) return router.back();
+  const back = router.options.history.state.back;
+  if (typeof back === 'string' && router.resolve(back).path === itemPath.value) return router.back();
   return router.replace(itemPath.value);
 }
 

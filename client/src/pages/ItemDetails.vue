@@ -569,7 +569,7 @@ onMounted(load);
             <div class="card-actions">
               <RouterLink
                 ref="historyLink"
-                :to="`/items/${item.id}/history`"
+                :to="`/items/${encodeURIComponent(route.params.id)}/history`"
               >
                 {{ $t('history.viewAll') }}
               </RouterLink>
