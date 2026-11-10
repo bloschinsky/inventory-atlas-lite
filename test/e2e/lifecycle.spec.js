@@ -55,7 +55,7 @@ test('retires an item with a reason, filters it out of the active list, and rest
   await expect(detail(retirement, 'Note')).toHaveText('Paid in cash');
   await expect(detail(retirement, 'Former container')).toHaveText(shelf.name);
   // Nothing else about the item changed: New, the serial number, and its identity stay.
-  await expect(detail(page, 'New')).toHaveText('New');
+  await expect(detail(page, 'New / Used')).toHaveText('New');
   await expect(detail(page, 'Serial Number')).toHaveText('LN-1');
   await openItemActions(page);
   await expect(page.getByRole('button', { name: 'Restore to inventory' })).toBeVisible();
@@ -204,7 +204,7 @@ test('a retired item opens from a direct UUID link, and new sessions start with 
   await retire(request, watch, { reason: 'gifted' });
   await page.goto(`/items/${watch.uuid}`);
   await expect(page.getByRole('heading', { name: watch.name })).toBeVisible();
-  await expect(detail(page, 'Status')).toHaveText('Retired');
+  await expect(detail(page, 'Inventory')).toHaveText('Retired');
   await openItems(page, token);
   await expect(page.getByRole('radio', { name: 'Active' })).toBeChecked();
   await expect(page.getByText('No retired items')).toHaveCount(0);
@@ -239,7 +239,7 @@ test('the lifecycle is translated into Ukrainian', async ({ page, request }) => 
   await dialog.getByLabel('Причина').selectOption({ label: 'Подаровано' });
   await dialog.getByRole('button', { name: 'Списати', exact: true }).click();
   await expect(page.getByRole('status')).toContainText(`«${lamp.name}» списано.`);
-  await expect(detail(page, 'Статус')).toHaveText('Списаний');
+  await expect(detail(page, 'Інвентар')).toHaveText('Списаний');
   await openItemActions(page, 'Більше дій');
   await expect(page.getByRole('button', { name: 'Повернути в інвентар' })).toBeVisible();
 });

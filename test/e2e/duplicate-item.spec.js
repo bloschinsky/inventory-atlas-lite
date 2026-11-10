@@ -61,7 +61,7 @@ test('Duplicate opens a prefilled Add Item form and saves a separate item', asyn
   await page.getByRole('button', { name: 'Save item' }).click();
 
   await expect(page.getByRole('heading', { name: copyName })).toBeVisible();
-  await expect(detail(page, 'New')).toHaveText('New');
+  await expect(detail(page, 'New / Used')).toHaveText('New');
   await expect(detail(page, 'Condition')).toHaveText('Poor');
   await expect(detail(page, 'Condition Notes')).toHaveText('Dented corner');
   await expect(page).not.toHaveURL(`/items/${source.id}`);

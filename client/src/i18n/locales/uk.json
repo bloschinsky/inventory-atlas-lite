@@ -361,6 +361,8 @@
     "loading": "Завантаження предмета…",
     "allItems": "Усі предмети",
     "details": "Відомості",
+    "inventory": "Інвентар",
+    "newOrUsed": "Новий / Вживаний",
     "categoryFields": "Поля категорії {category}",
     "storage": "Зберігання",
     "contents": "Вміст",
@@ -1500,7 +1502,6 @@
       "other": "Інше"
     },
     "fields": {
-      "status": "Статус",
       "reason": "Причина",
       "retiredAt": "Дата списання",
       "recipient": "Отримувач або контекст",

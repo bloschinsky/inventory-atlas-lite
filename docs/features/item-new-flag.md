@@ -14,9 +14,13 @@ Condition: Poor      Condition: Excellent
 
 - **Add/Edit Item** shows a **New** switch above Condition. A blank item starts unchecked (`false`).
 - **Read-only views** show the flag as a status badge instead of Yes/No: a green **New** badge for
-  `true` and an amber **Used** badge for `false`. The words are localized (Ukrainian **Новий** and
-  **Вживаний**) and always visible, so color is never the only carrier of meaning.
-- **Item details** always show the badge under the **New** label, directly above Condition.
+  `true` and a neutral gray **Used** badge for `false` (a used item is ordinary, never a warning). The
+  words are localized (Ukrainian **Новий** and **Вживаний**) and always visible, so color is never the
+  only carrier of meaning.
+- **Item details** always show the badge under the **New / Used** label (Ukrainian **Новий / Вживаний**)
+  of the **Details** card, between **Inventory** (the lifecycle: Active or Retired) and **Condition**, so
+  the three independent attributes read as *Inventory: Active*, *New / Used: Used*, *Condition:
+  Excellent*. The forms keep the plain **New** switch.
 - **Items list**: **New** is a core column in the **Columns** picker (after Condition). It is hidden by
   default, shows the New/Used badge in the table and in the phone cards (without a label there,
   since the badge names itself), and sorts on the server like the other core columns: No before Yes
@@ -65,7 +69,7 @@ state is inferred from them. The flag never sets a grade either.
   duplicate); `ItemDraftFields.vue` renders the item switch or the template tri-state select.
   `ItemNewStatusBadge.vue` is the only owner of the read-only mapping: it takes `is-new` and renders a
   Tabler `badge` with `bg-success-subtle text-success-emphasis` (New) or
-  `bg-warning-subtle text-warning-emphasis` (Used). These Bootstrap subtle/emphasis pairs resolve
+  `bg-secondary-subtle text-secondary-emphasis` (Used). These Bootstrap subtle/emphasis pairs resolve
   through `light-dark()`, so both modes keep a contrast of at least 4.5:1. Item details and
   `ItemResults.vue` (table cell and card line) use it; the cell text in `itemColumns.js` returns the
   same New/Used words so the card emptiness check stays consistent. The badge is presentation only:
@@ -83,7 +87,11 @@ state is inferred from them. The flag never sets a grade either.
 - `test/e2e.test.js`: the flag over HTTP in create, details, list, and sort.
 - Playwright: `test/e2e/item-new-status.spec.js` covers the New and Used badges and their styles in
   the Items table, boolean sorting of the New column, Item details, the phone cards, the unchanged
-  form switch, the Ukrainian labels, and the text contrast in light and dark mode. Other specs cover
+  form switch, the Ukrainian labels, and the text contrast in light and dark mode. It also checks the
+  Details labels and their order (Inventory, New / Used, Condition, Condition Notes), the Active,
+  Excellent, and Not set badges, the multiline notes and their absence when empty, the Active and
+  Retired contrast in both modes (a translucent background blended over the card), and the stacked
+  labels without horizontal overflow on a phone. Other specs cover
   toggling New on create and edit with the badge on Item details, the template default
   flowing into the item form, Duplicate, the Columns picker, and batch preview and refusal.
 

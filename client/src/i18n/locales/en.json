@@ -361,6 +361,8 @@
     "loading": "Loading item…",
     "allItems": "All items",
     "details": "Details",
+    "inventory": "Inventory",
+    "newOrUsed": "New / Used",
     "categoryFields": "{category} fields",
     "storage": "Storage",
     "contents": "Contents",
@@ -1500,7 +1502,6 @@
       "other": "Other"
     },
     "fields": {
-      "status": "Status",
       "reason": "Reason",
       "retiredAt": "Retired on",
       "recipient": "Recipient or context",

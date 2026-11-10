@@ -329,8 +329,9 @@ unusable, the message explains why and your description stays in the modal for a
 1. Open **Items** and press **Add item**. If no category exists yet, the form tells you to create one
    first and links to **Manage categories**.
 2. Fill in **Name** and choose a **Category**. Both are required.
-3. Turn on **New** if the item is new or unused; it starts off. The item page and the **New** list
-   column show it as a green **New** or an amber **Used** badge. **Condition** is separate from New:
+3. Turn on **New** if the item is new or unused; it starts off. The item page (the **New / Used** row
+   of its **Details** card, between **Inventory** — Active or Retired — and **Condition**) and the
+   **New** list column show it as a green **New** or a neutral gray **Used** badge. **Condition** is separate from New:
    choose one grade — **Excellent**, **Good**, **Fair**, **Poor**, or **Broken** — or leave it **Not
    set**; the chosen grade is shown as its colored badge. Press the info button beside **Condition**
    to open **Condition grading**, which explains every grade; close it with **Close**, ×, Escape, or a
