@@ -38,7 +38,7 @@ requests or the backup scheduler.
 
 **Out of scope.** Multi-factor authentication, SSO/LDAP, public registration, teams and per-category
 permissions, an MCP server or OAuth authorization server, LAN pairing of the planned Windows desktop
-build (`docs/issues/TASK-LOCAL-NETWORK-ACCESS.md`), protection against someone with shell or file
+build ([#85](https://github.com/bloschinsky/inventory-atlas-lite/issues/85)), protection against someone with shell or file
 access to the server, and denial of service by request volume.
 
 ## Roles, permissions, and scopes

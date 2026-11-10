@@ -253,7 +253,9 @@ The project stays small and readable. Do not add:
 - `test/i18n.test.js` — locale parity, message compilation, fallback, Ukrainian plurals, and locale-aware formatting.
 - `test/errors.test.js` — error code coverage in both locales, the error response mapping, and error translation.
 - `test/cloud-backup.test.js` — cloud backup services, adapters, scheduler, and API against the local Dropbox/Google Drive stub in `test/e2e/cloudProviderStub.js`.
-- `test/fixtures/` — real source photos used as regression input by the Node.js tests.
+- `test/fixtures/` — real source photos used as regression input by the Node.js tests;
+  `svema-ds-4-film-boxes-in-hand.jpg` is the held-item reference photo of background removal Phase 2
+  (#87), not yet used by an automated test.
 - `test/e2e/item-history.spec.js` — the history timeline (moves, loans, lifecycle, Condition & Usage, Load more) and the full history dialog: in-app open with the preserved scroll, inert background, focus, Escape, Back and Forward, Close and the backdrop, a direct load and reload replaced by the item on Close, links to another item, a UUID item address, and the full-screen phone dialog.
 - `test/e2e/settings-navigation.spec.js` — the Settings dialog: section routes and redirects, the Dashboard under direct addresses, the preserved page underneath, close, Escape, Back and Forward, section changes without history entries, the unsaved-changes prompt, focus, the desktop section list, the full-screen phone dialog and its section selector, and the dark mode in Ukrainian.
 - `test/e2e/url-import.spec.js` — Smart URL import with intercepted preview, variant, and image requests: a new item from a page, selective enrichment of an existing item, Refresh from Source and a dead source, the explicit variant choice, conflicts, the opt-in page price, images, partial failures, Ukrainian, and phones, plus the opt-in AI enhancement (suggestions, choices and edits, the untouched price opt-in, failure fallback, and discarding).
@@ -354,7 +356,7 @@ The project stays small and readable. Do not add:
 - `docs/HOW-TO.md` — quick user guide for the current application, the canonical English text of the
   public user guide.
 - `docs/HOW-TO.uk.md` — its Ukrainian translation, the Ukrainian public user guide.
-- `docs/issues/` — active tasks, feature specifications, and future work.
+- `docs/ROADMAP.md` — the short overview of planned features, linking to their GitHub Issues.
 - `docs/features/` — permanent documents for implemented features, with `README.md` as their index.
 - `docs/changes/` — dated records of completed repository changes.
 - `data/` — local runtime data; SQLite files and backups are ignored by Git.
@@ -426,14 +428,14 @@ are mandatory for all frontend work:
 - After completing any task that changes repository files, create a Markdown record in `docs/changes/` describing what was implemented and when.
 - Name records `YYYY-MM-DD-short-description.md` and write them in English.
 - Include the completion date, resulting project version, a concise summary of the implementation, and the verification performed, including the Playwright result.
-- Keep planned work and future specifications in `docs/issues/`; keep completed implementation records in `docs/changes/`.
+- Keep planned work and future specifications in GitHub Issues; keep completed implementation records in `docs/changes/`.
 
 ## Roadmap overview maintenance
 
-`docs/ROADMAP.md` is the concise overview of active planned features. Keep it synchronized with the task files currently in `docs/issues/`.
+`docs/ROADMAP.md` is the concise, human-friendly overview of planned features. GitHub Issues are authoritative for every task's status, scope, dependencies, and acceptance criteria; the roadmap only summarizes and links to them.
 
-- When adding, removing, completing, reprioritizing, or materially changing an active task file, update the corresponding roadmap entry in the same change.
-- Keep each entry limited to its feature, status, dependencies, and a link to the authoritative task file. Detailed requirements and acceptance criteria remain in the task file.
+- When a planned feature's issue is opened, closed, dropped, reprioritized, or materially changes its dependencies, update the corresponding roadmap entry in the same change (or the next change that touches the repository, when the issue changed on GitHub alone).
+- Keep each entry limited to its feature, a one-line summary, status, dependencies, and the issue link. Never copy checklists, requirements, or acceptance criteria into the roadmap.
 - Do not list completed features as planned work; their current behavior belongs in `docs/features/`.
 
 ## User guide maintenance
@@ -454,9 +456,9 @@ are mandatory for all frontend work:
 - This is an additional step, not a replacement for the permanent feature document in `docs/features/`.
 - Pure internal refactoring with no observable behavior change needs no guide edit. A task whose user-facing documentation is knowingly stale is not complete.
 
-## Task file lifecycle
+## Task lifecycle
 
-Files in `docs/issues/` (`TASK-*.md`, `CODEX-TASK-*.md`) are temporary working specifications, not completion records. Keep a task file while any of its requirements is unimplemented, unverified, blocked, or uncertain.
+Every numbered task is a self-contained GitHub Issue; the repository holds no Markdown task files or drafts. The workflow is: an approved feature concept becomes a GitHub Issue with its requirements and acceptance criteria → the agent implements it on its own branch named after the issue number (see Git below) → tests, documentation, and the pull request that references the issue are reviewed → the pull request is merged → the issue is closed. An issue is a working specification, not a completion record.
 
 Before treating a feature task as finished:
 
@@ -465,12 +467,13 @@ Before treating a feature task as finished:
 3. create or update its permanent feature document in `docs/features/`, describing the resulting implementation rather than the plan;
 4. add or update its entry in `docs/features/README.md`, the index of implemented features;
 5. update `docs/HOW-TO.md` when the change is visible to users or operators;
-6. delete the completed task file with normal tracked deletion, never by rewriting Git history;
-7. include the documentation updates and the task-file deletion in the same commit as the feature whenever practical.
+6. remove its entry from `docs/ROADMAP.md` when it had one;
+7. include the documentation updates in the same commit as the feature whenever practical.
 
 Safety rules:
 
-- Never delete an incomplete, partially implemented, failed, blocked, or uncertain task file; report what is missing instead.
+- Never mark an incomplete, partially implemented, failed, blocked, or uncertain task as done, and never close its issue; report what is missing instead.
+- When a requirement turns out to be missing or wrong, improve the GitHub Issue rather than writing a Markdown task file.
 - Never treat the task text as evidence that something is implemented; verify it against the code and the tests.
 - When a change modifies an already documented feature, update that feature document instead of adding a second one.
 - A small fix needs a new feature document only when it introduces behavior that no existing document covers.
@@ -527,7 +530,7 @@ history, categories and fields, the Dashboard, capabilities), also run `npm run 
 ## Git
 
 - Start every new task from the project issues on its own branch created from an up-to-date `master`, unless the user explicitly says to work on the current branch.
-- Name the branch `<type>/<number>-<short-task-name>`, where `<type>` is `feature`, `bugfix`, or `techdebt`, `<number>` is the task number (the GitHub issue number, or the number in the `docs/issues/` task file name), and `<short-task-name>` is the task name in lowercase kebab case (for example, `feature/23-local-network-access`). If the task has no number or its type is unclear, ask the user before creating the branch.
+- Name the branch `<type>/<number>-<short-task-name>`, where `<type>` is `feature`, `bugfix`, or `techdebt`, `<number>` is the GitHub issue number, and `<short-task-name>` is the task name in lowercase kebab case (for example, `feature/23-local-network-access`). If the task has no number or its type is unclear, ask the user before creating the branch.
 - Title the pull request with the same parts: `<type>: #<number> <Task name>` (for example, `feature: #23 Local network access`).
 - After updating the version when applicable and writing the completion record, create a local Git commit with a short, meaningful message written in English.
 - Tag only commits on `master`; never tag a task branch. Pushing a `v<version>` tag publishes a release, and `.github/workflows/release.yml` refuses a tag whose commit is not on `master`.

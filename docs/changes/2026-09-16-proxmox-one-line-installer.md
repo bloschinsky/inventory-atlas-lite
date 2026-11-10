@@ -2,7 +2,7 @@
 
 - **Completed:** 2026-09-16
 - **Version:** 0.5.0
-- **Task:** [`docs/issues/TASK-proxmox-one-line-installer.md`](../issues/TASK-proxmox-one-line-installer.md)
+- **Task:** [`docs/issues/TASK-proxmox-one-line-installer.md`](https://github.com/bloschinsky/inventory-atlas-lite/blob/5bac8a210829a33006c9f28963717083f60b7c12/docs/issues/TASK-proxmox-one-line-installer.md) (removed task file, linked at its last commit)
 
 ## Summary
 

@@ -21,15 +21,18 @@ keeps a short summary and links to them.
 ### Roadmap
 
 [`ROADMAP.md`](ROADMAP.md) is the concise overview of active planned features and their dependencies.
-Its entries link to the authoritative task specifications in `issues/`.
+Its entries link to the authoritative GitHub Issues.
 
-### `issues/`
+### Planned work: GitHub Issues
 
-Contains active tasks, feature specifications, and future plans that may be implemented later. Use descriptive filenames with the `TASK-` prefix, for example `TASK-nested-items.md`.
+Planned work is not kept in this directory. Every task — feature, bug fix, or technical debt — is a
+self-contained [GitHub Issue](https://github.com/bloschinsky/inventory-atlas-lite/issues) with its
+desired behavior and acceptance criteria. Treat an issue as planning material until its work is
+implemented and verified.
 
-These documents define desired behavior and acceptance criteria. Treat them as planning material until the corresponding work is implemented and verified.
-
-A task file is temporary. Once its work is implemented and verified, its result is written to `features/`, linked from `features/README.md`, and the task file is deleted. Anything still open stays here.
+An approved idea becomes an issue, the issue is implemented on its own branch and pull request, and
+merging the pull request closes it. The result is then written to `features/`, linked from
+`features/README.md`, and recorded in `changes/`.
 
 ### `features/`
 
@@ -48,4 +51,4 @@ Each record should contain:
 - a concise summary of the implemented changes;
 - the checks or manual verification performed.
 
-Keep each record focused on the final implementation. Detailed plans and unfinished ideas belong in `issues/`.
+Keep each record focused on the final implementation. Detailed plans and unfinished ideas belong in GitHub Issues.
