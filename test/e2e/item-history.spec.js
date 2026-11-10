@@ -2,6 +2,9 @@ import { expect, test } from './fixtures.js';
 import { createCategory, createItem, detail, openItemActions, unique } from './helpers.js';
 
 const historyCard = page => page.getByRole('region', { name: 'History' });
+// Makes the item page taller than a 500 px window. PUT replaces the item, so a test that edits the
+// item must send it again, or the page becomes short and stops scrolling.
+const longDescription = 'A long description. '.repeat(120);
 
 test('a box move shows in the history of the camera inside it, and taking the camera out asks where it is', async ({ page, request }) => {
   const category = await createCategory(request, unique('History'));
@@ -287,8 +290,8 @@ test('View full history opens a dialog over the item page that Back, Forward, Es
   const shelfName = unique('Shelf');
   const shelf = await createItem(request, { name: shelfName, category_id: category.id, location: 'Garage' });
   const name = unique('Camera');
-  const camera = await createItem(request, { name, category_id: category.id, location: 'Office', description: 'A long description. '.repeat(120) });
-  const moved = await request.put(`/api/items/${camera.id}`, { data: { name, category_id: category.id, parent_item_id: shelf.id } });
+  const camera = await createItem(request, { name, category_id: category.id, location: 'Office', description: longDescription });
+  const moved = await request.put(`/api/items/${camera.id}`, { data: { name, category_id: category.id, parent_item_id: shelf.id, description: longDescription } });
   expect(moved.ok()).toBeTruthy();
 
   // A short window, so the item page scrolls before the dialog opens.
@@ -355,8 +358,8 @@ test('View full history opens a dialog over the item page that Back, Forward, Es
 test('an item opened by its UUID, as a QR scan does, keeps that address and its page under the history dialog', async ({ page, request }) => {
   const category = await createCategory(request, unique('UUID'));
   const name = unique('Scanner');
-  const scanner = await createItem(request, { name, category_id: category.id, location: 'Desk', description: 'A long description. '.repeat(120) });
-  const moved = await request.put(`/api/items/${scanner.id}`, { data: { name, category_id: category.id, location: 'Shelf' } });
+  const scanner = await createItem(request, { name, category_id: category.id, location: 'Desk', description: longDescription });
+  const moved = await request.put(`/api/items/${scanner.id}`, { data: { name, category_id: category.id, location: 'Shelf', description: longDescription } });
   expect(moved.ok()).toBeTruthy();
   expect(scanner.uuid).toMatch(/^[0-9a-f-]{36}$/);
   // Requests for the item itself and its audits, never its history pages.
