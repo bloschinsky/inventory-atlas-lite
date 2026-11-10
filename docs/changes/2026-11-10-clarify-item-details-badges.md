@@ -38,6 +38,9 @@ no schema, API, business logic, or stored data changed, and `is_new` stays a boo
 - `npm run lint`: passed. `npm run build`: passed.
 - `npm test`: 442 of 445 passed (1 skipped); the 2 failures are the guide tests in
   `test/landing.test.js` that also fail on a clean `master` on Windows, unrelated to this change.
+  Cause: they edit the guide with `replace('…\n', …)`, and `core.autocrlf=true` checks the guides out
+  with CRLF, so the replacements never match. The repository stores the guides with LF (`i/lf`), as the
+  Ubuntu CI checks them out; with LF guide files `node --test test/landing.test.js` passes 20 of 20.
 - `APP_VERSION=0.74.2 npm run test:e2e` (with `E2E_*_PORT` overrides for reserved Windows ports):
   316 passed.
 - `npm run landing:screenshots` re-captured the landing screenshots that show the Details card and

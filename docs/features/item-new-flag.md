@@ -2,10 +2,10 @@
 
 Every item has a core yes/no **New** attribute that records whether it is new (unused) or not. It is
 separate from the [Condition grade and Condition Notes](condition-grading.md), which describe the
-physical state:
+physical state. Item details show it under the **New / Used** label:
 
 ```text
-New: [ New ]         New: [ Used ]
+New / Used: [ New ]  New / Used: [ Used ]
 Condition: Poor      Condition: Excellent
                      Condition Notes: Minor scratches on body
 ```
