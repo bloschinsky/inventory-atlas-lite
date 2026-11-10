@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.74.3",
+    "date": "2026-11-10",
+    "changes": [
+      "View full history now opens the whole Item History in a window over the item page instead of leaving it, so the page keeps its place when you close it. On a phone the window fills the screen.",
+      "The window keeps its own address ending in /history: a bookmarked, shared, or reloaded link shows the item page with the window open. Close, Esc, a click beside the window, and the browser's Back button all return to the item, and Forward opens the history again. Filters, Load more, and links in the timeline work as before."
+    ]
+  },
+  {
     "version": "0.74.2",
     "date": "2026-11-10",
     "changes": [

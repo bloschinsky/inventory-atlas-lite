@@ -947,6 +947,10 @@ loan: retire the item instead.
 The item page has a **History** card with the five most recent changes; **View full history** opens
 all of them, newest first, with **All**, **Locations**, **Transfers**, **Lifecycle**, and
 **Condition & Usage** filters and **Load more**.
+The full history opens as an **Item History** window over the item page, which stays where you left
+it; on a phone it fills the screen. Close it with **×**, **Esc**, a click beside it, or the browser's
+Back button. Its address ends in `/history`, so you can bookmark or share it: opening that address
+shows the item page with the window open.
 History is recorded by the server when a change is saved, from the moment each kind of change began to
 be tracked: New/Used and Condition changes only from version 0.74.0 on. Nothing earlier is invented,
 and adding an item is not a change.

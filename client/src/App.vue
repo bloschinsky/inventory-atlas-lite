@@ -7,6 +7,7 @@ import AboutDialog from './components/AboutDialog.vue';
 import AppMobileNav from './components/AppMobileNav.vue';
 import AppSidebar from './components/AppSidebar.vue';
 import DemoBanner from './components/DemoBanner.vue';
+import { itemHistoryOpen } from './components/ItemHistoryDialog.vue';
 import PageView from './components/PageView.vue';
 import ReauthDialog from './components/ReauthDialog.vue';
 import VersionHistoryDialog from './components/VersionHistoryDialog.vue';
@@ -20,6 +21,8 @@ const demoMode = __DEMO__;
 const route = useRoute();
 // Settings opens as a dialog over the page, which stays rendered but out of reach until it closes.
 const settingsOpen = computed(() => isSettingsRoute(route));
+// So does the full Item History dialog over its Item details page.
+const pageCovered = computed(() => settingsOpen.value || itemHistoryOpen.value);
 const pageRoute = usePageRoute();
 // Sign-in, setup, and recovery stand on their own, outside the application shell.
 const publicPage = computed(() => Boolean(route.meta.public));
@@ -39,8 +42,8 @@ const DemoTour = __DEMO__ ? defineAsyncComponent(() => import('./components/Demo
   <template v-else-if="signedIn">
     <div
       class="page"
-      :inert="settingsOpen"
-      :aria-hidden="settingsOpen ? 'true' : undefined"
+      :inert="pageCovered"
+      :aria-hidden="pageCovered ? 'true' : undefined"
     >
       <AppSidebar />
       <div class="page-wrapper">

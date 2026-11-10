@@ -24,7 +24,7 @@ import RetireItemDialog from '../components/RetireItemDialog.vue';
 
 const route = useRoute(); const router = useRouter(); const { t } = useI18n();
 const item = ref(null); const error = ref(''); const qrOpen = ref(false); const auditOpen = ref(false); const loanOpen = ref(false);
-const history = ref(null);
+const history = ref(null); const historyLink = ref(null);
 // The due date is a calendar day; the loan is overdue from the day after it, in the browser's time zone.
 const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 const overdue = computed(() => Boolean(item.value?.open_transfer?.expected_return_on && item.value.open_transfer.expected_return_on < today()));
@@ -85,6 +85,12 @@ watch(() => route.params.id, () => {
   qrOpen.value = false; auditOpen.value = false; loanOpen.value = false; retireOpen.value = false; restoreOpen.value = false;
   notice.value = '';
   load();
+});
+// Closing the full history returns the focus to its link without scrolling a directly loaded page.
+watch(() => route.path, async (path, previous) => {
+  if (previous !== `${path}/history`) return;
+  await nextTick();
+  if (document.activeElement === document.body) historyLink.value?.$el.focus({ preventScroll: true });
 });
 onMounted(load);
 </script>
@@ -561,7 +567,10 @@ onMounted(load);
               {{ $t('history.title') }}
             </h2>
             <div class="card-actions">
-              <RouterLink :to="`/items/${item.id}/history`">
+              <RouterLink
+                ref="historyLink"
+                :to="`/items/${encodeURIComponent(route.params.id)}/history`"
+              >
                 {{ $t('history.viewAll') }}
               </RouterLink>
             </div>
@@ -637,5 +646,13 @@ onMounted(load);
       @close="restoreOpen = false"
       @restored="restoredDone"
     />
+    <!-- /items/:id/history: the full history dialog over this page, with the item it already loaded. -->
+    <RouterView v-slot="{ Component }">
+      <component
+        :is="Component"
+        v-if="Component"
+        :item="item"
+      />
+    </RouterView>
   </template>
 </template>

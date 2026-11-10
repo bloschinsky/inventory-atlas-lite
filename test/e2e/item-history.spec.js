@@ -83,7 +83,7 @@ test('lend to Volodia, mark as returned, and lend again; the full history filter
   await expect(page.getByRole('region', { name: 'Loan' }).getByText('On loan to Olena')).toBeVisible();
 
   await historyCard(page).getByRole('link', { name: 'View full history' }).click();
-  await expect(page.getByRole('heading', { name: 'History' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Item History' })).toBeVisible();
   const timeline = page.getByRole('list', { name: 'History' });
   await expect(timeline.getByRole('heading')).toHaveText(['Lent to Olena', 'Returned from Volodia', 'Lent to Volodia']);
   await page.getByText('Locations', { exact: true }).click();
@@ -162,7 +162,7 @@ test('the history timeline on a phone in Ukrainian', async ({ page, request }) =
   await page.addInitScript(() => localStorage.setItem('inventory-atlas.locale', 'uk'));
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`/items/${camera.id}/history`);
-  await expect(page.getByRole('heading', { name: 'Історія' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Історія предмета' })).toBeVisible();
   const timeline = page.getByRole('list', { name: 'Історія' });
   await expect(timeline.getByRole('heading', { name: 'Місце змінено' })).toBeVisible();
   await expect(timeline.getByText('Гараж → Горище')).toBeVisible();
@@ -280,4 +280,177 @@ test('Condition and New/Used changes on a phone in Ukrainian, in dark mode', asy
     expect(box.x + box.width).toBeLessThanOrEqual(360);
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+});
+
+test('View full history opens a dialog over the item page that Back, Forward, Escape, and Close follow', async ({ page, request }) => {
+  const category = await createCategory(request, unique('Dialog'));
+  const shelfName = unique('Shelf');
+  const shelf = await createItem(request, { name: shelfName, category_id: category.id, location: 'Garage' });
+  const name = unique('Camera');
+  const camera = await createItem(request, { name, category_id: category.id, location: 'Office', description: 'A long description. '.repeat(120) });
+  const moved = await request.put(`/api/items/${camera.id}`, { data: { name, category_id: category.id, parent_item_id: shelf.id } });
+  expect(moved.ok()).toBeTruthy();
+
+  // A short window, so the item page scrolls before the dialog opens.
+  await page.setViewportSize({ width: 1280, height: 500 });
+  await page.goto(`/items/${camera.id}`);
+  await page.mouse.move(600, 400);
+  const link = historyCard(page).getByRole('link', { name: 'View full history' });
+  await link.scrollIntoViewIfNeeded();
+  const scrolled = await page.evaluate(() => window.scrollY);
+  expect(scrolled).toBeGreaterThan(0);
+  await link.click();
+
+  const dialog = page.getByRole('dialog', { name: 'Item History' });
+  await expect(dialog).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`/items/${camera.id}/history$`));
+  await expect(dialog.getByText(name, { exact: true })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Close history' })).toBeFocused();
+  await expect(dialog.getByRole('list', { name: 'History' }).getByRole('heading', { name: 'Container changed' })).toBeVisible();
+  // One dialog over the same page: the page stays where it was, out of reach, and does not scroll behind it.
+  await expect(page.getByRole('dialog')).toHaveCount(1);
+  await expect(page.locator('.page')).toHaveAttribute('inert', '');
+  await expect(page.getByRole('heading', { name, level: 1 })).toHaveCount(0);
+  expect(await page.evaluate(() => window.scrollY)).toBe(scrolled);
+  await page.mouse.wheel(0, -2000);
+  expect(await page.evaluate(() => window.scrollY)).toBe(scrolled);
+  // The keyboard stays inside the dialog.
+  for (let step = 0; step < 12; step++) await page.keyboard.press('Tab');
+  expect(await dialog.evaluate(node => node.contains(document.activeElement))).toBe(true);
+
+  // Escape returns to the item; the page kept its scroll and the focus is back on the link.
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect(page).toHaveURL(new RegExp(`/items/${camera.id}$`));
+  await expect(link).toBeFocused();
+  expect(await page.evaluate(() => window.scrollY)).toBe(scrolled);
+  await expect(page.locator('body')).not.toHaveClass(/modal-open/);
+
+  // Escape went Back, so Forward reopens the dialog and Back closes it again.
+  await page.goForward();
+  await expect(dialog).toBeVisible();
+  await page.goBack();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole('heading', { name, level: 1 })).toBeVisible();
+
+  // Close and the backdrop leave no dialog entry behind.
+  await link.click();
+  await dialog.getByRole('button', { name: 'Close history' }).click();
+  await expect(dialog).toBeHidden();
+  await link.click();
+  await page.mouse.click(5, 5);
+  await expect(dialog).toBeHidden();
+  await page.goBack();
+  await expect(page).not.toHaveURL(/\/history$/);
+
+  // A link to another item inside the timeline opens that item without the dialog.
+  await page.goto(`/items/${camera.id}/history`);
+  await dialog.getByRole('link', { name: shelfName }).click();
+  await expect(page).toHaveURL(new RegExp(`/items/${shelf.id}$`));
+  await expect(page.getByRole('heading', { name: shelfName, level: 1 })).toBeVisible();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.locator('body')).not.toHaveClass(/modal-open/);
+});
+
+test('an item opened by its UUID, as a QR scan does, keeps that address and its page under the history dialog', async ({ page, request }) => {
+  const category = await createCategory(request, unique('UUID'));
+  const name = unique('Scanner');
+  const scanner = await createItem(request, { name, category_id: category.id, location: 'Desk', description: 'A long description. '.repeat(120) });
+  const moved = await request.put(`/api/items/${scanner.id}`, { data: { name, category_id: category.id, location: 'Shelf' } });
+  expect(moved.ok()).toBeTruthy();
+  expect(scanner.uuid).toMatch(/^[0-9a-f-]{36}$/);
+  // Requests for the item itself and its audits, never its history pages.
+  const itemReads = [];
+  page.on('request', req => {
+    const path = new URL(req.url()).pathname;
+    if (/^\/api\/items\/[^/]+(\/audits)?$/.test(path)) itemReads.push(path);
+  });
+
+  await page.setViewportSize({ width: 1280, height: 500 });
+  await page.goto(`/items/${scanner.uuid}`);
+  await page.mouse.move(600, 400);
+  await expect(page.getByRole('heading', { name, level: 1 })).toBeVisible();
+  const link = historyCard(page).getByRole('link', { name: 'View full history' });
+  await link.scrollIntoViewIfNeeded();
+  const scrolled = await page.evaluate(() => window.scrollY);
+  expect(scrolled).toBeGreaterThan(0);
+  const readsBefore = itemReads.length;
+
+  await link.click();
+  const dialog = page.getByRole('dialog', { name: 'Item History' });
+  await expect(dialog.getByText('Desk → Shelf')).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`/items/${scanner.uuid}/history$`));
+  // The same page stays underneath: nothing about the item is loaded again.
+  expect(itemReads.length).toBe(readsBefore);
+
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect(page).toHaveURL(new RegExp(`/items/${scanner.uuid}$`));
+  expect(await page.evaluate(() => window.scrollY)).toBe(scrolled);
+  await page.goForward();
+  await expect(dialog).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`/items/${scanner.uuid}/history$`));
+  await dialog.getByRole('button', { name: 'Close history' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page).toHaveURL(new RegExp(`/items/${scanner.uuid}$`));
+  expect(itemReads.length).toBe(readsBefore);
+
+  // A directly loaded UUID history address closes to the same UUID address.
+  await page.goto(`/items/${scanner.uuid}/history`);
+  await dialog.getByRole('button', { name: 'Close history' }).click();
+  await expect(page).toHaveURL(new RegExp(`/items/${scanner.uuid}$`));
+  await expect(page.getByRole('heading', { name, level: 1 })).toBeVisible();
+});
+
+test('a directly loaded or refreshed history address shows the dialog over its item, and Close replaces it', async ({ page, request }) => {
+  const category = await createCategory(request, unique('Direct'));
+  const name = unique('Tripod');
+  const tripod = await createItem(request, { name, category_id: category.id, location: 'Attic' });
+  const moved = await request.put(`/api/items/${tripod.id}`, { data: { name, category_id: category.id, location: 'Cellar' } });
+  expect(moved.ok()).toBeTruthy();
+
+  await page.goto('/items');
+  await page.goto(`/items/${tripod.id}/history`);
+  const dialog = page.getByRole('dialog', { name: 'Item History' });
+  await expect(dialog.getByText('Attic → Cellar')).toBeVisible();
+  // The item's page is the backdrop, not a blank one.
+  await expect(page.getByRole('heading', { name, level: 1, includeHidden: true })).toBeAttached();
+
+  await page.reload();
+  await expect(dialog.getByText('Attic → Cellar')).toBeVisible();
+  await expect(page.getByRole('dialog')).toHaveCount(1);
+
+  await dialog.getByRole('button', { name: 'Close history' }).click();
+  await expect(page).toHaveURL(new RegExp(`/items/${tripod.id}$`));
+  await expect(page.getByRole('heading', { name, level: 1 })).toBeVisible();
+  // The dialog was replaced, so Back leaves the item instead of reopening it.
+  await page.goBack();
+  await expect(page).toHaveURL(/\/items$/);
+});
+
+test('the history dialog fills a phone screen and keeps its own scroll', async ({ page, request }) => {
+  const category = await createCategory(request, unique('Phone dialog'));
+  const name = unique('Lamp');
+  const lamp = await createItem(request, { name, category_id: category.id, location: 'Room 0' });
+  for (let index = 1; index <= 8; index++) {
+    const saved = await request.put(`/api/items/${lamp.id}`, { data: { name, category_id: category.id, location: `Room ${index}` } });
+    expect(saved.ok()).toBeTruthy();
+  }
+
+  await page.setViewportSize({ width: 390, height: 700 });
+  await page.goto(`/items/${lamp.id}/history`);
+  const dialog = page.getByRole('dialog', { name: 'Item History' });
+  await expect(dialog.getByRole('list', { name: 'History' }).getByRole('listitem')).toHaveCount(8);
+  const content = await dialog.locator('.modal-content').boundingBox();
+  expect(content).toMatchObject({ x: 0, y: 0, width: 390, height: 700 });
+  // The timeline scrolls inside the dialog; the page behind it neither scrolls nor overflows.
+  const body = dialog.locator('.modal-body');
+  expect(await body.evaluate(node => node.scrollHeight > node.clientHeight)).toBe(true);
+  await body.hover();
+  await page.mouse.wheel(0, 600);
+  await expect.poll(() => body.evaluate(node => node.scrollTop)).toBeGreaterThan(0);
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await dialog.getByRole('button', { name: 'Close history' }).click();
+  await expect(page.getByRole('heading', { name, level: 1 })).toBeVisible();
 });
