@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.74.2",
+    "date": "2026-11-10",
+    "changes": [
+      "The Details card of an item now names its three independent attributes clearly: Inventory (Active or Retired), New / Used, and Condition, so an item reads as Inventory: Active, New / Used: Used, Condition: Excellent instead of New: Used. Condition Notes still follow Condition only when filled in.",
+      "Used is now a neutral gray badge everywhere it appears, since a used item is not a warning, and the Active and Retired badges keep readable contrast in both light and dark mode. Nothing about the stored data changed."
+    ]
+  },
+  {
     "version": "0.74.1",
     "date": "2026-11-08",
     "changes": [

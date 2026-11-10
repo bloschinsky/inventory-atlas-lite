@@ -305,7 +305,7 @@ onMounted(load);
           <div class="card-body">
             <dl class="row mb-0">
               <dt class="col-sm-4">
-                {{ $t('lifecycle.fields.status') }}
+                {{ $t('itemDetails.inventory') }}
               </dt>
               <dd class="col-sm-8">
                 <ItemLifecycleBadge
@@ -314,7 +314,7 @@ onMounted(load);
                 />
               </dd>
               <dt class="col-sm-4">
-                {{ $t('items.fields.isNew') }}
+                {{ $t('itemDetails.newOrUsed') }}
               </dt>
               <dd class="col-sm-8">
                 <ItemNewStatusBadge :is-new="item.is_new" />

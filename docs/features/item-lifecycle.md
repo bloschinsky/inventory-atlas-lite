@@ -81,7 +81,8 @@ stranded inside a retired container, and retired items never move with an active
   The choice is kept in `sessionStorage` for the browser session; `?lifecycle=` opens a view directly
   (the Dashboard link uses it). Retired rows and cards show a neutral gray **Retired** badge with an
   archive icon and a faded thumbnail; text keeps its normal contrast.
-- **Item details:** the **Status** row (Active or Retired), the **Retired** badge under the name, and a
+- **Item details:** the **Inventory** row of the Details card (a blue **Active** or the gray **Retired**
+  badge, both opaque subtle/emphasis pairs readable in either color mode), the **Retired** badge under the name, and a
   **Retirement** card with the reason, date, recipient, note, last location, and the former container
   (linked by UUID). **Retire item** opens `RetireItemDialog.vue`: a required reason, the date and time
   (now by default, never in the future), recipient or context, and note; a container first asks to
