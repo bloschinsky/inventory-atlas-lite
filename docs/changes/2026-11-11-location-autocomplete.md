@@ -1,10 +1,10 @@
 # Cross-platform Location autocomplete (#94)
 
 - **Completed:** 2026-11-11
-- **Version:** 0.74.7
-- **Branch:** `feature/94-location-autocomplete`, started from `bugfix/93-batch-add-fields-mobile-review`
-  (#93, 0.74.6, not merged yet) because both change the version, the release history, and the guide;
-  the two are meant to reach `master` together.
+- **Version:** 0.74.6, released together with #93 as one release (one release-history entry, one tag)
+- **Branch:** `feature/94-location-autocomplete`, stacked on `bugfix/93-batch-add-fields-mobile-review`
+  (#93) because both change the version, the release history, and the guide. It was first given
+  0.74.7 and then folded into the 0.74.6 release of #93 before both reached `master` together.
 
 ## Summary
 
@@ -54,6 +54,8 @@ has its own Location input and is unchanged.
 - `npm run build` — succeeded.
 - `APP_VERSION=0.74.7 npm run test:e2e` — 336 passed (Windows, alternate e2e ports), including the
   landing and guide build checks for the updated English and Ukrainian guide.
+- After folding into 0.74.6: `npm test` — the same 443 of 446; `APP_VERSION=0.74.6 npx playwright test whats-new
+  version-history about landing guide location-autocomplete batch-fields-mobile` — 79 passed.
 
 ## Real iPhone Safari smoke test
 
