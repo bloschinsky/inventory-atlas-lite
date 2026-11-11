@@ -31,7 +31,8 @@ Description → POST /api/categories/:id/fields/ai → field-definition document
 - A successful answer is shown as the ordinary editable preview: one row per proposed field with its
   name input, type selector, recalculated status, and **Remove**. Everything Phase 1 supports —
   renaming, retyping, removing single rows, the per-row statuses, the disabled **Create N Fields**
-  button while a row is blocking — works exactly the same on generated rows.
+  button while a row is blocking — works exactly the same on generated rows. On a phone in portrait
+  the rows are the same stacked cards as in [Batch Add Fields](batch-add-fields.md).
 - **Edit Description** returns to the prompt with its text intact, so a draft can be regenerated.
 - Failures are shown in the modal and leave the prompt in place for an unchanged retry: AI disabled
   or unconfigured, a rejected key, a rate limit, an unavailable provider, a timeout, a malformed

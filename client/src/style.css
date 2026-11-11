@@ -291,6 +291,18 @@ body.modal-open { overflow: hidden; }
 .app-item-history-backdrop { z-index: 1040; }
 .app-item-history-dialog { --tblr-modal-width: 54rem; }
 .app-item-history-dialog .modal-body { overscroll-behavior: contain; padding-bottom: calc(var(--tblr-modal-padding) + env(safe-area-inset-bottom)); }
+/*
+  Batch and AI Add Fields: full screen on phones, where the review is a stack of cards. The secondary
+  actions share one footer row and the primary action takes a full-width row of its own below them.
+*/
+@media (max-width: 767.98px) {
+  .app-batch-fields-dialog .modal-body { overscroll-behavior: contain; }
+  /* iOS Safari zooms the page into any focused control whose text is smaller than 16px. */
+  .app-batch-fields-dialog :is(.form-control, .form-select) { font-size: 1rem; }
+  .app-batch-fields-footer { justify-content: space-between; padding-bottom: calc(var(--tblr-modal-footer-padding-y) + env(safe-area-inset-bottom)); }
+  .app-batch-fields-footer .btn { min-height: 2.75rem; }
+  .app-batch-fields-footer .btn-primary { flex: 1 0 calc(100% - var(--tblr-modal-footer-gap)); }
+}
 .app-settings-dialog .modal-content { height: 100%; }
 .app-settings-nav { flex: 0 0 14rem; overflow-y: auto; padding: 1rem; border-right: var(--tblr-border-width) solid var(--tblr-border-color); }
 .app-settings-pane { flex: 1 1 auto; min-width: 0; overflow-y: auto; overscroll-behavior: contain; padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom)); }

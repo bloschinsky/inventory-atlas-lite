@@ -39,7 +39,7 @@ onMounted(() => load().catch(e => error.value = e.message));
       @click="error = ''"
     />
   </div>
-  <div class="row g-4">
+  <div class="row g-3">
     <div class="col-12 col-lg-6">
       <div class="card">
         <div class="card-header">

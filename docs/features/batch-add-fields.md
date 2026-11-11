@@ -42,6 +42,17 @@ category templates.
 - A parsed document is shown as one editable row per proposed field: the name is a text input, the
   type is a selector, and **Remove** drops that row from the batch draft only. Existing category
   fields are never touched by a removal.
+- Below Bootstrap's `md` breakpoint (narrower than 768 px, a phone in portrait) the modal fills the
+  screen and the review is one stacked card per proposed field instead of the four-column table:
+  a *Proposed field N* heading with the status badge, a full-width **Name** input and **Type**
+  selector with visible labels, the blocking reason, and a full-width **Remove** button. Each card
+  control is described by its status and reason, and the badge is a polite live region, so a screen
+  reader hears a status change. From 768 px, including a phone in landscape, the compact table
+  stays. Both views edit the same draft, so a resize keeps every edit.
+- On a phone the footer keeps **Cancel** and **Edit JSON** / **Edit Description** on one row and
+  gives the primary action (**Preview**, **Generate Fields**, or **Create N Fields**) its own
+  full-width row below them, with touch-sized buttons and room for the bottom safe area. The body
+  scrolls between the fixed header and footer, so a long batch never hides the primary action.
 - Every row carries a status recalculated after each edit or removal: *New*, *Already exists*,
   *Duplicate in batch*, *Invalid type*, or *Invalid configuration*. Blocking rows are highlighted
   and carry the reason, for example `Field "Brand" already exists in this category.`
@@ -86,7 +97,11 @@ category templates.
   the project uses. The drafts are plain
   reactive objects and the review is a computed value, which is what keeps the statuses and the
   **Create N Fields** count correct after each edit or removal. It uses the same Vue-driven
-  Bootstrap modal markup as the About dialog, without Bootstrap JavaScript.
+  Bootstrap modal markup as the About dialog, without Bootstrap JavaScript. A `matchMedia` query for
+  `(max-width: 767.98px)` picks the card list or the table, so only one view is rendered and the
+  controls never exist twice; both read the same `drafts` and `rows`, so no validation is repeated.
+  `modal-fullscreen-md-down` and the `app-batch-fields-*` rules in `client/src/style.css` provide the
+  full-screen phone dialog and its footer.
 - `client/src/pages/Categories.vue` owns the button and reloads its fields and category counters
   through the existing `select`/`load` pair once the dialog reports a successful create.
 - The Docker image copies `shared/` into both stages: the build stage needs it for `vite build`,
@@ -113,3 +128,9 @@ category templates.
   and protects existing JSON`: the action's presence in JSON mode and absence in AI mode, insertion
   into an empty editor, the inserted document passing **Preview**, a dismissed confirmation keeping
   the user's JSON, and a confirmed one replacing it with the canonical example.
+- `test/e2e/batch-fields-mobile.spec.js` — the phone review at 360, 390, and 402 (iPhone 16 Pro)
+  CSS pixels with mobile emulation: cards with every status and reason, a long name, full-width
+  controls, no sideways scroll, and the footer layout; correcting, scrolling, and creating a
+  14-field batch; emptying a batch; AI Add Fields in the same cards; and the switch between cards
+  and the table at 767/768 px and in landscape, keeping the draft. The same spec also passes in
+  Playwright's mobile WebKit (`devices['iPhone 15 Pro']`) when run locally; CI runs Chromium only.
