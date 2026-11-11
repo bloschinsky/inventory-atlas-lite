@@ -26,8 +26,13 @@ code issuance.
   - `https` (**How to fix this?**): an HTTPS reverse proxy with `ATLAS_TRUST_PROXY` first, a
     trusted-network-only warning that credentials travel unencrypted, and per installation where to
     set `ATLAS_ALLOW_HTTP=true` (Proxmox: `pct enter <CTID>`, `/etc/inventory-atlas-lite.env`,
-    `systemctl restart inventory-atlas-lite`; Docker: recreate with `-e ATLAS_ALLOW_HTTP=true` or the
-    Compose environment; manual: the server process environment and a restart).
+    `systemctl restart inventory-atlas-lite`; Docker: check the `/data` mount with `docker inspect`,
+    back up with `server/src/cli/backup.js` and `docker cp`, then recreate from the original
+    `docker run` with the same `/data` volume or folder plus `-e ATLAS_ALLOW_HTTP=true`, or update the
+    Compose environment; manual: the server process environment and a restart). After review the
+    Docker steps no longer suggest `docker rm -f`: the image declares `VOLUME /data`, so a container
+    started without `-v` keeps the inventory in an anonymous volume that a new container would not
+    reuse, and the inventory would look empty.
 - **`client/src/pages/SignIn.vue`**: the fixed `npm run auth -- …` command block was replaced by the
   setup or recovery help; the page keeps the `ApiError.code` of a failed request and shows the HTTPS
   help only for `AUTH_HTTPS_REQUIRED`. One installation choice is shared by both panels of a page, and
@@ -43,7 +48,9 @@ code issuance.
 - **Tests:** `test/e2e/auth.spec.js` covers setup help (collapsed by default, opened from the keyboard,
   installation switching, the setup commands, Copy and clipboard content, kept form values, closing),
   recovery help (recovery commands only), and the HTTPS guidance (shown for a mocked
-  `AUTH_HTTPS_REQUIRED` with the per-installation steps and warning, absent for a wrong password).
+  `AUTH_HTTPS_REQUIRED` with the per-installation steps and warning, the Docker mount check and
+  backup with no `docker rm`, absent for a wrong password), and the Copy fallback when the browser
+  refuses the clipboard (the command is selected instead).
   The Ukrainian phone test now opens Recovery help and still checks for no horizontal overflow. All
   examples use placeholders only.
 
@@ -58,5 +65,8 @@ code issuance.
   ports) — 323 of 324 passed in 22.1 minutes. The one failure, `settings-navigation.spec.js` "unsaved
   changes are kept unless discarding them is confirmed" (a browser Back prompt count), is unrelated to
   this change and passed on an immediate rerun together with `auth.spec.js` (15 of 15).
+- After the review fixes (safe Docker steps, `errorCode` cleared on each attempt, the Docker and
+  clipboard-refusal tests): `npm run lint` clean, `test/i18n.test.js` and `test/errors.test.js` 17 of
+  17, `npm run build` succeeded, and `auth.spec.js` 9 of 9.
 - Manual check with Playwright screenshots of the setup help on a desktop and of the HTTPS and
   Ukrainian recovery help on a 390 px phone: compact when collapsed, no horizontal overflow.

@@ -45,6 +45,7 @@ async function submit() {
   if (mismatch.value) return;
   busy.value = true;
   error.value = '';
+  errorCode.value = null;
   const { username, password, code } = form.value;
   try {
     if (mode.value === 'setup') await setUp({ code, username, password });

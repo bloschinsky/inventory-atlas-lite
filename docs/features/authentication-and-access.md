@@ -392,8 +392,12 @@ the state, and the session all match, otherwise it is treated as unverified
   request fails with `AUTH_HTTPS_REQUIRED` (`ApiError.code`) does **How to fix this?** appear under
   the error: an HTTPS reverse proxy with `ATLAS_TRUST_PROXY` first, then a trusted-network warning and
   where to set `ATLAS_ALLOW_HTTP=true` for the chosen installation (Proxmox: `pct enter <CTID>`,
-  `/etc/inventory-atlas-lite.env`, `systemctl restart inventory-atlas-lite`; Docker: recreate the
-  container with `-e ATLAS_ALLOW_HTTP=true`; manual: the server process environment and a restart).
+  `/etc/inventory-atlas-lite.env`, `systemctl restart inventory-atlas-lite`; Docker: check the
+  `/data` mount with `docker inspect`, back up with `server/src/cli/backup.js` and `docker cp`, then
+  recreate from the original `docker run` with the same `/data` volume or folder plus
+  `-e ATLAS_ALLOW_HTTP=true`, or the Compose environment — never a blind `docker rm`, because the
+  image's `VOLUME /data` makes a container started without `-v` keep the inventory in an anonymous
+  volume a new container would not reuse; manual: the server process environment and a restart).
   The installation is the person's choice, shared by both panels of a page; nothing is detected or
   asked from the server, and opening help or switching never changes the typed form values.
 - The router guard in `client/src/main.js` sends every page without a session to sign-in and redirects

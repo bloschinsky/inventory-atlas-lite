@@ -135,6 +135,21 @@ test.describe('signed out', () => {
     await expect(page.getByText(/Replace <username>/)).toBeVisible();
   });
 
+  test('when the browser refuses the clipboard, Copy selects the command for copying by hand', async ({ page }) => {
+    // A plain-HTTP page has no clipboard access; the same refusal is simulated here.
+    await page.addInitScript(() => {
+      navigator.clipboard.writeText = () => Promise.reject(new DOMException('Denied', 'NotAllowedError'));
+    });
+    await page.goto('/recover');
+    await page.getByRole('button', { name: 'Recovery help' }).click();
+    await page.getByRole('radiogroup', { name: 'Installation' }).getByText('Manual / development').click();
+    const command = 'npm run auth -- recover <username>';
+    await page.getByRole('button', { name: `Copy command ${command}` }).click();
+    await expect(page.getByText('The browser did not allow copying. The command is selected: copy it yourself.')).toBeVisible();
+    await expect(page.getByRole('button', { name: `Copy command ${command}` })).toHaveText('Copy');
+    expect(await page.evaluate(() => getSelection().toString())).toBe(command);
+  });
+
   test('a refused plain-HTTP sign-in offers deployment-specific fixes, and other errors do not', async ({ page }) => {
     const refusal = { status: 403, json: { error: { code: 'AUTH_HTTPS_REQUIRED', params: {} } } };
     await page.route('**/api/auth/login', route => route.fulfill(refusal));
@@ -154,7 +169,14 @@ test.describe('signed out', () => {
     await expect(page.getByText('systemctl restart inventory-atlas-lite', { exact: true })).toBeVisible();
     const installation = page.getByRole('radiogroup', { name: 'Installation' });
     await installation.getByText('Docker').click();
+    // Docker guidance checks the /data mount and backs up first; it never suggests a blind docker rm.
+    await expect(page.getByText("docker inspect -f '{{json .Mounts}}' <container>", { exact: true })).toBeVisible();
+    await expect(page.getByText(/anonymous volume: a new container does not reuse it/)).toBeVisible();
+    await expect(page.getByText('docker exec <container> node server/src/cli/backup.js /data/inventory-backup.sqlite', { exact: true })).toBeVisible();
+    await expect(page.getByText('docker cp <container>:/data/inventory-backup.sqlite ./inventory-backup.sqlite', { exact: true })).toBeVisible();
+    await expect(page.getByText(/same -v volume or folder for \/data/)).toBeVisible();
     await expect(page.getByText('-e ATLAS_ALLOW_HTTP=true', { exact: true })).toBeVisible();
+    await expect(page.getByText(/docker rm/)).toHaveCount(0);
     await expect(page.getByText(/inventory-atlas-lite\.env/)).toHaveCount(0);
     await installation.getByText('Manual / development').click();
     await expect(page.getByText('ATLAS_ALLOW_HTTP=true npm start', { exact: true })).toBeVisible();

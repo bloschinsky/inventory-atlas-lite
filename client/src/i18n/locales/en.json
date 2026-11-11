@@ -1647,8 +1647,11 @@
       "proxmoxEnter": "On the Proxmox host, open a shell inside the container, replacing {ctid} with its ID from pct list:",
       "proxmoxEnv": "Add this line to /etc/inventory-atlas-lite.env inside the container (for example with nano /etc/inventory-atlas-lite.env):",
       "proxmoxRestart": "Restart the service so the setting takes effect:",
-      "dockerRecreate": "A running container keeps the settings it was started with. Remove it with docker rm -f {container} (the data volume stays) and start it again with the same docker run command plus this option:",
-      "dockerNote": "With Docker Compose, add ATLAS_ALLOW_HTTP: \"true\" under the service environment and run docker compose up -d.",
+      "dockerInspect": "First check what keeps the data. The entry with \"Destination\":\"/data\" must be a named volume (such as inventory-atlas-data) or a host folder (\"Type\":\"bind\"). A long random volume name is an anonymous volume: a new container does not reuse it, and the inventory would look empty.",
+      "dockerBackup": "Make a backup of the inventory while the container still runs:",
+      "dockerCopy": "Copy the backup out of the container to the Docker host:",
+      "dockerRecreate": "Then add this option to your original docker run command and start the container again from it, with the same -v volume or folder for /data, the same ports, and the other options. Only remove the old container once you are sure the new one gets that same /data:",
+      "dockerNote": "With Docker Compose, add ATLAS_ALLOW_HTTP: \"true\" to the service environment and run docker compose up -d; it recreates the service with its volumes. If /data is an anonymous volume or you are not sure, keep the backup and move the data to a named volume first instead of recreating the container.",
       "manualShell": "Stop the server and start it again with the setting in its environment. On Linux or macOS:",
       "manualPowerShell": "In PowerShell on Windows:",
       "manualNote": "The setting must be in the environment of the server process itself; it is read only when the server starts."

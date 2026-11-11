@@ -28,7 +28,14 @@ const steps = computed(() => {
         ['proxmoxEnv', 'ATLAS_ALLOW_HTTP=true'],
         ['proxmoxRestart', 'systemctl restart inventory-atlas-lite']
       ],
-      docker: [['dockerRecreate', '-e ATLAS_ALLOW_HTTP=true']],
+      // Never a bare `docker rm`: the image declares VOLUME /data, and a container started without
+      // -v keeps the inventory in an anonymous volume that a new container would not reuse.
+      docker: [
+        ['dockerInspect', "docker inspect -f '{{json .Mounts}}' <container>"],
+        ['dockerBackup', 'docker exec <container> node server/src/cli/backup.js /data/inventory-backup.sqlite'],
+        ['dockerCopy', 'docker cp <container>:/data/inventory-backup.sqlite ./inventory-backup.sqlite'],
+        ['dockerRecreate', '-e ATLAS_ALLOW_HTTP=true']
+      ],
       manual: [
         ['manualShell', 'ATLAS_ALLOW_HTTP=true npm start'],
         ['manualPowerShell', "$env:ATLAS_ALLOW_HTTP='true'; npm start"]
