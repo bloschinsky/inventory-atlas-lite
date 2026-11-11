@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.74.5",
+    "date": "2026-11-11",
+    "changes": [
+      "The Create the first administrator and recovery code pages have Setup help and Recovery help: choose Proxmox LXC, Docker, or Manual / development to see where to run the command and copy the exact setup or recovery command for that installation. The help also explains that the printed code is one-time, made on the server, valid for 30 minutes, and not a password.",
+      "When the server refuses a sign-in over plain HTTP, How to fix this? appears under the message: it recommends an HTTPS reverse proxy and, for a trusted home network or VPN only, shows where to set ATLAS_ALLOW_HTTP=true and how to restart for your installation. Sign-in security itself is unchanged."
+    ]
+  },
+  {
     "version": "0.74.4",
     "date": "2026-11-10",
     "changes": [

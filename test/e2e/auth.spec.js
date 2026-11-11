@@ -63,7 +63,9 @@ test.describe('signed out', () => {
     await page.getByRole('link', { name: 'Забули пароль? Скористайтеся кодом відновлення' }).click();
     await expect(page).toHaveURL(/\/recover$/);
     await expect(page.getByRole('heading', { name: 'Код відновлення' })).toBeVisible();
-    await expect(page.getByText('npm run auth -- recover <username>')).toBeVisible();
+    await page.getByRole('button', { name: 'Довідка з відновлення' }).click();
+    await page.getByText('Вручну / розробка').click();
+    await expect(page.getByText('npm run auth -- recover <username>', { exact: true })).toBeVisible();
     await page.getByLabel('Код відновлення').fill('AAAA-BBBB-CCCC-DDDD-EEEE');
     await page.getByLabel("Ім'я користувача").fill(e2eAdmin.username);
     await page.getByLabel('Новий пароль').fill('some-new-password-1');
@@ -77,6 +79,91 @@ test.describe('signed out', () => {
     // Setup is over, so its page leads to sign-in.
     await page.goto('/setup');
     await expect(page).toHaveURL(/\/login$/);
+  });
+
+  test('setup help is collapsed, shows the setup command for the chosen installation, and keeps the form', async ({ context, page }) => {
+    // The suite's server already has an administrator, so the page is shown as before the first one.
+    await page.route('**/api/auth/session', route => route.fulfill({ json: { authenticated: false, setupRequired: true } }));
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.goto('/setup');
+    await expect(page.getByRole('heading', { name: 'Create the first administrator' })).toBeVisible();
+    await page.getByLabel('Setup code').fill('AAAA-BBBB-CCCC-DDDD-EEEE');
+    await page.getByLabel('Username').fill('first-admin');
+
+    const toggle = page.getByRole('button', { name: 'Setup help' });
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.getByRole('radiogroup', { name: 'Installation' })).toHaveCount(0);
+    // The disclosure opens from the keyboard.
+    await toggle.focus();
+    await page.keyboard.press('Enter');
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    const installation = page.getByRole('radiogroup', { name: 'Installation' });
+    await expect(installation.getByRole('radio', { name: 'Proxmox LXC' })).toBeChecked();
+    await expect(page.getByText('pct exec <CTID> -- /usr/local/sbin/inventory-atlas-auth init', { exact: true })).toBeVisible();
+    await expect(page.getByText('inventory-atlas-auth init', { exact: true })).toBeVisible();
+    await expect(page.getByText(/expires after 30 minutes/)).toBeVisible();
+
+    await installation.getByText('Docker').click();
+    await expect(page.getByText('docker exec <container> node server/src/cli/auth.js init', { exact: true })).toBeVisible();
+    await expect(page.getByText(/pct exec/)).toHaveCount(0);
+    await installation.getByText('Manual / development').click();
+    const command = 'npm run auth -- init';
+    await expect(page.getByText(command, { exact: true })).toBeVisible();
+    await expect(page.getByText(/recover/)).toHaveCount(0);
+
+    await page.getByRole('button', { name: `Copy command ${command}` }).click();
+    await expect(page.getByRole('button', { name: `Copy command ${command}` })).toHaveText('Copied');
+    await expect(page.getByText('The command was copied.')).toBeVisible();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(command);
+
+    // Opening help and switching the installation never touch what was typed.
+    await expect(page.getByLabel('Setup code')).toHaveValue('AAAA-BBBB-CCCC-DDDD-EEEE');
+    await expect(page.getByLabel('Username')).toHaveValue('first-admin');
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.getByText(command, { exact: true })).toHaveCount(0);
+  });
+
+  test('recovery help shows recovery commands, never the setup command', async ({ page }) => {
+    await page.goto('/recover');
+    await page.getByRole('button', { name: 'Recovery help' }).click();
+    await expect(page.getByText('pct exec <CTID> -- /usr/local/sbin/inventory-atlas-auth recover <username>', { exact: true })).toBeVisible();
+    await expect(page.getByText('inventory-atlas-auth recover <username>', { exact: true })).toBeVisible();
+    await page.getByRole('radiogroup', { name: 'Installation' }).getByText('Docker').click();
+    await expect(page.getByText('docker exec <container> node server/src/cli/auth.js recover <username>', { exact: true })).toBeVisible();
+    await expect(page.getByText(/ init$/)).toHaveCount(0);
+    await expect(page.getByText(/Replace <username>/)).toBeVisible();
+  });
+
+  test('a refused plain-HTTP sign-in offers deployment-specific fixes, and other errors do not', async ({ page }) => {
+    const refusal = { status: 403, json: { error: { code: 'AUTH_HTTPS_REQUIRED', params: {} } } };
+    await page.route('**/api/auth/login', route => route.fulfill(refusal));
+    await page.goto('/login');
+    await expect(page.getByRole('button', { name: 'How to fix this?' })).toHaveCount(0);
+    await signIn(page, { username: 'someone', password: 'some-password-1' });
+    await expect(page.getByRole('alert')).toContainText('Signing in from another device needs HTTPS');
+    await expect(page.getByLabel('Username')).toHaveValue('someone');
+
+    const fix = page.getByRole('button', { name: 'How to fix this?' });
+    await expect(fix).toHaveAttribute('aria-expanded', 'false');
+    await fix.click();
+    await expect(page.getByText(/Recommended: put an HTTPS reverse proxy/)).toBeVisible();
+    await expect(page.getByRole('note')).toContainText('without encryption');
+    await expect(page.getByText('pct enter <CTID>', { exact: true })).toBeVisible();
+    await expect(page.getByText('ATLAS_ALLOW_HTTP=true', { exact: true })).toBeVisible();
+    await expect(page.getByText('systemctl restart inventory-atlas-lite', { exact: true })).toBeVisible();
+    const installation = page.getByRole('radiogroup', { name: 'Installation' });
+    await installation.getByText('Docker').click();
+    await expect(page.getByText('-e ATLAS_ALLOW_HTTP=true', { exact: true })).toBeVisible();
+    await expect(page.getByText(/inventory-atlas-lite\.env/)).toHaveCount(0);
+    await installation.getByText('Manual / development').click();
+    await expect(page.getByText('ATLAS_ALLOW_HTTP=true npm start', { exact: true })).toBeVisible();
+
+    // A different error, such as a wrong password, brings no transport advice.
+    await page.unroute('**/api/auth/login');
+    await signIn(page, { username: e2eAdmin.username, password: 'not-the-password' });
+    await expect(page.getByRole('alert')).toContainText('The username or password is not correct');
+    await expect(page.getByRole('button', { name: 'How to fix this?' })).toHaveCount(0);
   });
 
   test('a viewer browses read-only: no changing actions, no administration, and no way around it by address', async ({ page, request }) => {

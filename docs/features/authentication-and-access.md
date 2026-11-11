@@ -380,6 +380,22 @@ the state, and the session all match, otherwise it is treated as unverified
 - `client/src/pages/SignIn.vue` is **Sign in** (`/login`), **Create the first administrator**
   (`/setup`), and **Use a recovery code** (`/recover`), outside the application shell, responsive, and
   in both languages. After success the person continues at `?redirect=` (same-site paths only).
+- `client/src/components/SignInHelp.vue` is the collapsed, in-context help of those pages: an accessible
+  disclosure (`aria-expanded`, keyboard-operable) with a **Proxmox LXC** / **Docker** / **Manual /
+  development** radio group and copyable commands (Copy with spoken feedback; where the browser offers
+  no clipboard, as on a plain-HTTP page, the command is selected for copying by hand). **Setup help**
+  shows the `init` commands and **Recovery help** the `recover <username>` commands for each
+  installation (Proxmox host `pct list` and `pct exec <CTID> -- /usr/local/sbin/inventory-atlas-auth …`,
+  inside the container `inventory-atlas-auth …`, Docker `docker exec <container> node
+  server/src/cli/auth.js …`, manual `npm run auth -- …` with the server's `DATA_DIR`), and explains
+  that the code is one-time, made on the server, valid for 30 minutes, and not a password. Only when a
+  request fails with `AUTH_HTTPS_REQUIRED` (`ApiError.code`) does **How to fix this?** appear under
+  the error: an HTTPS reverse proxy with `ATLAS_TRUST_PROXY` first, then a trusted-network warning and
+  where to set `ATLAS_ALLOW_HTTP=true` for the chosen installation (Proxmox: `pct enter <CTID>`,
+  `/etc/inventory-atlas-lite.env`, `systemctl restart inventory-atlas-lite`; Docker: recreate the
+  container with `-e ATLAS_ALLOW_HTTP=true`; manual: the server process environment and a restart).
+  The installation is the person's choice, shared by both panels of a page; nothing is detected or
+  asked from the server, and opening help or switching never changes the typed form values.
 - The router guard in `client/src/main.js` sends every page without a session to sign-in and redirects
   pages whose `meta.permission` the role lacks; navigation links and Settings sections with a
   `permission` are hidden. Viewers get read-only pages: no Add item, Move to…, Edit, Transfer, More
@@ -414,7 +430,9 @@ the state, and the session all match, otherwise it is treated as unverified
 - `test/serverProcess.js` provisions the test administrator in each test server's store and returns a
   signed-in `fetch`; `test/e2e/globalSetup.js` and `test/e2e/fixtures.js` do the same for Playwright.
 - `test/e2e/auth.spec.js`: deep-link sign-in and return, refused password, sign-out, the Ukrainian phone
-  sign-in and recovery pages, the read-only viewer interface and its blocked addresses and Settings
+  sign-in and recovery pages, setup and recovery help (collapsed by default, keyboard disclosure,
+  installation switching, setup versus recovery commands, Copy, kept form values), the
+  `AUTH_HTTPS_REQUIRED` guidance offered only for that error, the read-only viewer interface and its blocked addresses and Settings
   sections, Security & Access (add and disable a viewer, a token shown once and revoked, sessions), and
   the password confirmation of an aged session.
 
