@@ -150,6 +150,7 @@ has no entry or an entry names no route. "own" means the person's own account or
 | GET | `/api/items/hierarchy` | `inventory:read` | yes | yes | `inventory:read`, `items:write` | Read only. |
 | GET | `/api/items/parent-candidates` | `inventory:read` | yes | yes | `inventory:read`, `items:write` | Read only. |
 | GET | `/api/items/transferred-to-suggestions` | `inventory:read` | yes | yes | `inventory:read`, `items:write` | Read only. |
+| GET | `/api/items/location-suggestions` | `inventory:read` | yes | yes | `inventory:read`, `items:write` | Read only. |
 | GET | `/api/items/bulk-replace/fields` | `inventory:read` | yes | yes | `inventory:read`, `items:write` | Field and value lists; inventory data a viewer can already read. |
 | GET | `/api/items/bulk-replace/values/:type/:id` | `inventory:read` | yes | yes | `inventory:read`, `items:write` | Field and value lists; inventory data a viewer can already read. |
 | GET | `/api/items/:id` | `inventory:read` | yes | yes | `inventory:read`, `items:write` | Read only. |

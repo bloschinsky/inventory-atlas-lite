@@ -100,7 +100,9 @@ the English names.
    is the cover.
 5. Fill in **Location** (free text, such as `Garage`), optionally **Specific location** for the exact
    spot within it (such as `Shelf 2, left`), and, if the item sits inside another item you have
-   already recorded, set **Stored inside**.
+   already recorded, set **Stored inside**. **Location** lists the locations already in use as soon as
+   you focus it, most used first, and narrows them as you type; tap or click one, or pick it with the
+   arrow keys and `Enter`. Any new location can still be typed.
 6. Press **Save item**. You land on the item page; check that it also appears on **Items** and that
    the search finds it by name.
 7. Open **Data / Backup** and press **Download backup** to get your first copy of the database.

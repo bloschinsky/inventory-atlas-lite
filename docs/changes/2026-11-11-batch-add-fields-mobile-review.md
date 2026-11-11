@@ -1,7 +1,7 @@
 # Responsive Batch Add Fields review on phones (#93)
 
 - **Completed:** 2026-11-11
-- **Version:** 0.74.6
+- **Version:** 0.74.6, released together with #94 (Location autocomplete, [record](2026-11-11-location-autocomplete.md))
 - **Branch:** `bugfix/93-batch-add-fields-mobile-review`
 
 ## Summary

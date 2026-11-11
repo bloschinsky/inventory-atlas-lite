@@ -9,6 +9,7 @@ export const createItemRoutes = ({ itemService, bulkReplaceService, itemTransfer
   router.get('/api/items/hierarchy', (req, res) => res.json(itemService.hierarchy(req.query)));
   router.get('/api/items/parent-candidates', (req, res) => res.json(itemService.parentCandidates(req.query)));
   router.get('/api/items/transferred-to-suggestions', (req, res) => res.json(itemService.transferredToSuggestions(req.query)));
+  router.get('/api/items/location-suggestions', (req, res) => res.json(itemService.locationSuggestions(req.query)));
   router.get('/api/items/bulk-replace/fields', (req, res) => res.json(bulkReplaceService.fields()));
   // `type` is core or custom; `id` is then a core column key or a custom field id.
   router.get('/api/items/bulk-replace/values/:type/:id', (req, res) => {

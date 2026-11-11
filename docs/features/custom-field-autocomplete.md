@@ -12,7 +12,10 @@ input: suggestions speed up typing, they do not restrict what can be saved.
   field, most frequently used first.
 - Typing filters the list with a case-insensitive prefix match (`Pe` → `Pentax`).
 - A suggestion can be chosen with the mouse, touch, or the keyboard: `ArrowDown`/`ArrowUp` move,
-  `Enter` selects, `Escape` closes, `Tab` leaves the field without forcing a selection.
+  `Enter` selects, `Escape` closes, `Tab` leaves the field without forcing a selection. A finger
+  can scroll a long list without choosing anything, and a tap anywhere else closes it.
+- On a phone whose keyboard leaves too little room below the field, the list opens above it, below
+  the sticky top bar, and is never taller than the visible space.
 - Any new value can still be typed and saved, and it becomes a suggestion for the next item
   automatically.
 - Suggestions belong to one exact custom field. `Brand` in `Cameras` and `Brand` in `Lenses` are
@@ -35,10 +38,19 @@ input: suggestions speed up typing, they do not restrict what can be saved.
   query; no additional index was added.
 - `client/src/components/FieldAutocomplete.vue` is a small Bootstrap-styled combobox used for text
   custom fields in `client/src/pages/ItemForm.vue`. Its `source` prop is the suggestions endpoint, so
-  the same control also serves the [Transferred To field](transferred-to-field.md), and other input
+  the same control also serves the [Transferred To field](transferred-to-field.md) and the
+  [Location field](location-autocomplete.md), and other input
   attributes such as `maxlength` are passed to the input. It loads on focus, debounces input by
   200 ms, discards stale responses through a request counter, hides a suggestion identical to the
-  current input, and closes on selection or when focus leaves the component. The optional
+  current input, and closes on selection or when focus leaves the component. It chooses a suggestion
+  on `click`, which mouse, touch, and pen all produce once the press ends, and prevents only
+  `mousedown`, so the mouse keeps the focus in the field while touch scrolling stays native. A
+  pointer pressed on the list is remembered, so a phone moving the focus out of the field (iOS
+  Safari does so before the click) does not remove the list under the finger; a press or focus
+  outside the component closes it instead. Typing or focusing clears the keyboard highlight, and a
+  late response keeps it, so an arrow key pressed before the answer arrives is not lost. The list is
+  placed against `window.visualViewport` and the `header.sticky-top` bar and opens upward when less
+  than 160 px fits below the field; touch screens get options at least 44 px tall. The optional
   `showCounts` prop adds a usage-count badge to each suggestion; [Bulk Replace Field Value](bulk-replace-field-value.md) uses it.
 
 ## Verification
@@ -48,11 +60,13 @@ input: suggestions speed up typing, they do not restrict what can be saved.
   responses.
 - `test/e2e/suggestions.spec.js` covers the browser workflow: suggestions appear on focus, filter
   while typing, can be selected, and a newly saved value is suggested afterwards.
+  `test/e2e/location-autocomplete.spec.js` covers the shared control's touch selection, outside
+  taps, and upward placement on a phone.
 
 ## Notes and limitations
 
 - Suggestions are derived from saved values only. There is no dictionary table, no administration
   page, and no way to delete or rename a suggestion other than changing the saved item values.
 - Matching is prefix-based; there is no fuzzy search or typo correction.
-- Autocomplete is not enabled for the item name, description, condition notes, or location. Transferred
-  To has its own suggestions over the saved values of that base field.
+- Autocomplete is not enabled for the item name, description, condition notes, or Specific location.
+  Transferred To and Location have their own suggestions over the saved values of those base fields.
