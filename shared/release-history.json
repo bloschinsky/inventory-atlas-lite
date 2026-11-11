@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.74.7",
+    "date": "2026-11-11",
+    "changes": [
+      "Location in the item form now suggests the locations already in use, on every browser including iPhone Safari: focus it to see them, most used first, and type to narrow them. Tap, click, or use the arrow keys and Enter to choose one; any new location can still be typed. Items stored inside a container and retired items do not add their own outdated locations.",
+      "Choosing a suggestion by touch is reliable in every autocomplete field, a finger can scroll a long list without choosing, and on a phone the list opens above the field when the keyboard leaves no room below it."
+    ]
+  },
+  {
     "version": "0.74.6",
     "date": "2026-11-11",
     "changes": [

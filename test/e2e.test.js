@@ -233,6 +233,8 @@ test('Transferred To is saved, cleared, searched, suggested, backed up, and kept
     assert.deepEqual(found.items.map(item => item.name), ['Drill', 'Saw']);
     assert.equal(found.items[0].transferred_to, 'Vasyl');
     assert.deepEqual(await request('/api/items/transferred-to-suggestions?search=va'), [{ value: 'Vasyl', usage_count: 2 }]);
+    assert.ok((await request('/api/items/location-suggestions?search=gar&limit=x')).some(suggestion => suggestion.value === 'Garage'));
+    assert.deepEqual(await request(`/api/items/location-suggestions?search=${encodeURIComponent("%' OR 1=1 --")}`), []);
     assert.equal(await failedStatus('/api/items', json('POST', { name: 'Too long', category_id: category.id, transferred_to: 'x'.repeat(256) })), 400);
 
     // Clearing stores NULL rather than an empty string.
