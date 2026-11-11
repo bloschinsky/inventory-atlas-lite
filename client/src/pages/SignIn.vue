@@ -4,18 +4,22 @@ import { useRoute, useRouter } from 'vue-router';
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '../../../shared/accounts.js';
 import { recover, setUp, signIn } from '../auth.js';
 import AppBrand from '../components/AppBrand.vue';
+import SignInHelp from '../components/SignInHelp.vue';
 import ThemeToggle from '../components/ThemeToggle.vue';
 
 /*
   The three pages open without a session, in one form: signing in, creating the first administrator
   with the setup code from the command line, and setting a new password with a recovery code. After
-  success the person continues at the address they first asked for.
+  success the person continues at the address they first asked for. Collapsed help shows the account
+  command for the person's installation, and how to allow sign-in when the server refused plain HTTP.
 */
 const route = useRoute();
 const router = useRouter();
 const mode = computed(() => route.meta.public);
 const form = ref({ username: '', password: '', confirm: '', code: '' });
 const error = ref('');
+const errorCode = ref(null);
+const deployment = ref('proxmox');
 const busy = ref(false);
 const codeInput = ref(null);
 const usernameInput = ref(null);
@@ -31,6 +35,7 @@ const target = () => {
 watch(mode, async () => {
   form.value = { username: form.value.username, password: '', confirm: '', code: '' };
   error.value = '';
+  errorCode.value = null;
   await nextTick();
   focusFirst();
 });
@@ -40,6 +45,7 @@ async function submit() {
   if (mismatch.value) return;
   busy.value = true;
   error.value = '';
+  errorCode.value = null;
   const { username, password, code } = form.value;
   try {
     if (mode.value === 'setup') await setUp({ code, username, password });
@@ -48,6 +54,7 @@ async function submit() {
     await router.replace(target());
   } catch (caught) {
     error.value = caught.message;
+    errorCode.value = caught.code ?? null;
     form.value.password = '';
     form.value.confirm = '';
   } finally {
@@ -78,10 +85,11 @@ const otherMode = path => ({ path, query: route.query.redirect ? { redirect: rou
           <p class="text-secondary mb-4">
             {{ $t(`auth.${mode}.help`) }}
           </p>
-          <pre
+          <SignInHelp
             v-if="mode !== 'login'"
-            class="app-sign-in-command"
-          ><code>{{ mode === 'setup' ? 'npm run auth -- init' : 'npm run auth -- recover <username>' }}</code></pre>
+            v-model:deployment="deployment"
+            :topic="mode === 'setup' ? 'init' : 'recover'"
+          />
           <div
             v-if="error"
             class="alert alert-danger"
@@ -89,6 +97,11 @@ const otherMode = path => ({ path, query: route.query.redirect ? { redirect: rou
           >
             {{ error }}
           </div>
+          <SignInHelp
+            v-if="errorCode === 'AUTH_HTTPS_REQUIRED'"
+            v-model:deployment="deployment"
+            topic="https"
+          />
           <div
             v-if="mode !== 'login'"
             class="mb-3"

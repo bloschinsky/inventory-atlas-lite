@@ -203,7 +203,9 @@
     "dismissError": "Dismiss error",
     "insertTemplate": "Insert Template",
     "editJson": "Edit JSON",
-    "typeToConfirm": "Type {phrase} to confirm"
+    "typeToConfirm": "Type {phrase} to confirm",
+    "copy": "Copy",
+    "copied": "Copied"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -1608,13 +1610,51 @@
     },
     "setup": {
       "title": "Create the first administrator",
-      "help": "No administrator exists yet. On the server (or in the container), run this command and enter the one-time setup code it prints:",
+      "help": "No administrator exists yet. Run the setup command on the server, then enter the one-time setup code it prints below.",
       "submit": "Create administrator"
     },
     "recover": {
       "title": "Use a recovery code",
-      "help": "Someone with access to the server prints a one-time recovery code for your account with this command:",
+      "help": "Someone with access to the server runs the recovery command, which prints a one-time recovery code for your account. Enter it below with a new password.",
       "submit": "Set password and sign in"
+    },
+    "helpToggle": {
+      "init": "Setup help",
+      "recover": "Recovery help",
+      "https": "How to fix this?"
+    },
+    "deployment": {
+      "label": "Installation",
+      "proxmox": "Proxmox LXC",
+      "docker": "Docker",
+      "manual": "Manual / development"
+    },
+    "copyCommand": "Copy command {command}",
+    "copiedCommand": "The command was copied.",
+    "copyFailed": "The browser did not allow copying. The command is selected: copy it yourself.",
+    "commandHelp": {
+      "proxmoxList": "On the Proxmox host, find the ID (CTID) of the Inventory Atlas Lite container:",
+      "proxmoxHost": "Then run this on the host, replacing {ctid} with that ID:",
+      "proxmoxInside": "Or run this in a shell inside the container (pct enter {ctid}):",
+      "dockerHost": "On the Docker host, replacing {container} with the container name or ID from docker ps:",
+      "manualRun": "In the application folder on the server, with the same DATA_DIR as the running server:",
+      "usernameNote": "Replace {username} with the name of the account that needs a new password.",
+      "codeNote": "The command prints a one-time code. Only someone with access to the server can create it, and it expires after {minutes} minutes. It is not a password: you choose the password in this form."
+    },
+    "httpsHelp": {
+      "proxy": "Recommended: put an HTTPS reverse proxy in front of Inventory Atlas Lite, open its HTTPS address, and set ATLAS_TRUST_PROXY to the proxy address (loopback for a proxy on the same machine) in the same place as the setting below.",
+      "warning": "Trusted network only: ATLAS_ALLOW_HTTP=true lets passwords and session cookies travel over plain HTTP without encryption. Use it only on a home network or VPN, and never make this address reachable from the internet.",
+      "proxmoxEnter": "On the Proxmox host, open a shell inside the container, replacing {ctid} with its ID from pct list:",
+      "proxmoxEnv": "Add this line to /etc/inventory-atlas-lite.env inside the container (for example with nano /etc/inventory-atlas-lite.env):",
+      "proxmoxRestart": "Restart the service so the setting takes effect:",
+      "dockerInspect": "First check what keeps the data. The entry with \"Destination\":\"/data\" must be a named volume (such as inventory-atlas-data) or a host folder (\"Type\":\"bind\"). A long random volume name is an anonymous volume: a new container does not reuse it, and the inventory would look empty.",
+      "dockerBackup": "Make a backup of the inventory while the container still runs:",
+      "dockerCopy": "Copy the backup out of the container to the Docker host:",
+      "dockerRecreate": "Then add this option to your original docker run command and start the container again from it, with the same -v volume or folder for /data, the same ports, and the other options. Only remove the old container once you are sure the new one gets that same /data:",
+      "dockerNote": "With Docker Compose, add ATLAS_ALLOW_HTTP: \"true\" to the service environment and run docker compose up -d; it recreates the service with its volumes. If /data is an anonymous volume or you are not sure, keep the backup and move the data to a named volume first instead of recreating the container.",
+      "manualShell": "Stop the server and start it again with the setting in its environment. On Linux or macOS:",
+      "manualPowerShell": "In PowerShell on Windows:",
+      "manualNote": "The setting must be in the environment of the server process itself; it is read only when the server starts."
     }
   },
   "security": {
@@ -2074,7 +2114,7 @@
     "AUTH_AMBIGUOUS_CREDENTIALS": "The request carried both a session and an API token. Send only one.",
     "AUTH_CROSS_SITE_REQUEST": "The request did not come from this application and was refused.",
     "AUTH_CSRF_INVALID": "The page is out of date. Reload it and try again.",
-    "AUTH_HTTPS_REQUIRED": "Signing in from another device needs HTTPS. Put the server behind an HTTPS reverse proxy, or set ATLAS_ALLOW_HTTP=true on a trusted network (see the README).",
+    "AUTH_HTTPS_REQUIRED": "Signing in from another device needs HTTPS, or plain HTTP allowed by the server's operator on a trusted network.",
     "AUTH_JSON_REQUIRED": "This request must be sent as JSON."
   },
   "notices": {

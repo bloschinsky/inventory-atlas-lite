@@ -1160,18 +1160,23 @@ A new installation, and an existing one right after the update that added accoun
 first administrator** instead. Someone with access to the server runs the setup command —
 `npm run auth -- init`, `docker exec <container> node server/src/cli/auth.js init`, or
 `inventory-atlas-auth init` inside the Proxmox container — which prints a one-time code valid for 30
-minutes. Enter the code, choose the administrator's name and a password of at least 12 characters, and
-press **Create administrator**. Without that code nobody can do this, so whoever opens the address first
-cannot take over the installation.
+minutes. **Setup help** on the page opens the exact command: choose **Proxmox LXC**, **Docker**, or
+**Manual / development**, and press **Copy** beside a command. Enter the code, choose the
+administrator's name and a password of at least 12 characters, and press **Create administrator**.
+Without that code nobody can do this, so whoever opens the address first cannot take over the
+installation.
 
 Forgot your password? Choose **Forgot your password? Use a recovery code** on the sign-in page. Someone
 with access to the server runs the same command with `recover <username>`, which prints a one-time code
-for your account; enter your name, the code, and a new password twice. The account is enabled again if
-it was disabled, and its other sessions end.
+for your account; **Recovery help** shows that command for each installation. Enter your name, the
+code, and a new password twice. The account is enabled again if it was disabled, and its other sessions
+end.
 
 Signing in from another computer or phone needs HTTPS. If the page says *Signing in from another device
-needs HTTPS*, ask whoever runs the server to put it behind an HTTPS reverse proxy or, on a trusted home
-network, to set `ATLAS_ALLOW_HTTP=true` (see the README).
+needs HTTPS*, open **How to fix this?** below the message. It recommends an HTTPS reverse proxy and, for
+a trusted home network or VPN only, shows for the chosen installation where to set
+`ATLAS_ALLOW_HTTP=true` and how to restart the service. Over plain HTTP passwords travel unencrypted,
+so never make such an address reachable from the internet.
 
 ### Add people and choose what they may do
 
