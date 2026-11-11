@@ -79,6 +79,8 @@ function backToInput() {
 }
 // Removing a proposed field only changes this draft; the category fields stay untouched.
 const removeDraft = index => drafts.value.splice(index, 1);
+// A card control announces its row status and, when present, the reason it blocks the batch.
+const describedBy = index => `batch-field-status-${index}${rows.value[index].error ? ` batch-field-error-${index}` : ''}`;
 
 async function create() {
   saving.value = true;
@@ -93,15 +95,25 @@ async function create() {
   }
 }
 
+/*
+  Below Bootstrap's md breakpoint the review shows one stacked card per draft instead of the table, whose
+  four columns cannot fit a phone. Only one of the two views is rendered, so their controls never duplicate.
+*/
+const narrowQuery = window.matchMedia('(max-width: 767.98px)');
+const narrow = ref(narrowQuery.matches);
+const onNarrowChange = event => { narrow.value = event.matches; };
+
 const onKeydown = event => { if (event.key === 'Escape') emit('close'); };
 onMounted(() => {
   document.body.classList.add('modal-open');
   document.addEventListener('keydown', onKeydown);
+  narrowQuery.addEventListener('change', onNarrowChange);
   nextTick(() => editor.value?.focus());
 });
 onBeforeUnmount(() => {
   document.body.classList.remove('modal-open');
   document.removeEventListener('keydown', onKeydown);
+  narrowQuery.removeEventListener('change', onNarrowChange);
 });
 </script>
 
@@ -114,7 +126,7 @@ onBeforeUnmount(() => {
     aria-labelledby="batch-fields-title"
     @click.self="emit('close')"
   >
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable modal-fullscreen-md-down app-batch-fields-dialog">
       <div class="modal-content">
         <div class="modal-header">
           <h2
@@ -180,6 +192,92 @@ onBeforeUnmount(() => {
                 {{ $t('common.insertTemplate') }}
               </button>
             </div>
+          </template>
+          <template v-else-if="narrow">
+            <p
+              v-if="!drafts.length"
+              class="text-secondary mb-0"
+            >
+              {{ $t('batchFields.empty') }}
+            </p>
+            <ol
+              v-else
+              class="list-unstyled mb-0"
+            >
+              <li
+                v-for="(draft, index) in drafts"
+                :key="index"
+                class="card mb-3"
+                :class="{ 'border-danger': rows[index].status !== 'new' }"
+              >
+                <div class="card-header">
+                  <h3 class="card-title">
+                    {{ $t('batchFields.proposed', { n: index + 1 }) }}
+                  </h3>
+                  <div class="card-actions">
+                    <span
+                      :id="`batch-field-status-${index}`"
+                      class="badge"
+                      aria-live="polite"
+                      :class="rows[index].status === 'new' ? 'bg-green-lt' : 'bg-red-lt'"
+                    >{{ $t(`batchFields.statuses.${rows[index].status}`) }}</span>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <label
+                    :for="`batch-field-name-${index}`"
+                    class="form-label"
+                  >{{ $t('batchFields.name') }}</label>
+                  <input
+                    :id="`batch-field-name-${index}`"
+                    v-model="draft.name"
+                    class="form-control"
+                    :aria-label="$t('batchFields.nameOf', { n: index + 1 })"
+                    :aria-describedby="describedBy(index)"
+                  >
+                  <label
+                    :for="`batch-field-type-${index}`"
+                    class="form-label mt-3"
+                  >{{ $t('batchFields.type') }}</label>
+                  <select
+                    :id="`batch-field-type-${index}`"
+                    v-model="draft.type"
+                    class="form-select"
+                    :aria-label="$t('batchFields.typeOf', { n: index + 1 })"
+                    :aria-describedby="describedBy(index)"
+                  >
+                    <option
+                      v-if="!FIELD_TYPES.some(type => type.value === draft.type)"
+                      :value="draft.type"
+                    >
+                      {{ draft.type || $t('batchFields.unsupported') }}
+                    </option>
+                    <option
+                      v-for="type in FIELD_TYPES"
+                      :key="type.value"
+                      :value="type.value"
+                    >
+                      {{ $t(`fieldTypes.${type.value}`) }}
+                    </option>
+                  </select>
+                  <p
+                    v-if="rows[index].error"
+                    :id="`batch-field-error-${index}`"
+                    class="text-danger small mt-2 mb-0"
+                  >
+                    {{ translateError(rows[index].error) }}
+                  </p>
+                  <button
+                    type="button"
+                    class="btn btn-outline-danger w-100 mt-3"
+                    :aria-label="$t('batchFields.removeOf', { n: index + 1 })"
+                    @click="removeDraft(index)"
+                  >
+                    {{ $t('common.remove') }}
+                  </button>
+                </div>
+              </li>
+            </ol>
           </template>
           <div
             v-else
@@ -261,7 +359,7 @@ onBeforeUnmount(() => {
             </table>
           </div>
         </div>
-        <div class="modal-footer">
+        <div class="modal-footer app-batch-fields-footer">
           <button
             type="button"
             class="btn btn-link link-secondary"

@@ -39,6 +39,7 @@ document describes the current behaviour and its boundaries, not the original pl
 | [Item QR identity](item-qr-identity.md) | Generate a deployment-independent QR code from an item's UUID locally and open it from a modal on the item page. |
 | [QR label printing](qr-label-printing.md) | Select items across pages and print their QR labels on A4 sheets in three fixed layouts, with optional name, description, category, and location. |
 | [In-app QR scanner](in-app-qr-scanner.md) | Read an item QR code with the camera or from an image, locally in the browser, and open the matching item. |
+| [Location autocomplete](location-autocomplete.md) | Suggest the locations already in use in the Location field, on desktop and touch screens alike. |
 | [Custom-field autocomplete](custom-field-autocomplete.md) | Suggest previously saved values for text custom fields; the same control serves Transferred To. |
 | [Purchase and serial fields](purchase-and-serial-fields.md) | Record an optional purchase date, structured multi-currency price, and serial number on every item. |
 | [New item flag](item-new-flag.md) | Record whether an item is new as a core yes/no attribute, separate from Condition, shown as a New/Used status badge, in the item form, details, list columns, templates, duplicates, batch import, and AI drafts. |

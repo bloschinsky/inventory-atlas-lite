@@ -100,7 +100,9 @@ the English names.
    is the cover.
 5. Fill in **Location** (free text, such as `Garage`), optionally **Specific location** for the exact
    spot within it (such as `Shelf 2, left`), and, if the item sits inside another item you have
-   already recorded, set **Stored inside**.
+   already recorded, set **Stored inside**. **Location** lists the locations already in use as soon as
+   you focus it, most used first, and narrows them as you type; tap or click one, or pick it with the
+   arrow keys and `Enter`. Any new location can still be typed.
 6. Press **Save item**. You land on the item page; check that it also appears on **Items** and that
    the search finds it by name.
 7. Open **Data / Backup** and press **Download backup** to get your first copy of the database.
@@ -299,6 +301,9 @@ is no longer shown; turn the column of the new name on under **Columns**.
    *Invalid type*, or *Invalid configuration* — with the reason. Correct the name or the type in
    place, or press **Remove** to drop that field from the batch. Removing a row changes only this
    draft, never the fields the category already has. **Edit JSON** goes back to the pasted text.
+   On a phone held upright, the window fills the screen and each field is a card instead of a row:
+   *Proposed field N* with its status, full-width **Name** and **Type**, the reason it is blocked,
+   and **Remove**. **Create N Fields** then sits on its own row at the bottom.
 6. Press **Create N Fields** to save them. The button counts the valid new fields and stays disabled
    while any row is still blocked. The whole batch is created at once: if anything fails, no field
    is created. **Cancel** or `Escape` discards the draft.

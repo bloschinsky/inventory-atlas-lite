@@ -182,6 +182,31 @@ export class ItemService {
     );
   }
 
+  /*
+    Locations already in use, for the Location autocomplete in the item form: a case-insensitive prefix
+    match, most used first, then alphabetical. Spellings that differ only in case are one suggestion
+    shown in its most used spelling. The grouping and matching happen here rather than in SQL because
+    SQLite folds the case of ASCII letters only, and locations are often Cyrillic. There are only as
+    many rows as distinct top-level locations, so reading them all stays cheap.
+  */
+  locationSuggestions(query = {}) {
+    const search = String(query.search || '').trim().toLocaleLowerCase();
+    const limit = Math.min(20, Math.max(1, Number.parseInt(query.limit) || 10));
+    const groups = new Map();
+    for (const { value, usage_count: count } of this.items.listRootLocations()) {
+      const key = value.toLocaleLowerCase();
+      if (!key.startsWith(search)) continue;
+      const group = groups.get(key) || { value, usage_count: 0, top: 0 };
+      if (count > group.top || (count === group.top && value < group.value)) Object.assign(group, { value, top: count });
+      group.usage_count += count;
+      groups.set(key, group);
+    }
+    return [...groups.values()]
+      .sort((a, b) => b.usage_count - a.usage_count || a.value.localeCompare(b.value) || (a.value < b.value ? -1 : 1))
+      .slice(0, limit)
+      .map(({ value, usage_count }) => ({ value, usage_count }));
+  }
+
   // Label data for a print job, in the order the items were selected. Items deleted since they were
   // selected are reported back instead of failing the whole job.
   labels(body) {

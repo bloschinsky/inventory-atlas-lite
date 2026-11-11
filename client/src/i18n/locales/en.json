@@ -933,6 +933,8 @@
     "field": "Field",
     "type": "Type",
     "status": "Status",
+    "proposed": "Proposed field {n}",
+    "name": "Name",
     "nameOf": "Name of proposed field {n}",
     "typeOf": "Type of proposed field {n}",
     "removeOf": "Remove proposed field {n} from the batch",

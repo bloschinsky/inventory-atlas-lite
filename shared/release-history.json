@@ -1,5 +1,15 @@
 [
   {
+    "version": "0.74.6",
+    "date": "2026-11-11",
+    "changes": [
+      "Location in the item form now suggests the locations already in use, on every browser including iPhone Safari: focus it to see them, most used first, and type to narrow them. Tap, click, or use the arrow keys and Enter to choose one; any new location can still be typed. Items stored inside a container and retired items do not add their own outdated locations.",
+      "Choosing a suggestion by touch is reliable in every autocomplete field, a finger can scroll a long list without choosing, and on a phone the list opens above the field when the keyboard leaves no room below it.",
+      "Batch Add Fields and AI Add Fields are now usable on a phone held upright: the window fills the screen and each proposed field is a card with its status, a full-width name and type, the reason it is blocked, and Remove. Create N Fields gets its own full-width row at the bottom. Wider screens keep the table.",
+      "Categories & Fields no longer scrolls a few pixels sideways on phones and tablets."
+    ]
+  },
+  {
     "version": "0.74.5",
     "date": "2026-11-11",
     "changes": [

@@ -210,12 +210,12 @@ async function applyTranslation(text) {
           @click="openTranslation('location', $t('items.fields.location'), 'item-location')"
         />
       </div>
-      <input
-        id="item-location"
+      <FieldAutocomplete
         v-model="form.location"
-        class="form-control"
+        input-id="item-location"
+        source="/api/items/location-suggestions"
         :placeholder="$t('itemForm.locationPlaceholder')"
-      >
+      />
     </div><div class="col-md-6 mb-3">
       <div class="d-flex align-items-center gap-1 mb-2">
         <label

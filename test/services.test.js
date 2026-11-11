@@ -363,6 +363,50 @@ test('Transferred To suggestions are distinct saved values, most used first', ()
   assert.equal(itemService.transferredToSuggestions({ limit: '1' }).length, 1);
 });
 
+test('Location suggestions are the distinct locations of active top-level items', () => {
+  const { db, categoryService, itemService } = build();
+  const category = categoryService.create({ name: 'Storage' });
+  const create = (name, location, parent) => itemService.create({ name, category_id: category.id, location, parent_item_id: parent?.id });
+
+  // Two top-level items share the Garage in different spellings; a third sits in the Attic.
+  const shelf = create('Shelf', 'Garage');
+  create('Bike', ' garage ');
+  create('Lamp', 'Attic');
+  // Contents of the shelf keep stale own locations: they are hidden, and they do not inflate the Garage.
+  const box = create('Box', 'Old flat', shelf);
+  create('Drill', 'Old flat', box);
+  create('Saw', 'Attic', box);
+  // Cyrillic letters fold their case too, and empty locations are never offered.
+  create('Санки', 'Гараж');
+  create('Лижі', 'гараж');
+  create('Ящик', 'Комора');
+  create('Nowhere', '   ');
+  // A retired item's location is no longer in use.
+  const retired = create('Old sofa', 'Basement');
+  db.prepare("UPDATE items SET lifecycle_status = 'retired' WHERE id = ?").run(retired.id);
+
+  const all = itemService.locationSuggestions();
+  assert.deepEqual(all, [
+    { value: 'Garage', usage_count: 2 },
+    { value: 'Гараж', usage_count: 2 },
+    { value: 'Attic', usage_count: 1 },
+    { value: 'Комора', usage_count: 1 }
+  ]);
+  assert.deepEqual(itemService.locationSuggestions({ search: ' gar ' }).map(suggestion => suggestion.value), ['Garage']);
+  assert.deepEqual(itemService.locationSuggestions({ search: 'ГАР' }).map(suggestion => suggestion.value), ['Гараж']);
+  assert.deepEqual(itemService.locationSuggestions({ search: 'old' }), []);
+  assert.deepEqual(itemService.locationSuggestions({ search: '%' }), []);
+  assert.deepEqual(itemService.locationSuggestions({ search: "' OR 1=1 --" }), []);
+  assert.equal(itemService.locationSuggestions({ limit: '1' }).length, 1);
+  assert.equal(itemService.locationSuggestions({ limit: '1000' }).length, 4);
+  assert.equal(itemService.locationSuggestions({ limit: 'many' }).length, 4);
+  assert.deepEqual(itemService.locationSuggestions({ search: ['a', 'b'] }), []);
+
+  // Taking the box out of the shelf makes its own saved location visible, so it is suggested again.
+  itemService.update(box.id, { name: 'Box', category_id: category.id, location: 'Old flat', parent_item_id: null });
+  assert.deepEqual(itemService.locationSuggestions({ search: 'old' }), [{ value: 'Old flat', usage_count: 1 }]);
+});
+
 test('categories and their fields guard their own deletions', () => {
   const { categoryService, customFieldService, itemService } = build();
   const category = categoryService.create({ name: 'Instruments' });

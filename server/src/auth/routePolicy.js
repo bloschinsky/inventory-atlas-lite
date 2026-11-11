@@ -63,6 +63,7 @@ export const ROUTE_POLICY = [
   ['GET', '/api/items/hierarchy', R],
   ['GET', '/api/items/parent-candidates', R],
   ['GET', '/api/items/transferred-to-suggestions', R],
+  ['GET', '/api/items/location-suggestions', R],
   ['GET', '/api/items/bulk-replace/fields', R],
   ['GET', '/api/items/bulk-replace/values/:type/:id', R],
   ['GET', '/api/items/:id', R],

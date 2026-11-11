@@ -366,6 +366,20 @@ export class ItemRepository {
     `).all({ search: startsWithLike(search), limit });
   }
 
+  /*
+    The Locations of active top-level items with how many use each exact trimmed spelling: the only
+    saved locations anyone sees. A nested item shows its outermost container's Location, so its own
+    saved value is hidden and never counted, and each root placement counts once however many items
+    it holds. Retired items are left out.
+  */
+  listRootLocations() {
+    return this.db.prepare(`
+      SELECT TRIM(location) AS value, COUNT(*) AS usage_count FROM items
+      WHERE parent_item_id IS NULL AND lifecycle_status = 'active' AND TRIM(COALESCE(location, '')) != ''
+      GROUP BY TRIM(location)
+    `).all();
+  }
+
   saveFieldValue(itemId, fieldId, value) {
     this.db
       .prepare('INSERT INTO item_field_values (item_id, field_id, value) VALUES (?, ?, ?) ON CONFLICT(item_id, field_id) DO UPDATE SET value = excluded.value')
